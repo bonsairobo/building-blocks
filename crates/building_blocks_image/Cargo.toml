@@ -1,0 +1,11 @@
+[package]
+name = "building_blocks_image"
+version = "0.1.0"
+authors = ["Duncan <bonsairobo@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+image = { version = "0.23" }
+
+building_blocks_core = { path = "../building_blocks_core", version = "0.1" }
+building_blocks_storage = { path = "../building_blocks_storage", version = "0.1" }

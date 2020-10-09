@@ -1,0 +1,12 @@
+[package]
+name = "building_blocks_core"
+version = "0.1.0"
+authors = ["Duncan <bonsairobo@gmail.com>"]
+edition = "2018"
+
+description = "The core data types for defining 2D and 3D integer lattices."
+
+[dependencies]
+itertools = "0.9"
+num = "0.3"
+serde = { version = "1.0", features = ["derive"] }

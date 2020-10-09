@@ -1,0 +1,30 @@
+[package]
+name = "building_blocks_storage"
+version = "0.1.0"
+authors = ["Duncan <bonsairobo@gmail.com>"]
+edition = "2018"
+
+description = "Efficient storage for maps on sparse or dense, 2D and 3D integer lattices."
+
+[dependencies]
+either = "1.6"
+fnv = "1.0"
+itertools = "0.9"
+lz4 = "1.23"
+num = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+
+building_blocks_core = { path = "../building_blocks_core", version = "0.1" }
+
+compressible-map = { git = "https://github.com/bonsairobo/compressible-map", features = ["bincode_lz4"] }
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "accessors"
+harness = false
+
+[[bench]]
+name = "compression"
+harness = false

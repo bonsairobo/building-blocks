@@ -24,7 +24,7 @@ pub use array::{Array, ArrayExtent, ArrayN, FastLz4, Local, Stride};
 pub use array2::Array2;
 pub use array3::Array3;
 pub use chunk_map::{
-    Chunk2, Chunk3, ChunkMap, ChunkMap2, ChunkMap3, ChunkMapReader, ChunkMapReader2,
+    Chunk, Chunk2, Chunk3, ChunkMap, ChunkMap2, ChunkMap3, ChunkMapReader, ChunkMapReader2,
     ChunkMapReader3, LocalChunkCache, SerializableChunkMap, SerializableChunkMap2,
     SerializableChunkMap3,
 };

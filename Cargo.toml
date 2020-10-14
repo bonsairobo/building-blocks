@@ -11,7 +11,9 @@ default = ["mesh", "procgen", "search"]
 
 image = ["building_blocks_image"]
 mesh = ["building_blocks_mesh"]
-ncollide3d = ["building_blocks_ncollide3d"]
+nalg = ["building_blocks_core/nalg"]
+ncollide = ["building_blocks_partition/ncollide"]
+partition = ["building_blocks_partition"]
 procgen = ["building_blocks_procgen"]
 search = ["building_blocks_search"]
 vox = ["building_blocks_vox"]
@@ -23,7 +25,7 @@ building_blocks_storage = { path = "crates/building_blocks_storage", version = "
 # Optional, feature-gated
 building_blocks_image = { path = "crates/building_blocks_image", version = "0.1", optional = true }
 building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.1", optional = true }
-building_blocks_ncollide3d = { path = "crates/building_blocks_ncollide3d", version = "0.1", optional = true }
+building_blocks_partition = { path = "crates/building_blocks_partition", version = "0.1", optional = true }
 building_blocks_procgen = { path = "crates/building_blocks_procgen", version = "0.1", optional = true }
 building_blocks_search = { path = "crates/building_blocks_search", version = "0.1", optional = true }
 building_blocks_vox = { path = "crates/building_blocks_vox", version = "0.1", optional = true }

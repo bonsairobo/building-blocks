@@ -5,13 +5,12 @@
 //! - **core**: lattice point and extent data types
 //! - **image**: conversion of 2D lattice maps to/from images
 //! - **mesh**: 3D isosurface generation algorithms, smooth and cubic
+//! - **partition**: spatial queries on voxels, e.g. raycasting
 //! - **search**: search algorithms on lattice maps
 //! - **storage**: compressed storage for lattice maps, i.e. functions defined on `Z^2` and `Z^3`
 //! - **vox**: conversion of 3D lattice maps to/from VOX data format
 //!
 //! Upcoming:
-//! - **partition**: specialized data structures for accelerating spatial queries
-//! - **ncollide3d**: `BVH` (bounding volume hierarchy) impl for voxel tree
 //! - **procgen**: procedural generation of lattice maps, including sampled SDFs, height maps, and cellular automata
 
 pub use building_blocks_core as core;
@@ -36,6 +35,3 @@ pub use building_blocks_search as search;
 
 #[cfg(feature = "vox")]
 pub use building_blocks_vox as vox;
-
-#[cfg(feature = "ncollide3d")]
-pub use building_blocks_ncollide3d as ncollide3d;

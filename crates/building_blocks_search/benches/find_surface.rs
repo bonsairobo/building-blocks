@@ -13,7 +13,7 @@ fn sphere_surface(c: &mut Criterion) {
             |b, &sphere_radius| {
                 b.iter_with_setup(
                     || {
-                        let map_radius = 2 * (sphere_radius + 1);
+                        let map_radius = sphere_radius + 1;
                         let mut map = Array3::fill(
                             Extent3i::from_min_and_shape(
                                 PointN([-map_radius; 3]),
@@ -30,9 +30,9 @@ fn sphere_surface(c: &mut Criterion) {
                             }
                         });
 
-                        (map, map_extent.padded(-1))
+                        map
                     },
-                    |(map, inner_extent)| find_surface_points(&map, &inner_extent),
+                    |map| find_surface_points(&map, &map.extent().padded(-1)),
                 );
             },
         );

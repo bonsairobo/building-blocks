@@ -1,0 +1,26 @@
+[package]
+name = "building_blocks_partition"
+version = "0.1.0"
+authors = ["Duncan Fairbanks <bonsairobo@gmail.com>"]
+edition = "2018"
+
+[features]
+default = ["ncollide"]
+
+ncollide = ["ncollide3d", "building_blocks_core/nalg"]
+
+[dependencies]
+fnv = "1.0"
+
+# Optional, feature-gated
+ncollide3d = { version = "0.25", optional = true }
+
+building_blocks_core = { path = "../building_blocks_core", version = "0.1" }
+building_blocks_storage = { path = "../building_blocks_storage", version = "0.1" }
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "octree"
+harness = false

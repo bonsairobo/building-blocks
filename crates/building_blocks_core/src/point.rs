@@ -103,6 +103,11 @@ where
 }
 
 pub trait IntegerPoint: Point {
+    fn left_shift(&self, shift_by: Self::Scalar) -> Self;
+    fn right_shift(&self, shift_by: Self::Scalar) -> Self;
+
+    fn basis() -> Vec<Self>;
+
     fn corner_offsets() -> Vec<Self>;
 
     /// https://en.wikipedia.org/wiki/Von_Neumann_neighborhood

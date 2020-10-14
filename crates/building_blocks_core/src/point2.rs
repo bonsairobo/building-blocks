@@ -96,6 +96,20 @@ where
 }
 
 impl IntegerPoint for Point2i {
+    #[inline]
+    fn left_shift(&self, shift_by: i32) -> Self {
+        PointN([self.x() << shift_by, self.y() << shift_by])
+    }
+
+    #[inline]
+    fn right_shift(&self, shift_by: i32) -> Self {
+        PointN([self.x() >> shift_by, self.y() >> shift_by])
+    }
+
+    fn basis() -> Vec<Self> {
+        vec![PointN([1, 0]), PointN([0, 1])]
+    }
+
     fn corner_offsets() -> Vec<Self> {
         vec![
             PointN([0, 0]),
@@ -232,5 +246,28 @@ impl Div<Point2i> for Point2i {
 
     fn div(self, rhs: Point2i) -> Self {
         self.vector_div_floor(&rhs)
+    }
+}
+
+#[cfg(feature = "nalg")]
+pub mod nalgebra_conversions {
+    use super::*;
+
+    use nalgebra as na;
+
+    impl From<Point2i> for na::Point2<i32> {
+        fn from(p: Point2i) -> Self {
+            na::Point2::new(p.x(), p.y())
+        }
+    }
+
+    impl From<Point2i> for na::Point2<f32> {
+        fn from(p: Point2i) -> Self {
+            na::Point2::new(p.x() as f32, p.y() as f32)
+        }
+    }
+
+    pub fn voxel_containing_point2(p: &na::Point2<f32>) -> Point2i {
+        PointN([p.x as i32, p.y as i32])
     }
 }

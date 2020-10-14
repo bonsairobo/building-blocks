@@ -6,7 +6,16 @@ edition = "2018"
 
 description = "The core data types for defining 2D and 3D integer lattices."
 
+[features]
+default = []
+
+# Provides type conversions.
+nalg = ["nalgebra"]
+
 [dependencies]
 itertools = "0.9"
 num = "0.3"
 serde = { version = "1.0", features = ["derive"] }
+
+# Optional, feature-gated.
+nalgebra = { version = "0.22", optional = true }

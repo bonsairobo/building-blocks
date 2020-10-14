@@ -24,3 +24,9 @@ pub mod prelude {
         Point2, Point2i, Point3, Point3i, PointN,
     };
 }
+
+#[cfg(feature = "nalg")]
+pub use point2::nalgebra_conversions::voxel_containing_point2;
+
+#[cfg(feature = "nalg")]
+pub use point3::nalgebra_conversions::voxel_containing_point3;

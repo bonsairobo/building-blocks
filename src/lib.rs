@@ -27,6 +27,9 @@ pub use building_blocks_image as image;
 #[cfg(feature = "mesh")]
 pub use building_blocks_mesh as mesh;
 
+#[cfg(feature = "partition")]
+pub use building_blocks_partition as partition;
+
 #[cfg(feature = "procgen")]
 pub use building_blocks_procgen as procgen;
 

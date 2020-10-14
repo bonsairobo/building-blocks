@@ -1,17 +1,17 @@
 use building_blocks_core::prelude::*;
-use building_blocks_partition::octree::{octree_edge_length, Octree};
+use building_blocks_partition::octree::Octree;
 use building_blocks_storage::{prelude::*, IsEmpty};
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 fn octree_from_array_sphere(c: &mut Criterion) {
     let mut group = c.benchmark_group("octree_from_array_sphere");
-    for root_level in [3, 4, 5].iter() {
-        let edge_len = octree_edge_length(*root_level);
+    for power in [4, 5, 6].iter() {
+        let edge_len = 1 << *power;
         group.bench_with_input(
             BenchmarkId::from_parameter(edge_len),
-            &(root_level, edge_len),
-            |b, &(&root_level, edge_len)| {
+            &(power, edge_len),
+            |b, &(&power, edge_len)| {
                 b.iter_with_setup(
                     || {
                         let sphere_radius = edge_len / 2;
@@ -31,9 +31,9 @@ fn octree_from_array_sphere(c: &mut Criterion) {
                             }
                         });
 
-                        (map, root_level)
+                        (map, power)
                     },
-                    |(map, root_level)| Octree::from_array(root_level, &map),
+                    |(map, power)| Octree::from_array(power, &map),
                 );
             },
         );
@@ -43,12 +43,12 @@ fn octree_from_array_sphere(c: &mut Criterion) {
 
 fn full_octree(c: &mut Criterion) {
     let mut group = c.benchmark_group("full_octree");
-    for root_level in [3, 4, 5].iter() {
-        let edge_len = octree_edge_length(*root_level);
+    for power in [4, 5, 6].iter() {
+        let edge_len = 1 << *power;
         group.bench_with_input(
             BenchmarkId::from_parameter(edge_len),
-            &(root_level, edge_len),
-            |b, &(&root_level, edge_len)| {
+            &(power, edge_len),
+            |b, &(&power, edge_len)| {
                 b.iter_with_setup(
                     || {
                         let map = Array3::fill(
@@ -56,9 +56,9 @@ fn full_octree(c: &mut Criterion) {
                             Voxel(true),
                         );
 
-                        (map, root_level)
+                        (map, power)
                     },
-                    |(map, root_level)| Octree::from_array(root_level, &map),
+                    |(map, power)| Octree::from_array(power, &map),
                 );
             },
         );

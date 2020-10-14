@@ -34,9 +34,11 @@
 //! let local_cache = LocalChunkCache::new();
 //! let reader = ChunkMapReader3::new(&map, &local_cache);
 //! for chunk_key in chunk_keys_to_update.into_iter() {
+//!     // It's crucial that we pad the chunk so we have access to adjacent points during meshing.
 //!     let padded_chunk_extent = map.extent_for_chunk_at_key(&chunk_key).padded(1);
 //!     let mut padded_chunk = Array3::fill(padded_chunk_extent, 0.0);
 //!     copy_extent(&padded_chunk_extent, &reader, &mut padded_chunk);
+//!
 //!     let mut sn_buffer = SurfaceNetsBuffer::new(padded_chunk_extent.num_points());
 //!     surface_nets(&padded_chunk, &padded_chunk_extent, &mut sn_buffer);
 //!     // Do something with the mesh output...

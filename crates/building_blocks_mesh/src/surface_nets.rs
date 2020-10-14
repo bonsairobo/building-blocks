@@ -1,4 +1,8 @@
-//! The Surface Nets smooth voxel meshing algorithm.
+//! The Naive Surface Nets smooth voxel meshing algorithm.
+//!
+//! For an in-depth explanation of the algorithm, read here:
+//!
+//! https://medium.com/@bonsairobo/smooth-voxel-mapping-a-technical-deep-dive-on-real-time-surface-nets-and-texturing-ef06d0f8ca14
 //!
 //! The `surface_nets` function is designed to be used with a `ChunkMap`, such that each chunk will
 //! have its own mesh. In order to update the mesh for a chunk, you must copy not only the chunk,

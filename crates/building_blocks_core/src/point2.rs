@@ -267,7 +267,7 @@ pub mod nalgebra_conversions {
         }
     }
 
-    pub fn voxel_containing_point2(p: &na::Point2<f32>) -> Point2i {
+    pub fn pixel_containing_point2(p: &na::Point2<f32>) -> Point2i {
         PointN([p.x as i32, p.y as i32])
     }
 }

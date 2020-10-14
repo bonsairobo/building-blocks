@@ -26,7 +26,7 @@ pub mod prelude {
 }
 
 #[cfg(feature = "nalg")]
-pub use point2::nalgebra_conversions::voxel_containing_point2;
+pub use point2::nalgebra_conversions::pixel_containing_point2;
 
 #[cfg(feature = "nalg")]
 pub use point3::nalgebra_conversions::voxel_containing_point3;

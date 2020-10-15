@@ -30,6 +30,7 @@ where
         }
     }
 
+    /// Inserts the octree, replacing any old octree at `key` and returning it.
     pub fn insert(&mut self, key: K, octree: Octree) -> Option<Octree> {
         let aabb = octree.octant().aabb();
         let new_leaf_id = self.dbvt.insert(DBVTLeaf::new(aabb, octree));

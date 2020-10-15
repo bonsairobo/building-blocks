@@ -1,6 +1,6 @@
 //! The `Octree` type is a memory-efficient set of points.
 //!
-//! The typical workflow for using an `Octree` is to construct it from an `Array3`, then place it
+//! The typical workflow for using an `Octree` is to construct it from an `Array3`, then insert it
 //! into an `OctreeDBVT` in order to perform spatial queries like raycasting.
 
 use building_blocks_core::prelude::*;
@@ -12,7 +12,7 @@ use fnv::FnvHashMap;
 ///
 /// The octree is a cube shape and the edge lengths can only be a power of 2, at most 64. When an
 /// entire octant is full, it will be stored in a collapsed representation, so the leaves of the
-/// tree can be differently sized cubes.
+/// tree can be differently sized octants.
 pub struct Octree {
     extent: Extent3i,
     root_level: u8,
@@ -131,7 +131,7 @@ impl Octree {
         !self.root_exists
     }
 
-    /// Visit every octant of the octree.
+    /// Visit every non-empty octant of the octree.
     pub fn visit(&self, visitor: &mut impl OctreeVisitor) -> VisitStatus {
         if !self.root_exists {
             return VisitStatus::Continue;
@@ -259,8 +259,8 @@ impl LocationCode {
     }
 }
 
-/// A cube-shaped which is an octant at some level of an octree. Represents a totally full set of
-/// points.
+/// A cube-shaped extent which is an octant at some level of an octree. As a leaf node, it
+/// represents a totally full set of points.
 #[derive(Clone, Copy)]
 pub struct Octant {
     pub minimum: Point3i,

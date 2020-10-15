@@ -40,8 +40,11 @@ where
 
 #[derive(Clone, Debug)]
 pub struct NearestVoxelRayCastResult {
+    /// The point of the first voxel to intersect the ray.
     pub point: Point3i,
+    /// The axis-aligned bounding box of the voxel at `point`.
     pub aabb: AABB<f32>,
+    /// The time of impact of the ray and voxel.
     pub toi: f32,
 }
 

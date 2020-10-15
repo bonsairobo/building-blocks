@@ -133,6 +133,7 @@ where
     V: Array<[i32; 3]> + GetUncheckedRefRelease<Stride, T>,
     T: SignedDistanceVoxel,
 {
+    output.clear();
     estimate_surface(sdf, extent, output);
     make_all_quads(sdf, &extent, output);
 }

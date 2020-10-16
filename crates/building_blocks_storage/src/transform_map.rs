@@ -159,7 +159,7 @@ impl<'a, F, S, N, T> ReadExtent<'a, N> for TransformMap<'a, ArrayN<N, S>, F>
 where
     Self: ArrayExtent<N>,
     F: 'a + Fn(S) -> T,
-    PointN<N>: Point,
+    PointN<N>: IntegerPoint,
 {
     type Src = ArrayCopySrc<Self>;
     type SrcIter = Once<(ExtentN<N>, Self::Src)>;
@@ -183,7 +183,7 @@ where
     S: Copy,
     T: 'a,
     M: Clone,
-    PointN<N>: Hash + Point,
+    PointN<N>: Point + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
 {
     type Src = TransformChunkCopySrc<'a, F, S, N, T>;

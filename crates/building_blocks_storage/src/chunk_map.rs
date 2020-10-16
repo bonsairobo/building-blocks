@@ -80,7 +80,7 @@ use crate::{
 };
 
 use building_blocks_core::{
-    bounding_extent, ExtentN, IntegerExtent, Point, Point2i, Point3i, PointN,
+    bounding_extent, ExtentN, IntegerExtent, IntegerPoint, Ones, Point, Point2i, Point3i, PointN,
 };
 
 use compressible_map::{
@@ -236,7 +236,7 @@ impl<N, T, M> ChunkMap<N, T, M>
 where
     T: Copy,
     M: Clone,
-    PointN<N>: Point + ChunkShape<N> + Hash,
+    PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
 {
     /// Creates an empty map.
@@ -529,7 +529,7 @@ impl<N, T> AmbientExtent<N, T> {
 /// Returns the extent of the chunk at `key`.
 pub fn extent_for_chunk_at_key<N>(chunk_shape: &PointN<N>, key: &PointN<N>) -> ExtentN<N>
 where
-    PointN<N>: Point,
+    PointN<N>: Copy,
 {
     ExtentN::from_min_and_shape(*key, *chunk_shape)
 }
@@ -540,7 +540,7 @@ pub fn chunk_key_iter<N>(
     extent: &ExtentN<N>,
 ) -> impl Iterator<Item = PointN<N>>
 where
-    PointN<N>: Point,
+    PointN<N>: Point + Ones,
     ExtentN<N>: IntegerExtent<N>,
 {
     let key_min = extent.minimum / chunk_shape;
@@ -562,7 +562,7 @@ impl<N, T, M> GetMut<&PointN<N>> for ChunkMap<N, T, M>
 where
     T: Copy,
     M: Clone,
-    PointN<N>: Point + ChunkShape<N> + Hash,
+    PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: Array<N>,
 {
@@ -579,7 +579,7 @@ impl<'a, N, T, M> GetRef<&PointN<N>> for ChunkMapReader<'a, N, T, M>
 where
     T: Copy,
     M: Clone,
-    PointN<N>: Point + ChunkShape<N> + Hash,
+    PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: Array<N>,
 {
@@ -599,7 +599,7 @@ where
     Self: for<'b> GetRef<&'b PointN<N>, Data = T>,
     T: Copy,
     M: Clone,
-    PointN<N>: Point + Hash,
+    PointN<N>: Point + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
 {
     type Data = T;
@@ -620,7 +620,7 @@ impl<'a, N, T, M> ForEachRef<N, PointN<N>> for ChunkMapReader<'a, N, T, M>
 where
     T: Copy,
     M: Clone,
-    PointN<N>: Point + ChunkShape<N> + Hash,
+    PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: Array<N> + ForEachRef<N, PointN<N>, Data = T>,
 {
@@ -656,7 +656,7 @@ impl<'a, N, T, M> ForEachMut<N, PointN<N>> for ChunkMap<N, T, M>
 where
     T: Copy,
     M: Clone,
-    PointN<N>: Point + ChunkShape<N> + Hash,
+    PointN<N>: Point + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: ForEachMut<N, PointN<N>, Data = T>,
 {
@@ -696,7 +696,7 @@ where
     T: Copy,
     M: Clone,
     ArrayN<N, T>: Array<N>,
-    PointN<N>: Point + ChunkShape<N> + Hash,
+    PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
 {
     type Src = ArrayChunkCopySrc<'a, N, T>;
@@ -739,7 +739,7 @@ where
     T: Copy,
     M: Clone,
     Src: Copy,
-    PointN<N>: Point + Hash,
+    PointN<N>: Point + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: WriteExtent<N, Src>,
 {

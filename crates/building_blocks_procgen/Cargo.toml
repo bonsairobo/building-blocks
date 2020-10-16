@@ -7,3 +7,5 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+building_blocks_core = { path = "../building_blocks_core", version = "0.1" }
+building_blocks_storage = { path = "../building_blocks_storage", version = "0.1" }

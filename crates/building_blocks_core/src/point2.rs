@@ -1,6 +1,6 @@
 use crate::{
-    point::{Bounded, PointOps, SmallOne, SmallZero},
-    IntegerPoint, Point, PointN,
+    point::SmallOne, Bounded, Distance, DotProduct, IntegerPoint, Norm, Ones, Point, PointN,
+    SmallZero,
 };
 
 use core::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
@@ -11,6 +11,8 @@ use std::cmp::{max, min, Ordering};
 pub type Point2<T> = PointN<[T; 2]>;
 /// A 2-dimensional point with scalar type `i32`.
 pub type Point2i = PointN<[i32; 2]>;
+/// A 2-dimensional point with scalar type `f32`.
+pub type Point2f = PointN<[f32; 2]>;
 
 impl<T> Point2<T> {
     pub fn x_mut(&mut self) -> &mut T {
@@ -33,6 +35,10 @@ where
     pub fn y(&self) -> T {
         self.0[1]
     }
+
+    pub fn yx(&self) -> Self {
+        PointN([self.y(), self.x()])
+    }
 }
 
 impl<T> Point2<T>
@@ -48,40 +54,49 @@ where
     }
 }
 
-impl PointOps for Point2i {
-    type Scalar = i32;
+impl<T> Bounded for Point2<T>
+where
+    T: Bounded,
+{
+    const MAX: Self = PointN([T::MAX; 2]);
+    const MIN: Self = PointN([T::MIN; 2]);
 }
 
-impl<T> Point for Point2<T>
+impl Point for Point2i {
+    type Scalar = i32;
+
+    fn basis() -> Vec<Self> {
+        vec![PointN([1, 0]), PointN([0, 1])]
+    }
+}
+
+impl Point for Point2f {
+    type Scalar = f32;
+
+    fn basis() -> Vec<Self> {
+        vec![PointN([1.0, 0.0]), PointN([0.0, 1.0])]
+    }
+}
+
+impl<T> SmallZero for Point2<T>
 where
-    T: Copy
-        + SmallZero
-        + SmallOne
-        + Signed
-        + Add<Output = T>
-        + Mul<Output = T>
-        + Pow<usize, Output = T>
-        + Ord
-        + Bounded,
-    Point2<T>: PointOps<Scalar = T>,
+    T: SmallZero,
 {
     const ZERO: Self = PointN([T::ZERO; 2]);
+}
+
+impl<T> Ones for Point2<T>
+where
+    T: SmallOne,
+{
     const ONES: Self = PointN([T::ONE; 2]);
-    const MIN: Self = PointN([T::MIN; 2]);
-    const MAX: Self = PointN([T::MAX; 2]);
+}
 
-    fn dot(&self, other: &Self) -> Self::Scalar {
-        self.x() * other.x() + self.y() * other.y()
-    }
-
-    fn join(&self, other: &Self) -> Self {
-        PointN([max(self.x(), other.x()), max(self.y(), other.y())])
-    }
-
-    fn meet(&self, other: &Self) -> Self {
-        PointN([min(self.x(), other.x()), min(self.y(), other.y())])
-    }
-
+impl<T> Distance for Point2<T>
+where
+    T: Copy + Signed + Add<Output = T> + Pow<i32, Output = T>,
+    Point2<T>: Point<Scalar = T>,
+{
     fn l1_distance(&self, other: &Self) -> Self::Scalar {
         let diff = *self - *other;
 
@@ -95,7 +110,41 @@ where
     }
 }
 
+impl Norm for Point2i {
+    fn norm(&self) -> f32 {
+        (self.dot(&self) as f32).sqrt()
+    }
+}
+
+impl Norm for Point2f {
+    fn norm(&self) -> f32 {
+        self.dot(&self).sqrt()
+    }
+}
+
+impl<T> DotProduct for Point2<T>
+where
+    T: Copy + Add<Output = T> + Mul<Output = T>,
+{
+    type Scalar = T;
+
+    fn dot(&self, other: &Self) -> Self::Scalar {
+        self.x() * other.x() + self.y() * other.y()
+    }
+}
+
 impl IntegerPoint for Point2i {
+    const MIN: Self = PointN([i32::MIN; 2]);
+    const MAX: Self = PointN([i32::MAX; 2]);
+
+    fn join(&self, other: &Self) -> Self {
+        PointN([max(self.x(), other.x()), max(self.y(), other.y())])
+    }
+
+    fn meet(&self, other: &Self) -> Self {
+        PointN([min(self.x(), other.x()), min(self.y(), other.y())])
+    }
+
     #[inline]
     fn left_shift(&self, shift_by: i32) -> Self {
         PointN([self.x() << shift_by, self.y() << shift_by])
@@ -104,10 +153,6 @@ impl IntegerPoint for Point2i {
     #[inline]
     fn right_shift(&self, shift_by: i32) -> Self {
         PointN([self.x() >> shift_by, self.y() >> shift_by])
-    }
-
-    fn basis() -> Vec<Self> {
-        vec![PointN([1, 0]), PointN([0, 1])]
     }
 
     fn corner_offsets() -> Vec<Self> {
@@ -239,6 +284,22 @@ impl Div<i32> for Point2i {
     }
 }
 
+impl Div<f32> for Point2f {
+    type Output = Self;
+
+    fn div(self, rhs: f32) -> Self {
+        Self([self.x() / rhs, self.y() / rhs])
+    }
+}
+
+impl Div<Self> for Point2f {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self {
+        Self([self.x() / rhs.x(), self.y() / rhs.y()])
+    }
+}
+
 // Use specialized implementation for integers because the default Div impl rounds towards zero,
 // which is not what we want.
 impl Div<Point2i> for Point2i {
@@ -246,6 +307,12 @@ impl Div<Point2i> for Point2i {
 
     fn div(self, rhs: Point2i) -> Self {
         self.vector_div_floor(&rhs)
+    }
+}
+
+impl From<Point2i> for Point2f {
+    fn from(p: Point2i) -> Self {
+        PointN([p.x() as f32, p.y() as f32])
     }
 }
 
@@ -258,6 +325,22 @@ pub mod nalgebra_conversions {
     impl From<Point2i> for na::Point2<i32> {
         fn from(p: Point2i) -> Self {
             na::Point2::new(p.x(), p.y())
+        }
+    }
+    impl From<Point2f> for na::Point2<f32> {
+        fn from(p: Point2f) -> Self {
+            na::Point2::new(p.x(), p.y())
+        }
+    }
+
+    impl From<na::Point2<i32>> for Point2i {
+        fn from(p: na::Point2<i32>) -> Self {
+            PointN([p.x, p.y])
+        }
+    }
+    impl From<na::Point2<f32>> for Point2f {
+        fn from(p: na::Point2<f32>) -> Self {
+            PointN([p.x, p.y])
         }
     }
 

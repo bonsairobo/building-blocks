@@ -1,4 +1,4 @@
-use building_blocks_core::{point::PointOps, prelude::*};
+use building_blocks_core::{point::Point, prelude::*};
 use building_blocks_storage::{access::GetUncheckedRefRelease, prelude::*, IsEmpty};
 
 use core::cmp::Ordering;
@@ -56,7 +56,7 @@ pub fn greedy_path<N, C>(
 ) -> (bool, Vec<PointN<N>>)
 where
     C: Copy + Ord,
-    PointN<N>: core::hash::Hash + IntegerPoint,
+    PointN<N>: core::hash::Hash + Eq + IntegerPoint,
 {
     if !predicate(start) {
         return (false, vec![]);
@@ -90,8 +90,8 @@ pub fn greedy_path_with_l1_heuristic<N>(
     max_iterations: usize,
 ) -> (bool, Vec<PointN<N>>)
 where
-    PointN<N>: core::hash::Hash + IntegerPoint,
-    <PointN<N> as PointOps>::Scalar: Ord,
+    PointN<N>: core::hash::Hash + Eq + Distance + IntegerPoint,
+    <PointN<N> as Point>::Scalar: Ord,
 {
     let heuristic = |p: &PointN<N>| finish.l1_distance(p);
 

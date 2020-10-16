@@ -1,4 +1,7 @@
-use crate::{point::PointOps, Point, PointN};
+use crate::{
+    point::{IntegerPoint, Ones, Point},
+    PointN,
+};
 
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 use serde::{Deserialize, Serialize};
@@ -49,6 +52,26 @@ where
         self.minimum <= *p && *p < lub
     }
 
+    pub fn add_to_shape(&self, delta: PointN<N>) -> Self {
+        Self::from_min_and_shape(self.minimum, self.shape + delta)
+    }
+
+    pub fn padded(&self, pad_amount: <PointN<N> as Point>::Scalar) -> Self
+    where
+        PointN<N>: Ones,
+        <PointN<N> as Point>::Scalar: Add<Output = <PointN<N> as Point>::Scalar>,
+    {
+        Self::from_min_and_shape(
+            self.minimum - (PointN::ONES * pad_amount),
+            self.shape + (PointN::ONES * (pad_amount + pad_amount)),
+        )
+    }
+}
+
+impl<N> ExtentN<N>
+where
+    PointN<N>: IntegerPoint,
+{
     /// Returns the extent containing only the points in both `self` and `other`.
     pub fn intersection(&self, other: &Self) -> Self {
         let minimum = self.minimum.join(&other.minimum);
@@ -64,25 +87,11 @@ where
     {
         self.intersection(other).eq(self)
     }
-
-    pub fn add_to_shape(&self, delta: PointN<N>) -> Self {
-        Self::from_min_and_shape(self.minimum, self.shape + delta)
-    }
-
-    pub fn padded(&self, pad_amount: <PointN<N> as PointOps>::Scalar) -> Self
-    where
-        <PointN<N> as PointOps>::Scalar: Add<Output = <PointN<N> as PointOps>::Scalar>,
-    {
-        Self::from_min_and_shape(
-            self.minimum - (PointN::ONES * pad_amount),
-            self.shape + (PointN::ONES * (pad_amount + pad_amount)),
-        )
-    }
 }
 
 impl<N> ExtentN<N>
 where
-    PointN<N>: Point,
+    PointN<N>: Point + Ones,
     ExtentN<N>: IntegerExtent<N>,
 {
     /// An alternative representation of an integer extent as the minimum point and maximum point.
@@ -180,7 +189,7 @@ where
 pub fn bounding_extent<N, I>(points: I) -> ExtentN<N>
 where
     I: Iterator<Item = PointN<N>>,
-    PointN<N>: Point,
+    PointN<N>: IntegerPoint,
     ExtentN<N>: IntegerExtent<N>,
 {
     let mut min_point = PointN::MAX;

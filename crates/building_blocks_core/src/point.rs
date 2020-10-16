@@ -44,77 +44,24 @@ use serde::{Deserialize, Serialize};
 #[derive(Copy, Clone, Debug, Deserialize, Default, Eq, Hash, PartialEq, Serialize)]
 pub struct PointN<N>(pub N);
 
-/// A subtrait that bundles op traits that all `PointN<N>` (and its components) should have.
-pub trait PointOps:
-    Copy
-    + Eq
-    + Add<Output = Self>
-    + Sub<Output = Self>
-    + Mul<Self, Output = Self>
+/// A trait that bundles op traits that all `PointN<N>` (and its components) should have.
+pub trait Point:
+    Add<Output = Self>
+    + Bounded
+    + Copy
+    + Div<<Self as Point>::Scalar, Output = Self>
     + Div<Self, Output = Self>
-    + Mul<<Self as PointOps>::Scalar, Output = Self>
-    + Div<<Self as PointOps>::Scalar, Output = Self>
+    + Mul<<Self as Point>::Scalar, Output = Self>
+    + Mul<Self, Output = Self>
+    + Ones
     + PartialOrd
     + Sized
+    + Sub<Output = Self>
+    + Zero
 {
     type Scalar: Copy;
-}
-
-/// A subtrait of `PointOps` which also includes methods that must be implemented specially by each
-/// `PointN<N>`. The goal is only to generalize over the number of dimensions.
-pub trait Point: PointOps {
-    /// A point of all ones.
-    const ONES: Self;
-    /// A point of all zeros, algebraically the "zero element."
-    const ZERO: Self;
-
-    /// The least point.
-    const MIN: Self;
-    /// The greatest point.
-    const MAX: Self;
-
-    /// Component-wise maximum.
-    fn join(&self, other: &Self) -> Self;
-
-    /// Component-wise minimum.
-    fn meet(&self, other: &Self) -> Self;
-
-    /// The vector dot product.
-    fn dot(&self, other: &Self) -> Self::Scalar;
-
-    /// The L1 distance between points.
-    fn l1_distance(&self, other: &Self) -> Self::Scalar;
-
-    /// The square of the L2 (Euclidean) distance between points.
-    fn l2_distance_squared(&self, other: &Self) -> Self::Scalar;
-}
-
-impl<N> Zero for PointN<N>
-where
-    PointN<N>: Point,
-{
-    fn zero() -> Self {
-        Self::ZERO
-    }
-
-    fn is_zero(&self) -> bool {
-        *self == Self::zero()
-    }
-}
-
-pub trait IntegerPoint: Point {
-    fn left_shift(&self, shift_by: Self::Scalar) -> Self;
-    fn right_shift(&self, shift_by: Self::Scalar) -> Self;
 
     fn basis() -> Vec<Self>;
-
-    fn corner_offsets() -> Vec<Self>;
-
-    /// https://en.wikipedia.org/wiki/Von_Neumann_neighborhood
-    fn von_neumann_offsets() -> Vec<Self>;
-
-    /// https://en.wikipedia.org/wiki/Moore_neighborhood
-    fn moore_offsets() -> Vec<Self>;
 }
 
 impl<N> AddAssign for PointN<N>
@@ -137,6 +84,67 @@ where
     }
 }
 
+pub trait Ones {
+    /// A point of all ones.
+    const ONES: Self;
+}
+
+pub trait Distance: Point {
+    /// The L1 distance between points.
+    fn l1_distance(&self, other: &Self) -> Self::Scalar;
+
+    /// The square of the L2 (Euclidean) distance between points.
+    fn l2_distance_squared(&self, other: &Self) -> Self::Scalar;
+}
+
+pub trait Norm {
+    fn norm(&self) -> f32;
+}
+
+impl<N> Zero for PointN<N>
+where
+    Self: Point + SmallZero,
+{
+    fn zero() -> Self {
+        Self::ZERO
+    }
+
+    fn is_zero(&self) -> bool {
+        *self == Self::zero()
+    }
+}
+
+pub trait DotProduct {
+    type Scalar: Copy;
+
+    /// The vector dot product.
+    fn dot(&self, other: &Self) -> Self::Scalar;
+}
+
+pub trait IntegerPoint: Point {
+    /// The least point.
+    const MIN: Self;
+    /// The greatest point.
+    const MAX: Self;
+
+    /// Component-wise maximum.
+    fn join(&self, other: &Self) -> Self;
+
+    /// Component-wise minimum.
+    fn meet(&self, other: &Self) -> Self;
+
+    fn left_shift(&self, shift_by: Self::Scalar) -> Self;
+    fn right_shift(&self, shift_by: Self::Scalar) -> Self;
+
+    fn corner_offsets() -> Vec<Self>;
+
+    /// https://en.wikipedia.org/wiki/Von_Neumann_neighborhood
+    fn von_neumann_offsets() -> Vec<Self>;
+
+    /// https://en.wikipedia.org/wiki/Moore_neighborhood
+    fn moore_offsets() -> Vec<Self>;
+}
+
 // `Zero` trait doesn't allow associated constants for zero because of bignums.
 pub trait SmallZero: Copy {
     const ZERO: Self;
@@ -154,6 +162,13 @@ impl SmallOne for i32 {
     const ONE: i32 = 1;
 }
 
+impl SmallZero for f32 {
+    const ZERO: f32 = 0.0;
+}
+impl SmallOne for f32 {
+    const ONE: f32 = 1.0;
+}
+
 pub trait Bounded: Copy {
     const MIN: Self;
     const MAX: Self;
@@ -162,4 +177,9 @@ pub trait Bounded: Copy {
 impl Bounded for i32 {
     const MIN: Self = std::i32::MIN;
     const MAX: Self = std::i32::MAX;
+}
+
+impl Bounded for f32 {
+    const MIN: Self = std::f32::MIN;
+    const MAX: Self = std::f32::MAX;
 }

@@ -512,7 +512,6 @@ macro_rules! impl_array_for_each {
         impl<N, T> ForEachRef<N, $coords> for ArrayN<N, T>
         where
             Self: Sized + Array<N> + GetRef<Stride, Data = T> + GetUncheckedRef<Stride, Data = T>,
-            PointN<N>: Point,
         {
             type Data = T;
 
@@ -526,7 +525,6 @@ macro_rules! impl_array_for_each {
         impl<N, T> ForEachMut<N, $coords> for ArrayN<N, T>
         where
             Self: Sized + Array<N> + GetMut<Stride, Data = T> + GetUncheckedMut<Stride, Data = T>,
-            PointN<N>: Point,
             ExtentN<N>: Copy,
         {
             type Data = T;
@@ -583,7 +581,7 @@ impl<'a, M, F> Deref for ArrayCopySrc<TransformMap<'a, M, F>> {
 
 impl<'a, N: 'a, T: 'a> ReadExtent<'a, N> for ArrayN<N, T>
 where
-    PointN<N>: Point,
+    PointN<N>: IntegerPoint,
 {
     type Src = ArrayCopySrc<&'a ArrayN<N, T>>;
     type SrcIter = Once<(ExtentN<N>, Self::Src)>;
@@ -600,7 +598,7 @@ where
     Self: Array<N>,
     ArrayCopySrc<Ms>: Deref<Target = M>,
     M: 'a + ArrayExtent<N> + GetUncheckedRelease<Stride, T>,
-    PointN<N>: Point,
+    PointN<N>: IntegerPoint,
     ExtentN<N>: Copy,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src_array: ArrayCopySrc<Ms>) {
@@ -626,7 +624,6 @@ impl<M, N, T> WriteExtent<N, ChunkCopySrc<M, N, T>> for ArrayN<N, T>
 where
     T: Clone,
     Self: Array<N> + WriteExtent<N, ArrayCopySrc<M>>,
-    PointN<N>: Point,
     ExtentN<N>: Copy,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<M, N, T>) {
@@ -645,9 +642,9 @@ where
 impl<'a, N, F, T: 'a + Clone> WriteExtent<N, F> for ArrayN<N, T>
 where
     F: Fn(&PointN<N>) -> T,
+    PointN<N>: IntegerPoint,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: for<'r> GetUncheckedMutRelease<&'r PointN<N>, T>,
-    PointN<N>: Point,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: F) {
         let in_bounds_extent = extent.intersection(self.extent());

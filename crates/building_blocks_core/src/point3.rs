@@ -1,6 +1,6 @@
 use crate::{
-    point::{Bounded, PointOps, SmallOne, SmallZero},
-    IntegerPoint, Point, PointN,
+    point::SmallOne, Bounded, Distance, DotProduct, IntegerPoint, Norm, Ones, Point, Point2,
+    PointN, SmallZero,
 };
 
 use core::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
@@ -11,6 +11,8 @@ use std::cmp::{max, min, Ordering};
 pub type Point3<T> = PointN<[T; 3]>;
 /// A 3-dimensional point with scalar type `i32`.
 pub type Point3i = PointN<[i32; 3]>;
+/// A 3-dimensional point with scalar type `f32`.
+pub type Point3f = PointN<[f32; 3]>;
 
 impl<T> PointN<[T; 3]> {
     pub fn x_mut(&mut self) -> &mut T {
@@ -41,6 +43,42 @@ where
     pub fn z(&self) -> T {
         self.0[2]
     }
+
+    pub fn xy(&self) -> Point2<T> {
+        PointN([self.x(), self.y()])
+    }
+
+    pub fn yx(&self) -> Point2<T> {
+        PointN([self.y(), self.x()])
+    }
+
+    pub fn yz(&self) -> Point2<T> {
+        PointN([self.y(), self.z()])
+    }
+
+    pub fn zy(&self) -> Point2<T> {
+        PointN([self.z(), self.y()])
+    }
+
+    pub fn zx(&self) -> Point2<T> {
+        PointN([self.z(), self.x()])
+    }
+
+    pub fn xz(&self) -> Point2<T> {
+        PointN([self.x(), self.z()])
+    }
+
+    pub fn yzx(&self) -> Point3<T> {
+        PointN([self.y(), self.z(), self.x()])
+    }
+
+    pub fn zxy(&self) -> Point3<T> {
+        PointN([self.z(), self.x(), self.y()])
+    }
+
+    pub fn zyx(&self) -> Point3<T> {
+        PointN([self.z(), self.y(), self.x()])
+    }
 }
 
 impl<T> Point3<T>
@@ -64,31 +102,92 @@ where
     }
 }
 
-impl PointOps for Point3i {
-    type Scalar = i32;
+impl<T> Bounded for Point3<T>
+where
+    T: Bounded,
+{
+    const MAX: Self = PointN([T::MAX; 3]);
+    const MIN: Self = PointN([T::MIN; 3]);
 }
 
-impl<T> Point for Point3<T>
+impl Point for Point3i {
+    type Scalar = i32;
+
+    fn basis() -> Vec<Self> {
+        vec![PointN([1, 0, 0]), PointN([0, 1, 0]), PointN([0, 0, 1])]
+    }
+}
+
+impl Point for Point3f {
+    type Scalar = f32;
+
+    fn basis() -> Vec<Self> {
+        vec![
+            PointN([1.0, 0.0, 0.0]),
+            PointN([0.0, 1.0, 0.0]),
+            PointN([0.0, 0.0, 1.0]),
+        ]
+    }
+}
+
+impl<T> SmallZero for Point3<T>
 where
-    T: Copy
-        + SmallZero
-        + SmallOne
-        + Signed
-        + Add<Output = T>
-        + Mul<Output = T>
-        + Pow<usize, Output = T>
-        + Ord
-        + Bounded,
-    Point3<T>: PointOps<Scalar = T>,
+    T: SmallZero,
 {
     const ZERO: Self = PointN([T::ZERO; 3]);
+}
+
+impl<T> Ones for Point3<T>
+where
+    T: SmallOne,
+{
     const ONES: Self = PointN([T::ONE; 3]);
-    const MIN: Self = PointN([T::MIN; 3]);
-    const MAX: Self = PointN([T::MAX; 3]);
+}
+
+impl<T> Distance for Point3<T>
+where
+    T: Copy + Signed + Add<Output = T> + Pow<i32, Output = T>,
+    Point3<T>: Point<Scalar = T>,
+{
+    fn l1_distance(&self, other: &Self) -> Self::Scalar {
+        let diff = *self - *other;
+
+        diff.x().abs() + diff.y().abs() + diff.z().abs()
+    }
+
+    fn l2_distance_squared(&self, other: &Self) -> Self::Scalar {
+        let diff = *self - *other;
+
+        diff.x().pow(2) + diff.y().pow(2) + diff.z().pow(2)
+    }
+}
+
+impl Norm for Point3i {
+    fn norm(&self) -> f32 {
+        (self.dot(&self) as f32).sqrt()
+    }
+}
+
+impl Norm for Point3f {
+    fn norm(&self) -> f32 {
+        self.dot(&self).sqrt()
+    }
+}
+
+impl<T> DotProduct for Point3<T>
+where
+    T: Copy + Add<Output = T> + Mul<Output = T>,
+{
+    type Scalar = T;
 
     fn dot(&self, other: &Self) -> Self::Scalar {
         self.x() * other.x() + self.y() * other.y() + self.z() * other.z()
     }
+}
+
+impl IntegerPoint for Point3i {
+    const MIN: Self = PointN([i32::MIN; 3]);
+    const MAX: Self = PointN([i32::MAX; 3]);
 
     fn join(&self, other: &Self) -> Self {
         PointN([
@@ -106,20 +205,6 @@ where
         ])
     }
 
-    fn l1_distance(&self, other: &Self) -> Self::Scalar {
-        let diff = *self - *other;
-
-        diff.x().abs() + diff.y().abs() + diff.z().abs()
-    }
-
-    fn l2_distance_squared(&self, other: &Self) -> Self::Scalar {
-        let diff = *self - *other;
-
-        diff.x().pow(2) + diff.y().pow(2) + diff.z().pow(2)
-    }
-}
-
-impl IntegerPoint for Point3i {
     #[inline]
     fn left_shift(&self, shift_by: i32) -> Self {
         PointN([
@@ -136,10 +221,6 @@ impl IntegerPoint for Point3i {
             self.y() >> shift_by,
             self.z() >> shift_by,
         ])
-    }
-
-    fn basis() -> Vec<Self> {
-        vec![PointN([1, 0, 0]), PointN([0, 1, 0]), PointN([0, 0, 1])]
     }
 
     fn corner_offsets() -> Vec<Self> {
@@ -302,6 +383,22 @@ impl Div<i32> for Point3i {
     }
 }
 
+impl Div<f32> for Point3f {
+    type Output = Self;
+
+    fn div(self, rhs: f32) -> Self {
+        Self([self.x() / rhs, self.y() / rhs, self.z() / rhs])
+    }
+}
+
+impl Div<Self> for Point3f {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self {
+        Self([self.x() / rhs.x(), self.y() / rhs.y(), self.z() / rhs.z()])
+    }
+}
+
 // Use specialized implementation for integers because the default Div impl rounds towards zero,
 // which is not what we want.
 impl Div<Point3i> for Point3i {
@@ -309,6 +406,12 @@ impl Div<Point3i> for Point3i {
 
     fn div(self, rhs: Point3i) -> Self {
         self.vector_div_floor(&rhs)
+    }
+}
+
+impl From<Point3i> for Point3f {
+    fn from(p: Point3i) -> Self {
+        PointN([p.x() as f32, p.y() as f32, p.z() as f32])
     }
 }
 
@@ -321,6 +424,22 @@ pub mod nalgebra_conversions {
     impl From<Point3i> for na::Point3<i32> {
         fn from(p: Point3i) -> Self {
             na::Point3::new(p.x(), p.y(), p.z())
+        }
+    }
+    impl From<Point3f> for na::Point3<f32> {
+        fn from(p: Point3f) -> Self {
+            na::Point3::new(p.x(), p.y(), p.z())
+        }
+    }
+
+    impl From<na::Point3<i32>> for Point3i {
+        fn from(p: na::Point3<i32>) -> Self {
+            PointN([p.x, p.y, p.z])
+        }
+    }
+    impl From<na::Point3<f32>> for Point3f {
+        fn from(p: na::Point3<f32>) -> Self {
+            PointN([p.x, p.y, p.z])
         }
     }
 

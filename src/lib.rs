@@ -6,12 +6,10 @@
 //! - **image**: conversion of 2D lattice maps to/from images
 //! - **mesh**: 3D isosurface generation algorithms, smooth and cubic
 //! - **partition**: spatial queries on voxels, e.g. raycasting
+//! - **procgen**: procedural generation of lattice maps, including sampled SDFs, height maps, and cellular automata
 //! - **search**: search algorithms on lattice maps
 //! - **storage**: compressed storage for lattice maps, i.e. functions defined on `Z^2` and `Z^3`
 //! - **vox**: conversion of 3D lattice maps to/from VOX data format
-//!
-//! Upcoming:
-//! - **procgen**: procedural generation of lattice maps, including sampled SDFs, height maps, and cellular automata
 
 pub use building_blocks_core as core;
 pub use building_blocks_storage as storage;

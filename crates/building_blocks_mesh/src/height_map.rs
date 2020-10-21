@@ -36,7 +36,7 @@ impl HeightMapMeshBuffer {
 /// neighborhood. This means that points on the boundary of `extent` are not eligible as mesh
 /// vertices, but they are still required.
 ///
-/// This is illustrated in the ascii art below, where "b" is a boundary point and "i" is an interior
+/// This is illustrated in the ASCII art below, where "b" is a boundary point and "i" is an interior
 /// point. Line segments denote the edges of the mesh.
 ///
 /// ```text

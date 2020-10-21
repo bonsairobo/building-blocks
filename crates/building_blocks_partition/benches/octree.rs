@@ -4,8 +4,8 @@ use building_blocks_storage::{prelude::*, IsEmpty};
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
-fn octree_from_array_sphere(c: &mut Criterion) {
-    let mut group = c.benchmark_group("octree_from_array_sphere");
+fn octree_from_array3_sphere(c: &mut Criterion) {
+    let mut group = c.benchmark_group("octree_from_array3_sphere");
     for power in [4, 5, 6].iter() {
         let edge_len = 1 << *power;
         group.bench_with_input(
@@ -33,7 +33,7 @@ fn octree_from_array_sphere(c: &mut Criterion) {
 
                         (map, power)
                     },
-                    |(map, power)| Octree::from_array(power, &map),
+                    |(map, power)| Octree::from_array3(power, &map),
                 );
             },
         );
@@ -58,7 +58,7 @@ fn full_octree(c: &mut Criterion) {
 
                         (map, power)
                     },
-                    |(map, power)| Octree::from_array(power, &map),
+                    |(map, power)| Octree::from_array3(power, &map),
                 );
             },
         );
@@ -66,7 +66,7 @@ fn full_octree(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, octree_from_array_sphere, full_octree);
+criterion_group!(benches, octree_from_array3_sphere, full_octree);
 criterion_main!(benches);
 
 #[derive(Clone)]

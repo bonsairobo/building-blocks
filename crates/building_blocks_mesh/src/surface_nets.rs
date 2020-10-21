@@ -47,6 +47,8 @@
 //! }
 //! ```
 
+use super::PosNormMesh;
+
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{access::GetUncheckedRefRelease, prelude::*};
 
@@ -57,11 +59,11 @@ use building_blocks_storage::{access::GetUncheckedRefRelease, prelude::*};
 // ███████║╚██████╔╝██║  ██║██║     ██║  ██║╚██████╗███████╗
 // ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝
 
-pub trait SignedDistanceVoxel {
+pub trait SignedDistance {
     fn distance(&self) -> f32;
 }
 
-impl SignedDistanceVoxel for f32 {
+impl SignedDistance for f32 {
     fn distance(&self) -> f32 {
         *self
     }
@@ -69,15 +71,11 @@ impl SignedDistanceVoxel for f32 {
 
 /// The output buffers used by `surface_nets`. These buffers can be cleared and reused without
 /// reallocating memory.
+#[derive(Default)]
 pub struct SurfaceNetsBuffer {
-    /// The isosurface points. Parallel to `surface_points`.
-    pub positions: Vec<[f32; 3]>,
-    /// The isosurface normals. Parallel to `surface_points`. These are *not* normalized, since that
-    /// is done most efficiently on the GPU.
-    pub normals: Vec<[f32; 3]>,
-    /// All of the triangles in the mesh, wound counter-clockwise (right-hand rule).
-    pub indices: Vec<usize>,
-
+    /// The isosurface positions and normals. Parallel to `surface_points`. The normals are *not*
+    /// normalized, since that is done most efficiently on the GPU.
+    pub mesh: PosNormMesh,
     /// Global lattice coordinates of every voxel that intersects the isosurface.
     pub surface_points: Vec<Point3i>,
     /// Stride of every voxel that intersects the isosurface. Can be used with the
@@ -85,29 +83,18 @@ pub struct SurfaceNetsBuffer {
     pub surface_strides: Vec<Stride>,
 
     // Used to map back from voxel stride to vertex index.
-    voxel_to_index: Vec<usize>,
+    stride_to_index: Vec<usize>,
 }
 
 impl SurfaceNetsBuffer {
-    pub fn new(num_points: usize) -> Self {
-        Self {
-            positions: Vec::with_capacity(num_points),
-            normals: Vec::with_capacity(num_points),
-            // worst case 36 indices per cube, 8 corners per cube, 4.5 indices per corner
-            indices: Vec::with_capacity(5 * num_points),
-            surface_points: Vec::with_capacity(num_points),
-            surface_strides: Vec::with_capacity(num_points),
-            voxel_to_index: vec![0; num_points],
-        }
-    }
-
     /// Clears all of the buffers, but keeps the memory allocated for reuse.
-    pub fn clear(&mut self) {
-        self.positions.clear();
-        self.normals.clear();
-        self.indices.clear();
-        self.positions.clear();
-        self.positions.clear();
+    pub fn reset(&mut self, array_size: usize) {
+        self.mesh.clear();
+        self.surface_points.clear();
+        self.surface_strides.clear();
+
+        // Just make sure this buffer is big enough, whether or not we've used it before.
+        self.stride_to_index.resize(array_size, 0);
     }
 }
 
@@ -131,9 +118,10 @@ impl SurfaceNetsBuffer {
 pub fn surface_nets<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
     V: Array<[i32; 3]> + GetUncheckedRefRelease<Stride, T>,
-    T: SignedDistanceVoxel,
+    T: SignedDistance,
 {
-    output.clear();
+    output.reset(sdf.extent().num_points());
+
     estimate_surface(sdf, extent, output);
     make_all_quads(sdf, &extent, output);
 }
@@ -143,7 +131,7 @@ where
 fn estimate_surface<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
     V: Array<[i32; 3]> + GetUncheckedRefRelease<Stride, T>,
-    T: SignedDistanceVoxel,
+    T: SignedDistance,
 {
     // Precalculate these offsets to do faster linear indexing.
     let mut corner_offset_strides = [Stride(0); 8];
@@ -161,11 +149,11 @@ where
         }
 
         if let Some((position, normal)) = estimate_surface_in_voxel(sdf, &p, &corner_strides) {
-            output.voxel_to_index[p_stride.0] = output.positions.len();
+            output.stride_to_index[p_stride.0] = output.mesh.positions.len();
             output.surface_points.push(p);
             output.surface_strides.push(p_stride);
-            output.positions.push(position);
-            output.normals.push(normal);
+            output.mesh.positions.push(position);
+            output.mesh.normals.push(normal);
         }
     });
 }
@@ -197,7 +185,7 @@ fn estimate_surface_in_voxel<V, T>(
 ) -> Option<([f32; 3], [f32; 3])>
 where
     V: GetUncheckedRefRelease<Stride, T>,
-    T: SignedDistanceVoxel,
+    T: SignedDistance,
 {
     // Get the signed distance values at each corner of this cube.
     let mut dists = [0.0; 8];
@@ -228,8 +216,8 @@ where
         }
     }
 
-    // Calculate the normal as the gradient of the distance field. Don't bother making it a unit
-    // vector, since we'll do that on the GPU.
+    // Calculate the normal as the gradient of the distance field. Use central differencing. Don't
+    // bother making it a unit vector, since we'll do that on the GPU.
     let normal_x = (dists[0b001] + dists[0b011] + dists[0b101] + dists[0b111])
         - (dists[0b000] + dists[0b010] + dists[0b100] + dists[0b110]);
     let normal_y = (dists[0b010] + dists[0b011] + dists[0b110] + dists[0b111])
@@ -277,7 +265,7 @@ fn estimate_surface_edge_intersection(
 fn make_all_quads<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
     V: Array<[i32; 3]> + GetUncheckedRefRelease<Stride, T>,
-    T: SignedDistanceVoxel,
+    T: SignedDistance,
 {
     let mut xyz_strides = [Stride(0); 3];
     let xyz = [PointN([1, 0, 0]), PointN([0, 1, 0]), PointN([0, 0, 1])];
@@ -298,39 +286,39 @@ where
         if p.y() != min.y() && p.z() != min.z() && p.x() != max.x() {
             maybe_make_quad(
                 sdf,
-                &output.voxel_to_index,
-                &output.positions,
+                &output.stride_to_index,
+                &output.mesh.positions,
                 *p_stride,
                 *p_stride + xyz_strides[0],
                 xyz_strides[1],
                 xyz_strides[2],
-                &mut output.indices,
+                &mut output.mesh.indices,
             );
         }
         // Do edges parallel with the Y axis
         if p.x() != min.x() && p.z() != min.z() && p.y() != max.y() {
             maybe_make_quad(
                 sdf,
-                &output.voxel_to_index,
-                &output.positions,
+                &output.stride_to_index,
+                &output.mesh.positions,
                 *p_stride,
                 *p_stride + xyz_strides[1],
                 xyz_strides[2],
                 xyz_strides[0],
-                &mut output.indices,
+                &mut output.mesh.indices,
             );
         }
         // Do edges parallel with the Z axis
         if p.x() != min.x() && p.y() != min.y() && p.z() != max.z() {
             maybe_make_quad(
                 sdf,
-                &output.voxel_to_index,
-                &output.positions,
+                &output.stride_to_index,
+                &output.mesh.positions,
                 *p_stride,
                 *p_stride + xyz_strides[2],
                 xyz_strides[0],
                 xyz_strides[1],
-                &mut output.indices,
+                &mut output.mesh.indices,
             );
         }
     }
@@ -366,7 +354,7 @@ where
 // to A) in the negative directions; these are axis B and axis C.
 fn maybe_make_quad<V, T>(
     sdf: &V,
-    voxel_to_index: &[usize],
+    stride_to_index: &[usize],
     positions: &[[f32; 3]],
     p1: Stride,
     p2: Stride,
@@ -375,7 +363,7 @@ fn maybe_make_quad<V, T>(
     indices: &mut Vec<usize>,
 ) where
     V: GetUncheckedRefRelease<Stride, T>,
-    T: SignedDistanceVoxel,
+    T: SignedDistance,
 {
     let voxel1 = sdf.get_unchecked_ref_release(p1);
     let voxel2 = sdf.get_unchecked_ref_release(p2);
@@ -389,10 +377,10 @@ fn maybe_make_quad<V, T>(
     // The triangle points, viewed face-front, look like this:
     // v1 v3
     // v2 v4
-    let v1 = voxel_to_index[p1.0];
-    let v2 = voxel_to_index[(p1 - axis_b_stride).0];
-    let v3 = voxel_to_index[(p1 - axis_c_stride).0];
-    let v4 = voxel_to_index[(p1 - axis_b_stride - axis_c_stride).0];
+    let v1 = stride_to_index[p1.0];
+    let v2 = stride_to_index[(p1 - axis_b_stride).0];
+    let v3 = stride_to_index[(p1 - axis_c_stride).0];
+    let v4 = stride_to_index[(p1 - axis_b_stride - axis_c_stride).0];
     let (pos1, pos2, pos3, pos4) = (positions[v1], positions[v2], positions[v3], positions[v4]);
     // Split the quad along the shorter axis, rather than the longer one.
     let quad = if sq_dist(pos1, pos4) < sq_dist(pos2, pos3) {
@@ -452,7 +440,7 @@ pub trait MaterialVoxel {
 pub fn material_weights<V, T>(voxels: &V, surface_strides: &[Stride]) -> Vec<[f32; 4]>
 where
     V: Array<[i32; 3]> + GetUncheckedRefRelease<Stride, T>,
-    T: MaterialVoxel + SignedDistanceVoxel,
+    T: MaterialVoxel + SignedDistance,
 {
     // Precompute the offsets for cube corners.
     let mut corner_offset_strides = [Stride(0); 8];

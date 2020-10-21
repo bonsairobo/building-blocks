@@ -14,9 +14,8 @@ fn surface_nets_sine_sdf(c: &mut Criterion) {
                         Extent3i::from_min_and_max(PointN([-radius; 3]), PointN([radius; 3]));
                     let mut samples = Array3::fill(sample_extent, Voxel(0.0));
                     copy_extent(&sample_extent, &sine_sdf, &mut samples);
-                    let buffer = SurfaceNetsBuffer::new(sample_extent.num_points());
 
-                    (samples, buffer)
+                    (samples, SurfaceNetsBuffer::default())
                 },
                 |(samples, mut buffer)| surface_nets(&samples, samples.extent(), &mut buffer),
             );
@@ -31,7 +30,7 @@ criterion_main!(benches);
 #[derive(Clone)]
 struct Voxel(f32);
 
-impl SignedDistanceVoxel for Voxel {
+impl SignedDistance for Voxel {
     fn distance(&self) -> f32 {
         self.0
     }

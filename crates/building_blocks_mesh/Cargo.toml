@@ -14,3 +14,7 @@ criterion = "0.3"
 [[bench]]
 name = "surface_nets"
 harness = false
+
+[[bench]]
+name = "height_map"
+harness = false

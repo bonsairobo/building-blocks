@@ -23,10 +23,12 @@ pub struct Octree {
 }
 
 impl Octree {
+    // TODO: from_height_map
+
     /// Constructs an `Octree` which contains all of the points which are not empty (as defined by
     /// the `IsEmpty` trait). `array` must be cube-shaped with edge length being a power of 2.
     /// `power` must be the exponent of the edge length, and `0 < power <= 6`.
-    pub fn from_array<T: IsEmpty>(power: u8, array: &Array3<T>) -> Self {
+    pub fn from_array3<T: IsEmpty>(power: u8, array: &Array3<T>) -> Self {
         // Constrained by 16-bit location code.
         assert!(power > 0 && power <= 6);
         let root_level = power - 1;

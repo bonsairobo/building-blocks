@@ -69,8 +69,8 @@ impl SignedDistance for f32 {
     }
 }
 
-/// The output buffers used by `surface_nets`. These buffers can be cleared and reused without
-/// reallocating memory.
+/// The output buffers used by `surface_nets`. These buffers can be reused to avoid reallocating
+/// memory.
 #[derive(Default)]
 pub struct SurfaceNetsBuffer {
     /// The isosurface positions and normals. Parallel to `surface_points`. The normals are *not*

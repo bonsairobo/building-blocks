@@ -9,7 +9,7 @@ pub trait Height {
     fn height(&self) -> f32;
 }
 
-/// The output buffers used by `surface_nets`. These buffers can be cleared and reused without
+/// The output buffers used by `triangulate_height_map`. These buffers can be reused to avoid
 /// reallocating memory.
 #[derive(Default)]
 pub struct HeightMapMeshBuffer {
@@ -59,7 +59,6 @@ pub fn triangulate_height_map<H>(
 
     // Avoid accessing out of bounds with a 3x3x3 kernel.
     let interior_extent = extent.add_to_shape(PointN([-2; 2])) + PointN([1; 2]);
-    let interior_max = Extent2i::max(&interior_extent);
 
     let deltas = Point2i::basis();
     let mut delta_strides = [Stride(0); 2];
@@ -102,6 +101,7 @@ pub fn triangulate_height_map<H>(
         },
     );
 
+    let interior_max = interior_extent.max();
     Array2::<H>::for_each_point_and_stride(
         height_map.extent(),
         &interior_extent,

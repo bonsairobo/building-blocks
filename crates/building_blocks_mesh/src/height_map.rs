@@ -101,27 +101,23 @@ pub fn triangulate_height_map<H>(
         },
     );
 
-    let interior_max = interior_extent.max();
-    Array2::<H>::for_each_point_and_stride(
-        height_map.extent(),
-        &interior_extent,
-        |p, bl_stride| {
-            // Only add a quad when p is the bottom-left corner of a quad that fits in the interior.
-            if p < interior_max {
-                let br_stride = bl_stride + delta_strides[0];
-                let tl_stride = bl_stride + delta_strides[1];
-                let tr_stride = bl_stride + delta_strides[0] + delta_strides[1];
+    // Only add a quad when p is the bottom-left corner of a quad that fits in the interior.
+    let quads_extent = interior_extent.add_to_shape(PointN([-1; 2]));
 
-                let bl_index = output.stride_to_index[bl_stride.0];
-                let br_index = output.stride_to_index[br_stride.0];
-                let tl_index = output.stride_to_index[tl_stride.0];
-                let tr_index = output.stride_to_index[tr_stride.0];
+    Array2::<H>::for_each_point_and_stride(height_map.extent(), &quads_extent, |_p, bl_stride| {
+        let br_stride = bl_stride + delta_strides[0];
+        let tl_stride = bl_stride + delta_strides[1];
+        let tr_stride = bl_stride + delta_strides[0] + delta_strides[1];
 
-                // Counter-clockwise winding.
-                output.mesh.indices.extend_from_slice(&[
-                    bl_index, tr_index, tl_index, bl_index, br_index, tr_index,
-                ]);
-            }
-        },
-    );
+        let bl_index = output.stride_to_index[bl_stride.0];
+        let br_index = output.stride_to_index[br_stride.0];
+        let tl_index = output.stride_to_index[tl_stride.0];
+        let tr_index = output.stride_to_index[tr_stride.0];
+
+        // Counter-clockwise winding.
+        output
+            .mesh
+            .indices
+            .extend_from_slice(&[bl_index, tr_index, tl_index, bl_index, br_index, tr_index]);
+    });
 }

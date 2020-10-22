@@ -15,7 +15,11 @@ fn height_map_plane(c: &mut Criterion) {
                     let mut samples = Array2::fill(sample_extent, Pixel(0.0));
                     copy_extent(&sample_extent, &plane, &mut samples);
 
-                    (samples, HeightMapMeshBuffer::default())
+                    // Do a single run first to allocate the buffer to the right size.
+                    let mut buffer = HeightMapMeshBuffer::default();
+                    triangulate_height_map(&samples, samples.extent(), &mut buffer);
+
+                    (samples, buffer)
                 },
                 |(samples, mut buffer)| {
                     triangulate_height_map(&samples, samples.extent(), &mut buffer)

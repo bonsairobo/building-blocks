@@ -49,9 +49,14 @@ It may be more enlightening to enumerate some things which are NOT in scope:
 
 ### Principles
 
-The architecture of Building Blocks is driven by a few core philosophical
-principles:
+The architecture of Building Blocks is driven by a few guiding principles:
 
+- **Real-Time Performance**
+  - The primary use case for Building Blocks is using voxel technology within a
+    video game. This means it needs to be fast. For example, we want to be able
+    to generate meshes for millions of voxels per frame (16.6 ms).
+  - Critical algorithms must be benchmarked with Criterion so we can guide
+    optimization with evidence.
 - **Composable APIs**
   - APIs are more powerful when they are generic. You will find many examples
     of generic APIs that require the input types to implement some traits.
@@ -72,9 +77,6 @@ principles:
     feature set or road map. This is probably just because no one has found a
     need for it yet. We are open to contributions, but keep the KISS principle
     in mind when considering what problem you are solving.
-- **Data-Driven**
-  - In concert with KISS, we ask that any contributions which claim to improve
-    performance are accompanied with Criterion benchmarks to prove it.
 - **Minimal Dependencies**
   - Rather than taking on large dependencies like nalgebra, ncollide, ndarray,
     etc, we will first try to implement the simplest version of what is needed

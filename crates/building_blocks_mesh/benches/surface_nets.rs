@@ -15,7 +15,11 @@ fn surface_nets_sine_sdf(c: &mut Criterion) {
                     let mut samples = Array3::fill(sample_extent, Voxel(0.0));
                     copy_extent(&sample_extent, &sine_sdf, &mut samples);
 
-                    (samples, SurfaceNetsBuffer::default())
+                    // Do a single run first to allocate the buffer to the right size.
+                    let mut buffer = SurfaceNetsBuffer::default();
+                    surface_nets(&samples, samples.extent(), &mut buffer);
+
+                    (samples, buffer)
                 },
                 |(samples, mut buffer)| surface_nets(&samples, samples.extent(), &mut buffer),
             );

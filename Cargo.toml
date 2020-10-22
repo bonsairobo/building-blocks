@@ -28,3 +28,11 @@ building_blocks_partition = { path = "crates/building_blocks_partition", version
 building_blocks_procgen = { path = "crates/building_blocks_procgen", version = "0.1", optional = true }
 building_blocks_search = { path = "crates/building_blocks_search", version = "0.1", optional = true }
 building_blocks_vox = { path = "crates/building_blocks_vox", version = "0.1", optional = true }
+
+[dev-dependencies]
+bevy = "0.2" # for examples
+log = "0.4"
+
+[[example]]
+name = "bevy_meshing"
+path = "examples/bevy_meshing/bevy_meshing.rs"

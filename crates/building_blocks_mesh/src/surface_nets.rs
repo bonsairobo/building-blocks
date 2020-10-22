@@ -59,6 +59,10 @@ use building_blocks_storage::{access::GetUncheckedRefRelease, prelude::*};
 // ███████║╚██████╔╝██║  ██║██║     ██║  ██║╚██████╗███████╗
 // ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝
 
+pub fn padded_surface_nets_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {
+    chunk_extent.padded(1)
+}
+
 pub trait SignedDistance {
     fn distance(&self) -> f32;
 }

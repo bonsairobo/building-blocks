@@ -1,5 +1,5 @@
 use building_blocks::core::prelude::*;
-use building_blocks::mesh::{height_map::*, surface_nets::*, PosNormMesh};
+use building_blocks::mesh::*;
 use building_blocks::procgen::signed_distance_fields::*;
 use building_blocks::storage::prelude::*;
 
@@ -107,8 +107,7 @@ pub fn mesh_generator_system(
         }
 
         // Sample the new shape SDF in some extent.
-        let shape = choose_shape(state.current_shape_index);
-        match shape {
+        match choose_shape(state.current_shape_index) {
             Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(
                 sdf,
                 &mut state,
@@ -154,7 +153,8 @@ fn generate_chunk_meshes_from_sdf(
     let local_cache = LocalChunkCache::new();
     let map_reader = ChunkMapReader3::new(&map, &local_cache);
     for chunk_key in map.chunk_keys() {
-        let padded_chunk_extent = map.extent_for_chunk_at_key(chunk_key).padded(1);
+        let padded_chunk_extent =
+            padded_surface_nets_chunk_extent(&map.extent_for_chunk_at_key(chunk_key));
         let mut padded_chunk = Array3::fill(padded_chunk_extent, 0.0);
         copy_extent(&padded_chunk_extent, &map_reader, &mut padded_chunk);
         surface_nets(
@@ -203,14 +203,10 @@ fn generate_chunk_meshes_from_height_map(
     let local_cache = LocalChunkCache::new();
     let map_reader = ChunkMapReader2::new(&map, &local_cache);
     for chunk_key in map.chunk_keys() {
-        // TODO: this padding is kind of odd, but it's exactly what's required for the height map
-        // meshing scheme
-        let padded_chunk_extent = map
-            .extent_for_chunk_at_key(chunk_key)
-            .padded(1)
-            .add_to_shape(PointN([1; 2]))
-            // Ignore the ambient values outside the sample extent.
-            .intersection(&sample_extent);
+        let padded_chunk_extent =
+            padded_height_map_chunk_extent(&map.extent_for_chunk_at_key(chunk_key))
+                // Ignore the ambient values outside the sample extent.
+                .intersection(&sample_extent);
 
         let mut padded_chunk = Array2::fill(padded_chunk_extent, 0.0);
         copy_extent(&padded_chunk_extent, &map_reader, &mut padded_chunk);

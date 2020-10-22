@@ -15,6 +15,10 @@ impl Height for f32 {
     }
 }
 
+pub fn padded_height_map_chunk_extent(chunk_extent: &Extent2i) -> Extent2i {
+    chunk_extent.padded(1).add_to_shape(PointN([1; 2]))
+}
+
 /// The output buffers used by `triangulate_height_map`. These buffers can be reused to avoid
 /// reallocating memory.
 #[derive(Default)]

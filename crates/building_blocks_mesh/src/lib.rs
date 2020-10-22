@@ -3,6 +3,13 @@ pub mod surface_nets;
 
 // TODO: greedy meshing of cubes
 
+pub use height_map::{
+    padded_height_map_chunk_extent, triangulate_height_map, Height, HeightMapMeshBuffer,
+};
+pub use surface_nets::{
+    padded_surface_nets_chunk_extent, surface_nets, SignedDistance, SurfaceNetsBuffer,
+};
+
 #[derive(Default)]
 pub struct PosNormMesh {
     pub positions: Vec<[f32; 3]>,

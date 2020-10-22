@@ -9,6 +9,12 @@ pub trait Height {
     fn height(&self) -> f32;
 }
 
+impl Height for f32 {
+    fn height(&self) -> f32 {
+        *self
+    }
+}
+
 /// The output buffers used by `triangulate_height_map`. These buffers can be reused to avoid
 /// reallocating memory.
 #[derive(Default)]
@@ -114,10 +120,9 @@ pub fn triangulate_height_map<H>(
         let tl_index = output.stride_to_index[tl_stride.0];
         let tr_index = output.stride_to_index[tr_stride.0];
 
-        // Counter-clockwise winding.
         output
             .mesh
             .indices
-            .extend_from_slice(&[bl_index, tr_index, tl_index, bl_index, br_index, tr_index]);
+            .extend_from_slice(&[bl_index, tl_index, tr_index, bl_index, tr_index, br_index]);
     });
 }

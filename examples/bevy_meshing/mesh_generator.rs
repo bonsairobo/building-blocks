@@ -235,13 +235,15 @@ fn create_mesh_entity(
     material: Handle<StandardMaterial>,
     meshes: &mut Assets<Mesh>,
 ) -> Entity {
+    assert_eq!(mesh.positions.len(), mesh.normals.len());
+
     let mesh = meshes.add(Mesh {
         primitive_topology: PrimitiveTopology::TriangleList,
         attributes: vec![
             VertexAttribute::position(mesh.positions.clone()),
             VertexAttribute::normal(mesh.normals.clone()),
             // UVs don't matter for this monocolor mesh
-            VertexAttribute::uv(vec![[0.0; 2]; mesh.normals.len()]),
+            VertexAttribute::uv(vec![[0.0; 2]; mesh.positions.len()]),
         ],
         indices: Some(mesh.indices.iter().map(|i| *i as u32).collect()),
     });

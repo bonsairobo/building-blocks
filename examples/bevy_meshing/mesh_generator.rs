@@ -45,10 +45,10 @@ impl Shape {
 
     pub fn get_sdf(self: Shape) -> Box<dyn Fn(&Point3i) -> f32> {
         match self {
-            Shape::Cube => Box::new(cube(PointN([0.0, 0.0, 0.0]), 25.0)),
+            Shape::Cube => Box::new(cube(PointN([0.0, 0.0, 0.0]), 35.0)),
             Shape::Plane => Box::new(plane(PointN([0.5, 0.5, 0.5]), 1.0)),
-            Shape::Sphere => Box::new(sphere(PointN([0.0, 0.0, 0.0]), 25.0)),
-            Shape::Torus => Box::new(torus(PointN([25.0, 10.0]))),
+            Shape::Sphere => Box::new(sphere(PointN([0.0, 0.0, 0.0]), 35.0)),
+            Shape::Torus => Box::new(torus(PointN([35.0, 10.0]))),
             Shape::Invalid => panic!("Invalid shape"),
         }
     }

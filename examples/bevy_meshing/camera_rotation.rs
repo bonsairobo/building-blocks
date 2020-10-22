@@ -16,11 +16,11 @@ pub fn camera_rotation_system(
     transforms: Query<&mut Transform>,
 ) {
     let target = Vec3::new(0.0, 0.0, 0.0);
-    let radius = 200.0;
+    let radius = 120.0;
     let seconds = time.seconds_since_startup as f32;
     let x = radius * seconds.cos();
     let z = radius * seconds.sin();
-    let eye = Vec3::new(x, 100.0, z);
+    let eye = Vec3::new(x, 75.0, z);
     let new_transform = Mat4::face_toward(eye, target, Vec3::unit_y());
 
     let mut cam_tfm = transforms.get_mut(state.camera).unwrap();

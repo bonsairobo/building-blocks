@@ -37,11 +37,13 @@
 //! let reader = ChunkMapReader3::new(&map, &local_cache);
 //! for chunk_key in chunk_keys_to_update.into_iter() {
 //!     // It's crucial that we pad the chunk so we have access to adjacent points during meshing.
-//!     let padded_chunk_extent = map.extent_for_chunk_at_key(&chunk_key).padded(1);
+//!     let padded_chunk_extent = padded_surface_nets_chunk_extent(
+//!         &map.extent_for_chunk_at_key(&chunk_key)
+//!     );
 //!     let mut padded_chunk = Array3::fill(padded_chunk_extent, 0.0);
 //!     copy_extent(&padded_chunk_extent, &reader, &mut padded_chunk);
 //!
-//!     let mut sn_buffer = SurfaceNetsBuffer::new(padded_chunk_extent.num_points());
+//!     let mut sn_buffer = SurfaceNetsBuffer::default();
 //!     surface_nets(&padded_chunk, &padded_chunk_extent, &mut sn_buffer);
 //!     // Do something with the mesh output...
 //! }
@@ -59,6 +61,8 @@ use building_blocks_storage::{access::GetUncheckedRefRelease, prelude::*};
 // ███████║╚██████╔╝██║  ██║██║     ██║  ██║╚██████╗███████╗
 // ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝
 
+/// Pads the given chunk extent with exactly the amount of space required for running the
+/// `surface_nets` algorithm.
 pub fn padded_surface_nets_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {
     chunk_extent.padded(1)
 }

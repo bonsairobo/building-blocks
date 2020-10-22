@@ -17,6 +17,10 @@ procgen = ["building_blocks_procgen"]
 search = ["building_blocks_search"]
 vox = ["building_blocks_vox"]
 
+[workspace]
+members = ["crates/*"]
+exclude = ["benches"]
+
 [dependencies]
 building_blocks_core = { path = "crates/building_blocks_core", version = "0.1" }
 building_blocks_storage = { path = "crates/building_blocks_storage", version = "0.1" }

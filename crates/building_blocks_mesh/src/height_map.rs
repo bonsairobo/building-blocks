@@ -15,6 +15,8 @@ impl Height for f32 {
     }
 }
 
+/// Pads the given chunk extent with exactly the amount of space required for running the
+/// `triangulate_height_map` algorithm.
 pub fn padded_height_map_chunk_extent(chunk_extent: &Extent2i) -> Extent2i {
     chunk_extent.padded(1).add_to_shape(PointN([1; 2]))
 }

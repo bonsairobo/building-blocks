@@ -227,6 +227,10 @@ impl<K: Ord> Ord for HeuristicCostHolder<K> {
 mod test {
     use super::*;
 
+    use std::collections::HashSet;
+    use std::fmt::Debug;
+    use std::iter::FromIterator;
+
     #[derive(Clone)]
     struct Voxel(bool);
 

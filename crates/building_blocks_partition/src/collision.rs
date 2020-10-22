@@ -149,7 +149,7 @@ mod tests {
         *voxels.get_mut(&PointN([0, 15, 0])) = Voxel(true);
 
         let power = 4;
-        let octree = Octree::from_array(power, &voxels);
+        let octree = Octree::from_array3(power, &voxels);
         let mut bvt = OctreeDBVT::new();
         let key = 0; // unimportant
         bvt.insert(key, octree);
@@ -179,7 +179,7 @@ mod tests {
         let voxels = Array3::fill(extent, Voxel(true));
 
         let power = 4;
-        let octree = Octree::from_array(power, &voxels);
+        let octree = Octree::from_array3(power, &voxels);
         let mut bvt = OctreeDBVT::new();
         let key = 0; // unimportant
         bvt.insert(key, octree);

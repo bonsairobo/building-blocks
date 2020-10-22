@@ -2,10 +2,6 @@
 
 Building Blocks is a voxel library that focuses on real-time applications.
 
-The general scope of this library includes core data structures and algorithms
-that enable efficient implementation of voxel worlds for interactive video
-games, where the phrase "voxel worlds" is intentionally ambiguous.
-
 Supported use cases include:
 
 - memory-efficient storage of voxel maps
@@ -21,14 +17,6 @@ Supported use cases include:
   - generating height maps from fractal noise
 - pathfinding
 
-It may be more enlightening to enumerate some things which are NOT in scope:
-
-- core game engine functionality
-  - voxel shaders
-  - any direct interaction with a 3D rendering API
-  - character controllers
-- scientifically precise volumetric algorithms
-
 ## Learning
 
 The current best way to learn about the library is to read the documentation.
@@ -43,6 +31,20 @@ There is plentiful documentation with examples.
 To run the benchmarks (using the "criterion" crate), go to the root of a crate
 and run `cargo bench`.
 
+## Scope
+
+The general scope of this library includes core data structures and algorithms
+that enable efficient implementation of voxel worlds for interactive video
+games, where the phrase "voxel worlds" is intentionally ambiguous.
+
+It may be more enlightening to enumerate some things which are NOT in scope:
+
+- core game engine functionality
+  - voxel shaders
+  - any direct interaction with a 3D rendering API
+  - character controllers
+- scientifically precise volumetric algorithms
+
 ## Design Philosophy and Architecture
 
 ### Principles
@@ -50,14 +52,14 @@ and run `cargo bench`.
 The architecture of Building Blocks is driven by a few core philosophical
 principles:
 
-- Composable APIs
+- **Composable APIs**
   - APIs are more powerful when they are generic. You will find many examples
     of generic APIs that require the input types to implement some traits.
   - This is most prevalent in the storage crate, where we desire all of the
     lattice map types to be accessible through the same core set of traits.
     This results in a very powerful function, `copy_extent`, which works with
     all implementations of the `ReadExtent` and `WriteExtent` traits.
-- KISS (Keep It Simple Stupid)
+- **KISS (Keep It Simple Stupid)**
   - There are *many* complex data structures and algorithms used in voxel
     technology. While they certainly all serve a purpose, it is not feasible for
     contributors to understand and implement all of them at the very inception
@@ -70,10 +72,10 @@ principles:
     feature set or road map. This is probably just because no one has found a
     need for it yet. We are open to contributions, but keep the KISS principle
     in mind when considering what problem you are solving.
-- Data-driven
+- **Data-Driven**
   - In concert with KISS, we ask that any contributions which claim to improve
     performance are accompanied with Criterion benchmarks to prove it.
-- Minimal dependencies
+- **Minimal Dependencies**
   - Rather than taking on large dependencies like nalgebra, ncollide, ndarray,
     etc, we will first try to implement the simplest version of what is needed
     ourselves.
@@ -88,7 +90,7 @@ principles:
 Noting the above principles, here is a quick summary of the design decisions
 which brought about the current feature set:
 
-- Mathematical Data Types
+- **Mathematical Data Types**
   - A voxel world can be modeled mathematically as a function over a
     3-dimensional integer lattice, i.e. with domain Z^3. Thus we have a
     `Point3i` type which serves as the main coordinate set.
@@ -97,7 +99,7 @@ which brought about the current feature set:
     subset. It is very simple to iterate over all of the points in such a box,
     find the intersection of two boxes, or check if the box contains a point. We
     call these boxes by the name `Extent3i`.
-- Storage
+- **Storage**
   - Any extent of the voxel world function can be simply represented as a
     3-dimensional array. We call it `Array3`. Arrays contain some data at every
     point in some `Extent3i`. The most common operations on arrays are iteration
@@ -129,7 +131,7 @@ which brought about the current feature set:
     chunks for efficiency. Cache eviction and compression is done on-demand, so
     you can choose to ignore this feature if you are not worried about memory
     usage.
-- Meshing
+- **Meshing**
   - There are many ways of generating meshes from voxel data. You can make each
     occupied voxel into a cube, which gives the classis Minecraft aesthetic. Or
     you can store geometric information, commonly referred to as "signed
@@ -154,7 +156,7 @@ which brought about the current feature set:
     generalized all of the core data types to work in both 2 and 3 dimensions,
     which gives us the `Array2` type, capable of cleanly representing a height
     map. We've also implemented a specialized meshing algorithm for height maps.
-- Accelerated Spatial Queries
+- **Accelerated Spatial Queries**
   - Our first voxel game prototypes utilized the ncollide3d crate and it's
     `DBVT` (dynamic bounding volume tree) structure for doing raycasting.
     Unforunately, storing an `AABB<f32>` for every voxel cost us 6 `f32`s or 24
@@ -176,12 +178,12 @@ which brought about the current feature set:
   interesting examples in a popular Rust game engine (Bevy)
 2. cubic (greedy) meshing
 3. procedurally generated heightmaps for terrain
-  a. fractal noise
-  b. hydraulic erosion
+    1. fractal noise
+    2. hydraulic erosion
 4. Bevy integration
-  a. ECS systems for dynamic meshing
+    1. ECS systems for dynamic meshing
 5. level of detail
-  a. chunk stitching
-  b. geomorphing
+    1. chunk stitching
+    2. geomorphing
 6. GPU acceleration of core algorithms
 7. SIMD variants of core data types

@@ -184,8 +184,9 @@ which brought about the current feature set:
     2. hydraulic erosion
 4. Bevy integration
     1. ECS systems for dynamic meshing
-5. level of detail
+5. Rapier3d integration
+6. level of detail
     1. chunk stitching
     2. geomorphing
-6. GPU acceleration of core algorithms
-7. SIMD variants of core data types
+7. GPU acceleration of core algorithms
+8. SIMD variants of core data types

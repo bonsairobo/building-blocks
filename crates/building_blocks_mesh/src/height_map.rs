@@ -69,8 +69,8 @@ pub fn padded_height_map_chunk_extent(chunk_extent: &Extent2i) -> Extent2i {
 /// reallocating memory.
 #[derive(Default)]
 pub struct HeightMapMeshBuffer {
-    /// The isosurface positions and normals. Parallel to `surface_points`. The normals are *not*
-    /// normalized, since that is done most efficiently on the GPU.
+    /// The surface positions and normals. The normals are *not* normalized, since that is done most
+    /// efficiently on the GPU.
     pub mesh: PosNormMesh,
 
     // Used to map back from voxel stride to vertex index.

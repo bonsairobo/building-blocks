@@ -102,38 +102,30 @@ pub fn mesh_generator_system(
             commands.despawn(entity);
         }
 
-        // Sample the new shape SDF in some extent.
-        match choose_shape(state.current_shape_index) {
-            Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(
-                sdf,
-                &mut state,
+        // Sample the new shape.
+        let chunk_meshes = match choose_shape(state.current_shape_index) {
+            Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(sdf, &pool.0),
+            Shape::HeightMap(hm) => generate_chunk_meshes_from_height_map(hm, &pool.0),
+        };
+
+        for mesh in chunk_meshes.into_iter() {
+            if mesh.indices.is_empty() {
+                continue;
+            }
+
+            state.chunk_mesh_entities.push(create_mesh_entity(
+                &mesh,
                 &mut commands,
                 material.0,
                 &mut meshes,
-                &pool.0,
-            ),
-            Shape::HeightMap(hm) => generate_chunk_meshes_from_height_map(
-                hm,
-                &mut state,
-                &mut commands,
-                material.0,
-                &mut meshes,
-                &pool.0,
-            ),
+            ));
         }
     }
 }
 
 const CHUNK_SIZE: i32 = 32;
 
-fn generate_chunk_meshes_from_sdf(
-    sdf: Sdf,
-    state: &mut MeshGeneratorState,
-    commands: &mut Commands,
-    material: Handle<StandardMaterial>,
-    meshes: &mut Assets<Mesh>,
-    pool: &TaskPool,
-) {
+fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<PosNormMesh> {
     let sdf = sdf.get_sdf();
     let sample_extent = Extent3i::from_min_and_shape(PointN([-50; 3]), PointN([100; 3]));
     let chunk_shape = PointN([CHUNK_SIZE; 3]);
@@ -152,7 +144,8 @@ fn generate_chunk_meshes_from_sdf(
 
     // Generate the chunk meshes.
     let map_ref = &map;
-    let chunk_meshes = pool.scope(|s| {
+
+    pool.scope(|s| {
         for chunk_key in map_ref.chunk_keys() {
             s.spawn(async move {
                 let local_cache = LocalChunkCache::new();
@@ -175,27 +168,10 @@ fn generate_chunk_meshes_from_sdf(
                 surface_nets_buffer.mesh
             })
         }
-    });
-
-    for mesh in chunk_meshes.into_iter() {
-        if mesh.indices.is_empty() {
-            continue;
-        }
-
-        state
-            .chunk_mesh_entities
-            .push(create_mesh_entity(&mesh, commands, material, meshes));
-    }
+    })
 }
 
-fn generate_chunk_meshes_from_height_map(
-    hm: HeightMap,
-    state: &mut MeshGeneratorState,
-    commands: &mut Commands,
-    material: Handle<StandardMaterial>,
-    meshes: &mut Assets<Mesh>,
-    pool: &TaskPool,
-) {
+fn generate_chunk_meshes_from_height_map(hm: HeightMap, pool: &TaskPool) -> Vec<PosNormMesh> {
     let height_map = hm.get_height_map();
     let sample_extent = Extent2i::from_min_and_shape(PointN([-50; 2]), PointN([100; 2]));
     let chunk_shape = PointN([CHUNK_SIZE; 2]);
@@ -214,7 +190,8 @@ fn generate_chunk_meshes_from_height_map(
 
     // Generate the chunk meshes.
     let map_ref = &map;
-    let chunk_meshes = pool.scope(|s| {
+
+    pool.scope(|s| {
         for chunk_key in map_ref.chunk_keys() {
             s.spawn(async move {
                 let local_cache = LocalChunkCache::new();
@@ -239,17 +216,7 @@ fn generate_chunk_meshes_from_height_map(
                 height_map_mesh_buffer.mesh
             })
         }
-    });
-
-    for mesh in chunk_meshes.into_iter() {
-        if mesh.indices.is_empty() {
-            continue;
-        }
-
-        state
-            .chunk_mesh_entities
-            .push(create_mesh_entity(&mesh, commands, material, meshes));
-    }
+    })
 }
 
 fn create_mesh_entity(

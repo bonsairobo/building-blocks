@@ -9,6 +9,7 @@ Supported use cases include:
 - generating meshes
   - isosurface
   - cubic / blocky (TODO)
+  - height maps
 - accelerated spatial queries
   - ray casting
   - range queries (TODO)
@@ -55,20 +56,6 @@ in real applications.
 
 To run the benchmarks (using the "criterion" crate), go to the root of a crate
 and run `cargo bench`.
-
-## Scope
-
-The general scope of this library includes core data structures and algorithms
-that enable efficient implementation of voxel worlds for interactive video
-games, where the phrase "voxel worlds" is intentionally ambiguous.
-
-It may be more enlightening to enumerate some things which are NOT in scope:
-
-- core game engine functionality
-  - voxel shaders
-  - any direct interaction with a 3D rendering API
-  - character controllers
-- scientifically precise volumetric algorithms
 
 ## Design Philosophy and Architecture
 

@@ -103,10 +103,13 @@ pub fn mesh_generator_system(
         }
 
         // Sample the new shape.
+        let start = std::time::Instant::now();
         let chunk_meshes = match choose_shape(state.current_shape_index) {
             Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(sdf, &pool.0),
             Shape::HeightMap(hm) => generate_chunk_meshes_from_height_map(hm, &pool.0),
         };
+        let elapsed = start.elapsed().as_micros();
+        println!("Generating mesh took {} microseconds", elapsed);
 
         for mesh in chunk_meshes.into_iter() {
             if mesh.indices.is_empty() {

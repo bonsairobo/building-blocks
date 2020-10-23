@@ -41,14 +41,17 @@ surface_nets(&samples, samples.extent(), &mut mesh_buffer);
 
 ## Learning
 
-The current best way to learn about the library is to read the documentation.
-Clone the repo and run
+The current best way to learn about the library is to read the documentation and
+examples. Clone the repo and run
 
 ```sh
 cargo doc --open --all-features
 ```
 
 There is plentiful documentation with examples.
+
+Take a look in the `examples/` directory to see how Building Blocks can be used
+in real applications.
 
 To run the benchmarks (using the "criterion" crate), go to the root of a crate
 and run `cargo bench`.

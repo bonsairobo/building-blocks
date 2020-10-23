@@ -20,14 +20,14 @@ where
 }
 
 /// An iterator over all points in an `Extent2<T>`.
-pub struct RowMajorExtent2PointIter<T>
+pub struct Extent2PointIter<T>
 where
     Range<T>: Iterator<Item = T>,
 {
     product_iter: Product<Range<T>, Range<T>>,
 }
 
-impl<T> Iterator for RowMajorExtent2PointIter<T>
+impl<T> Iterator for Extent2PointIter<T>
 where
     T: Clone,
     Range<T>: Iterator<Item = T>,
@@ -40,7 +40,7 @@ where
 }
 
 impl IntegerExtent<[i32; 2]> for Extent2i {
-    type PointIter = RowMajorExtent2PointIter<i32>;
+    type PointIter = Extent2PointIter<i32>;
 
     fn num_points(&self) -> usize {
         self.volume() as usize
@@ -49,7 +49,7 @@ impl IntegerExtent<[i32; 2]> for Extent2i {
     fn iter_points(&self) -> Self::PointIter {
         let lub = self.least_upper_bound();
 
-        RowMajorExtent2PointIter {
+        Extent2PointIter {
             // iproduct is opposite of row-major order.
             product_iter: iproduct!(self.minimum.y()..lub.y(), self.minimum.x()..lub.x()),
         }

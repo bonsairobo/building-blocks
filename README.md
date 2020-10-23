@@ -213,6 +213,3 @@ which brought about the current feature set:
     2. geomorphing
 7. GPU acceleration of core algorithms
 8. SIMD variants of core data types
-
-NOTE: When a features is completed, delete it from the roadmap and write a new
-paragraph in the architecture section.

@@ -185,7 +185,7 @@ pub trait ForEachMut<N, Coord> {
 // ╚██████╗╚██████╔╝██║        ██║
 //  ╚═════╝ ╚═════╝ ╚═╝        ╚═╝
 
-/// Some lattice maps, like `ChunkedArray`, have nonlinear layouts. This means that, in order for a
+/// Some lattice maps, like `ChunkMap`, have nonlinear layouts. This means that, in order for a
 /// writer to receive data efficiently, it must come as an iterator over multiple arrays.
 pub trait ReadExtent<'a, N> {
     type Src: 'a;

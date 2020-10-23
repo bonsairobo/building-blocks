@@ -124,6 +124,8 @@ pub fn mesh_generator_system(
     }
 }
 
+const CHUNK_SIZE: i32 = 32;
+
 fn generate_chunk_meshes_from_sdf(
     sdf: Sdf,
     state: &mut MeshGeneratorState,
@@ -134,7 +136,7 @@ fn generate_chunk_meshes_from_sdf(
 ) {
     let sdf = sdf.get_sdf();
     let sample_extent = Extent3i::from_min_and_shape(PointN([-50; 3]), PointN([100; 3]));
-    let chunk_shape = PointN([16; 3]);
+    let chunk_shape = PointN([CHUNK_SIZE; 3]);
     let ambient_value = std::f32::MAX; // air
     let default_chunk_meta = ();
     // Normally we'd keep this map around in a resource, but we don't need to for this specific
@@ -196,7 +198,7 @@ fn generate_chunk_meshes_from_height_map(
 ) {
     let height_map = hm.get_height_map();
     let sample_extent = Extent2i::from_min_and_shape(PointN([-50; 2]), PointN([100; 2]));
-    let chunk_shape = PointN([16; 2]);
+    let chunk_shape = PointN([CHUNK_SIZE; 2]);
     let ambient_value = 0.0;
     let default_chunk_meta = ();
     // Normally we'd keep this map around in a resource, but we don't need to for this specific

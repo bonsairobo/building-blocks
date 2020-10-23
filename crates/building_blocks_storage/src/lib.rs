@@ -37,9 +37,9 @@ pub trait IsEmpty {
 
 pub mod prelude {
     pub use super::{
-        copy_extent, Array, Array2, Array3, ArrayExtent, ArrayN, BincodeLz4, Chunk2, Chunk3,
-        ChunkMap2, ChunkMap3, ChunkMapReader2, ChunkMapReader3, Compressible, Decompressible,
-        FastLz4, ForEachMut, ForEachRef, Get, GetMut, GetRef, LocalChunkCache, ReadExtent, Stride,
+        copy_extent, Array, Array2, Array3, ArrayExtent, ArrayN, Chunk2, Chunk3, ChunkMap2,
+        ChunkMap3, ChunkMapReader2, ChunkMapReader3, Compressible, Decompressible, FastLz4,
+        ForEachMut, ForEachRef, Get, GetMut, GetRef, LocalChunkCache, ReadExtent, Stride,
         TransformMap, WriteExtent,
     };
 }

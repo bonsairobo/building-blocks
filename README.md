@@ -85,7 +85,8 @@ The architecture of Building Blocks is driven by a few guiding principles:
     avoid bloat.
   - There is always a judgement call when determining if we should take on a
     dependency. The main considerations are build time, difficulty of "rolling
-    our own," and of course the full feature set of the dependency.
+    our own," and of course the full feature set and performance of the
+    dependency.
 
 ### Architecture
 

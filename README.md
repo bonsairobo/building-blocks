@@ -17,6 +17,28 @@ Supported use cases include:
   - generating height maps from fractal noise (TODO)
 - pathfinding
 
+## Short Code Example
+
+The code below samples a signed distance field and generates a mesh from it.
+
+```rust
+use building_blocks::{
+    prelude::*,
+    mesh::{SurfaceNetsBuffer, surface_nets},
+    procgen::signed_distance_fields::sphere,
+};
+
+let center = PointN([25.0; 3]);
+let radius = 10.0;
+let sphere_sdf = sphere(center, radius);
+
+let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([50; 3]));
+let mut samples = Array3::fill_with(extent, &sphere_sdf);
+
+let mut mesh_buffer = SurfaceNetsBuffer::new();
+surface_nets(&samples, samples.extent(), &mut mesh_buffer);
+```
+
 ## Learning
 
 The current best way to learn about the library is to read the documentation.

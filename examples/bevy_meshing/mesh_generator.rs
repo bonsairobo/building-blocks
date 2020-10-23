@@ -114,7 +114,7 @@ pub fn mesh_generator_system(
             }
 
             state.chunk_mesh_entities.push(create_mesh_entity(
-                &mesh,
+                mesh,
                 &mut commands,
                 material.0,
                 &mut meshes,
@@ -220,20 +220,21 @@ fn generate_chunk_meshes_from_height_map(hm: HeightMap, pool: &TaskPool) -> Vec<
 }
 
 fn create_mesh_entity(
-    mesh: &PosNormMesh,
+    mesh: PosNormMesh,
     commands: &mut Commands,
     material: Handle<StandardMaterial>,
     meshes: &mut Assets<Mesh>,
 ) -> Entity {
     assert_eq!(mesh.positions.len(), mesh.normals.len());
+    let num_vertices = mesh.positions.len();
 
     let mesh = meshes.add(Mesh {
         primitive_topology: PrimitiveTopology::TriangleList,
         attributes: vec![
-            VertexAttribute::position(mesh.positions.clone()),
-            VertexAttribute::normal(mesh.normals.clone()),
+            VertexAttribute::position(mesh.positions),
+            VertexAttribute::normal(mesh.normals),
             // UVs don't matter for this monocolor mesh
-            VertexAttribute::uv(vec![[0.0; 2]; mesh.positions.len()]),
+            VertexAttribute::uv(vec![[0.0; 2]; num_vertices]),
         ],
         indices: Some(mesh.indices.iter().map(|i| *i as u32).collect()),
     });

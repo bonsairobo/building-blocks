@@ -39,8 +39,6 @@ let mut mesh_buffer = SurfaceNetsBuffer::new();
 surface_nets(&samples, samples.extent(), &mut mesh_buffer);
 ```
 
-![Meshing](/images/meshing.gif)
-
 ## Learning
 
 The current best way to learn about the library is to read the documentation.

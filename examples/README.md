@@ -7,3 +7,5 @@ engine.
 
 Use the left and right arrow keys to select one of the example shapes to be
 meshed.
+
+![Meshing](/images/meshing.gif)

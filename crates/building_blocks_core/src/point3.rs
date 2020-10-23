@@ -449,7 +449,7 @@ pub mod nalgebra_conversions {
         }
     }
 
-    pub fn voxel_containing_point3(p: &na::Point3<f32>) -> Point3i {
+    pub fn voxel_containing_point3f(p: &na::Point3<f32>) -> Point3i {
         PointN([p.x as i32, p.y as i32, p.z as i32])
     }
 }

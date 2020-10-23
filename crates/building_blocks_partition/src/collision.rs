@@ -3,7 +3,7 @@ use crate::{
     octree_dbvt::{OctreeDBVT, OctreeDBVTVisitor},
 };
 
-use building_blocks_core::{prelude::*, voxel_containing_point3};
+use building_blocks_core::{prelude::*, voxel_containing_point3f};
 
 use core::hash::Hash;
 use ncollide3d::{
@@ -104,7 +104,7 @@ where
                         let intersection_p = self.ray.point_at(toi);
                         let nudge_p = intersection_p - std::f32::EPSILON * normal;
 
-                        voxel_containing_point3(&nudge_p)
+                        voxel_containing_point3f(&nudge_p)
                     };
 
                     if (self.predicate_fn)(voxel_point) {

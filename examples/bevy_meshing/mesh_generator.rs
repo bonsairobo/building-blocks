@@ -6,23 +6,18 @@ use building_blocks::storage::prelude::*;
 use bevy::{
     prelude::*,
     render::{mesh::VertexAttribute, pipeline::PrimitiveTopology},
+    tasks::{ComputeTaskPool, TaskPool},
 };
 
 pub struct MeshGeneratorState {
     current_shape_index: i32,
     chunk_mesh_entities: Vec<Entity>,
-
-    // reused to avoid reallocations
-    surface_nets_buffer: SurfaceNetsBuffer,
-    height_map_mesh_buffer: HeightMapMeshBuffer,
 }
 
 impl MeshGeneratorState {
     pub fn new() -> Self {
         Self {
             current_shape_index: 0,
-            height_map_mesh_buffer: HeightMapMeshBuffer::default(),
-            surface_nets_buffer: SurfaceNetsBuffer::default(),
             chunk_mesh_entities: Vec::new(),
         }
     }
@@ -86,6 +81,7 @@ pub struct MeshMaterial(pub Handle<StandardMaterial>);
 
 pub fn mesh_generator_system(
     mut commands: Commands,
+    pool: Res<ComputeTaskPool>,
     mut state: ResMut<MeshGeneratorState>,
     mut meshes: ResMut<Assets<Mesh>>,
     keyboard_input: Res<Input<KeyCode>>,
@@ -114,6 +110,7 @@ pub fn mesh_generator_system(
                 &mut commands,
                 material.0,
                 &mut meshes,
+                &pool.0,
             ),
             Shape::HeightMap(hm) => generate_chunk_meshes_from_height_map(
                 hm,
@@ -121,6 +118,7 @@ pub fn mesh_generator_system(
                 &mut commands,
                 material.0,
                 &mut meshes,
+                &pool.0,
             ),
         }
     }
@@ -132,6 +130,7 @@ fn generate_chunk_meshes_from_sdf(
     commands: &mut Commands,
     material: Handle<StandardMaterial>,
     meshes: &mut Assets<Mesh>,
+    pool: &TaskPool,
 ) {
     let sdf = sdf.get_sdf();
     let sample_extent = Extent3i::from_min_and_shape(PointN([-50; 3]), PointN([100; 3]));
@@ -150,29 +149,40 @@ fn generate_chunk_meshes_from_sdf(
     copy_extent(&sample_extent, &sdf, &mut map);
 
     // Generate the chunk meshes.
-    let local_cache = LocalChunkCache::new();
-    let map_reader = ChunkMapReader3::new(&map, &local_cache);
-    for chunk_key in map.chunk_keys() {
-        let padded_chunk_extent =
-            padded_surface_nets_chunk_extent(&map.extent_for_chunk_at_key(chunk_key));
-        let mut padded_chunk = Array3::fill(padded_chunk_extent, 0.0);
-        copy_extent(&padded_chunk_extent, &map_reader, &mut padded_chunk);
-        surface_nets(
-            &padded_chunk,
-            &padded_chunk_extent,
-            &mut state.surface_nets_buffer,
-        );
+    let map_ref = &map;
+    let chunk_meshes = pool.scope(|s| {
+        for chunk_key in map_ref.chunk_keys() {
+            s.spawn(async move {
+                let local_cache = LocalChunkCache::new();
+                let map_reader = ChunkMapReader3::new(map_ref, &local_cache);
 
-        if state.surface_nets_buffer.mesh.indices.is_empty() {
+                let padded_chunk_extent =
+                    padded_surface_nets_chunk_extent(&map_ref.extent_for_chunk_at_key(chunk_key));
+                let mut padded_chunk = Array3::fill(padded_chunk_extent, 0.0);
+                copy_extent(&padded_chunk_extent, &map_reader, &mut padded_chunk);
+
+                // TODO bevy: we could avoid re-allocating the buffers on every call if we had
+                // thread-local storage accessible from this task
+                let mut surface_nets_buffer = SurfaceNetsBuffer::default();
+                surface_nets(
+                    &padded_chunk,
+                    &padded_chunk_extent,
+                    &mut surface_nets_buffer,
+                );
+
+                surface_nets_buffer.mesh
+            })
+        }
+    });
+
+    for mesh in chunk_meshes.into_iter() {
+        if mesh.indices.is_empty() {
             continue;
         }
 
-        state.chunk_mesh_entities.push(create_mesh_entity(
-            &state.surface_nets_buffer.mesh,
-            commands,
-            material,
-            meshes,
-        ));
+        state
+            .chunk_mesh_entities
+            .push(create_mesh_entity(&mesh, commands, material, meshes));
     }
 }
 
@@ -182,6 +192,7 @@ fn generate_chunk_meshes_from_height_map(
     commands: &mut Commands,
     material: Handle<StandardMaterial>,
     meshes: &mut Assets<Mesh>,
+    pool: &TaskPool,
 ) {
     let height_map = hm.get_height_map();
     let sample_extent = Extent2i::from_min_and_shape(PointN([-50; 2]), PointN([100; 2]));
@@ -200,32 +211,42 @@ fn generate_chunk_meshes_from_height_map(
     copy_extent(&sample_extent, &height_map, &mut map);
 
     // Generate the chunk meshes.
-    let local_cache = LocalChunkCache::new();
-    let map_reader = ChunkMapReader2::new(&map, &local_cache);
-    for chunk_key in map.chunk_keys() {
-        let padded_chunk_extent =
-            padded_height_map_chunk_extent(&map.extent_for_chunk_at_key(chunk_key))
-                // Ignore the ambient values outside the sample extent.
-                .intersection(&sample_extent);
+    let map_ref = &map;
+    let chunk_meshes = pool.scope(|s| {
+        for chunk_key in map_ref.chunk_keys() {
+            s.spawn(async move {
+                let local_cache = LocalChunkCache::new();
+                let map_reader = ChunkMapReader2::new(map_ref, &local_cache);
+                let padded_chunk_extent =
+                    padded_height_map_chunk_extent(&map_ref.extent_for_chunk_at_key(chunk_key))
+                        // Ignore the ambient values outside the sample extent.
+                        .intersection(&sample_extent);
 
-        let mut padded_chunk = Array2::fill(padded_chunk_extent, 0.0);
-        copy_extent(&padded_chunk_extent, &map_reader, &mut padded_chunk);
-        triangulate_height_map(
-            &padded_chunk,
-            &padded_chunk_extent,
-            &mut state.height_map_mesh_buffer,
-        );
+                let mut padded_chunk = Array2::fill(padded_chunk_extent, 0.0);
+                copy_extent(&padded_chunk_extent, &map_reader, &mut padded_chunk);
 
-        if state.height_map_mesh_buffer.mesh.indices.is_empty() {
+                // TODO bevy: we could avoid re-allocating the buffers on every call if we had
+                // thread-local storage accessible from this task
+                let mut height_map_mesh_buffer = HeightMapMeshBuffer::default();
+                triangulate_height_map(
+                    &padded_chunk,
+                    &padded_chunk_extent,
+                    &mut height_map_mesh_buffer,
+                );
+
+                height_map_mesh_buffer.mesh
+            })
+        }
+    });
+
+    for mesh in chunk_meshes.into_iter() {
+        if mesh.indices.is_empty() {
             continue;
         }
 
-        state.chunk_mesh_entities.push(create_mesh_entity(
-            &state.height_map_mesh_buffer.mesh,
-            commands,
-            material,
-            meshes,
-        ));
+        state
+            .chunk_mesh_entities
+            .push(create_mesh_entity(&mesh, commands, material, meshes));
     }
 }
 

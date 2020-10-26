@@ -9,6 +9,7 @@ pub enum VoxColor {
     Empty,
 }
 
+// TODO: should take a type parameter that implements a trait to access `VoxColor`
 pub fn encode_vox(map: &Array3<VoxColor>) -> DotVoxData {
     let global_extent = *map.extent();
     let local_extent = global_extent - global_extent.minimum;

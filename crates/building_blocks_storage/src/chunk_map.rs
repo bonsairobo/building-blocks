@@ -454,6 +454,19 @@ where
     }
 }
 
+impl<N, T, M> ChunkMap<N, T, M>
+where
+    Self: ForEachMut<N, PointN<N>, Data = T>,
+    T: Copy,
+    M: Clone,
+    PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
+    ExtentN<N>: IntegerExtent<N>,
+{
+    pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: T) {
+        self.for_each_mut(extent, |_p, v| *v = value.clone());
+    }
+}
+
 /// A thread-local reader of a `ChunkMap` which stores a cache of chunks that were
 /// decompressed after missing the global cache of chunks.
 pub struct ChunkMapReader<'a, N, T, M = ()>

@@ -1,7 +1,7 @@
 use building_blocks::core::prelude::*;
 use building_blocks::mesh::*;
 use building_blocks::procgen::signed_distance_fields::*;
-use building_blocks::storage::prelude::*;
+use building_blocks::storage::{prelude::*, IsEmpty};
 
 use bevy::{
     prelude::*,
@@ -27,6 +27,7 @@ impl MeshGeneratorState {
 enum Shape {
     Sdf(Sdf),
     HeightMap(HeightMap),
+    Cubic(Cubic),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -40,9 +41,9 @@ enum Sdf {
 impl Sdf {
     fn get_sdf(&self) -> Box<dyn Fn(&Point3i) -> f32> {
         match self {
-            Sdf::Cube => Box::new(cube(PointN([0.0, 0.0, 0.0]), 35.0)),
+            Sdf::Cube => Box::new(cube(PointN([0.0, 0.0, 0.0]), 50.0)),
             Sdf::Plane => Box::new(plane(PointN([0.5, 0.5, 0.5]), 1.0)),
-            Sdf::Sphere => Box::new(sphere(PointN([0.0, 0.0, 0.0]), 35.0)),
+            Sdf::Sphere => Box::new(sphere(PointN([0.0, 0.0, 0.0]), 50.0)),
             Sdf::Torus => Box::new(torus(PointN([35.0, 10.0]))),
         }
     }
@@ -63,7 +64,50 @@ impl HeightMap {
     }
 }
 
-const NUM_SHAPES: i32 = 5;
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Cubic {
+    Terrace,
+}
+
+impl Cubic {
+    fn get_voxels(&self) -> Array3<CubeVoxel> {
+        match self {
+            Cubic::Terrace => {
+                let extent =
+                    Extent3i::from_min_and_shape(PointN([-50; 3]), PointN([100; 3])).padded(1);
+                let mut voxels = Array3::fill(extent, CubeVoxel(false));
+                for i in 0..100 {
+                    let level = Extent3i::from_min_and_shape(
+                        PointN([i - 50; 3]),
+                        PointN([100 - i, 1, 100 - i]),
+                    );
+                    voxels.fill_extent(&level, CubeVoxel(true));
+                }
+
+                voxels
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct CubeVoxel(bool);
+
+impl MaterialVoxel for CubeVoxel {
+    type Material = u8;
+
+    fn material(&self) -> Self::Material {
+        1 // only 1 material
+    }
+}
+
+impl IsEmpty for CubeVoxel {
+    fn is_empty(&self) -> bool {
+        !self.0
+    }
+}
+
+const NUM_SHAPES: i32 = 6;
 
 fn choose_shape(index: i32) -> Shape {
     match index {
@@ -72,6 +116,7 @@ fn choose_shape(index: i32) -> Shape {
         2 => Shape::Sdf(Sdf::Sphere),
         3 => Shape::Sdf(Sdf::Torus),
         4 => Shape::HeightMap(HeightMap::Wave),
+        5 => Shape::Cubic(Cubic::Terrace),
         _ => panic!("bad shape index"),
     }
 }
@@ -103,34 +148,34 @@ pub fn mesh_generator_system(
         }
 
         // Sample the new shape.
-        let start = std::time::Instant::now();
         let chunk_meshes = match choose_shape(state.current_shape_index) {
             Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(sdf, &pool.0),
             Shape::HeightMap(hm) => generate_chunk_meshes_from_height_map(hm, &pool.0),
+            Shape::Cubic(cubic) => generate_chunk_meshes_from_cubic(cubic, &pool.0),
         };
-        let elapsed = start.elapsed().as_micros();
-        println!("Generating mesh took {} microseconds", elapsed);
 
         for mesh in chunk_meshes.into_iter() {
-            if mesh.indices.is_empty() {
-                continue;
-            }
+            if let Some(mesh) = mesh {
+                if mesh.indices.is_empty() {
+                    continue;
+                }
 
-            state.chunk_mesh_entities.push(create_mesh_entity(
-                mesh,
-                &mut commands,
-                material.0,
-                &mut meshes,
-            ));
+                state.chunk_mesh_entities.push(create_mesh_entity(
+                    mesh,
+                    &mut commands,
+                    material.0,
+                    &mut meshes,
+                ));
+            }
         }
     }
 }
 
 const CHUNK_SIZE: i32 = 32;
 
-fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<PosNormMesh> {
+fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNormMesh>> {
     let sdf = sdf.get_sdf();
-    let sample_extent = Extent3i::from_min_and_shape(PointN([-50; 3]), PointN([100; 3]));
+    let sample_extent = Extent3i::from_min_and_shape(PointN([-50; 3]), PointN([100; 3])).padded(1);
     let chunk_shape = PointN([CHUNK_SIZE; 3]);
     let ambient_value = std::f32::MAX; // air
     let default_chunk_meta = ();
@@ -168,15 +213,22 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<PosNormMesh>
                     &mut surface_nets_buffer,
                 );
 
-                surface_nets_buffer.mesh
+                if surface_nets_buffer.mesh.indices.is_empty() {
+                    None
+                } else {
+                    Some(surface_nets_buffer.mesh)
+                }
             })
         }
     })
 }
 
-fn generate_chunk_meshes_from_height_map(hm: HeightMap, pool: &TaskPool) -> Vec<PosNormMesh> {
+fn generate_chunk_meshes_from_height_map(
+    hm: HeightMap,
+    pool: &TaskPool,
+) -> Vec<Option<PosNormMesh>> {
     let height_map = hm.get_height_map();
-    let sample_extent = Extent2i::from_min_and_shape(PointN([-50; 2]), PointN([100; 2]));
+    let sample_extent = Extent2i::from_min_and_shape(PointN([-50; 2]), PointN([100; 2])).padded(1);
     let chunk_shape = PointN([CHUNK_SIZE; 2]);
     let ambient_value = 0.0;
     let default_chunk_meta = ();
@@ -216,7 +268,69 @@ fn generate_chunk_meshes_from_height_map(hm: HeightMap, pool: &TaskPool) -> Vec<
                     &mut height_map_mesh_buffer,
                 );
 
-                height_map_mesh_buffer.mesh
+                if height_map_mesh_buffer.mesh.indices.is_empty() {
+                    None
+                } else {
+                    Some(height_map_mesh_buffer.mesh)
+                }
+            })
+        }
+    })
+}
+
+fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option<PosNormMesh>> {
+    let voxels = cubic.get_voxels();
+
+    // Chunk up the voxels just to show that meshing across chunks is consistent.
+    let chunk_shape = PointN([CHUNK_SIZE; 3]);
+    let ambient_value = CubeVoxel(false);
+    let default_chunk_meta = ();
+    // Normally we'd keep this map around in a resource, but we don't need to for this specific
+    // example. We could also use an Array3 here instead of a ChunkMap3, but we use chunks for
+    // educational purposes.
+    let mut map = ChunkMap3::new(
+        chunk_shape,
+        ambient_value,
+        default_chunk_meta,
+        FastLz4 { level: 10 },
+    );
+    copy_extent(voxels.extent(), &voxels, &mut map);
+
+    // Generate the chunk meshes.
+    let map_ref = &map;
+
+    pool.scope(|s| {
+        for chunk_key in map_ref.chunk_keys() {
+            s.spawn(async move {
+                let local_cache = LocalChunkCache::new();
+                let map_reader = ChunkMapReader3::new(map_ref, &local_cache);
+                let padded_chunk_extent =
+                    padded_greedy_quads_chunk_extent(&map_ref.extent_for_chunk_at_key(chunk_key));
+
+                let mut padded_chunk = Array3::fill(padded_chunk_extent, CubeVoxel(false));
+                copy_extent(&padded_chunk_extent, &map_reader, &mut padded_chunk);
+
+                // TODO bevy: we could avoid re-allocating the buffers on every call if we had
+                // thread-local storage accessible from this task
+                let mut buffer = GreedyQuadsBuffer::new(padded_chunk_extent);
+                greedy_quads(&padded_chunk, &padded_chunk_extent, &mut buffer);
+
+                let mut meshes = pos_norm_tex_meshes_from_material_quads(&buffer.quad_groups);
+
+                if meshes.is_empty() {
+                    None
+                } else {
+                    // Only one material => only one mesh.
+                    assert!(meshes.len() == 1);
+                    let mesh = meshes.remove(&1).unwrap();
+
+                    // Ignore the texture coordinates for this demo.
+                    Some(PosNormMesh {
+                        positions: mesh.positions,
+                        normals: mesh.normals,
+                        indices: mesh.indices,
+                    })
+                }
             })
         }
     })

@@ -8,7 +8,7 @@ Supported use cases include:
 - voxel map serialization
 - generating meshes
   - isosurface
-  - cubic / blocky (TODO)
+  - cubic / blocky
   - height maps
 - accelerated spatial queries
   - ray casting
@@ -191,15 +191,14 @@ which brought about the current feature set:
 
 1. v0.1: Publish on crates.io with enough core functionality to provide
   interesting examples in a popular Rust game engine (Bevy)
-2. cubic (greedy) meshing
-3. procedurally generated heightmaps for terrain
+2. procedurally generated heightmaps for terrain
     1. fractal noise
     2. hydraulic erosion
-4. Bevy integration
+3. Bevy integration
     1. ECS systems for dynamic meshing
-5. Rapier3d integration
-6. level of detail
+4. Rapier3d integration
+5. level of detail
     1. chunk stitching
     2. geomorphing
-7. GPU acceleration of core algorithms
-8. SIMD variants of core data types
+6. GPU acceleration of core algorithms
+7. SIMD variants of core data types

@@ -18,8 +18,8 @@ pub fn camera_rotation_system(
     let seconds = time.seconds_since_startup as f32;
 
     let target = Vec3::new(0.0, 0.0, 0.0);
-    let radius = 120.0;
-    let height = 75.0;
+    let radius = 200.0;
+    let height = 140.0;
     let x = radius * seconds.cos();
     let z = radius * seconds.sin();
     let eye = Vec3::new(x, height, z);

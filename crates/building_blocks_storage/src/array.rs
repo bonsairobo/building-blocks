@@ -81,7 +81,7 @@ use building_blocks_core::prelude::*;
 use compressible_map::{Compressible, Decompressible};
 use core::iter::{once, Once};
 use core::mem::MaybeUninit;
-use core::ops::{Add, Deref, Sub};
+use core::ops::{Add, AddAssign, Deref, Mul, Sub, SubAssign};
 use either::Either;
 use num::Zero;
 use serde::{Deserialize, Serialize};
@@ -102,7 +102,7 @@ impl<N, T> ArrayExtent<N> for ArrayN<N, T> {
 }
 
 pub trait Array<N>: ArrayExtent<N> {
-    fn stride_from_point(shape: &PointN<N>, point: &PointN<N>) -> Stride;
+    fn stride_from_point_static(shape: &PointN<N>, point: &PointN<N>) -> Stride;
 
     fn for_each_point_and_stride(
         array_extent: &ExtentN<N>,
@@ -117,9 +117,13 @@ pub trait Array<N>: ArrayExtent<N> {
         f: impl FnMut(Stride, Stride),
     );
 
+    fn stride_from_point(&self, p: &PointN<N>) -> Stride {
+        Self::stride_from_point_static(&self.extent().shape, p)
+    }
+
     fn strides_from_points(&self, points: &[PointN<N>], strides: &mut [Stride]) {
         for (i, p) in points.iter().enumerate() {
-            strides[i] = Self::stride_from_point(&self.extent().shape, p);
+            strides[i] = self.stride_from_point(p);
         }
     }
 }
@@ -132,6 +136,16 @@ pub struct ArrayN<N, T> {
 }
 
 impl<N, T> ArrayN<N, T> {
+    /// Set all points to the same value.
+    pub fn reset_values(&mut self, value: T)
+    where
+        T: Clone,
+    {
+        for v in self.values.iter_mut() {
+            *v = value.clone();
+        }
+    }
+
     /// Returns the entire slice of values.
     pub fn values_slice(&self) -> &[T] {
         &self.values[..]
@@ -144,16 +158,6 @@ impl<N, T> ArrayN<N, T> {
 
     pub fn extent(&self) -> &ExtentN<N> {
         &self.extent
-    }
-}
-
-impl<N, T> ArrayN<N, T>
-where
-    PointN<N>: Point,
-{
-    /// Returns `true` iff this map contains point `p`.
-    pub fn contains(&self, p: &PointN<N>) -> bool {
-        self.extent.contains(p)
     }
 }
 
@@ -188,6 +192,27 @@ where
         Self::new(extent, vec![value; extent.num_points()])
     }
 
+    /// Sets the extent minimum to `p`.
+    pub fn set_minimum(&mut self, p: PointN<N>) {
+        self.extent.minimum = p;
+    }
+}
+
+impl<N, T> ArrayN<N, T>
+where
+    PointN<N>: Point,
+{
+    /// Returns `true` iff this map contains point `p`.
+    pub fn contains(&self, p: &PointN<N>) -> bool {
+        self.extent.contains(p)
+    }
+}
+
+impl<N, T> ArrayN<N, T>
+where
+    PointN<N>: Point,
+    ExtentN<N>: IntegerExtent<N>,
+{
     pub fn fill_with(extent: ExtentN<N>, filler: impl Fn(&PointN<N>) -> T) -> Self
     where
         ArrayN<N, MaybeUninit<T>>: for<'r> GetMut<&'r PointN<N>, Data = MaybeUninit<T>>,
@@ -202,10 +227,28 @@ where
 
         unsafe { array.assume_init() }
     }
+
+    /// Adds `p` to the extent minimum.
+    pub fn translate(&mut self, p: PointN<N>) {
+        self.extent = self.extent.add(p);
+    }
+}
+
+impl<N, T> ArrayN<N, T>
+where
+    Self: ForEachMut<N, Stride, Data = T>,
+{
+    pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: T)
+    where
+        T: Clone,
+    {
+        self.for_each_mut(extent, |_s: Stride, v| *v = value.clone());
+    }
 }
 
 impl<N, T> ArrayN<N, MaybeUninit<T>>
 where
+    PointN<N>: Point,
     ExtentN<N>: IntegerExtent<N>,
 {
     /// Transmutes the map values from `MaybeUninit<T>` to `T` after manual initialization. The
@@ -276,6 +319,26 @@ impl Sub for Stride {
     }
 }
 
+impl Mul<usize> for Stride {
+    type Output = Self;
+
+    fn mul(self, rhs: usize) -> Self::Output {
+        Self(self.0.wrapping_mul(rhs))
+    }
+}
+
+impl AddAssign for Stride {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+impl SubAssign for Stride {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
 impl<N, T> Get<Stride> for ArrayN<N, T>
 where
     Self: GetRef<Stride, Data = T>,
@@ -343,7 +406,7 @@ where
 
     #[inline]
     fn get(&self, p: &Local<N>) -> Self::Data {
-        self.get(Self::stride_from_point(&self.extent().shape, &p.0))
+        self.get(self.stride_from_point(&p.0))
     }
 }
 
@@ -355,7 +418,7 @@ where
 
     #[inline]
     fn get_ref(&self, p: &Local<N>) -> &Self::Data {
-        self.get_ref(Self::stride_from_point(&self.extent().shape, &p.0))
+        self.get_ref(self.stride_from_point(&p.0))
     }
 }
 
@@ -367,7 +430,7 @@ where
 
     #[inline]
     fn get_mut(&mut self, p: &Local<N>) -> &mut Self::Data {
-        self.get_mut(Self::stride_from_point(&self.extent().shape, &p.0))
+        self.get_mut(self.stride_from_point(&p.0))
     }
 }
 
@@ -426,7 +489,7 @@ where
 
     #[inline]
     unsafe fn get_unchecked(&self, p: &Local<N>) -> Self::Data {
-        self.get_unchecked(Self::stride_from_point(&self.extent().shape, &p.0))
+        self.get_unchecked(self.stride_from_point(&p.0))
     }
 }
 
@@ -438,7 +501,7 @@ where
 
     #[inline]
     unsafe fn get_unchecked_ref(&self, p: &Local<N>) -> &Self::Data {
-        self.get_unchecked_ref(Self::stride_from_point(&self.extent().shape, &p.0))
+        self.get_unchecked_ref(self.stride_from_point(&p.0))
     }
 }
 
@@ -450,7 +513,7 @@ where
 
     #[inline]
     unsafe fn get_unchecked_mut(&mut self, p: &Local<N>) -> &mut Self::Data {
-        self.get_unchecked_mut(Self::stride_from_point(&self.extent().shape, &p.0))
+        self.get_unchecked_mut(self.stride_from_point(&p.0))
     }
 }
 
@@ -629,12 +692,7 @@ where
     fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<M, N, T>) {
         match src {
             Either::Left(array) => self.write_extent(extent, array),
-            Either::Right(ambient) => {
-                let src_value = ambient.get();
-                self.for_each_mut(extent, |_s: Stride, value| {
-                    *value = src_value.clone();
-                });
-            }
+            Either::Right(ambient) => self.fill_extent(extent, ambient.get()),
         }
     }
 }
@@ -644,13 +702,10 @@ where
     F: Fn(&PointN<N>) -> T,
     PointN<N>: IntegerPoint,
     ExtentN<N>: IntegerExtent<N>,
-    ArrayN<N, T>: for<'r> GetUncheckedMutRelease<&'r PointN<N>, T>,
+    ArrayN<N, T>: ForEachMut<N, PointN<N>, Data = T>,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: F) {
-        let in_bounds_extent = extent.intersection(self.extent());
-        for p in in_bounds_extent.iter_points() {
-            *self.get_unchecked_mut_release(&p) = (src)(&p);
-        }
+        self.for_each_mut(extent, |p, v| *v = (src)(&p));
     }
 }
 

@@ -114,7 +114,7 @@ pub fn triangulate_height_map<H>(
     output.reset(height_map.extent().num_points());
 
     // Avoid accessing out of bounds with a 3x3x3 kernel.
-    let interior_extent = extent.add_to_shape(PointN([-2; 2])) + PointN([1; 2]);
+    let interior_extent = extent.padded(-1);
 
     let deltas = Point2i::basis();
     let mut delta_strides = [Stride(0); 2];

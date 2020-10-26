@@ -68,6 +68,10 @@ impl Point for Point2i {
     fn basis() -> Vec<Self> {
         vec![PointN([1, 0]), PointN([0, 1])]
     }
+
+    fn abs(&self) -> Self {
+        PointN([self.x().abs(), self.y().abs()])
+    }
 }
 
 impl Point for Point2f {
@@ -75,6 +79,10 @@ impl Point for Point2f {
 
     fn basis() -> Vec<Self> {
         vec![PointN([1.0, 0.0]), PointN([0.0, 1.0])]
+    }
+
+    fn abs(&self) -> Self {
+        PointN([self.x().abs(), self.y().abs()])
     }
 }
 

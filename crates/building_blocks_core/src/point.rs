@@ -1,4 +1,4 @@
-use core::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
+use core::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 use num::Zero;
 use serde::{Deserialize, Serialize};
 
@@ -57,11 +57,26 @@ pub trait Point:
     + PartialOrd
     + Sized
     + Sub<Output = Self>
+    + Neg
     + Zero
 {
     type Scalar: Copy;
 
     fn basis() -> Vec<Self>;
+
+    fn abs(&self) -> Self;
+}
+
+impl<N> Neg for PointN<N>
+where
+    N: Copy,
+    PointN<N>: Sub<Output = Self> + Zero,
+{
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self::zero() - self
+    }
 }
 
 impl<N> AddAssign for PointN<N>

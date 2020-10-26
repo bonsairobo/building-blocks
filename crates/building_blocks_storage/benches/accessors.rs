@@ -131,7 +131,7 @@ fn chunk_map_copy(c: &mut Criterion) {
                 || {
                     let cp_extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
                     let mut src = default_chunk_map();
-                    copy_extent(&cp_extent, &|_p: &Point3i| 1, &mut src);
+                    src.fill_extent(&cp_extent, 1);
 
                     let dst = default_chunk_map();
 
@@ -174,7 +174,7 @@ fn set_up_array(size: i32) -> (Array3<i32>, Extent3i) {
 fn set_up_chunk_map(size: i32) -> (ChunkMap3<i32, ()>, Extent3i) {
     let mut map = default_chunk_map();
     let iter_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
-    copy_extent(&iter_extent, &|_p: &Point3i| 1, &mut map);
+    map.fill_extent(&iter_extent, 1);
 
     (map, iter_extent)
 }

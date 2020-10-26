@@ -14,7 +14,7 @@ pub type Point3i = PointN<[i32; 3]>;
 /// A 3-dimensional point with scalar type `f32`.
 pub type Point3f = PointN<[f32; 3]>;
 
-impl<T> PointN<[T; 3]> {
+impl<T> Point3<T> {
     pub fn x_mut(&mut self) -> &mut T {
         &mut self.0[0]
     }
@@ -28,7 +28,7 @@ impl<T> PointN<[T; 3]> {
     }
 }
 
-impl<T> PointN<[T; 3]>
+impl<T> Point3<T>
 where
     T: Copy,
 {

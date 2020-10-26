@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/bonsairobo/building-blocks"
 keywords = ["voxel"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Algorithms for procedural generation of voxel data."
 
 [dependencies]
 building_blocks_core = { path = "../building_blocks_core", version = "0.1" }

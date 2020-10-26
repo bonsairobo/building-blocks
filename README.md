@@ -200,17 +200,15 @@ which brought about the current feature set:
 
 ## Roadmap
 
-1. v0.1: Publish on crates.io with enough core functionality to provide
-  interesting examples in a popular Rust game engine (Bevy)
-2. `Octree` from height map
-3. procedurally generated heightmaps for terrain
+1. `Octree` from height map
+2. procedurally generated heightmaps for terrain
     1. fractal noise
     2. hydraulic erosion
-4. Bevy integration
+3. Bevy integration
     1. ECS systems for dynamic meshing
-5. Rapier3d integration
-6. level of detail
+4. Rapier3d integration
+5. level of detail
     1. stitching chunks on LoD boundaries
     2. geomorphing
-7. GPU acceleration of core algorithms
-8. SIMD variants of core data types
+6. GPU acceleration of core algorithms
+7. SIMD variants of core data types

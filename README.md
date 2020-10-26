@@ -45,7 +45,11 @@ surface_nets(&samples, samples.extent(), &mut mesh_buffer);
 ## Learning
 
 The current best way to learn about the library is to read the documentation and
-examples. Clone the repo and run
+examples.
+
+For the latest stable docs, look [here](https://docs.rs/building_blocks/latest/building_blocks).
+
+For the latest unstable docs, clone the repo and run
 
 ```sh
 cargo doc --open --all-features

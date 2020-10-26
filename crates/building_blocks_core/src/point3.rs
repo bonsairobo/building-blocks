@@ -83,6 +83,19 @@ where
 
 impl<T> Point3<T>
 where
+    T: Copy + Mul<Output = T> + Sub<Output = T>,
+{
+    pub fn cross(&self, other: &Self) -> Self {
+        Self([
+            self.y() * other.z() - self.z() * other.y(),
+            self.z() * other.x() - self.x() * other.z(),
+            self.x() * other.y() - self.y() * other.x(),
+        ])
+    }
+}
+
+impl<T> Point3<T>
+where
     T: Copy + Integer,
 {
     pub fn vector_div_floor(&self, rhs: &Self) -> Self {

@@ -362,6 +362,8 @@ impl QuadGroupMeta {
     }
 }
 
+/// Returns the vertex indices for a single quad (two triangles). The triangles may have either
+/// clockwise or counter-clockwise winding. `start` is the first index.
 pub fn quad_indices(start: usize, clockwise: bool) -> [usize; 6] {
     if clockwise {
         [

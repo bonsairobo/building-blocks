@@ -1,8 +1,11 @@
 [package]
 name = "building_blocks_core"
 version = "0.1.0"
-authors = ["Duncan <bonsairobo@gmail.com>"]
 edition = "2018"
+authors = ["Duncan <bonsairobo@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/bonsairobo/building-blocks"
+keywords = ["voxel"]
 
 description = "The core data types for defining 2D and 3D integer lattices."
 

@@ -1,5 +1,9 @@
 # Building Blocks
 
+[![Crates.io](https://img.shields.io/crates/v/building-blocks.svg)](https://crates.io/crates/building-blocks)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bonsairobo/building-blocks/blob/master/LICENSE)
+[![Crates.io](https://img.shields.io/crates/d/building-blocks.svg)](https://crates.io/crates/building-blocks)
+
 Building Blocks is a voxel library for real-time applications.
 
 ![Meshing](/images/meshing.gif)

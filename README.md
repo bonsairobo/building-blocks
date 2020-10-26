@@ -1,6 +1,7 @@
 # Building Blocks
 
 [![Crates.io](https://img.shields.io/crates/v/building-blocks.svg)](https://crates.io/crates/building-blocks)
+[![Docs.rs](https://docs.rs/building-blocks/badge.svg)](https://docs.rs/building-blocks)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bonsairobo/building-blocks/blob/master/LICENSE)
 [![Crates.io](https://img.shields.io/crates/d/building-blocks.svg)](https://crates.io/crates/building-blocks)
 

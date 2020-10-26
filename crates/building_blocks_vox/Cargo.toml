@@ -7,6 +7,8 @@ license = "MIT"
 repository = "https://github.com/bonsairobo/building-blocks"
 keywords = ["voxel"]
 
+description = "Functions for converting to/from building-blocks arrays from/to VOX data format."
+
 [dependencies]
 dot_vox = "4.1"
 

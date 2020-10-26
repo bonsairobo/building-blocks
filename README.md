@@ -198,7 +198,7 @@ which brought about the current feature set:
     1. ECS systems for dynamic meshing
 4. Rapier3d integration
 5. level of detail
-    1. chunk stitching
+    1. stitching chunks on LoD boundaries
     2. geomorphing
 6. GPU acceleration of core algorithms
 7. SIMD variants of core data types

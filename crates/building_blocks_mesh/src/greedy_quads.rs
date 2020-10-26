@@ -323,7 +323,7 @@ impl QuadGroupMeta {
     ///      -------->
     ///        +u
     /// ```
-    pub fn quad_corners(&self, quad: &Quad) -> [[f32; 3]; 4] {
+    pub fn quad_corners(&self, quad: &Quad) -> [Point3f; 4] {
         let w_vec = self.u * quad.width;
         let h_vec = self.v * quad.height;
 
@@ -335,19 +335,18 @@ impl QuadGroupMeta {
         let maxu_minv = minu_minv + w_vec;
         let minu_maxv = minu_minv + h_vec;
         let maxu_maxv = minu_minv + w_vec + h_vec;
-        let minu_minv: Point3f = minu_minv.into();
-        let maxu_minv: Point3f = maxu_minv.into();
-        let minu_maxv: Point3f = minu_maxv.into();
-        let maxu_maxv: Point3f = maxu_maxv.into();
 
-        [minu_minv.0, maxu_minv.0, minu_maxv.0, maxu_maxv.0]
+        [
+            minu_minv.into(),
+            maxu_minv.into(),
+            minu_maxv.into(),
+            maxu_maxv.into(),
+        ]
     }
 
     /// The quad surface normal vector.
-    pub fn normal(&self) -> [f32; 3] {
-        let nf: Point3f = (self.n * self.n_sign).into();
-
-        nf.0
+    pub fn normal(&self) -> Point3f {
+        (self.n * self.n_sign).into()
     }
 
     /// Returns the 6 vertex indices for the quad in order to make two triangles in a mesh.
@@ -426,10 +425,12 @@ where
         for (quad, material) in quads.iter() {
             let mesh = meshes.entry(*material).or_default();
 
+            let [c0, c1, c2, c3] = meta.quad_corners(quad);
+
             let cur_idx = mesh.positions.len();
             mesh.indices.extend_from_slice(&meta.indices(cur_idx));
-            mesh.positions.extend_from_slice(&meta.quad_corners(quad));
-            mesh.normals.extend_from_slice(&[normal; 4]);
+            mesh.positions.extend_from_slice(&[c0.0, c1.0, c2.0, c3.0]);
+            mesh.normals.extend_from_slice(&[normal.0; 4]);
             mesh.tex_coords.extend_from_slice(&quad.tex_coords());
         }
     }

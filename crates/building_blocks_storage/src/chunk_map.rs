@@ -408,6 +408,7 @@ where
     where
         Chunk<N, T, M>: DeserializeOwned + Serialize,
     {
+        // PERF: this could easily be done in parallel
         let portable_chunks = self
             .chunks
             .iter_maybe_compressed()

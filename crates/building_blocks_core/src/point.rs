@@ -112,8 +112,21 @@ pub trait Distance: Point {
     fn l2_distance_squared(&self, other: &Self) -> Self::Scalar;
 }
 
+pub trait NormSquared {
+    fn norm_squared(&self) -> f32;
+}
+
 pub trait Norm {
     fn norm(&self) -> f32;
+}
+
+impl<T> Norm for T
+where
+    T: NormSquared,
+{
+    fn norm(&self) -> f32 {
+        self.norm_squared().sqrt()
+    }
 }
 
 impl<N> Zero for PointN<N>

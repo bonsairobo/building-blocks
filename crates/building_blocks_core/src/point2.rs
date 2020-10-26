@@ -1,5 +1,5 @@
 use crate::{
-    point::SmallOne, Bounded, Distance, DotProduct, IntegerPoint, Norm, Ones, Point, PointN,
+    point::SmallOne, Bounded, Distance, DotProduct, IntegerPoint, NormSquared, Ones, Point, PointN,
     SmallZero,
 };
 
@@ -118,15 +118,15 @@ where
     }
 }
 
-impl Norm for Point2i {
-    fn norm(&self) -> f32 {
-        (self.dot(&self) as f32).sqrt()
+impl NormSquared for Point2i {
+    fn norm_squared(&self) -> f32 {
+        self.dot(&self) as f32
     }
 }
 
-impl Norm for Point2f {
-    fn norm(&self) -> f32 {
-        self.dot(&self).sqrt()
+impl NormSquared for Point2f {
+    fn norm_squared(&self) -> f32 {
+        self.dot(&self)
     }
 }
 

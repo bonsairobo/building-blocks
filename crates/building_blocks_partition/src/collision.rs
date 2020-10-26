@@ -104,7 +104,7 @@ where
                         let intersection_p = self.ray.point_at(toi);
                         let nudge_p = intersection_p - std::f32::EPSILON * normal;
 
-                        voxel_containing_point3f(&nudge_p)
+                        voxel_containing_point3f(&nudge_p.into())
                     };
 
                     if (self.predicate_fn)(voxel_point) {

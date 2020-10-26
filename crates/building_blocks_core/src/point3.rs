@@ -423,6 +423,10 @@ impl From<Point3i> for Point3f {
     }
 }
 
+pub fn voxel_containing_point3f(p: &Point3f) -> Point3i {
+    PointN([p.x() as i32, p.y() as i32, p.z() as i32])
+}
+
 #[cfg(feature = "nalg")]
 pub mod nalgebra_conversions {
     use super::*;
@@ -455,9 +459,5 @@ pub mod nalgebra_conversions {
         fn from(p: Point3i) -> Self {
             na::Point3::new(p.x() as f32, p.y() as f32, p.z() as f32)
         }
-    }
-
-    pub fn voxel_containing_point3f(p: &na::Point3<f32>) -> Point3i {
-        PointN([p.x as i32, p.y as i32, p.z as i32])
     }
 }

@@ -324,6 +324,10 @@ impl From<Point2i> for Point2f {
     }
 }
 
+pub fn pixel_containing_point2f(p: &Point2f) -> Point2i {
+    PointN([p.x() as i32, p.y() as i32])
+}
+
 #[cfg(feature = "nalg")]
 pub mod nalgebra_conversions {
     use super::*;
@@ -356,9 +360,5 @@ pub mod nalgebra_conversions {
         fn from(p: Point2i) -> Self {
             na::Point2::new(p.x() as f32, p.y() as f32)
         }
-    }
-
-    pub fn pixel_containing_point2f(p: &na::Point2<f32>) -> Point2i {
-        PointN([p.x as i32, p.y as i32])
     }
 }

@@ -1,6 +1,8 @@
 # Building Blocks
 
-Building Blocks is a voxel library that focuses on real-time applications.
+Building Blocks is a voxel library for real-time applications.
+
+![Meshing](/images/meshing.gif)
 
 Supported use cases include:
 

@@ -41,10 +41,10 @@ enum Sdf {
 impl Sdf {
     fn get_sdf(&self) -> Box<dyn Fn(&Point3i) -> f32> {
         match self {
-            Sdf::Cube => Box::new(cube(PointN([0.0, 0.0, 0.0]), 50.0)),
+            Sdf::Cube => Box::new(cube(PointN([0.0, 0.0, 0.0]), 20.0)),
             Sdf::Plane => Box::new(plane(PointN([0.5, 0.5, 0.5]), 1.0)),
-            Sdf::Sphere => Box::new(sphere(PointN([0.0, 0.0, 0.0]), 50.0)),
-            Sdf::Torus => Box::new(torus(PointN([35.0, 10.0]))),
+            Sdf::Sphere => Box::new(sphere(PointN([0.0, 0.0, 0.0]), 20.0)),
+            Sdf::Torus => Box::new(torus(PointN([16.0, 4.0]))),
         }
     }
 }
@@ -58,7 +58,7 @@ impl HeightMap {
     fn get_height_map(&self) -> impl Fn(&Point2i) -> f32 {
         match self {
             HeightMap::Wave => {
-                |p: &Point2i| 10.0 * (1.0 + (0.1 * p.x() as f32).cos() + (0.1 * p.y() as f32).sin())
+                |p: &Point2i| 10.0 * (1.0 + (0.2 * p.x() as f32).cos() + (0.2 * p.y() as f32).sin())
             }
         }
     }
@@ -74,12 +74,12 @@ impl Cubic {
         match self {
             Cubic::Terrace => {
                 let extent =
-                    Extent3i::from_min_and_shape(PointN([-50; 3]), PointN([100; 3])).padded(1);
+                    Extent3i::from_min_and_shape(PointN([-20; 3]), PointN([40; 3])).padded(1);
                 let mut voxels = Array3::fill(extent, CubeVoxel(false));
-                for i in 0..100 {
+                for i in 0..40 {
                     let level = Extent3i::from_min_and_shape(
-                        PointN([i - 50; 3]),
-                        PointN([100 - i, 1, 100 - i]),
+                        PointN([i - 20; 3]),
+                        PointN([40 - i, 1, 40 - i]),
                     );
                     voxels.fill_extent(&level, CubeVoxel(true));
                 }
@@ -171,11 +171,11 @@ pub fn mesh_generator_system(
     }
 }
 
-const CHUNK_SIZE: i32 = 32;
+const CHUNK_SIZE: i32 = 16;
 
 fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNormMesh>> {
     let sdf = sdf.get_sdf();
-    let sample_extent = Extent3i::from_min_and_shape(PointN([-50; 3]), PointN([100; 3])).padded(1);
+    let sample_extent = Extent3i::from_min_and_shape(PointN([-20; 3]), PointN([40; 3])).padded(1);
     let chunk_shape = PointN([CHUNK_SIZE; 3]);
     let ambient_value = std::f32::MAX; // air
     let default_chunk_meta = ();
@@ -228,7 +228,7 @@ fn generate_chunk_meshes_from_height_map(
     pool: &TaskPool,
 ) -> Vec<Option<PosNormMesh>> {
     let height_map = hm.get_height_map();
-    let sample_extent = Extent2i::from_min_and_shape(PointN([-50; 2]), PointN([100; 2])).padded(1);
+    let sample_extent = Extent2i::from_min_and_shape(PointN([-20; 2]), PointN([40; 2])).padded(1);
     let chunk_shape = PointN([CHUNK_SIZE; 2]);
     let ambient_value = 0.0;
     let default_chunk_meta = ();

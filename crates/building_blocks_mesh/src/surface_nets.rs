@@ -1,54 +1,3 @@
-//! The Naive Surface Nets smooth voxel meshing algorithm.
-//!
-//! For an in-depth explanation of the algorithm, read [here](https://medium.com/@bonsairobo/smooth-voxel-mapping-a-technical-deep-dive-on-real-time-surface-nets-and-texturing-ef06d0f8ca14).
-//!
-//! The `surface_nets` function is designed to be used with a `ChunkMap3`, such that each chunk will
-//! have its own mesh. In order to update the mesh for a chunk, you must copy not only the chunk,
-//! but also the adjacent points, into an array and pass it to `surface_nets`.
-//!
-//! ```
-//! use building_blocks_core::prelude::*;
-//! use building_blocks_storage::prelude::*;
-//! use building_blocks_mesh::surface_nets::*;
-//!
-//! use std::collections::HashSet;
-//!
-//! let chunk_shape = PointN([16; 3]);
-//! let mut map = ChunkMap3::new(chunk_shape, 100.0, (), FastLz4 { level: 10 });
-//!
-//! // Mutate one or more of the chunks...
-//! let mutated_chunk_keys = [PointN([0; 3]), PointN([16; 3])];
-//!
-//! // For each mutated chunk, and any adjacent chunk, the mesh will need to be updated. (This is
-//! // not 100% true, but it's a conservative assumption to make. In reality, if a given voxel is
-//! // mutated and it's L1 distance from an adjacent chunk is less than or equal to 2, that adjacent
-//! // chunk's mesh is dependent on that voxel, so it must be re-meshed).
-//! let mut chunk_keys_to_update: HashSet<Point3i> = HashSet::new();
-//! let offsets = Point3i::moore_offsets();
-//! for chunk_key in mutated_chunk_keys.into_iter() {
-//!     chunk_keys_to_update.insert(*chunk_key);
-//!     for offset in offsets.iter() {
-//!         chunk_keys_to_update.insert(*chunk_key + *offset * chunk_shape);
-//!     }
-//! }
-//!
-//! // Now we generate mesh vertices for each chunk.
-//! let local_cache = LocalChunkCache::new();
-//! let reader = ChunkMapReader3::new(&map, &local_cache);
-//! for chunk_key in chunk_keys_to_update.into_iter() {
-//!     // It's crucial that we pad the chunk so we have access to adjacent points during meshing.
-//!     let padded_chunk_extent = padded_surface_nets_chunk_extent(
-//!         &map.extent_for_chunk_at_key(&chunk_key)
-//!     );
-//!     let mut padded_chunk = Array3::fill(padded_chunk_extent, 0.0);
-//!     copy_extent(&padded_chunk_extent, &reader, &mut padded_chunk);
-//!
-//!     let mut sn_buffer = SurfaceNetsBuffer::default();
-//!     surface_nets(&padded_chunk, &padded_chunk_extent, &mut sn_buffer);
-//!     // Do something with the mesh output...
-//! }
-//! ```
-
 use super::PosNormMesh;
 
 use building_blocks_core::prelude::*;
@@ -106,6 +55,10 @@ impl SurfaceNetsBuffer {
     }
 }
 
+/// The Naive Surface Nets smooth voxel meshing algorithm.
+///
+/// For an in-depth explanation of the algorithm, read [here](https://medium.com/@bonsairobo/smooth-voxel-mapping-a-technical-deep-dive-on-real-time-surface-nets-and-texturing-ef06d0f8ca14).
+///
 /// Extracts an isosurface mesh from the signed distance field `sdf`. The `sdf` describes a 3D
 /// lattice of values. These lattice points will be considered corners of unit cubes. For each unit
 /// cube, a single isosurface vertex will be estimated, as below, where "c" is a cube corner and "s"

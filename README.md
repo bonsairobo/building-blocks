@@ -22,7 +22,7 @@ Supported use cases include:
 
 ## Short Code Example
 
-The code below samples a signed distance field and generates a mesh from it.
+The code below samples a [signed distance field](https://en.wikipedia.org/wiki/Signed_distance_function) and generates a mesh from it.
 
 ```rust
 use building_blocks::{

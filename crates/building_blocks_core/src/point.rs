@@ -99,7 +99,7 @@ where
     }
 }
 
-pub trait Ones {
+pub trait Ones: Copy {
     /// A point of all ones.
     const ONES: Self;
 }

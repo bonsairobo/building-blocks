@@ -365,23 +365,9 @@ impl QuadGroupMeta {
 /// clockwise or counter-clockwise winding. `start` is the first index.
 pub fn quad_indices(start: usize, clockwise: bool) -> [usize; 6] {
     if clockwise {
-        [
-            start + 0,
-            start + 2,
-            start + 1,
-            start + 1,
-            start + 2,
-            start + 3,
-        ]
+        [start, start + 2, start + 1, start + 1, start + 2, start + 3]
     } else {
-        [
-            start + 0,
-            start + 1,
-            start + 2,
-            start + 1,
-            start + 3,
-            start + 2,
-        ]
+        [start, start + 1, start + 2, start + 1, start + 3, start + 2]
     }
 }
 

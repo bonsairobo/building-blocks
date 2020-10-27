@@ -464,7 +464,7 @@ where
     ExtentN<N>: IntegerExtent<N>,
 {
     pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: T) {
-        self.for_each_mut(extent, |_p, v| *v = value.clone());
+        self.for_each_mut(extent, |_p, v| *v = value);
     }
 }
 

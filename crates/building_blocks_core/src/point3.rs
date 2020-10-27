@@ -167,7 +167,7 @@ where
 
 impl<T> Distance for Point3<T>
 where
-    T: Copy + Signed + Add<Output = T> + Pow<i32, Output = T>,
+    T: Copy + Signed + Add<Output = T> + Pow<u16, Output = T>,
     Point3<T>: Point<Scalar = T>,
 {
     fn l1_distance(&self, other: &Self) -> Self::Scalar {

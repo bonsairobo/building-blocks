@@ -76,9 +76,8 @@ impl SurfaceNetsBuffer {
 ///
 /// The set of corners sampled is exactly the set of points in `extent`. `sdf` must contain all of
 /// those points.
-pub fn surface_nets<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
+pub fn surface_nets<T>(sdf: &Array3<T>, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    V: Array<[i32; 3]> + GetUncheckedRefRelease<Stride, T>,
     T: SignedDistance,
 {
     output.reset(sdf.extent().num_points());
@@ -89,9 +88,8 @@ where
 
 // Find all vertex positions and normals. Also generate a map from grid position to vertex index
 // to be used to look up vertices when generating quads.
-fn estimate_surface<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
+fn estimate_surface<T>(sdf: &Array3<T>, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    V: Array<[i32; 3]> + GetUncheckedRefRelease<Stride, T>,
     T: SignedDistance,
 {
     // Precalculate these offsets to do faster linear indexing.
@@ -102,7 +100,7 @@ where
     // Avoid accessing out of bounds with a 2x2x2 kernel.
     let iter_extent = extent.add_to_shape(PointN([-1; 3]));
 
-    V::for_each_point_and_stride(sdf.extent(), &iter_extent, |p, p_stride| {
+    Array3::<T>::for_each_point_and_stride(sdf.extent(), &iter_extent, |p, p_stride| {
         // Get the corners of the cube with minimal corner p.
         let mut corner_strides = [Stride(0); 8];
         for i in 0..8 {
@@ -139,13 +137,12 @@ const CUBE_EDGES: [(usize, usize); 12] = [
 //
 // This is done by estimating, for each cube edge, where the isosurface crosses the edge (if it
 // does at all). Then the estimated surface point is the average of these edge crossings.
-fn estimate_surface_in_voxel<V, T>(
-    sdf: &V,
+fn estimate_surface_in_voxel<T>(
+    sdf: &Array3<T>,
     point: &Point3i,
     corner_strides: &[Stride],
 ) -> Option<([f32; 3], [f32; 3])>
 where
-    V: GetUncheckedRefRelease<Stride, T>,
     T: SignedDistance,
 {
     // Get the signed distance values at each corner of this cube.
@@ -223,9 +220,8 @@ fn estimate_surface_edge_intersection(
 // touching that surface. The "centers" are actually the vertex positions found earlier. Also,
 // make sure the triangles are facing the right way. See the comments on `maybe_make_quad` to help
 // with understanding the indexing.
-fn make_all_quads<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
+fn make_all_quads<T>(sdf: &Array3<T>, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    V: Array<[i32; 3]> + GetUncheckedRefRelease<Stride, T>,
     T: SignedDistance,
 {
     let mut xyz_strides = [Stride(0); 3];
@@ -314,8 +310,8 @@ where
 // then we must find the other 3 quad corners by moving along the other two axes (those orthogonal
 // to A) in the negative directions; these are axis B and axis C.
 #[allow(clippy::too_many_arguments)]
-fn maybe_make_quad<V, T>(
-    sdf: &V,
+fn maybe_make_quad<T>(
+    sdf: &Array3<T>,
     stride_to_index: &[usize],
     positions: &[[f32; 3]],
     p1: Stride,
@@ -324,7 +320,6 @@ fn maybe_make_quad<V, T>(
     axis_c_stride: Stride,
     indices: &mut Vec<usize>,
 ) where
-    V: GetUncheckedRefRelease<Stride, T>,
     T: SignedDistance,
 {
     let voxel1 = sdf.get_unchecked_ref_release(p1);
@@ -399,9 +394,8 @@ pub trait MaterialVoxel {
 /// materials for each surface point. `voxels` should at least contain the extent that was used with
 /// `surface_nets` in order to generate `surface_strides`. Currently limited to 4 materials per
 /// surface chunk.
-pub fn material_weights<V, T>(voxels: &V, surface_strides: &[Stride]) -> Vec<[f32; 4]>
+pub fn material_weights<T>(voxels: &Array3<T>, surface_strides: &[Stride]) -> Vec<[f32; 4]>
 where
-    V: Array<[i32; 3]> + GetUncheckedRefRelease<Stride, T>,
     T: MaterialVoxel + SignedDistance,
 {
     // Precompute the offsets for cube corners.

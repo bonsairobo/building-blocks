@@ -270,9 +270,9 @@ where
         PointN::chunk_key_containing_point(self.chunk_shape_mask(), point)
     }
 
-    /// Same as `chunk_key_iter`, but for this map's chunk shape.
-    pub fn key_iter(&self, extent: &ExtentN<N>) -> impl Iterator<Item = PointN<N>> {
-        chunk_key_iter(self.chunk_shape, extent)
+    /// Returns an iterator over all chunk keys for chunks that overlap the given extent.
+    pub fn chunk_keys_for_extent(&self, extent: &ExtentN<N>) -> impl Iterator<Item = PointN<N>> {
+        chunk_keys_for_extent(self.chunk_shape, extent)
     }
 
     /// The extent spanned by the chunk at `key`.
@@ -549,7 +549,7 @@ where
 }
 
 /// Returns an iterator over all chunk keys for chunks that overlap the given extent.
-pub fn chunk_key_iter<N>(
+pub fn chunk_keys_for_extent<N>(
     chunk_shape: PointN<N>,
     extent: &ExtentN<N>,
 ) -> impl Iterator<Item = PointN<N>>
@@ -641,7 +641,7 @@ where
     type Data = T;
 
     fn for_each_ref(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &Self::Data)) {
-        for chunk_key in self.map.key_iter(extent) {
+        for chunk_key in self.map.chunk_keys_for_extent(extent) {
             if let Some(chunk) = self.map.get_chunk(chunk_key, &self.local_cache) {
                 chunk.map.for_each_ref(extent, |p, value| f(p, value));
             } else {
@@ -685,7 +685,7 @@ where
             ..
         } = self;
 
-        for chunk_key in chunk_key_iter(*chunk_shape, extent) {
+        for chunk_key in chunk_keys_for_extent(*chunk_shape, extent) {
             let chunk = chunks.get_or_insert_with(chunk_key, || Chunk {
                 metadata: default_chunk_metadata.clone(),
                 map: ArrayN::fill(
@@ -719,7 +719,7 @@ where
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
         let chunk_iters = self
             .map
-            .key_iter(extent)
+            .chunk_keys_for_extent(extent)
             .map(|key| {
                 let chunk_extent = self.map.extent_for_chunk_at_key(&key);
                 let intersection = extent.intersection(&chunk_extent);
@@ -766,7 +766,7 @@ where
             ..
         } = self;
 
-        for chunk_key in chunk_key_iter(*chunk_shape, extent) {
+        for chunk_key in chunk_keys_for_extent(*chunk_shape, extent) {
             let chunk = chunks.get_or_insert_with(chunk_key, || Chunk {
                 metadata: default_chunk_metadata.clone(),
                 map: ArrayN::fill(
@@ -795,10 +795,10 @@ mod tests {
     use building_blocks_core::Extent3i;
 
     #[test]
-    fn chunk_key_iter_gives_keys_for_chunks_overlapping_extent() {
+    fn chunk_keys_for_extent_gives_keys_for_chunks_overlapping_extent() {
         let chunk_shape = PointN([16; 3]);
         let query_extent = Extent3i::from_min_and_shape(PointN([15; 3]), PointN([16; 3]));
-        let chunk_keys: Vec<_> = chunk_key_iter(chunk_shape, &query_extent).collect();
+        let chunk_keys: Vec<_> = chunk_keys_for_extent(chunk_shape, &query_extent).collect();
 
         assert_eq!(
             chunk_keys,

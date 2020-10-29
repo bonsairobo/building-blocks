@@ -279,8 +279,7 @@ impl<M> QuadGroup<M> {
 
 /// Metadata that's used to aid in the geometric calculations for one of the 6 possible cube faces.
 pub struct QuadGroupMeta {
-    // Normal determines the direction we iterate through slices. It's direction is either positive
-    // or negative depending on which cube face we're looking for.
+    // Determines whether we're looking at a positive or negative face of each cube.
     pub n_sign: i32,
 
     // Used for indexing.

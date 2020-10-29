@@ -130,8 +130,14 @@ impl Point for Point3i {
         vec![PointN([1, 0, 0]), PointN([0, 1, 0]), PointN([0, 0, 1])]
     }
 
+    #[inline]
     fn abs(&self) -> Self {
         PointN([self.x().abs(), self.y().abs(), self.z().abs()])
+    }
+
+    #[inline]
+    fn at(&self, component_index: usize) -> Self::Scalar {
+        self.0[component_index]
     }
 }
 
@@ -146,8 +152,14 @@ impl Point for Point3f {
         ]
     }
 
+    #[inline]
     fn abs(&self) -> Self {
         PointN([self.x().abs(), self.y().abs(), self.z().abs()])
+    }
+
+    #[inline]
+    fn at(&self, component_index: usize) -> Self::Scalar {
+        self.0[component_index]
     }
 }
 

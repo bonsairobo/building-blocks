@@ -112,8 +112,8 @@ fn greedy_quads_for_group<V>(
     let i_u = u_axis.index();
     let i_v = v_axis.index();
 
-    let num_slices = interior_shape.0[i_n];
-    let slice_shape = *n + *u * interior_shape.0[i_u] + *v * interior_shape.0[i_v];
+    let num_slices = interior_shape.at(i_n);
+    let slice_shape = *n + *u * interior_shape.at(i_u) + *v * interior_shape.at(i_v);
     let mut slice_extent = Extent3i::from_min_and_shape(interior_min, slice_shape);
 
     let normal = *n * *n_sign;
@@ -125,15 +125,15 @@ fn greedy_quads_for_group<V>(
 
     for _ in 0..num_slices {
         let slice_ub = slice_extent.least_upper_bound();
-        let u_ub = slice_ub.0[i_u];
-        let v_ub = slice_ub.0[i_v];
+        let u_ub = slice_ub.at(i_u);
+        let v_ub = slice_ub.at(i_v);
 
         voxels.for_each_ref(&slice_extent, |(p, p_stride): (Point3i, Stride), voxel| {
             let quad_material = voxel.material();
 
             // These are the boundaries on quad width and height so it is contained in the slice.
-            let mut max_width = u_ub - p.0[i_u];
-            let max_height = v_ub - p.0[i_v];
+            let mut max_width = u_ub - p.at(i_u);
+            let max_height = v_ub - p.at(i_v);
 
             // Greedily search for the biggest visible quad that matches this material.
             //

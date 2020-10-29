@@ -64,7 +64,11 @@ pub trait Point:
 
     fn basis() -> Vec<Self>;
 
+    /// Returns a point where each component is the absolute value of the input component.
     fn abs(&self) -> Self;
+
+    /// Returns the component specified by index. I.e. X = 0, Y = 1, Z = 2.
+    fn at(&self, component_index: usize) -> Self::Scalar;
 }
 
 impl<N> Neg for PointN<N>

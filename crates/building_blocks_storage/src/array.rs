@@ -104,7 +104,7 @@ impl<N, T> ArrayExtent<N> for ArrayN<N, T> {
 pub trait Array<N>: ArrayExtent<N> {
     fn stride_from_point_static(shape: &PointN<N>, point: &PointN<N>) -> Stride;
 
-    fn for_each_point_and_stride(
+    fn for_each_point_and_stride_static(
         array_extent: &ExtentN<N>,
         extent: &ExtentN<N>,
         f: impl FnMut(PointN<N>, Stride),
@@ -116,6 +116,10 @@ pub trait Array<N>: ArrayExtent<N> {
         array2_extent: &ExtentN<N>,
         f: impl FnMut(Stride, Stride),
     );
+
+    fn for_each_point_and_stride(&self, extent: &ExtentN<N>, f: impl FnMut(PointN<N>, Stride)) {
+        Self::for_each_point_and_stride_static(self.extent(), extent, f);
+    }
 
     fn stride_from_point(&self, p: &PointN<N>) -> Stride {
         Self::stride_from_point_static(&self.extent().shape, p)
@@ -579,7 +583,7 @@ macro_rules! impl_array_for_each {
             type Data = T;
 
             fn for_each_ref(&self, extent: &ExtentN<N>, mut f: impl FnMut($coords, &T)) {
-                Self::for_each_point_and_stride(self.extent(), &extent, |$p, $stride| {
+                Self::for_each_point_and_stride_static(self.extent(), &extent, |$p, $stride| {
                     f($forward_coords, self.get_unchecked_ref_release($stride))
                 })
             }
@@ -594,7 +598,7 @@ macro_rules! impl_array_for_each {
 
             fn for_each_mut(&mut self, extent: &ExtentN<N>, mut f: impl FnMut($coords, &mut T)) {
                 let array_extent = *self.extent();
-                Self::for_each_point_and_stride(&array_extent, &extent, |$p, $stride| {
+                Self::for_each_point_and_stride_static(&array_extent, &extent, |$p, $stride| {
                     f($forward_coords, self.get_unchecked_mut_release($stride))
                 })
             }

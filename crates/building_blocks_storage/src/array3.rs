@@ -13,7 +13,7 @@ impl<T> Array<[i32; 3]> for Array3<T> {
         Stride((p.z() * s.y() * s.x() + p.y() * s.x() + p.x()) as usize)
     }
 
-    fn for_each_point_and_stride(
+    fn for_each_point_and_stride_static(
         array_extent: &Extent3i,
         extent: &Extent3i,
         mut f: impl FnMut(Point3i, Stride),

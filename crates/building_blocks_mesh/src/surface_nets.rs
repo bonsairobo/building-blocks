@@ -100,7 +100,7 @@ where
     // Avoid accessing out of bounds with a 2x2x2 kernel.
     let iter_extent = extent.add_to_shape(PointN([-1; 3]));
 
-    Array3::<T>::for_each_point_and_stride(sdf.extent(), &iter_extent, |p, p_stride| {
+    sdf.for_each_point_and_stride(&iter_extent, |p, p_stride| {
         // Get the corners of the cube with minimal corner p.
         let mut corner_strides = [Stride(0); 8];
         for i in 0..8 {

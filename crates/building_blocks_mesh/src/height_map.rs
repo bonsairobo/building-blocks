@@ -114,7 +114,7 @@ pub fn triangulate_height_map<H>(
     // Only add a quad when p is the bottom-left corner of a quad that fits in the interior.
     let quads_extent = interior_extent.add_to_shape(PointN([-1; 2]));
 
-    Array2::<H>::for_each_point_and_stride(height_map.extent(), &quads_extent, |_p, bl_stride| {
+    height_map.for_each_point_and_stride(&quads_extent, |_p, bl_stride| {
         let br_stride = bl_stride + delta_strides[0];
         let tl_stride = bl_stride + delta_strides[1];
         let tr_stride = bl_stride + delta_strides[0] + delta_strides[1];

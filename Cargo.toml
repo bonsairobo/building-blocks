@@ -9,7 +9,7 @@ repository = "https://github.com/bonsairobo/building-blocks"
 keywords = ["voxel"]
 
 [features]
-default = ["mesh", "procgen", "search"]
+default = ["mesh", "partition", "procgen", "search"]
 
 image = ["building_blocks_image"]
 mesh = ["building_blocks_mesh"]

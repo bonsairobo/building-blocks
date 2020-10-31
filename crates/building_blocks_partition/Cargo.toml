@@ -10,7 +10,7 @@ keywords = ["voxel"]
 description = "Acceleration structures for spatial queries on voxel data."
 
 [features]
-default = ["ncollide"]
+default = []
 
 ncollide = ["ncollide3d", "building_blocks_core/nalg"]
 

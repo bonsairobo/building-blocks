@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{prelude::*, BincodeLz4};
+use building_blocks_storage::{compressible_map::BincodeLz4, prelude::*};
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 

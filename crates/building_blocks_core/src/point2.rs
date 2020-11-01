@@ -393,4 +393,9 @@ pub mod nalgebra_conversions {
             na::Point2::new(p.x() as f32, p.y() as f32)
         }
     }
+    impl From<Point2i> for na::Vector2<f32> {
+        fn from(p: Point2i) -> Self {
+            na::Vector2::new(p.x() as f32, p.y() as f32)
+        }
+    }
 }

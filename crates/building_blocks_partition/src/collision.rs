@@ -278,13 +278,13 @@ fn extent3i_cuboid(e: &Extent3i) -> Cuboid<f32> {
 }
 
 fn extent3i_cuboid_transform(e: &Extent3i) -> Isometry3<f32> {
-    let center = Vector3::<f32>::from(Point3f::from(e.minimum)) + half_extent(e.shape);
+    let center = Vector3::<f32>::from(e.minimum) + half_extent(e.shape);
 
     Isometry3::new(center, zero())
 }
 
 fn half_extent(shape: Point3i) -> Vector3<f32> {
-    Vector3::<f32>::from(Point3f::from(shape)) / 2.0
+    Vector3::<f32>::from(shape) / 2.0
 }
 
 // ████████╗███████╗███████╗████████╗

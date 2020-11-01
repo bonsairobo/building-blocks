@@ -52,7 +52,6 @@ where
 
 struct VoxelRayCast<F> {
     earliest_impact: Option<VoxelImpact<RayIntersection<f32>>>,
-    num_ray_casts: usize,
     ray: Ray<f32>,
     max_toi: f32,
     predicate: F,
@@ -62,7 +61,6 @@ impl<F> VoxelRayCast<F> {
     fn new(ray: Ray<f32>, max_toi: f32, predicate: F) -> Self {
         Self {
             earliest_impact: None,
-            num_ray_casts: 0,
             ray,
             max_toi,
             predicate,
@@ -82,7 +80,6 @@ where
     F: Fn(Point3i) -> bool,
 {
     fn visit(&mut self, aabb: &AABB<f32>, octant: Option<&Octant>, is_leaf: bool) -> VisitStatus {
-        self.num_ray_casts += 1;
         let solid = true;
         if let Some(toi) = aabb.toi_with_ray(&Isometry3::identity(), &self.ray, self.max_toi, solid)
         {
@@ -155,7 +152,6 @@ where
 
 struct VoxelSphereCast<F> {
     earliest_impact: Option<VoxelImpact<TOI<f32>>>,
-    num_sphere_casts: usize,
     ball: Ball<f32>,
     ball_start_isom: Isometry3<f32>,
     ray: Ray<f32>,
@@ -183,7 +179,6 @@ impl<F> VoxelSphereCast<F> {
 
         Self {
             earliest_impact: None,
-            num_sphere_casts: 0,
             ball,
             ball_start_isom,
             ray,
@@ -214,7 +209,6 @@ where
 
         if let Some(octant) = octant {
             // Cast a sphere at this octant.
-            self.num_sphere_casts += 1;
             let octant_extent = Extent3i::from(*octant);
             let voxel_velocity = Vector3::zeros();
             let target_distance = 0.0;

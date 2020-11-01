@@ -7,6 +7,8 @@ use itertools::{iproduct, ConsTuples, Product};
 pub type Extent3<T> = ExtentN<[T; 3]>;
 /// A 3-dimensional extent with scalar type `i32`.
 pub type Extent3i = ExtentN<[i32; 3]>;
+/// A 3-dimensional extent with scalar type `f32`.
+pub type Extent3f = ExtentN<[f32; 3]>;
 
 impl<T> Extent<[T; 3]> for Extent3<T>
 where

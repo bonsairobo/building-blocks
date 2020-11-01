@@ -7,6 +7,8 @@ use itertools::{iproduct, Product};
 pub type Extent2<T> = ExtentN<[T; 2]>;
 /// A 2-dimensional extent with scalar type `i32`.
 pub type Extent2i = ExtentN<[i32; 2]>;
+/// A 2-dimensional extent with scalar type `f32`.
+pub type Extent2f = ExtentN<[f32; 2]>;
 
 impl<T> Extent<[T; 2]> for Extent2<T>
 where

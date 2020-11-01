@@ -18,7 +18,7 @@ ncollide = ["ncollide3d", "building_blocks_core/nalg"]
 fnv = "1.0"
 
 # Optional, feature-gated
-ncollide3d = { version = "0.25", optional = true }
+ncollide3d = { version = "0.26", optional = true }
 
 building_blocks_core = { path = "../building_blocks_core", version = "0.1" }
 building_blocks_storage = { path = "../building_blocks_storage", version = "0.1" }

@@ -356,6 +356,16 @@ pub mod nalgebra_conversions {
             na::Point2::new(p.x(), p.y())
         }
     }
+    impl From<Point2i> for na::Vector2<i32> {
+        fn from(p: Point2i) -> Self {
+            na::Vector2::new(p.x(), p.y())
+        }
+    }
+    impl From<Point2f> for na::Vector2<f32> {
+        fn from(p: Point2f) -> Self {
+            na::Vector2::new(p.x(), p.y())
+        }
+    }
 
     impl From<na::Point2<i32>> for Point2i {
         fn from(p: na::Point2<i32>) -> Self {
@@ -364,6 +374,16 @@ pub mod nalgebra_conversions {
     }
     impl From<na::Point2<f32>> for Point2f {
         fn from(p: na::Point2<f32>) -> Self {
+            PointN([p.x, p.y])
+        }
+    }
+    impl From<na::Vector2<i32>> for Point2i {
+        fn from(p: na::Vector2<i32>) -> Self {
+            PointN([p.x, p.y])
+        }
+    }
+    impl From<na::Vector2<f32>> for Point2f {
+        fn from(p: na::Vector2<f32>) -> Self {
             PointN([p.x, p.y])
         }
     }

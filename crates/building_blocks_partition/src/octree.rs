@@ -159,15 +159,14 @@ impl Octree {
     ) -> VisitStatus {
         // Precondition: location exists.
 
+        let octant = Octant {
+            minimum,
+            edge_length,
+        };
+
         // Base case where the octant is a single leaf voxel.
         if edge_length == 1 {
-            return visitor.visit_octant(
-                Octant {
-                    minimum,
-                    edge_length,
-                },
-                true,
-            );
+            return visitor.visit_octant(octant, true);
         }
 
         // Continue traversal of this branch.
@@ -177,23 +176,11 @@ impl Octree {
         } else {
             // Since we know that location exists, but it's not in the nodes map, this means that we
             // can assume the entire octant is full. This is an implicit leaf node.
-            return visitor.visit_octant(
-                Octant {
-                    minimum,
-                    edge_length,
-                },
-                true,
-            );
+            return visitor.visit_octant(octant, true);
         };
 
         // Definitely not at a leaf node.
-        let status = visitor.visit_octant(
-            Octant {
-                minimum,
-                edge_length,
-            },
-            false,
-        );
+        let status = visitor.visit_octant(octant, false);
         if status != VisitStatus::Continue {
             return status;
         }
@@ -267,6 +254,12 @@ impl LocationCode {
 pub struct Octant {
     pub minimum: Point3i,
     pub edge_length: i32,
+}
+
+impl From<Octant> for Extent3i {
+    fn from(octant: Octant) -> Self {
+        Extent3i::from_min_and_shape(octant.minimum, PointN([octant.edge_length; 3]))
+    }
 }
 
 pub trait OctreeVisitor {

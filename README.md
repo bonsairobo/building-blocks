@@ -70,7 +70,7 @@ To run the benchmarks (using the "criterion" crate), go to the root of a crate
 and run `cargo bench`.
 
 To learn more about the motivations behind the library's design, read about our
-[design philosophy and architecture](https://github.com/bonsairobo/building-blocks/blob/master/DESIGN.md)
+[design philosophy and architecture](https://github.com/bonsairobo/building-blocks/blob/master/DESIGN.md).
 
 ## Development
 

@@ -7,7 +7,13 @@
 //! its own mesh. In order to update the mesh for a chunk, you must copy not only the chunk, but
 //! also some adjacent points, into an array before running the meshing algorithm.
 //!
-//! An example of updating chunk meshes for a height map is shown below.
+//! An example of updating chunk meshes for a height map is shown below. The same general pattern
+//! applies to all meshing algorithms, where you:
+//!
+//!   1. get the desired chunk extent
+//!   2. pad the extent for a particular meshing algorithm
+//!   3. copy that extent into an array
+//!   4. mesh that array
 //!
 //! ```
 //! use building_blocks_core::prelude::*;

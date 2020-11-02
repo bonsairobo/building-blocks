@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/building-blocks.svg)](https://crates.io/crates/building-blocks)
 [![Docs.rs](https://docs.rs/building-blocks/badge.svg)](https://docs.rs/building-blocks)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bonsairobo/building-blocks/blob/master/LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bonsairobo/building-blocks/blob/main/LICENSE)
 [![Crates.io](https://img.shields.io/crates/d/building-blocks.svg)](https://crates.io/crates/building-blocks)
 [![Discord](https://img.shields.io/discord/770726405557321778.svg?logo=discord&colorB=7289DA)](https://discord.gg/CnTNjwb)
 
@@ -70,11 +70,11 @@ To run the benchmarks (using the "criterion" crate), go to the root of a crate
 and run `cargo bench`.
 
 To learn more about the motivations behind the library's design, read about our
-[design philosophy and architecture](https://github.com/bonsairobo/building-blocks/blob/master/DESIGN.md).
+[design philosophy and architecture](https://github.com/bonsairobo/building-blocks/blob/main/DESIGN.md).
 
 ## Development
 
 We prioritize work according to the [project board](https://github.com/bonsairobo/building-blocks/projects/1).
 
 If you'd like to make a contribution, please first read the
-**[contribution guidelines](https://github.com/bonsairobo/building-blocks/blob/master/CONTRIBUTING.md)**.
+**[contribution guidelines](https://github.com/bonsairobo/building-blocks/blob/main/CONTRIBUTING.md)**.

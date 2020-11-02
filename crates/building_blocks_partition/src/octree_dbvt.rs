@@ -42,6 +42,13 @@ where
             .map(|old_leaf_id| self.dbvt.remove(old_leaf_id).data)
     }
 
+    /// Remove the octree at `key`.
+    pub fn remove(&mut self, key: &K) -> Option<Octree> {
+        self.leaf_ids
+            .remove(key)
+            .map(|leaf_id| self.dbvt.remove(leaf_id).data)
+    }
+
     /// Visit every bounding volume (AABB) in the DBVT. This is a heterogeneous tree, meaning that
     /// not all nodes have the same representation. Upper nodes simply store a bounding volume
     /// (AABB), while octree nodes will provide both a bounding volume and an `Octant`, which is

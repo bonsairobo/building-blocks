@@ -131,7 +131,7 @@ pub type LocalChunkCache<N, T, M> = LocalCache<PointN<N>, Chunk<N, T, M>, fnv::F
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Chunk<N, T, M = ()> {
     pub metadata: M,
-    pub map: ArrayN<N, T>,
+    pub array: ArrayN<N, T>,
 }
 
 pub type Chunk2<T, M> = Chunk<[i32; 2], T, M>;
@@ -139,14 +139,17 @@ pub type Chunk3<T, M> = Chunk<[i32; 3], T, M>;
 
 impl<N, T> Chunk<N, T, ()> {
     /// Constructs a chunk without metadata.
-    pub fn with_map(map: ArrayN<N, T>) -> Self {
-        Chunk { metadata: (), map }
+    pub fn with_array(array: ArrayN<N, T>) -> Self {
+        Chunk {
+            metadata: (),
+            array,
+        }
     }
 }
 
 pub struct FastCompressedChunk<N, T, M = ()> {
     pub metadata: M, // metadata doesn't get compressed, hope it's small!
-    pub compressed_map: FastLz4CompressedArrayN<N, T>,
+    pub compressed_array: FastLz4CompressedArrayN<N, T>,
 }
 
 // PERF: cloning the metadata is unfortunate
@@ -162,7 +165,7 @@ where
     fn decompress(&self) -> Self::Decompressed {
         Chunk {
             metadata: self.metadata.clone(),
-            map: self.compressed_map.decompress(),
+            array: self.compressed_array.decompress(),
         }
     }
 }
@@ -178,7 +181,7 @@ where
     fn compress(&self, params: FastLz4) -> Self::Compressed {
         FastCompressedChunk {
             metadata: self.metadata.clone(),
-            compressed_map: self.map.compress(params),
+            compressed_array: self.array.compress(params),
         }
     }
 }
@@ -347,7 +350,7 @@ where
         let key = self.chunk_key(p);
         let chunk = self.get_mut_chunk_or_insert_with(key, create_chunk);
 
-        (key, chunk.map.get_unchecked_mut_release(p))
+        (key, chunk.array.get_unchecked_mut_release(p))
     }
 
     /// Sets point `p` to value `T`. If `p` is in a chunk that doesn't exist yet, then the chunk
@@ -367,9 +370,9 @@ where
         let array = &mut chunks
             .get_or_insert_with(key, || Chunk {
                 metadata: default_chunk_metadata.clone(),
-                map: ArrayN::fill(extent_for_chunk_at_key(chunk_shape, &key), *ambient_value),
+                array: ArrayN::fill(extent_for_chunk_at_key(chunk_shape, &key), *ambient_value),
             })
-            .map;
+            .array;
 
         (key, array.get_unchecked_mut_release(p))
     }
@@ -586,7 +589,7 @@ where
     fn get_ref(&self, p: &PointN<N>) -> &Self::Data {
         self.map
             .get_chunk_containing_point(p, &self.local_cache)
-            .map(|(_key, chunk)| chunk.map.get_unchecked_ref_release(p))
+            .map(|(_key, chunk)| chunk.array.get_unchecked_ref_release(p))
             .unwrap_or(&self.map.ambient_value)
     }
 }
@@ -627,7 +630,7 @@ where
     fn for_each_ref(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &Self::Data)) {
         for chunk_key in self.map.chunk_keys_for_extent(extent) {
             if let Some(chunk) = self.map.get_chunk(chunk_key, &self.local_cache) {
-                chunk.map.for_each_ref(extent, |p, value| f(p, value));
+                chunk.array.for_each_ref(extent, |p, value| f(p, value));
             } else {
                 let chunk_extent = self.map.extent_for_chunk_at_key(&chunk_key);
                 AmbientExtent::new(self.map.ambient_value)
@@ -672,12 +675,12 @@ where
         for chunk_key in chunk_keys_for_extent(*chunk_shape, extent) {
             let chunk = chunks.get_or_insert_with(chunk_key, || Chunk {
                 metadata: default_chunk_metadata.clone(),
-                map: ArrayN::fill(
+                array: ArrayN::fill(
                     extent_for_chunk_at_key(chunk_shape, &chunk_key),
                     *ambient_value,
                 ),
             });
-            chunk.map.for_each_mut(extent, |p, value| f(p, value));
+            chunk.array.for_each_mut(extent, |p, value| f(p, value));
         }
     }
 }
@@ -712,7 +715,7 @@ where
                     intersection,
                     self.map
                         .get_chunk(key, &self.local_cache)
-                        .map(|chunk| Either::Left(ArrayCopySrc(&chunk.map)))
+                        .map(|chunk| Either::Left(ArrayCopySrc(&chunk.array)))
                         .unwrap_or_else(|| {
                             Either::Right(AmbientExtent::new(self.map.ambient_value))
                         }),
@@ -753,12 +756,12 @@ where
         for chunk_key in chunk_keys_for_extent(*chunk_shape, extent) {
             let chunk = chunks.get_or_insert_with(chunk_key, || Chunk {
                 metadata: default_chunk_metadata.clone(),
-                map: ArrayN::fill(
+                array: ArrayN::fill(
                     extent_for_chunk_at_key(chunk_shape, &chunk_key),
                     *ambient_value,
                 ),
             });
-            chunk.map.write_extent(extent, src);
+            chunk.array.write_extent(extent, src);
         }
     }
 }

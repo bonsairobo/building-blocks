@@ -94,10 +94,7 @@ where
 {
     // Precalculate these offsets to do faster linear indexing.
     let mut corner_offset_strides = [Stride(0); 8];
-    let corner_offsets: Vec<_> = Point3i::corner_offsets()
-        .into_iter()
-        .map(|p| Local(p))
-        .collect();
+    let corner_offsets = Local::localize_points(&Point3i::corner_offsets());
     sdf.strides_from_local_points(&corner_offsets, &mut corner_offset_strides);
 
     // Avoid accessing out of bounds with a 2x2x2 kernel.
@@ -407,10 +404,7 @@ where
 {
     // Precompute the offsets for cube corners.
     let mut corner_offset_strides = [Stride(0); 8];
-    let corner_offsets: Vec<_> = Point3i::corner_offsets()
-        .into_iter()
-        .map(|p| Local(p))
-        .collect();
+    let corner_offsets = Local::localize_points(&Point3i::corner_offsets());
     voxels.strides_from_local_points(&corner_offsets, &mut corner_offset_strides);
 
     let mut material_weights = vec![[0.0; 4]; surface_strides.len()];

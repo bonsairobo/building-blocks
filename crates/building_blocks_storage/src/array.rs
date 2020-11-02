@@ -50,7 +50,7 @@
 //! // Some of these offsets include negative coordinates, which would underflow when translated
 //! // into an unsigned index. That's OK though, because Stride is intended to be used with modular
 //! // arithmetic.
-//! let offsets: Vec<_> = Point3i::von_neumann_offsets().into_iter().map(|p| Local(p)).collect();
+//! let offsets = Local::localize_points(&Point3i::von_neumann_offsets());
 //! let mut neighbor_strides = [Stride(0); 6];
 //! array.strides_from_local_points(&offsets, &mut neighbor_strides);
 //!
@@ -290,6 +290,15 @@ where
 /// coordinates. `Local<N>` only applies to lattice maps where a point must first be translated from
 /// global coordinates into map-local coordinates before indexing with `Get<Local<N>>`.
 pub struct Local<N>(pub PointN<N>);
+
+impl<N> Local<N> {
+    pub fn localize_points(points: &[PointN<N>]) -> Vec<Local<N>>
+    where
+        PointN<N>: Clone,
+    {
+        points.iter().cloned().map(|p| Local(p)).collect()
+    }
+}
 
 impl<N> Deref for Local<N> {
     type Target = PointN<N>;

@@ -70,7 +70,7 @@ pub fn triangulate_height_map<H>(
     // Avoid accessing out of bounds with a 3x3x3 kernel.
     let interior_extent = extent.padded(-1);
 
-    let deltas: Vec<_> = Point2i::basis().into_iter().map(|p| Local(p)).collect();
+    let deltas: Vec<_> = Local::localize_points(&Point2i::basis());
     let mut delta_strides = [Stride(0); 2];
     height_map.strides_from_local_points(&deltas, &mut delta_strides);
 

@@ -8,7 +8,7 @@ issue tracker, and project board to see if your idea is already tracking.
 Otherwise, please discuss your plan via either our Discord server or by opening
 an issue. We generally prefer for large new features to first take the form of a
 working prototype in a separate repository to demonstrate the added value, then
-we can being discussing how to integrate those ideas into the library.
+we can begin discussing how to integrate those ideas into the library.
 
 Pull requests are expected to add unit tests for complex logic and benchmarks
 where offering good performance is expected to be challenging. Please ask if you

@@ -74,6 +74,10 @@ pub struct PosNormMesh {
 }
 
 impl PosNormMesh {
+    pub fn is_empty(&self) -> bool {
+        self.indices.is_empty()
+    }
+
     pub fn clear(&mut self) {
         self.positions.clear();
         self.normals.clear();
@@ -93,6 +97,10 @@ pub struct PosNormTexMesh {
 }
 
 impl PosNormTexMesh {
+    pub fn is_empty(&self) -> bool {
+        self.indices.is_empty()
+    }
+
     pub fn clear(&mut self) {
         self.positions.clear();
         self.normals.clear();

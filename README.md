@@ -213,3 +213,6 @@ which brought about the current feature set:
     2. geomorphing
 6. GPU acceleration of core algorithms
 7. SIMD variants of core data types
+
+If you'd like to make a contribution, please first read the
+**[contribution guidelines](https://github.com/bonsairobo/building-blocks/blob/master/CONTRIBUTING.md)**.

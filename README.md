@@ -20,7 +20,7 @@ Supported use cases include:
   - height maps
 - accelerated spatial queries
   - ray casting
-  - range queries (TODO)
+  - range queries
 - procedural generation
   - sampling signed distance fields
   - generating height maps from fractal noise (TODO)

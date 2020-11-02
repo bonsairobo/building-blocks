@@ -381,7 +381,7 @@ mod tests {
 
         let power = 4;
         let octree = Octree::from_array3(power, &voxels);
-        let mut bvt = OctreeDBVT::new();
+        let mut bvt = OctreeDBVT::default();
         let key = 0; // unimportant
         bvt.insert(key, octree);
 
@@ -394,7 +394,7 @@ mod tests {
 
         let power = 4;
         let octree = Octree::from_array3(power, &voxels);
-        let mut bvt = OctreeDBVT::new();
+        let mut bvt = OctreeDBVT::default();
         let key = 0; // unimportant
         bvt.insert(key, octree);
 

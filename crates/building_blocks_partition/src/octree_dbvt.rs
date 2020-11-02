@@ -19,17 +19,19 @@ pub struct OctreeDBVT<K> {
     leaf_ids: FnvHashMap<K, DBVTLeafId>,
 }
 
-impl<K> OctreeDBVT<K>
-where
-    K: Eq + Hash,
-{
-    pub fn new() -> Self {
+impl<K> Default for OctreeDBVT<K> {
+    fn default() -> Self {
         Self {
             dbvt: DBVT::new(),
             leaf_ids: Default::default(),
         }
     }
+}
 
+impl<K> OctreeDBVT<K>
+where
+    K: Eq + Hash,
+{
     /// Inserts the octree, replacing any old octree at `key` and returning it.
     pub fn insert(&mut self, key: K, octree: Octree) -> Option<Octree> {
         let aabb = octree.octant().aabb();

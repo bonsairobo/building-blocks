@@ -296,7 +296,7 @@ impl<N> Local<N> {
     where
         PointN<N>: Clone,
     {
-        points.iter().cloned().map(|p| Local(p)).collect()
+        points.iter().cloned().map(Local).collect()
     }
 }
 

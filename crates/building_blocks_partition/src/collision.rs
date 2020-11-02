@@ -108,7 +108,7 @@ where
                     }
                 }
 
-                return VisitStatus::Continue;
+                VisitStatus::Continue
             } else {
                 // The TOI with any voxels in this octant can't be earliest.
                 VisitStatus::Stop

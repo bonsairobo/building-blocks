@@ -28,8 +28,8 @@ pub struct SurfaceNetsBuffer {
     pub mesh: PosNormMesh,
     /// Global lattice coordinates of every voxel that intersects the isosurface.
     pub surface_points: Vec<Point3i>,
-    /// Stride of every voxel that intersects the isosurface. Can be used with the
-    /// `material_weights` function.
+    /// Stride of every voxel that intersects the isosurface. Can be used for efficient
+    /// post-processing.
     pub surface_strides: Vec<Stride>,
 
     // Used to map back from voxel stride to vertex index.

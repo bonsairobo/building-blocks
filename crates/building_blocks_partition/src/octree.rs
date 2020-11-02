@@ -42,15 +42,15 @@ impl Octree {
         // These are the corners of the root octant, in local coordinates.
         let corner_offsets: Vec<_> = Point3i::corner_offsets()
             .into_iter()
-            .map(|p| p * edge_len)
+            .map(|p| Local(p * edge_len))
             .collect();
         // Convert into strides for indexing efficiency.
         let mut corner_strides = [Stride(0); 8];
-        array.strides_from_points(&corner_offsets, &mut corner_strides);
+        array.strides_from_local_points(&corner_offsets, &mut corner_strides);
 
         let mut nodes = FnvHashMap::default();
-        let min_local = extent.minimum - array.extent().minimum;
-        let root_minimum = array.stride_from_point(&min_local);
+        let min_local = Local(extent.minimum - array.extent().minimum);
+        let root_minimum = array.stride_from_local_point(&min_local);
         let root_location = LocationCode(1);
         let root_exists = Self::partition_array(
             root_location,

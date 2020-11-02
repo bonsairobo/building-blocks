@@ -94,8 +94,11 @@ where
 {
     // Precalculate these offsets to do faster linear indexing.
     let mut corner_offset_strides = [Stride(0); 8];
-    let corner_offsets = Point3i::corner_offsets();
-    sdf.strides_from_points(&corner_offsets, &mut corner_offset_strides);
+    let corner_offsets: Vec<_> = Point3i::corner_offsets()
+        .into_iter()
+        .map(|p| Local(p))
+        .collect();
+    sdf.strides_from_local_points(&corner_offsets, &mut corner_offset_strides);
 
     // Avoid accessing out of bounds with a 2x2x2 kernel.
     let iter_extent = extent.add_to_shape(PointN([-1; 3]));
@@ -225,8 +228,12 @@ where
     T: SignedDistance,
 {
     let mut xyz_strides = [Stride(0); 3];
-    let xyz = [PointN([1, 0, 0]), PointN([0, 1, 0]), PointN([0, 0, 1])];
-    sdf.strides_from_points(&xyz, &mut xyz_strides);
+    let xyz = [
+        Local(PointN([1, 0, 0])),
+        Local(PointN([0, 1, 0])),
+        Local(PointN([0, 0, 1])),
+    ];
+    sdf.strides_from_local_points(&xyz, &mut xyz_strides);
 
     // NOTE: The checks against max prevent us from making quads on the 3 maximal planes of the
     // grid. This is necessary to avoid redundant quads when meshing adjacent chunks (assuming this
@@ -400,8 +407,11 @@ where
 {
     // Precompute the offsets for cube corners.
     let mut corner_offset_strides = [Stride(0); 8];
-    let corner_offsets = Point3i::corner_offsets();
-    voxels.strides_from_points(&corner_offsets, &mut corner_offset_strides);
+    let corner_offsets: Vec<_> = Point3i::corner_offsets()
+        .into_iter()
+        .map(|p| Local(p))
+        .collect();
+    voxels.strides_from_local_points(&corner_offsets, &mut corner_offset_strides);
 
     let mut material_weights = vec![[0.0; 4]; surface_strides.len()];
 

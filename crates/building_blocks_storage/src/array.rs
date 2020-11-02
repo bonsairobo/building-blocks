@@ -50,8 +50,9 @@
 //! // Some of these offsets include negative coordinates, which would underflow when translated
 //! // into an unsigned index. That's OK though, because Stride is intended to be used with modular
 //! // arithmetic.
+//! let offsets: Vec<_> = Point3i::von_neumann_offsets().into_iter().map(|p| Local(p)).collect();
 //! let mut neighbor_strides = [Stride(0); 6];
-//! array.strides_from_points(&Point3i::von_neumann_offsets(), &mut neighbor_strides);
+//! array.strides_from_local_points(&offsets, &mut neighbor_strides);
 //!
 //! // Sum up the values in the Von Neumann neighborhood of each point, acting as a sort of blur
 //! // filter.
@@ -102,7 +103,7 @@ impl<N, T> ArrayExtent<N> for ArrayN<N, T> {
 }
 
 pub trait Array<N>: ArrayExtent<N> {
-    fn stride_from_point_static(shape: &PointN<N>, point: &PointN<N>) -> Stride;
+    fn stride_from_local_point_static(shape: &PointN<N>, point: &Local<N>) -> Stride;
 
     fn for_each_point_and_stride_static(
         array_extent: &ExtentN<N>,
@@ -121,13 +122,13 @@ pub trait Array<N>: ArrayExtent<N> {
         Self::for_each_point_and_stride_static(self.extent(), extent, f);
     }
 
-    fn stride_from_point(&self, p: &PointN<N>) -> Stride {
-        Self::stride_from_point_static(&self.extent().shape, p)
+    fn stride_from_local_point(&self, p: &Local<N>) -> Stride {
+        Self::stride_from_local_point_static(&self.extent().shape, p)
     }
 
-    fn strides_from_points(&self, points: &[PointN<N>], strides: &mut [Stride]) {
+    fn strides_from_local_points(&self, points: &[Local<N>], strides: &mut [Stride]) {
         for (i, p) in points.iter().enumerate() {
-            strides[i] = self.stride_from_point(p);
+            strides[i] = self.stride_from_local_point(p);
         }
     }
 }
@@ -290,6 +291,14 @@ where
 /// global coordinates into map-local coordinates before indexing with `Get<Local<N>>`.
 pub struct Local<N>(pub PointN<N>);
 
+impl<N> Deref for Local<N> {
+    type Target = PointN<N>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 /// The most efficient coordinates for slice-backed lattice maps. A single number that translates
 /// directly to a slice offset.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -410,7 +419,7 @@ where
 
     #[inline]
     fn get(&self, p: &Local<N>) -> Self::Data {
-        self.get(self.stride_from_point(&p.0))
+        self.get(self.stride_from_local_point(p))
     }
 }
 
@@ -422,7 +431,7 @@ where
 
     #[inline]
     fn get_ref(&self, p: &Local<N>) -> &Self::Data {
-        self.get_ref(self.stride_from_point(&p.0))
+        self.get_ref(self.stride_from_local_point(p))
     }
 }
 
@@ -434,7 +443,7 @@ where
 
     #[inline]
     fn get_mut(&mut self, p: &Local<N>) -> &mut Self::Data {
-        self.get_mut(self.stride_from_point(&p.0))
+        self.get_mut(self.stride_from_local_point(p))
     }
 }
 
@@ -493,7 +502,7 @@ where
 
     #[inline]
     unsafe fn get_unchecked(&self, p: &Local<N>) -> Self::Data {
-        self.get_unchecked(self.stride_from_point(&p.0))
+        self.get_unchecked(self.stride_from_local_point(p))
     }
 }
 
@@ -505,7 +514,7 @@ where
 
     #[inline]
     unsafe fn get_unchecked_ref(&self, p: &Local<N>) -> &Self::Data {
-        self.get_unchecked_ref(self.stride_from_point(&p.0))
+        self.get_unchecked_ref(self.stride_from_local_point(p))
     }
 }
 
@@ -517,7 +526,7 @@ where
 
     #[inline]
     unsafe fn get_unchecked_mut(&mut self, p: &Local<N>) -> &mut Self::Data {
-        self.get_unchecked_mut(self.stride_from_point(&p.0))
+        self.get_unchecked_mut(self.stride_from_local_point(p))
     }
 }
 

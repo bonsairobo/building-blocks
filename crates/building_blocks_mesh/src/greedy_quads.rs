@@ -118,10 +118,10 @@ fn greedy_quads_for_group<V>(
 
     let normal = *n * *n_sign;
 
-    let visibility_offset = voxels.stride_from_point(&normal);
+    let visibility_offset = voxels.stride_from_local_point(&Local(normal));
 
-    let u_stride = voxels.stride_from_point(&u);
-    let v_stride = voxels.stride_from_point(&v);
+    let u_stride = voxels.stride_from_local_point(&Local(*u));
+    let v_stride = voxels.stride_from_local_point(&Local(*v));
 
     for _ in 0..num_slices {
         let slice_ub = slice_extent.least_upper_bound();

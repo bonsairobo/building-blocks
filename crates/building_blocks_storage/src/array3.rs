@@ -9,7 +9,7 @@ pub type Array3<T> = ArrayN<[i32; 3], T>;
 
 impl<T> Array<[i32; 3]> for Array3<T> {
     #[inline]
-    fn stride_from_point_static(s: &Point3i, p: &Point3i) -> Stride {
+    fn stride_from_local_point_static(s: &Point3i, p: &Local3i) -> Stride {
         Stride((p.z() * s.y() * s.x() + p.y() * s.x() + p.x()) as usize)
     }
 

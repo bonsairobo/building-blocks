@@ -21,9 +21,12 @@ where
     ExtentN<N>: IntegerExtent<N>,
 {
     // Precompute the strides for adjacency checks.
-    let vn_offsets = PointN::von_neumann_offsets();
+    let vn_offsets: Vec<_> = PointN::von_neumann_offsets()
+        .into_iter()
+        .map(|p| Local(p))
+        .collect();
     let mut vn_strides = vec![Stride(0); vn_offsets.len()];
-    map.strides_from_points(&vn_offsets, &mut vn_strides);
+    map.strides_from_local_points(&vn_offsets, &mut vn_strides);
 
     let mut surface_points = Vec::new();
     let mut surface_strides = Vec::new();

@@ -60,8 +60,7 @@ pub mod height_map;
 pub mod surface_nets;
 
 pub use greedy_quads::{
-    greedy_quads, padded_greedy_quads_chunk_extent, pos_norm_tex_meshes_from_material_quads,
-    GreedyQuadsBuffer, MaterialVoxel, Quad,
+    greedy_quads, padded_greedy_quads_chunk_extent, GreedyQuadsBuffer, MaterialVoxel, Quad,
 };
 pub use height_map::{
     padded_height_map_chunk_extent, triangulate_height_map, Height, HeightMapMeshBuffer,

@@ -1,10 +1,7 @@
-use super::PosNormTexMesh;
+use super::{PosNormMesh, PosNormTexMesh};
 
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{access::GetUncheckedRefRelease, prelude::*, IsEmpty};
-
-use core::hash::Hash;
-use fnv::FnvHashMap;
 
 pub trait MaterialVoxel {
     type Material: Eq;
@@ -105,6 +102,7 @@ fn greedy_quads_for_group<V>(
                 n_axis,
                 u_axis,
                 v_axis,
+                ..
             },
     } = quad_group;
 
@@ -291,22 +289,29 @@ pub struct QuadGroupMeta {
     pub n: Point3i,
     pub u: Point3i,
     pub v: Point3i,
+
+    pub mesh_normal: Point3f,
 }
 
 impl QuadGroupMeta {
     pub fn new(n_sign: i32, n_axis: Axis, u_axis: Axis, v_axis: Axis) -> Self {
         let xyz = [PointN([1, 0, 0]), PointN([0, 1, 0]), PointN([0, 0, 1])];
 
+        let n = xyz[n_axis.index()];
+        let mesh_normal: Point3f = (n * n_sign).into();
+
         Self {
+            n_sign,
+
             n_axis,
             u_axis,
             v_axis,
 
-            n_sign,
-
-            n: xyz[n_axis.index()],
+            n,
             u: xyz[u_axis.index()],
             v: xyz[v_axis.index()],
+
+            mesh_normal,
         }
     }
 
@@ -343,11 +348,6 @@ impl QuadGroupMeta {
         ]
     }
 
-    /// The quad surface normal vector.
-    pub fn normal(&self) -> Point3f {
-        (self.n * self.n_sign).into()
-    }
-
     /// Returns the 6 vertex indices for the quad in order to make two triangles in a mesh.
     pub fn indices(&self, start: usize) -> [usize; 6] {
         match self.n_axis {
@@ -357,6 +357,27 @@ impl QuadGroupMeta {
             // our heuristic.
             Axis::Z => quad_indices(start, self.n_sign < 0),
         }
+    }
+
+    /// Extends `mesh` with the given `quad` that belongs to this group.
+    pub fn add_quad_to_pos_norm_mesh(&self, quad: &Quad, mesh: &mut PosNormMesh) {
+        let cur_idx = mesh.positions.len();
+        mesh.indices.extend_from_slice(&self.indices(cur_idx));
+        let [c0, c1, c2, c3] = self.quad_corners(quad);
+        mesh.positions.extend_from_slice(&[c0.0, c1.0, c2.0, c3.0]);
+        mesh.normals.extend_from_slice(&[self.mesh_normal.0; 4]);
+    }
+
+    /// Extends `mesh` with the given `quad` that belongs to this group.
+    ///
+    /// The texture coordinates come from `Quad::simple_tex_coords`.
+    pub fn add_quad_to_pos_norm_tex_mesh(&self, quad: &Quad, mesh: &mut PosNormTexMesh) {
+        let cur_idx = mesh.positions.len();
+        mesh.indices.extend_from_slice(&self.indices(cur_idx));
+        let [c0, c1, c2, c3] = self.quad_corners(quad);
+        mesh.positions.extend_from_slice(&[c0.0, c1.0, c2.0, c3.0]);
+        mesh.normals.extend_from_slice(&[self.mesh_normal.0; 4]);
+        mesh.tex_coords.extend_from_slice(&quad.simple_tex_coords());
     }
 }
 
@@ -383,9 +404,12 @@ impl Quad {
     /// `QuadGroup::quad_corners`.
     ///
     /// This is just one way of assigning UVs to voxel quads. It assumes that each material has a
-    /// single tile texture, and each voxel face should show the entire texture. It also assumes a
-    /// particular orientation for the texture.
-    pub fn tex_coords(&self) -> [[f32; 2]; 4] {
+    /// single tile texture with wrapping coordinates, and each voxel face should show the entire
+    /// texture. It also assumes a particular orientation for the texture. This should be sufficient
+    /// for minecraft-style meshing.
+    ///
+    /// If you need to use a texture atlas, you must calculate your own coordinates from the `Quad`.
+    pub fn simple_tex_coords(&self) -> [[f32; 2]; 4] {
         [
             [0.0, 0.0],
             [self.width as f32, 0.0],
@@ -393,32 +417,4 @@ impl Quad {
             [self.width as f32, self.height as f32],
         ]
     }
-}
-
-/// Produces a `PosNormTextMesh` per material. Each mesh contains all of the quads sharing the same
-/// material.
-pub fn pos_norm_tex_meshes_from_material_quads<M>(
-    quad_groups: &[QuadGroup<M>],
-) -> FnvHashMap<M, PosNormTexMesh>
-where
-    M: Copy + Eq + Hash,
-{
-    let mut meshes: FnvHashMap<M, PosNormTexMesh> = FnvHashMap::default();
-
-    for QuadGroup { quads, meta } in quad_groups.iter() {
-        let normal = meta.normal();
-        for (quad, material) in quads.iter() {
-            let mesh = meshes.entry(*material).or_default();
-
-            let [c0, c1, c2, c3] = meta.quad_corners(quad);
-
-            let cur_idx = mesh.positions.len();
-            mesh.indices.extend_from_slice(&meta.indices(cur_idx));
-            mesh.positions.extend_from_slice(&[c0.0, c1.0, c2.0, c3.0]);
-            mesh.normals.extend_from_slice(&[normal.0; 4]);
-            mesh.tex_coords.extend_from_slice(&quad.tex_coords());
-        }
-    }
-
-    meshes
 }

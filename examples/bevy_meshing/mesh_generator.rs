@@ -315,21 +315,17 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
                 let mut buffer = GreedyQuadsBuffer::new(padded_chunk_extent);
                 greedy_quads(&padded_chunk, &padded_chunk_extent, &mut buffer);
 
-                let mut meshes = pos_norm_tex_meshes_from_material_quads(&buffer.quad_groups);
+                let mut mesh = PosNormMesh::default();
+                for group in buffer.quad_groups.iter() {
+                    for (quad, _material) in group.quads.iter() {
+                        group.meta.add_quad_to_pos_norm_mesh(&quad, &mut mesh);
+                    }
+                }
 
-                if meshes.is_empty() {
+                if mesh.is_empty() {
                     None
                 } else {
-                    // Only one material => only one mesh.
-                    assert!(meshes.len() == 1);
-                    let mesh = meshes.remove(&1).unwrap();
-
-                    // Ignore the texture coordinates for this demo.
-                    Some(PosNormMesh {
-                        positions: mesh.positions,
-                        normals: mesh.normals,
-                        indices: mesh.indices,
-                    })
+                    Some(mesh)
                 }
             })
         }

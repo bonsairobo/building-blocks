@@ -3,13 +3,6 @@ use super::PosNormMesh;
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{access::GetUncheckedRefRelease, prelude::*};
 
-// ███████╗██╗   ██╗██████╗ ███████╗ █████╗  ██████╗███████╗
-// ██╔════╝██║   ██║██╔══██╗██╔════╝██╔══██╗██╔════╝██╔════╝
-// ███████╗██║   ██║██████╔╝█████╗  ███████║██║     █████╗
-// ╚════██║██║   ██║██╔══██╗██╔══╝  ██╔══██║██║     ██╔══╝
-// ███████║╚██████╔╝██║  ██║██║     ██║  ██║╚██████╗███████╗
-// ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝
-
 /// Pads the given chunk extent with exactly the amount of space required for running the
 /// `surface_nets` algorithm.
 pub fn padded_surface_nets_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {
@@ -380,57 +373,3 @@ fn is_face(d1: f32, d2: f32) -> FaceResult {
         _ => FaceResult::NoFace,
     }
 }
-
-// ███╗   ███╗ █████╗ ████████╗███████╗██████╗ ██╗ █████╗ ██╗     ███████╗
-// ████╗ ████║██╔══██╗╚══██╔══╝██╔════╝██╔══██╗██║██╔══██╗██║     ██╔════╝
-// ██╔████╔██║███████║   ██║   █████╗  ██████╔╝██║███████║██║     ███████╗
-// ██║╚██╔╝██║██╔══██║   ██║   ██╔══╝  ██╔══██╗██║██╔══██║██║     ╚════██║
-// ██║ ╚═╝ ██║██║  ██║   ██║   ███████╗██║  ██║██║██║  ██║███████╗███████║
-// ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
-
-pub trait MaterialVoxel {
-    fn material_index(&self) -> usize;
-}
-
-/// Returns the material weights for each of the points in `surface_strides`.
-///
-/// Uses a 2x2x2 kernel (the same shape as the Surface Nets kernel) to average the adjacent
-/// materials for each surface point. `voxels` should at least contain the extent that was used with
-/// `surface_nets` in order to generate `surface_strides`. Currently limited to 4 materials per
-/// surface chunk.
-pub fn material_weights<T>(voxels: &Array3<T>, surface_strides: &[Stride]) -> Vec<[f32; 4]>
-where
-    T: MaterialVoxel + SignedDistance,
-{
-    // Precompute the offsets for cube corners.
-    let mut corner_offset_strides = [Stride(0); 8];
-    let corner_offsets = Local::localize_points(&Point3i::corner_offsets());
-    voxels.strides_from_local_points(&corner_offsets, &mut corner_offset_strides);
-
-    let mut material_weights = vec![[0.0; 4]; surface_strides.len()];
-
-    for (i, p_stride) in surface_strides.iter().enumerate() {
-        let w = &mut material_weights[i];
-        for offset_stride in corner_offset_strides.iter() {
-            let q_stride = *p_stride + *offset_stride;
-            let voxel = voxels.get_unchecked_ref_release(q_stride);
-            if voxel.distance() < 0.0 {
-                let material_w = MATERIAL_WEIGHT_TABLE[voxel.material_index()];
-                w[0] += material_w[0];
-                w[1] += material_w[1];
-                w[2] += material_w[2];
-                w[3] += material_w[3];
-            }
-        }
-    }
-
-    material_weights
-}
-
-// Currently limited to 4 numbers for material weights.
-const MATERIAL_WEIGHT_TABLE: [[f32; 4]; 4] = [
-    [1.0, 0.0, 0.0, 0.0],
-    [0.0, 1.0, 0.0, 0.0],
-    [0.0, 0.0, 1.0, 0.0],
-    [0.0, 0.0, 0.0, 1.0],
-];

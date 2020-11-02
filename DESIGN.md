@@ -115,7 +115,7 @@ which brought about the current feature set:
 - **Accelerated Spatial Queries**
   - Our first voxel game prototypes utilized the ncollide3d crate and it's
     `DBVT` (dynamic bounding volume tree) structure for doing raycasting.
-    Unforunately, storing an `AABB<f32>` for every voxel cost us 6 `f32`s or 24
+    Unfortunately, storing an `AABB<f32>` for every voxel cost us 6 `f32`s or 24
     bytes per voxel. That simply doesn't scale. So as a replacement, we
     implemented the `Octree` and `OctreeDBVT` types. The `Octree` is essentially
     a hierarchical bitset, making it very memory efficient; it doesn't contain

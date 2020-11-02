@@ -78,6 +78,10 @@ impl Point for Point2i {
     fn at(&self, component_index: usize) -> Self::Scalar {
         self.0[component_index]
     }
+
+    fn map_components(&self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self {
+        PointN([f(self.x()), f(self.y())])
+    }
 }
 
 impl Point for Point2f {
@@ -95,6 +99,10 @@ impl Point for Point2f {
     #[inline]
     fn at(&self, component_index: usize) -> Self::Scalar {
         self.0[component_index]
+    }
+
+    fn map_components(&self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self {
+        PointN([f(self.x()), f(self.y())])
     }
 }
 
@@ -204,6 +212,17 @@ impl IntegerPoint for Point2i {
             PointN([0, 1]),
             PointN([1, 1]),
         ]
+    }
+
+    fn dimensions_are_powers_of_2(&self) -> bool {
+        self.x().is_positive()
+            && self.y().is_positive()
+            && (self.x() as u32).is_power_of_two()
+            && (self.y() as u32).is_power_of_two()
+    }
+
+    fn is_cube(&self) -> bool {
+        self.x() == self.y()
     }
 }
 

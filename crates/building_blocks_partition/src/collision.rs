@@ -379,8 +379,7 @@ mod tests {
             *voxels.get_mut(p) = Voxel(true);
         }
 
-        let power = 4;
-        let octree = Octree::from_array3(power, &voxels);
+        let octree = Octree::from_array3(&voxels, *voxels.extent());
         let mut bvt = OctreeDBVT::default();
         let key = 0; // unimportant
         bvt.insert(key, octree);
@@ -392,8 +391,7 @@ mod tests {
         let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
         let voxels = Array3::fill(extent, Voxel(true));
 
-        let power = 4;
-        let octree = Octree::from_array3(power, &voxels);
+        let octree = Octree::from_array3(&voxels, *voxels.extent());
         let mut bvt = OctreeDBVT::default();
         let key = 0; // unimportant
         bvt.insert(key, octree);

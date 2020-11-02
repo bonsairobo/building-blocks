@@ -69,6 +69,9 @@ pub trait Point:
 
     /// Returns the component specified by index. I.e. X = 0, Y = 1, Z = 2.
     fn at(&self, component_index: usize) -> Self::Scalar;
+
+    /// Returns the point after applying `f` component-wise.
+    fn map_components(&self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self;
 }
 
 impl<N> Neg for PointN<N>
@@ -165,7 +168,10 @@ pub trait IntegerPoint: Point {
     /// Component-wise minimum.
     fn meet(&self, other: &Self) -> Self;
 
+    /// Left bitshifts all dimensions.
     fn left_shift(&self, shift_by: Self::Scalar) -> Self;
+
+    /// Right bitshifts all dimensions.
     fn right_shift(&self, shift_by: Self::Scalar) -> Self;
 
     fn corner_offsets() -> Vec<Self>;
@@ -175,6 +181,12 @@ pub trait IntegerPoint: Point {
 
     /// https://en.wikipedia.org/wiki/Moore_neighborhood
     fn moore_offsets() -> Vec<Self>;
+
+    /// Returns `true` iff all dimensions are powers of 2.
+    fn dimensions_are_powers_of_2(&self) -> bool;
+
+    /// Returns `true` iff all dimensions are equal.
+    fn is_cube(&self) -> bool;
 }
 
 // `Zero` trait doesn't allow associated constants for zero because of bignums.

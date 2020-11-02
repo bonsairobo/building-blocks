@@ -4,7 +4,7 @@
 //! into an `OctreeDBVT` in order to perform spatial queries like raycasting.
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{prelude::*, IsEmpty};
+use building_blocks_storage::{access::GetUncheckedRefRelease, prelude::*, IsEmpty};
 
 use fnv::FnvHashMap;
 
@@ -25,15 +25,19 @@ pub struct Octree {
 impl Octree {
     // TODO: from_height_map
 
-    /// Constructs an `Octree` which contains all of the points which are not empty (as defined by
-    /// the `IsEmpty` trait). `array` must be cube-shaped with edge length being a power of 2.
-    /// `power` must be the exponent of the edge length, and `0 < power <= 6`.
-    pub fn from_array3<T: IsEmpty>(power: u8, array: &Array3<T>) -> Self {
+    /// Constructs an `Octree` which contains all of the points in `extent` which are not empty (as
+    /// defined by the `IsEmpty` trait). `extent` must be cube-shaped with edge length being a power
+    /// of 2. For exponent E where edge length is 2^E, we must have `0 < E <= 6`, because there is a
+    /// maximum fixed depth of the octree.
+    pub fn from_array3<T: IsEmpty>(array: &Array3<T>, extent: Extent3i) -> Self {
+        assert!(extent.shape.dimensions_are_powers_of_2());
+        assert!(extent.shape.is_cube());
+        let power = extent.shape.x().trailing_zeros();
         // Constrained by 16-bit location code.
         assert!(power > 0 && power <= 6);
-        let root_level = power - 1;
+
+        let root_level = (power - 1) as u8;
         let edge_len = 1 << power;
-        assert_eq!(PointN([edge_len; 3]), array.extent().shape);
 
         // These are the corners of the root octant, in local coordinates.
         let corner_offsets: Vec<_> = Point3i::corner_offsets()
@@ -45,7 +49,8 @@ impl Octree {
         array.strides_from_points(&corner_offsets, &mut corner_strides);
 
         let mut nodes = FnvHashMap::default();
-        let root_minimum = Stride(0);
+        let min_local = extent.minimum - array.extent().minimum;
+        let root_minimum = array.stride_from_point(&min_local);
         let root_location = LocationCode(1);
         let root_exists = Self::partition_array(
             root_location,
@@ -59,7 +64,7 @@ impl Octree {
         Octree {
             root_level,
             root_exists,
-            extent: *array.extent(),
+            extent,
             nodes,
         }
     }
@@ -74,7 +79,7 @@ impl Octree {
     ) -> bool {
         // Base case where the octant is a single voxel.
         if edge_len == 1 {
-            return !array.get_ref(minimum).is_empty();
+            return !array.get_unchecked_ref_release(minimum).is_empty();
         }
 
         let mut octant_corner_strides = [Stride(0); 8];

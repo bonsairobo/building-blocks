@@ -184,8 +184,6 @@ where
 }
 
 pub trait ChunkShape<N> {
-    fn dimensions_are_powers_of_2(&self) -> bool;
-
     /// Makes the mask required to convert points to chunk keys.
     fn mask(&self) -> PointN<N>;
 
@@ -195,14 +193,9 @@ pub trait ChunkShape<N> {
 }
 
 impl ChunkShape<[i32; 2]> for Point2i {
-    fn dimensions_are_powers_of_2(&self) -> bool {
-        self.x().is_positive()
-            && self.y().is_positive()
-            && (self.x() as u32).is_power_of_two()
-            && (self.y() as u32).is_power_of_two()
-    }
-
     fn mask(&self) -> Point2i {
+        assert!(self.dimensions_are_powers_of_2());
+
         PointN([!(self.x() - 1), !(self.y() - 1)])
     }
 
@@ -212,15 +205,6 @@ impl ChunkShape<[i32; 2]> for Point2i {
 }
 
 impl ChunkShape<[i32; 3]> for Point3i {
-    fn dimensions_are_powers_of_2(&self) -> bool {
-        self.x().is_positive()
-            && self.y().is_positive()
-            && self.z().is_positive()
-            && (self.x() as u32).is_power_of_two()
-            && (self.y() as u32).is_power_of_two()
-            && (self.z() as u32).is_power_of_two()
-    }
-
     fn mask(&self) -> Point3i {
         assert!(self.dimensions_are_powers_of_2());
 

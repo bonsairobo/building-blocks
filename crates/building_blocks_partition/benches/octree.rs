@@ -10,8 +10,8 @@ fn octree_from_array3_sphere(c: &mut Criterion) {
         let edge_len = 1 << *power;
         group.bench_with_input(
             BenchmarkId::from_parameter(edge_len),
-            &(power, edge_len),
-            |b, &(&power, edge_len)| {
+            &edge_len,
+            |b, &edge_len| {
                 b.iter_with_setup(
                     || {
                         let sphere_radius = edge_len / 2;
@@ -31,9 +31,9 @@ fn octree_from_array3_sphere(c: &mut Criterion) {
                             }
                         });
 
-                        (map, power)
+                        map
                     },
-                    |(map, power)| Octree::from_array3(power, &map),
+                    |map| Octree::from_array3(&map, *map.extent()),
                 );
             },
         );
@@ -47,18 +47,16 @@ fn full_octree(c: &mut Criterion) {
         let edge_len = 1 << *power;
         group.bench_with_input(
             BenchmarkId::from_parameter(edge_len),
-            &(power, edge_len),
-            |b, &(&power, edge_len)| {
+            &edge_len,
+            |b, &edge_len| {
                 b.iter_with_setup(
                     || {
-                        let map = Array3::fill(
+                        Array3::fill(
                             Extent3i::from_min_and_shape(PointN([0; 3]), PointN([edge_len; 3])),
                             Voxel(true),
-                        );
-
-                        (map, power)
+                        )
                     },
-                    |(map, power)| Octree::from_array3(power, &map),
+                    |map| Octree::from_array3(&map, *map.extent()),
                 );
             },
         );

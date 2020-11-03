@@ -66,12 +66,15 @@ pub fn padded_greedy_quads_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {
 /// `extent`.
 ///
 /// The quads can be post-processed into meshes as the user sees fit.
-pub fn greedy_quads<V>(
-    voxels: &Array3<V>,
+pub fn greedy_quads<V, T>(
+    voxels: &V,
     extent: &Extent3i,
-    output: &mut GreedyQuadsBuffer<V::Material>,
+    output: &mut GreedyQuadsBuffer<T::Material>,
 ) where
-    V: IsEmpty + MaterialVoxel,
+    V: Array<[i32; 3]>
+        + GetUncheckedRefRelease<Stride, T>
+        + ForEachRef<[i32; 3], (Point3i, Stride), Data = T>,
+    T: IsEmpty + MaterialVoxel,
 {
     output.reset(*extent);
     let GreedyQuadsBuffer {
@@ -90,14 +93,17 @@ pub fn greedy_quads<V>(
     }
 }
 
-fn greedy_quads_for_group<V>(
-    voxels: &Array3<V>,
+fn greedy_quads_for_group<V, T>(
+    voxels: &V,
     interior_min: Point3i,
     interior_shape: Point3i,
     visited: &mut Array3<bool>,
-    quad_group: &mut QuadGroup<V::Material>,
+    quad_group: &mut QuadGroup<T::Material>,
 ) where
-    V: IsEmpty + MaterialVoxel,
+    V: Array<[i32; 3]>
+        + GetUncheckedRefRelease<Stride, T>
+        + ForEachRef<[i32; 3], (Point3i, Stride), Data = T>,
+    T: IsEmpty + MaterialVoxel,
 {
     visited.reset_values(false);
 
@@ -203,17 +209,20 @@ fn greedy_quads_for_group<V>(
     }
 }
 
-fn get_row_width<V>(
-    voxels: &Array3<V>,
+fn get_row_width<V, T>(
+    voxels: &V,
     visited: &Array3<bool>,
-    quad_material: &V::Material,
+    quad_material: &T::Material,
     visibility_offset: Stride,
     start_stride: Stride,
     delta_stride: Stride,
     max_width: i32,
 ) -> i32
 where
-    V: IsEmpty + MaterialVoxel,
+    V: Array<[i32; 3]>
+        + GetUncheckedRefRelease<Stride, T>
+        + ForEachRef<[i32; 3], (Point3i, Stride), Data = T>,
+    T: IsEmpty + MaterialVoxel,
 {
     let mut quad_width = 0;
     let mut row_stride = start_stride;

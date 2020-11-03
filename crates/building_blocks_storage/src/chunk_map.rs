@@ -30,7 +30,7 @@
 //!
 //! // Now we can read back the values without mutating the map by using local caching. Compressed
 //! // chunks will be decompressed into our local cache.
-//! let local_cache = LocalChunkCache::new();
+//! let local_cache = LocalChunkCache3::new();
 //! let reader = ChunkMapReader3::new(&map, &local_cache);
 //! reader.for_each_ref(&bounding_extent, |p, value| {
 //!     if write_points.iter().position(|pw| p == *pw) != None {
@@ -124,7 +124,11 @@ pub type ChunkMap3<T, M> = ChunkMap<[i32; 3], T, M>;
 
 type CompressibleFnvMap<K, V, A> = CompressibleMap<K, V, A, fnv::FnvBuildHasher>;
 
-pub type LocalChunkCache<N, T, M> = LocalCache<PointN<N>, Chunk<N, T, M>, fnv::FnvBuildHasher>;
+pub type LocalChunkCache<N, T, M = ()> = LocalCache<PointN<N>, Chunk<N, T, M>, fnv::FnvBuildHasher>;
+pub type LocalChunkCache2<T, M = ()> =
+    LocalCache<Point2i, Chunk<[i32; 2], T, M>, fnv::FnvBuildHasher>;
+pub type LocalChunkCache3<T, M = ()> =
+    LocalCache<Point3i, Chunk<[i32; 3], T, M>, fnv::FnvBuildHasher>;
 
 /// One piece of the `ChunkMap`. Contains both some generic metadata and the data for each
 /// point in the chunk extent.
@@ -835,7 +839,7 @@ mod tests {
         map.for_each_mut(&write_extent, |_p, value| *value = 1);
 
         let read_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
-        let local_cache = LocalChunkCache::new();
+        let local_cache = LocalChunkCache3::new();
         let reader = ChunkMapReader3::new(&map, &local_cache);
         for p in read_extent.iter_points() {
             if write_extent.contains(&p) {
@@ -858,7 +862,7 @@ mod tests {
         copy_extent(&extent_to_copy, &array, &mut map);
 
         let read_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
-        let local_cache = LocalChunkCache::new();
+        let local_cache = LocalChunkCache3::new();
         let reader = ChunkMapReader3::new(&map, &local_cache);
         for p in read_extent.iter_points() {
             if extent_to_copy.contains(&p) {

@@ -50,7 +50,7 @@
 //!     chunk_shape, ambient_value, default_chunk_metadata, FastLz4 { level: 10 }
 //! );
 //! copy_extent(&subextent, &map, &mut other_map);
-//! let local_cache = LocalChunkCache::new();
+//! let local_cache = LocalChunkCache3::new();
 //! let reader = ChunkMapReader3::new(&other_map, &local_cache);
 //! copy_extent(&subextent, &reader, &mut map);
 //!```

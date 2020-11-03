@@ -196,7 +196,7 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
     pool.scope(|s| {
         for chunk_key in map_ref.chunk_keys() {
             s.spawn(async move {
-                let local_cache = LocalChunkCache::new();
+                let local_cache = LocalChunkCache3::new();
                 let map_reader = ChunkMapReader3::new(map_ref, &local_cache);
 
                 let padded_chunk_extent =
@@ -249,7 +249,7 @@ fn generate_chunk_meshes_from_height_map(
     pool.scope(|s| {
         for chunk_key in map_ref.chunk_keys() {
             s.spawn(async move {
-                let local_cache = LocalChunkCache::new();
+                let local_cache = LocalChunkCache2::new();
                 let map_reader = ChunkMapReader2::new(map_ref, &local_cache);
                 let padded_chunk_extent =
                     padded_height_map_chunk_extent(&map_ref.extent_for_chunk_at_key(chunk_key))
@@ -302,7 +302,7 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
     pool.scope(|s| {
         for chunk_key in map_ref.chunk_keys() {
             s.spawn(async move {
-                let local_cache = LocalChunkCache::new();
+                let local_cache = LocalChunkCache3::new();
                 let map_reader = ChunkMapReader3::new(map_ref, &local_cache);
                 let padded_chunk_extent =
                     padded_greedy_quads_chunk_extent(&map_ref.extent_for_chunk_at_key(chunk_key));

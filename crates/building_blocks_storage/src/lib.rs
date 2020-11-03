@@ -25,8 +25,8 @@ pub use array2::Array2;
 pub use array3::Array3;
 pub use chunk_map::{
     Chunk, Chunk2, Chunk3, ChunkMap, ChunkMap2, ChunkMap3, ChunkMapReader, ChunkMapReader2,
-    ChunkMapReader3, LocalChunkCache, SerializableChunkMap, SerializableChunkMap2,
-    SerializableChunkMap3,
+    ChunkMapReader3, LocalChunkCache, LocalChunkCache2, LocalChunkCache3, SerializableChunkMap,
+    SerializableChunkMap2, SerializableChunkMap3,
 };
 pub use transform_map::TransformMap;
 
@@ -39,8 +39,8 @@ pub mod prelude {
     pub use super::{
         copy_extent, Array, Array2, Array3, ArrayExtent, ArrayN, Chunk2, Chunk3, ChunkMap2,
         ChunkMap3, ChunkMapReader2, ChunkMapReader3, Compressible, Decompressible, FastLz4,
-        ForEachMut, ForEachRef, Get, GetMut, GetRef, IsEmpty, Local, LocalChunkCache, ReadExtent,
-        Stride, TransformMap, WriteExtent,
+        ForEachMut, ForEachRef, Get, GetMut, GetRef, IsEmpty, Local, LocalChunkCache2,
+        LocalChunkCache3, ReadExtent, Stride, TransformMap, WriteExtent,
     };
 }
 

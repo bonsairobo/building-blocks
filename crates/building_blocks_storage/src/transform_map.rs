@@ -282,7 +282,7 @@ mod tests {
         let mut src = ChunkMap3::new(PointN([4; 3]), 0, (), FastLz4 { level: 10 });
         copy_extent(&src_extent, &src_array, &mut src);
 
-        let local_cache = LocalChunkCache::new();
+        let local_cache = LocalChunkCache3::new();
         let src_reader = ChunkMapReader3::new(&src, &local_cache);
         let tfm = TransformMap::new(&src_reader, &|value: i32| value + 1);
 

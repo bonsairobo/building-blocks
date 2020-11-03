@@ -46,7 +46,7 @@ fn chunk_map_for_each_point(c: &mut Criterion) {
             b.iter_with_setup(
                 || set_up_chunk_map(size),
                 |(chunk_map, iter_extent)| {
-                    let local_cache = LocalChunkCache::new();
+                    let local_cache = LocalChunkCache3::new();
                     let reader = ChunkMapReader3::new(&chunk_map, &local_cache);
 
                     let mut sum = 0;
@@ -85,7 +85,7 @@ fn chunk_map_point_indexing(c: &mut Criterion) {
             b.iter_with_setup(
                 || set_up_chunk_map(size),
                 |(chunk_map, iter_extent)| {
-                    let local_cache = LocalChunkCache::new();
+                    let local_cache = LocalChunkCache3::new();
                     let reader = ChunkMapReader3::new(&chunk_map, &local_cache);
 
                     let mut sum = 0;
@@ -138,7 +138,7 @@ fn chunk_map_copy(c: &mut Criterion) {
                     (src, dst, cp_extent)
                 },
                 |(src, mut dst, cp_extent)| {
-                    let local_cache = LocalChunkCache::new();
+                    let local_cache = LocalChunkCache3::new();
                     let src_reader = ChunkMapReader3::new(&src, &local_cache);
                     copy_extent(&cp_extent, &src_reader, &mut dst);
                 },

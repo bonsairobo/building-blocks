@@ -58,11 +58,14 @@ impl HeightMapMeshBuffer {
 ///
 /// b   b   b   b
 /// ```
-pub fn triangulate_height_map<H>(
-    height_map: &Array2<H>,
+pub fn triangulate_height_map<V, H>(
+    height_map: &V,
     extent: &Extent2i,
     output: &mut HeightMapMeshBuffer,
 ) where
+    V: Array<[i32; 2]>
+        + GetUncheckedRefRelease<Stride, H>
+        + ForEachRef<[i32; 2], (Point2i, Stride), Data = H>,
     H: Height,
 {
     output.reset(height_map.extent().num_points());

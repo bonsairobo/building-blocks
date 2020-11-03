@@ -39,6 +39,16 @@ impl<M> GreedyQuadsBuffer<M> {
         }
         self.visited.set_minimum(extent.minimum);
     }
+
+    /// Returns the total count of quads across all groups.
+    pub fn num_quads(&self) -> usize {
+        let mut sum = 0;
+        for group in self.quad_groups.iter() {
+            sum += group.quads.len();
+        }
+
+        sum
+    }
 }
 
 /// Pads the given chunk extent with exactly the amount of space required for running the

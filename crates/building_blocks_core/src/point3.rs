@@ -481,22 +481,22 @@ pub mod nalgebra_conversions {
 
     impl From<Point3i> for na::Point3<i32> {
         fn from(p: Point3i) -> Self {
-            na::Point3::new(p.x(), p.y(), p.z())
+            na::Point3::from(p.0)
         }
     }
     impl From<Point3f> for na::Point3<f32> {
         fn from(p: Point3f) -> Self {
-            na::Point3::new(p.x(), p.y(), p.z())
+            na::Point3::from(p.0)
         }
     }
     impl From<Point3i> for na::Vector3<i32> {
         fn from(p: Point3i) -> Self {
-            na::Vector3::new(p.x(), p.y(), p.z())
+            na::Vector3::from(p.0)
         }
     }
     impl From<Point3f> for na::Vector3<f32> {
         fn from(p: Point3f) -> Self {
-            na::Vector3::new(p.x(), p.y(), p.z())
+            na::Vector3::from(p.0)
         }
     }
 

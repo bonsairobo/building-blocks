@@ -119,8 +119,8 @@ where
     pub chunks: CompressibleFnvMap<PointN<N>, Chunk<N, T, M>, FastLz4>,
 }
 
-pub type ChunkMap2<T, M> = ChunkMap<[i32; 2], T, M>;
-pub type ChunkMap3<T, M> = ChunkMap<[i32; 3], T, M>;
+pub type ChunkMap2<T, M = ()> = ChunkMap<[i32; 2], T, M>;
+pub type ChunkMap3<T, M = ()> = ChunkMap<[i32; 3], T, M>;
 
 type CompressibleFnvMap<K, V, A> = CompressibleMap<K, V, A, fnv::FnvBuildHasher>;
 

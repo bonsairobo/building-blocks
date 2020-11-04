@@ -21,6 +21,9 @@ pub struct VoxelImpact<I> {
     pub impact: I,
 }
 
+pub type VoxelRayImpact = VoxelImpact<RayIntersection<f32>>;
+pub type VoxelSphereImpact = VoxelImpact<TOI<f32>>;
+
 // ██████╗  █████╗ ██╗   ██╗
 // ██╔══██╗██╔══██╗╚██╗ ██╔╝
 // ██████╔╝███████║ ╚████╔╝
@@ -40,7 +43,7 @@ pub fn voxel_ray_cast<K>(
     ray: Ray<f32>,
     max_toi: f32,
     predicate: impl Fn(Point3i) -> bool,
-) -> Option<VoxelImpact<RayIntersection<f32>>>
+) -> Option<VoxelRayImpact>
 where
     K: Eq + Hash,
 {
@@ -140,7 +143,7 @@ pub fn voxel_sphere_cast<K>(
     ray: Ray<f32>,
     max_toi: f32,
     predicate: impl Fn(Point3i) -> bool,
-) -> Option<VoxelImpact<TOI<f32>>>
+) -> Option<VoxelSphereImpact>
 where
     K: Eq + Hash,
 {

@@ -54,6 +54,27 @@
 //!     // Do something with the mesh output...
 //! }
 //! ```
+//!
+//! All of the meshing algorithms are generic enough to work with an array wrapped in a
+//! `TransformMap`.
+//!
+//! ```
+//! # use building_blocks_core::prelude::*;
+//! # use building_blocks_storage::prelude::*;
+//! # use building_blocks_mesh::height_map::*;
+//!
+//! struct OtherHeight(f32);
+//!
+//! impl Height for OtherHeight {
+//!     fn height(&self) -> f32 { self.0 }
+//! }
+//!
+//! let extent = Extent2i::from_min_and_shape(PointN([0; 2]), PointN([50; 2]));
+//! let array = Array2::fill(extent, 0.0);
+//! let tfm_array = TransformMap::new(&array, &|h: f32| OtherHeight(h));
+//! let mut hm_buffer = HeightMapMeshBuffer::default();
+//! triangulate_height_map(&tfm_array, &extent, &mut hm_buffer);
+//! ```
 
 pub mod greedy_quads;
 pub mod height_map;

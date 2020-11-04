@@ -40,7 +40,7 @@
 
 use crate::{
     access::GetUnchecked,
-    array::ArrayCopySrc,
+    array::{Array, ArrayCopySrc, Local, Stride},
     chunk_map::{AmbientExtent, ArrayChunkCopySrc, ArrayChunkCopySrcIter, ChunkCopySrc},
     ArrayExtent, ArrayN, ChunkMapReader, ForEach, Get, ReadExtent,
 };
@@ -119,6 +119,34 @@ where
 {
     fn extent(&self) -> &ExtentN<N> {
         self.delegate.extent()
+    }
+}
+
+// TODO: delegating like this is kind of verbose and could probably be avoided by extracting another
+// trait
+impl<'a, N, M, F> Array<N> for TransformMap<'a, M, F>
+where
+    M: Array<N>,
+{
+    fn stride_from_local_point_static(shape: &PointN<N>, point: &Local<N>) -> Stride {
+        M::stride_from_local_point_static(shape, point)
+    }
+
+    fn for_each_point_and_stride_static(
+        array_extent: &ExtentN<N>,
+        extent: &ExtentN<N>,
+        f: impl FnMut(PointN<N>, Stride),
+    ) {
+        M::for_each_point_and_stride_static(array_extent, extent, f);
+    }
+
+    fn for_each_stride_parallel(
+        iter_extent: &ExtentN<N>,
+        array1_extent: &ExtentN<N>,
+        array2_extent: &ExtentN<N>,
+        f: impl FnMut(Stride, Stride),
+    ) {
+        M::for_each_stride_parallel(iter_extent, array1_extent, array2_extent, f);
     }
 }
 

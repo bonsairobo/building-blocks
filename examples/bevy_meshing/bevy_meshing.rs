@@ -14,7 +14,7 @@ fn main() {
 
     App::build()
         .add_resource(window_desc)
-        .add_default_plugins()
+        .add_plugins(DefaultPlugins)
         .add_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
         .add_startup_system(setup.system())
         .add_system(camera_rotation_system.system())

@@ -5,7 +5,10 @@ use building_blocks::storage::{prelude::*, IsEmpty};
 
 use bevy::{
     prelude::*,
-    render::{mesh::VertexAttribute, pipeline::PrimitiveTopology},
+    render::{
+        mesh::{Indices, VertexAttributeValues},
+        pipeline::PrimitiveTopology,
+    },
     tasks::{ComputeTaskPool, TaskPool},
 };
 
@@ -163,7 +166,7 @@ pub fn mesh_generator_system(
                 state.chunk_mesh_entities.push(create_mesh_entity(
                     mesh,
                     &mut commands,
-                    material.0,
+                    material.0.clone(),
                     &mut meshes,
                 ));
             }
@@ -341,20 +344,23 @@ fn create_mesh_entity(
     assert_eq!(mesh.positions.len(), mesh.normals.len());
     let num_vertices = mesh.positions.len();
 
-    let mesh = meshes.add(Mesh {
-        primitive_topology: PrimitiveTopology::TriangleList,
-        attributes: vec![
-            VertexAttribute::position(mesh.positions),
-            VertexAttribute::normal(mesh.normals),
-            // UVs don't matter for this monocolor mesh
-            VertexAttribute::uv(vec![[0.0; 2]; num_vertices]),
-        ],
-        indices: Some(mesh.indices.iter().map(|i| *i as u32).collect()),
-    });
+    let mut render_mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    render_mesh.set_attribute(
+        "Vertex_Position",
+        VertexAttributeValues::Float3(mesh.positions),
+    );
+    render_mesh.set_attribute("Vertex_Normal", VertexAttributeValues::Float3(mesh.normals));
+    render_mesh.set_attribute(
+        "Vertex_UV",
+        VertexAttributeValues::Float2(vec![[0.0; 2]; num_vertices]),
+    );
+    render_mesh.set_indices(Some(Indices::U32(
+        mesh.indices.iter().map(|i| *i as u32).collect(),
+    )));
 
     commands
         .spawn(PbrComponents {
-            mesh,
+            mesh: meshes.add(render_mesh),
             material,
             ..Default::default()
         })

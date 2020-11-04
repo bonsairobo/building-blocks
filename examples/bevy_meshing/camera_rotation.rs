@@ -13,7 +13,7 @@ impl CameraRotationState {
 pub fn camera_rotation_system(
     state: Res<CameraRotationState>,
     time: Res<Time>,
-    transforms: Query<&mut Transform>,
+    mut transforms: Query<&mut Transform>,
 ) {
     let seconds = time.seconds_since_startup as f32;
 
@@ -26,5 +26,5 @@ pub fn camera_rotation_system(
     let new_transform = Mat4::face_toward(eye, target, Vec3::unit_y());
 
     let mut cam_tfm = transforms.get_mut(state.camera).unwrap();
-    *cam_tfm = Transform::new(new_transform);
+    *cam_tfm = Transform::from_matrix(new_transform);
 }

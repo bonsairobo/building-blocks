@@ -17,9 +17,7 @@ pub mod chunk_map;
 pub mod func;
 pub mod transform_map;
 
-pub use access::{
-    copy_extent, ForEachMut, ForEachRef, Get, GetMut, GetRef, ReadExtent, WriteExtent,
-};
+pub use access::{copy_extent, ForEach, ForEachMut, Get, GetMut, ReadExtent, WriteExtent};
 pub use array::{Array, ArrayExtent, ArrayN, FastLz4, Local, Stride};
 pub use array2::Array2;
 pub use array3::Array3;
@@ -39,8 +37,8 @@ pub mod prelude {
     pub use super::{
         copy_extent, Array, Array2, Array3, ArrayExtent, ArrayN, Chunk2, Chunk3, ChunkMap2,
         ChunkMap3, ChunkMapReader2, ChunkMapReader3, Compressible, Decompressible, FastLz4,
-        ForEachMut, ForEachRef, Get, GetMut, GetRef, IsEmpty, Local, LocalChunkCache2,
-        LocalChunkCache3, ReadExtent, Stride, TransformMap, WriteExtent,
+        ForEach, ForEachMut, Get, GetMut, IsEmpty, Local, LocalChunkCache2, LocalChunkCache3,
+        ReadExtent, Stride, TransformMap, WriteExtent,
     };
 }
 

@@ -17,7 +17,7 @@
 //! But this may require understanding the array layout.
 //!
 //! Often, you only want to iterate over a sub-extent of the map. This can also be done at similar
-//! speeds using the `ForEachRef` and `ForEachMut` traits:
+//! speeds using the `ForEach` and `ForEachMut` traits:
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
@@ -71,13 +71,6 @@ pub trait Get<L> {
     fn get(&self, location: L) -> Self::Data;
 }
 
-pub trait GetRef<L> {
-    type Data;
-
-    /// Get a reference to the value at `location`.
-    fn get_ref(&self, location: L) -> &Self::Data;
-}
-
 pub trait GetMut<L> {
     type Data;
 
@@ -92,15 +85,6 @@ pub trait GetUnchecked<L> {
     /// # Safety
     /// Don't access out of bounds.
     unsafe fn get_unchecked(&self, location: L) -> Self::Data;
-}
-
-pub trait GetUncheckedRef<L> {
-    type Data;
-
-    /// Get a reference to the value at location without doing bounds checking.
-    /// # Safety
-    /// Don't access out of bounds.
-    unsafe fn get_unchecked_ref(&self, location: L) -> &Self::Data;
 }
 
 pub trait GetUncheckedMut<L> {
@@ -126,23 +110,6 @@ pub trait GetUncheckedRelease<L, T>: Get<L, Data = T> + GetUnchecked<L, Data = T
 impl<M, L, T> GetUncheckedRelease<L, T> for M where M: Get<L, Data = T> + GetUnchecked<L, Data = T> {}
 
 /// A lattice map that supports getting without bounds checking only in release mode.
-pub trait GetUncheckedRefRelease<L, T>: GetRef<L, Data = T> + GetUncheckedRef<L, Data = T> {
-    #[inline]
-    fn get_unchecked_ref_release(&self, location: L) -> &T {
-        if cfg!(debug_assertions) {
-            self.get_ref(location)
-        } else {
-            unsafe { self.get_unchecked_ref(location) }
-        }
-    }
-}
-
-impl<M, L, T> GetUncheckedRefRelease<L, T> for M where
-    M: GetRef<L, Data = T> + GetUncheckedRef<L, Data = T>
-{
-}
-
-/// A lattice map that supports getting without bounds checking only in release mode.
 pub trait GetUncheckedMutRelease<L, T>: GetMut<L, Data = T> + GetUncheckedMut<L, Data = T> {
     #[inline]
     fn get_unchecked_mut_release(&mut self, location: L) -> &mut T {
@@ -166,10 +133,10 @@ impl<M, L, T> GetUncheckedMutRelease<L, T> for M where
 // ██║     ╚██████╔╝██║  ██║    ███████╗██║  ██║╚██████╗██║  ██║
 // ╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
-pub trait ForEachRef<N, Coord> {
+pub trait ForEach<N, Coord> {
     type Data;
 
-    fn for_each_ref(&self, extent: &ExtentN<N>, f: impl FnMut(Coord, &Self::Data));
+    fn for_each(&self, extent: &ExtentN<N>, f: impl FnMut(Coord, Self::Data));
 }
 
 pub trait ForEachMut<N, Coord> {

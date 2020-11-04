@@ -18,11 +18,11 @@
 //! *index_map.get_mut(&PointN([0, 0, 1])) = 1;
 //!
 //! let palette = vec![BigData([1; 9001]), BigData([2; 9001])];
-//! let lookup = |i: &u8| &palette[*i as usize];
+//! let lookup = |i: u8| palette[i as usize].0[0];
 //! let big_data_map = TransformMap::new(&index_map, &lookup);
 //!
-//! assert_eq!(big_data_map.get_ref(&PointN([0, 0, 0])).0.as_ptr(), palette[0].0.as_ptr());
-//! assert_eq!(big_data_map.get_ref(&PointN([0, 0, 1])).0.as_ptr(), palette[1].0.as_ptr());
+//! assert_eq!(big_data_map.get(&PointN([0, 0, 0])), palette[0].0[0]);
+//! assert_eq!(big_data_map.get(&PointN([0, 0, 1])), palette[1].0[0]);
 //! ```
 //!
 //! `TransformMap` also gives us an efficient way of applying transforms to array data during a
@@ -39,10 +39,10 @@
 //! ```
 
 use crate::{
-    access::{GetUnchecked, GetUncheckedRef},
+    access::GetUnchecked,
     array::ArrayCopySrc,
     chunk_map::{AmbientExtent, ArrayChunkCopySrc, ArrayChunkCopySrcIter, ChunkCopySrc},
-    ArrayExtent, ArrayN, ChunkMapReader, ForEachRef, Get, GetRef, ReadExtent,
+    ArrayExtent, ArrayN, ChunkMapReader, ForEach, Get, ReadExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -88,20 +88,6 @@ where
     }
 }
 
-impl<'a, M, F, T, S, Coord> GetRef<Coord> for TransformMap<'a, M, F>
-where
-    T: 'a,
-    S: 'a,
-    F: Fn(&'a T) -> &'a S,
-    M: GetRef<Coord, Data = T>,
-{
-    type Data = S;
-
-    fn get_ref(&self, c: Coord) -> &S {
-        (self.transform)(self.delegate.get_ref(c))
-    }
-}
-
 impl<'a, M, F, T, S, Coord> GetUnchecked<Coord> for TransformMap<'a, M, F>
 where
     F: Fn(T) -> S,
@@ -114,32 +100,16 @@ where
     }
 }
 
-impl<'a, M, F, T, S, Coord> GetUncheckedRef<Coord> for TransformMap<'a, M, F>
+impl<'a, M, F, N, T, S, Coord> ForEach<N, Coord> for TransformMap<'a, M, F>
 where
-    T: 'a,
-    S: 'a,
-    F: Fn(&'a T) -> &'a S,
-    M: GetUncheckedRef<Coord, Data = T>,
+    F: Fn(T) -> S,
+    M: ForEach<N, Coord, Data = T>,
 {
     type Data = S;
 
-    unsafe fn get_unchecked_ref(&self, c: Coord) -> &S {
-        (self.transform)(self.delegate.get_unchecked_ref(c))
-    }
-}
-
-impl<'a, M, F, N, T, S, Coord> ForEachRef<N, Coord> for TransformMap<'a, M, F>
-where
-    T: 'a,
-    S: 'a,
-    F: for<'r> Fn(&'r T) -> &'a S,
-    M: ForEachRef<N, Coord, Data = T>,
-{
-    type Data = S;
-
-    fn for_each_ref(&self, extent: &ExtentN<N>, mut f: impl FnMut(Coord, &Self::Data)) {
+    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(Coord, Self::Data)) {
         self.delegate
-            .for_each_ref(extent, |c, t| f(c, (self.transform)(t)))
+            .for_each(extent, |c, t| f(c, (self.transform)(t)))
     }
 }
 
@@ -246,19 +216,19 @@ mod tests {
         let inner_map: Array3<usize> = Array3::fill(extent, 0usize);
 
         let palette = vec![1, 2, 3];
-        let f = |i: &usize| &palette[*i];
+        let f = |i: usize| palette[i];
         let outer_map = TransformMap::new(&inner_map, &f);
 
-        assert_eq!(outer_map.get_ref(&PointN([0; 3])), &1);
+        assert_eq!(outer_map.get(&PointN([0; 3])), 1);
 
-        outer_map.for_each_ref(&extent, |_s: Stride, value| {
-            assert_eq!(value, &1);
+        outer_map.for_each(&extent, |_s: Stride, value| {
+            assert_eq!(value, 1);
         });
-        outer_map.for_each_ref(&extent, |_p: Point3i, value| {
-            assert_eq!(value, &1);
+        outer_map.for_each(&extent, |_p: Point3i, value| {
+            assert_eq!(value, 1);
         });
-        outer_map.for_each_ref(&extent, |_ps: (Point3i, Stride), value| {
-            assert_eq!(value, &1);
+        outer_map.for_each(&extent, |_ps: (Point3i, Stride), value| {
+            assert_eq!(value, 1);
         });
 
         let f = |i: usize| palette[i];

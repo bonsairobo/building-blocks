@@ -1,5 +1,5 @@
 use building_blocks_core::{point::Point, prelude::*};
-use building_blocks_storage::{access::GetUncheckedRefRelease, prelude::*, IsEmpty};
+use building_blocks_storage::{access::GetUncheckedRelease, prelude::*, IsEmpty};
 
 use core::cmp::Ordering;
 use core::hash::Hash;
@@ -12,10 +12,7 @@ use std::collections::BinaryHeap;
 /// ensure that those points are within the bounds of `map`.
 pub fn find_surface_points<M, N, T>(map: &M, extent: &ExtentN<N>) -> (Vec<PointN<N>>, Vec<Stride>)
 where
-    M: Array<N>
-        + ForEachRef<N, (PointN<N>, Stride), Data = T>
-        + GetRef<Stride, Data = T>
-        + GetUncheckedRefRelease<Stride, T>,
+    M: Array<N> + ForEach<N, (PointN<N>, Stride), Data = T> + GetUncheckedRelease<Stride, T>,
     T: IsEmpty,
     PointN<N>: IntegerPoint,
     ExtentN<N>: IntegerExtent<N>,
@@ -27,13 +24,13 @@ where
 
     let mut surface_points = Vec::new();
     let mut surface_strides = Vec::new();
-    map.for_each_ref(&extent, |(p, s), value| {
+    map.for_each(&extent, |(p, s), value| {
         if value.is_empty() {
             return;
         }
 
         for vn_stride in vn_strides.iter() {
-            if map.get_unchecked_ref_release(s + *vn_stride).is_empty() {
+            if map.get_unchecked_release(s + *vn_stride).is_empty() {
                 surface_points.push(p);
                 surface_strides.push(s);
                 break;

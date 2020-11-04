@@ -1,7 +1,7 @@
 use super::PosNormMesh;
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{access::GetUncheckedRefRelease, prelude::*};
+use building_blocks_storage::{access::GetUncheckedRelease, prelude::*};
 
 /// Pads the given chunk extent with exactly the amount of space required for running the
 /// `surface_nets` algorithm.
@@ -71,7 +71,7 @@ impl SurfaceNetsBuffer {
 /// those points.
 pub fn surface_nets<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    V: Array<[i32; 3]> + GetUncheckedRefRelease<Stride, T>,
+    V: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     output.reset(sdf.extent().num_points());
@@ -84,7 +84,7 @@ where
 // to be used to look up vertices when generating quads.
 fn estimate_surface<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    V: Array<[i32; 3]> + GetUncheckedRefRelease<Stride, T>,
+    V: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     // Precalculate these offsets to do faster linear indexing.
@@ -138,14 +138,14 @@ fn estimate_surface_in_voxel<V, T>(
     corner_strides: &[Stride],
 ) -> Option<([f32; 3], [f32; 3])>
 where
-    V: GetUncheckedRefRelease<Stride, T>,
+    V: GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     // Get the signed distance values at each corner of this cube.
     let mut dists = [0.0; 8];
     let mut num_negative = 0;
     for (i, dist) in dists.iter_mut().enumerate() {
-        let d = sdf.get_unchecked_ref_release(corner_strides[i]).distance();
+        let d = sdf.get_unchecked_release(corner_strides[i]).distance();
         *dist = d;
         if d < 0.0 {
             num_negative += 1;
@@ -218,7 +218,7 @@ fn estimate_surface_edge_intersection(
 // with understanding the indexing.
 fn make_all_quads<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    V: Array<[i32; 3]> + GetUncheckedRefRelease<Stride, T>,
+    V: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     let mut xyz_strides = [Stride(0); 3];
@@ -321,11 +321,11 @@ fn maybe_make_quad<V, T>(
     axis_c_stride: Stride,
     indices: &mut Vec<usize>,
 ) where
-    V: GetUncheckedRefRelease<Stride, T>,
+    V: GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
-    let voxel1 = sdf.get_unchecked_ref_release(p1);
-    let voxel2 = sdf.get_unchecked_ref_release(p2);
+    let voxel1 = sdf.get_unchecked_release(p1);
+    let voxel2 = sdf.get_unchecked_release(p2);
 
     let face_result = is_face(voxel1.distance(), voxel2.distance());
 

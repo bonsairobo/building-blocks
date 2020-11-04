@@ -32,14 +32,14 @@
 //! // chunks will be decompressed into our local cache.
 //! let local_cache = LocalChunkCache3::new();
 //! let reader = ChunkMapReader3::new(&map, &local_cache);
-//! reader.for_each_ref(&bounding_extent, |p, value| {
+//! reader.for_each(&bounding_extent, |p, value| {
 //!     if write_points.iter().position(|pw| p == *pw) != None {
-//!         assert_eq!(value, &1);
+//!         assert_eq!(value, 1);
 //!     } else {
 //!         // The points that we didn't write explicitly got an ambient value when the chunk was
 //!         // inserted. Also any points in `bounding_extent` that don't have a chunk will also take
 //!         // the ambient value.
-//!         assert_eq!(value, &0);
+//!         assert_eq!(value, 0);
 //!     }
 //! });
 //!
@@ -72,11 +72,10 @@
 
 use crate::{
     access::{
-        ForEachMut, ForEachRef, GetUncheckedMutRelease, GetUncheckedRefRelease, ReadExtent,
-        WriteExtent,
+        ForEach, ForEachMut, GetUncheckedMutRelease, GetUncheckedRelease, ReadExtent, WriteExtent,
     },
     array::{Array, ArrayCopySrc, ArrayN, FastLz4CompressedArrayN},
-    FastLz4, Get, GetMut, GetRef,
+    FastLz4, Get, GetMut,
 };
 
 use building_blocks_core::{
@@ -580,7 +579,7 @@ where
     }
 }
 
-impl<'a, N, T, M> GetRef<&PointN<N>> for ChunkMapReader<'a, N, T, M>
+impl<'a, N, T, M> Get<&PointN<N>> for ChunkMapReader<'a, N, T, M>
 where
     T: Copy,
     M: Clone,
@@ -590,27 +589,11 @@ where
 {
     type Data = T;
 
-    fn get_ref(&self, p: &PointN<N>) -> &Self::Data {
+    fn get(&self, p: &PointN<N>) -> Self::Data {
         self.map
             .get_chunk_containing_point(p, &self.local_cache)
-            .map(|(_key, chunk)| chunk.array.get_unchecked_ref_release(p))
-            .unwrap_or(&self.map.ambient_value)
-    }
-}
-
-// TODO: could be more generic once Rust has specialization
-impl<'a, N, T, M> Get<&PointN<N>> for ChunkMapReader<'a, N, T, M>
-where
-    Self: for<'b> GetRef<&'b PointN<N>, Data = T>,
-    T: Copy,
-    M: Clone,
-    PointN<N>: Point + Eq + Hash,
-    ExtentN<N>: IntegerExtent<N>,
-{
-    type Data = T;
-
-    fn get(&self, p: &PointN<N>) -> Self::Data {
-        *self.get_ref(p)
+            .map(|(_key, chunk)| chunk.array.get_unchecked_release(p))
+            .unwrap_or(self.map.ambient_value)
     }
 }
 
@@ -621,38 +604,39 @@ where
 // ██║     ╚██████╔╝██║  ██║    ███████╗██║  ██║╚██████╗██║  ██║
 // ╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
-impl<'a, N, T, M> ForEachRef<N, PointN<N>> for ChunkMapReader<'a, N, T, M>
+impl<'a, N, T, M> ForEach<N, PointN<N>> for ChunkMapReader<'a, N, T, M>
 where
     T: Copy,
     M: Clone,
     PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
-    ArrayN<N, T>: Array<N> + ForEachRef<N, PointN<N>, Data = T>,
+    ArrayN<N, T>: Array<N> + ForEach<N, PointN<N>, Data = T>,
 {
     type Data = T;
 
-    fn for_each_ref(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &Self::Data)) {
+    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
         for chunk_key in self.map.chunk_keys_for_extent(extent) {
             if let Some(chunk) = self.map.get_chunk(chunk_key, &self.local_cache) {
-                chunk.array.for_each_ref(extent, |p, value| f(p, value));
+                chunk.array.for_each(extent, |p, value| f(p, value));
             } else {
                 let chunk_extent = self.map.extent_for_chunk_at_key(&chunk_key);
                 AmbientExtent::new(self.map.ambient_value)
-                    .for_each_ref(&extent.intersection(&chunk_extent), |p, value| f(p, value))
+                    .for_each(&extent.intersection(&chunk_extent), |p, value| f(p, value))
             }
         }
     }
 }
 
-impl<N, T> ForEachRef<N, PointN<N>> for AmbientExtent<N, T>
+impl<N, T> ForEach<N, PointN<N>> for AmbientExtent<N, T>
 where
+    T: Clone,
     ExtentN<N>: IntegerExtent<N>,
 {
     type Data = T;
 
-    fn for_each_ref(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &Self::Data)) {
+    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
         for p in extent.iter_points() {
-            f(p, &self.value);
+            f(p, self.value.clone());
         }
     }
 }
@@ -843,9 +827,9 @@ mod tests {
         let reader = ChunkMapReader3::new(&map, &local_cache);
         for p in read_extent.iter_points() {
             if write_extent.contains(&p) {
-                assert_eq!(reader.get_ref(&p), &1);
+                assert_eq!(reader.get(&p), 1);
             } else {
-                assert_eq!(reader.get_ref(&p), &0);
+                assert_eq!(reader.get(&p), 0);
             }
         }
     }
@@ -866,9 +850,9 @@ mod tests {
         let reader = ChunkMapReader3::new(&map, &local_cache);
         for p in read_extent.iter_points() {
             if extent_to_copy.contains(&p) {
-                assert_eq!(reader.get_ref(&p), &1);
+                assert_eq!(reader.get(&p), 1);
             } else {
-                assert_eq!(reader.get_ref(&p), &0);
+                assert_eq!(reader.get(&p), 0);
             }
         }
     }

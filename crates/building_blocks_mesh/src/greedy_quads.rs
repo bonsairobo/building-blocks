@@ -1,7 +1,7 @@
 use super::{PosNormMesh, PosNormTexMesh};
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{access::GetUncheckedRefRelease, prelude::*, IsEmpty};
+use building_blocks_storage::{access::GetUncheckedRelease, prelude::*, IsEmpty};
 
 pub trait MaterialVoxel {
     type Material: Eq;
@@ -72,8 +72,8 @@ pub fn greedy_quads<V, T>(
     output: &mut GreedyQuadsBuffer<T::Material>,
 ) where
     V: Array<[i32; 3]>
-        + GetUncheckedRefRelease<Stride, T>
-        + ForEachRef<[i32; 3], (Point3i, Stride), Data = T>,
+        + GetUncheckedRelease<Stride, T>
+        + ForEach<[i32; 3], (Point3i, Stride), Data = T>,
     T: IsEmpty + MaterialVoxel,
 {
     output.reset(*extent);
@@ -101,8 +101,8 @@ fn greedy_quads_for_group<V, T>(
     quad_group: &mut QuadGroup<T::Material>,
 ) where
     V: Array<[i32; 3]>
-        + GetUncheckedRefRelease<Stride, T>
-        + ForEachRef<[i32; 3], (Point3i, Stride), Data = T>,
+        + GetUncheckedRelease<Stride, T>
+        + ForEach<[i32; 3], (Point3i, Stride), Data = T>,
     T: IsEmpty + MaterialVoxel,
 {
     visited.reset_values(false);
@@ -142,7 +142,7 @@ fn greedy_quads_for_group<V, T>(
         let u_ub = slice_ub.at(i_u);
         let v_ub = slice_ub.at(i_v);
 
-        voxels.for_each_ref(&slice_extent, |(p, p_stride): (Point3i, Stride), voxel| {
+        voxels.for_each(&slice_extent, |(p, p_stride): (Point3i, Stride), voxel| {
             let quad_material = voxel.material();
 
             // These are the boundaries on quad width and height so it is contained in the slice.
@@ -220,25 +220,25 @@ fn get_row_width<V, T>(
 ) -> i32
 where
     V: Array<[i32; 3]>
-        + GetUncheckedRefRelease<Stride, T>
-        + ForEachRef<[i32; 3], (Point3i, Stride), Data = T>,
+        + GetUncheckedRelease<Stride, T>
+        + ForEach<[i32; 3], (Point3i, Stride), Data = T>,
     T: IsEmpty + MaterialVoxel,
 {
     let mut quad_width = 0;
     let mut row_stride = start_stride;
     while quad_width < max_width {
-        if *visited.get_unchecked_ref_release(row_stride) {
+        if visited.get_unchecked_release(row_stride) {
             // Already have a quad for this voxel face.
             break;
         }
 
-        let voxel = voxels.get_unchecked_ref_release(row_stride);
+        let voxel = voxels.get_unchecked_release(row_stride);
         if voxel.is_empty() || !voxel.material().eq(quad_material) {
             // Voxel needs to be non-empty and match the quad material.
             break;
         }
 
-        let adjacent_voxel = voxels.get_unchecked_ref_release(row_stride + visibility_offset);
+        let adjacent_voxel = voxels.get_unchecked_release(row_stride + visibility_offset);
         if !adjacent_voxel.is_empty() {
             // The adjacent voxel sharing this face must be empty for the face to be visible.
             break;

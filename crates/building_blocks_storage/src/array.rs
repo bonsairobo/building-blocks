@@ -26,11 +26,11 @@
 //! array.for_each_mut(&write_extent, |_stride: Stride, value| *value = 1);
 //!
 //! // Only the points in the extent should have been written.
-//! array.for_each_ref(array.extent(), |p: Point3i, value|
+//! array.for_each(array.extent(), |p: Point3i, value|
 //!     if write_extent.contains(&p) {
-//!         assert_eq!(value, &1);
+//!         assert_eq!(value, 1);
 //!     } else {
-//!         assert_eq!(value, &0);
+//!         assert_eq!(value, 0);
 //!     }
 //! );
 //! ```
@@ -56,8 +56,8 @@
 //!
 //! // Sum up the values in the Von Neumann neighborhood of each point, acting as a sort of blur
 //! // filter.
-//! array.for_each_ref(&subextent, |stride: Stride, value| {
-//!     let mut neighborhood_sum = *value;
+//! array.for_each(&subextent, |stride: Stride, value| {
+//!     let mut neighborhood_sum = value;
 //!     for offset in neighbor_strides.iter() {
 //!         let adjacent_value = array.get(stride + *offset);
 //!         neighborhood_sum += adjacent_value;
@@ -69,12 +69,9 @@
 //! important this difference can be in tight loops.
 
 use crate::{
-    access::{
-        GetUnchecked, GetUncheckedMut, GetUncheckedMutRelease, GetUncheckedRef,
-        GetUncheckedRefRelease, GetUncheckedRelease,
-    },
+    access::{GetUnchecked, GetUncheckedMut, GetUncheckedMutRelease, GetUncheckedRelease},
     chunk_map::ChunkCopySrc,
-    ForEachMut, ForEachRef, Get, GetMut, GetRef, ReadExtent, TransformMap, WriteExtent,
+    ForEach, ForEachMut, Get, GetMut, ReadExtent, TransformMap, WriteExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -363,35 +360,25 @@ impl SubAssign for Stride {
 
 impl<N, T> Get<Stride> for ArrayN<N, T>
 where
-    Self: GetRef<Stride, Data = T>,
     T: Clone,
 {
     type Data = T;
 
     #[inline]
     fn get(&self, stride: Stride) -> Self::Data {
-        self.get_ref(stride).clone()
+        self.values[stride.0].clone()
     }
 }
 
 impl<N, T> GetUnchecked<Stride> for ArrayN<N, T>
 where
-    Self: GetUncheckedRef<Stride, Data = T>,
     T: Clone,
 {
     type Data = T;
 
     #[inline]
-    unsafe fn get_unchecked(&self, index: Stride) -> Self::Data {
-        self.get_unchecked_ref(index).clone()
-    }
-}
-
-impl<N, T> GetRef<Stride> for ArrayN<N, T> {
-    type Data = T;
-
-    fn get_ref(&self, stride: Stride) -> &Self::Data {
-        &self.values[stride.0]
+    unsafe fn get_unchecked(&self, stride: Stride) -> Self::Data {
+        self.values.get_unchecked(stride.0).clone()
     }
 }
 
@@ -400,14 +387,6 @@ impl<N, T> GetMut<Stride> for ArrayN<N, T> {
 
     fn get_mut(&mut self, stride: Stride) -> &mut Self::Data {
         &mut self.values[stride.0]
-    }
-}
-
-impl<N, T> GetUncheckedRef<Stride> for ArrayN<N, T> {
-    type Data = T;
-
-    unsafe fn get_unchecked_ref(&self, stride: Stride) -> &Self::Data {
-        self.values.get_unchecked(stride.0)
     }
 }
 
@@ -429,18 +408,6 @@ where
     #[inline]
     fn get(&self, p: &Local<N>) -> Self::Data {
         self.get(self.stride_from_local_point(p))
-    }
-}
-
-impl<N, T> GetRef<&Local<N>> for ArrayN<N, T>
-where
-    Self: Array<N> + GetRef<Stride, Data = T>,
-{
-    type Data = T;
-
-    #[inline]
-    fn get_ref(&self, p: &Local<N>) -> &Self::Data {
-        self.get_ref(self.stride_from_local_point(p))
     }
 }
 
@@ -472,21 +439,6 @@ where
     }
 }
 
-impl<N, T> GetRef<&PointN<N>> for ArrayN<N, T>
-where
-    Self: Array<N> + for<'r> GetRef<&'r Local<N>, Data = T>,
-    PointN<N>: Point,
-{
-    type Data = T;
-
-    #[inline]
-    fn get_ref(&self, p: &PointN<N>) -> &Self::Data {
-        let local_p = *p - self.extent().minimum;
-
-        GetRef::<&Local<N>>::get_ref(self, &Local(local_p))
-    }
-}
-
 impl<N, T> GetMut<&PointN<N>> for ArrayN<N, T>
 where
     Self: Array<N> + for<'r> GetMut<&'r Local<N>, Data = T>,
@@ -512,18 +464,6 @@ where
     #[inline]
     unsafe fn get_unchecked(&self, p: &Local<N>) -> Self::Data {
         self.get_unchecked(self.stride_from_local_point(p))
-    }
-}
-
-impl<N, T> GetUncheckedRef<&Local<N>> for ArrayN<N, T>
-where
-    Self: Array<N> + GetUncheckedRef<Stride, Data = T>,
-{
-    type Data = T;
-
-    #[inline]
-    unsafe fn get_unchecked_ref(&self, p: &Local<N>) -> &Self::Data {
-        self.get_unchecked_ref(self.stride_from_local_point(p))
     }
 }
 
@@ -555,21 +495,6 @@ where
     }
 }
 
-impl<N, T> GetUncheckedRef<&PointN<N>> for ArrayN<N, T>
-where
-    Self: Array<N> + for<'r> GetUncheckedRef<&'r Local<N>, Data = T>,
-    PointN<N>: Point,
-{
-    type Data = T;
-
-    #[inline]
-    unsafe fn get_unchecked_ref(&self, p: &PointN<N>) -> &Self::Data {
-        let local_p = *p - self.extent().minimum;
-
-        GetUncheckedRef::<&Local<N>>::get_unchecked_ref(self, &Local(local_p))
-    }
-}
-
 impl<N, T> GetUncheckedMut<&PointN<N>> for ArrayN<N, T>
 where
     Self: Array<N> + for<'r> GetUncheckedMut<&'r Local<N>, Data = T>,
@@ -594,15 +519,15 @@ where
 
 macro_rules! impl_array_for_each {
     (coords: $coords:ty; forwarder = |$p:ident, $stride:ident| $forward_coords:expr;) => {
-        impl<N, T> ForEachRef<N, $coords> for ArrayN<N, T>
+        impl<N, T> ForEach<N, $coords> for ArrayN<N, T>
         where
-            Self: Sized + Array<N> + GetRef<Stride, Data = T> + GetUncheckedRef<Stride, Data = T>,
+            Self: Sized + Array<N> + Get<Stride, Data = T> + GetUnchecked<Stride, Data = T>,
         {
             type Data = T;
 
-            fn for_each_ref(&self, extent: &ExtentN<N>, mut f: impl FnMut($coords, &T)) {
+            fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut($coords, T)) {
                 Self::for_each_point_and_stride_static(self.extent(), &extent, |$p, $stride| {
-                    f($forward_coords, self.get_unchecked_ref_release($stride))
+                    f($forward_coords, self.get_unchecked_release($stride))
                 })
             }
         }
@@ -843,30 +768,21 @@ mod tests {
         *array.get_mut(Stride(0)) = 1;
 
         assert_eq!(array.get(Stride(0)), 1);
-        assert_eq!(array.get_ref(Stride(0)), &1);
         assert_eq!(array.get_mut(Stride(0)), &mut 1);
         assert_eq!(unsafe { array.get_unchecked(Stride(0)) }, 1);
-        assert_eq!(unsafe { array.get_unchecked_ref(Stride(0)) }, &1);
         assert_eq!(unsafe { array.get_unchecked_mut(Stride(0)) }, &mut 1);
 
         assert_eq!(array.get(&Local(PointN([0, 0]))), 1);
-        assert_eq!(array.get_ref(&Local(PointN([0, 0]))), &1);
         assert_eq!(array.get_mut(&Local(PointN([0, 0]))), &mut 1);
         assert_eq!(unsafe { array.get_unchecked(&Local(PointN([0, 0]))) }, 1);
-        assert_eq!(
-            unsafe { array.get_unchecked_ref(&Local(PointN([0, 0]))) },
-            &1
-        );
         assert_eq!(
             unsafe { array.get_unchecked_mut(&Local(PointN([0, 0]))) },
             &mut 1
         );
 
         assert_eq!(array.get(&PointN([1, 1])), 1);
-        assert_eq!(array.get_ref(&PointN([1, 1])), &1);
         assert_eq!(array.get_mut(&PointN([1, 1])), &mut 1);
         assert_eq!(unsafe { array.get_unchecked(&PointN([1, 1])) }, 1);
-        assert_eq!(unsafe { array.get_unchecked_ref(&PointN([1, 1])) }, &1);
         assert_eq!(unsafe { array.get_unchecked_mut(&PointN([1, 1])) }, &mut 1);
     }
 
@@ -878,30 +794,21 @@ mod tests {
         *array.get_mut(Stride(0)) = 1;
 
         assert_eq!(array.get(Stride(0)), 1);
-        assert_eq!(array.get_ref(Stride(0)), &1);
         assert_eq!(array.get_mut(Stride(0)), &mut 1);
         assert_eq!(unsafe { array.get_unchecked(Stride(0)) }, 1);
-        assert_eq!(unsafe { array.get_unchecked_ref(Stride(0)) }, &1);
         assert_eq!(unsafe { array.get_unchecked_mut(Stride(0)) }, &mut 1);
 
         assert_eq!(array.get(&Local(PointN([0, 0, 0]))), 1);
-        assert_eq!(array.get_ref(&Local(PointN([0, 0, 0]))), &1);
         assert_eq!(array.get_mut(&Local(PointN([0, 0, 0]))), &mut 1);
         assert_eq!(unsafe { array.get_unchecked(&Local(PointN([0, 0, 0]))) }, 1);
-        assert_eq!(
-            unsafe { array.get_unchecked_ref(&Local(PointN([0, 0, 0]))) },
-            &1
-        );
         assert_eq!(
             unsafe { array.get_unchecked_mut(&Local(PointN([0, 0, 0]))) },
             &mut 1
         );
 
         assert_eq!(array.get(&PointN([1, 1, 1])), 1);
-        assert_eq!(array.get_ref(&PointN([1, 1, 1])), &1);
         assert_eq!(array.get_mut(&PointN([1, 1, 1])), &mut 1);
         assert_eq!(unsafe { array.get_unchecked(&PointN([1, 1, 1])) }, 1);
-        assert_eq!(unsafe { array.get_unchecked_ref(&PointN([1, 1, 1])) }, &1);
         assert_eq!(
             unsafe { array.get_unchecked_mut(&PointN([1, 1, 1])) },
             &mut 1

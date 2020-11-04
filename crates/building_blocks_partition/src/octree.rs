@@ -4,7 +4,7 @@
 //! into an `OctreeDBVT` in order to perform spatial queries like raycasting.
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{access::GetUncheckedRefRelease, prelude::*, IsEmpty};
+use building_blocks_storage::{access::GetUncheckedRelease, prelude::*, IsEmpty};
 
 use fnv::FnvHashMap;
 
@@ -29,7 +29,10 @@ impl Octree {
     /// defined by the `IsEmpty` trait). `extent` must be cube-shaped with edge length being a power
     /// of 2. For exponent E where edge length is 2^E, we must have `0 < E <= 6`, because there is a
     /// maximum fixed depth of the octree.
-    pub fn from_array3<T: IsEmpty>(array: &Array3<T>, extent: Extent3i) -> Self {
+    pub fn from_array3<T>(array: &Array3<T>, extent: Extent3i) -> Self
+    where
+        T: Clone + IsEmpty,
+    {
         assert!(extent.shape.dimensions_are_powers_of_2());
         assert!(extent.shape.is_cube());
         let power = extent.shape.x().trailing_zeros();
@@ -69,17 +72,20 @@ impl Octree {
         }
     }
 
-    fn partition_array<T: IsEmpty>(
+    fn partition_array<T>(
         location: LocationCode,
         minimum: Stride,
         edge_len: i32,
         corner_strides: &[Stride],
         array: &Array3<T>,
         nodes: &mut FnvHashMap<LocationCode, ChildBitMask>,
-    ) -> bool {
+    ) -> bool
+    where
+        T: Clone + IsEmpty,
+    {
         // Base case where the octant is a single voxel.
         if edge_len == 1 {
-            return !array.get_unchecked_ref_release(minimum).is_empty();
+            return !array.get_unchecked_release(minimum).is_empty();
         }
 
         let mut octant_corner_strides = [Stride(0); 8];

@@ -11,8 +11,8 @@ fn array_for_each_stride(c: &mut Criterion) {
                 || set_up_array(size),
                 |(array, iter_extent)| {
                     let mut sum = 0;
-                    array.for_each_ref(&iter_extent, |_stride: Stride, value| {
-                        sum += *value;
+                    array.for_each(&iter_extent, |_stride: Stride, value| {
+                        sum += value;
                     });
                 },
             );
@@ -29,8 +29,8 @@ fn array_for_each_point(c: &mut Criterion) {
                 || set_up_array(size),
                 |(array, iter_extent)| {
                     let mut sum = 0;
-                    array.for_each_ref(&iter_extent, |_p: Point3i, value| {
-                        sum += *value;
+                    array.for_each(&iter_extent, |_p: Point3i, value| {
+                        sum += value;
                     });
                 },
             );
@@ -50,8 +50,8 @@ fn chunk_map_for_each_point(c: &mut Criterion) {
                     let reader = ChunkMapReader3::new(&chunk_map, &local_cache);
 
                     let mut sum = 0;
-                    reader.for_each_ref(&iter_extent, |_p: Point3i, value| {
-                        sum += *value;
+                    reader.for_each(&iter_extent, |_p: Point3i, value| {
+                        sum += value;
                     });
                 },
             );
@@ -69,7 +69,7 @@ fn array_point_indexing(c: &mut Criterion) {
                 |(array, iter_extent)| {
                     let mut sum = 0;
                     for p in iter_extent.iter_points() {
-                        sum += array.get_ref(&p);
+                        sum += array.get(&p);
                     }
                 },
             );
@@ -90,7 +90,7 @@ fn chunk_map_point_indexing(c: &mut Criterion) {
 
                     let mut sum = 0;
                     for p in iter_extent.iter_points() {
-                        sum += reader.get_ref(&p);
+                        sum += reader.get(&p);
                     }
                 },
             );

@@ -501,8 +501,8 @@ where
     pub compressed_chunks: FnvHashMap<PointN<N>, BincodeLz4Compressed<Chunk<N, T, M>>>,
 }
 
-pub type SerializableChunkMap2<T, M> = SerializableChunkMap<[i32; 2], T, M>;
-pub type SerializableChunkMap3<T, M> = SerializableChunkMap<[i32; 3], T, M>;
+pub type SerializableChunkMap2<T, M = ()> = SerializableChunkMap<[i32; 2], T, M>;
+pub type SerializableChunkMap3<T, M = ()> = SerializableChunkMap<[i32; 3], T, M>;
 
 /// An extent that takes the same value everywhere.
 #[derive(Copy, Clone)]

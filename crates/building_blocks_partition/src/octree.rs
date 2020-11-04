@@ -31,7 +31,7 @@ impl Octree {
     /// maximum fixed depth of the octree.
     pub fn from_array3<A, T>(array: &A, extent: Extent3i) -> Self
     where
-        A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+        A: HasArrayIndexer<[i32; 3]> + GetUncheckedRelease<Stride, T>,
         T: Clone + IsEmpty,
     {
         assert!(extent.shape.dimensions_are_powers_of_2());
@@ -82,7 +82,7 @@ impl Octree {
         nodes: &mut FnvHashMap<LocationCode, ChildBitMask>,
     ) -> bool
     where
-        A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+        A: HasArrayIndexer<[i32; 3]> + GetUncheckedRelease<Stride, T>,
         T: Clone + IsEmpty,
     {
         // Base case where the octant is a single voxel.

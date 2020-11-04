@@ -74,7 +74,7 @@ use crate::{
     access::{
         ForEach, ForEachMut, GetUncheckedMutRelease, GetUncheckedRelease, ReadExtent, WriteExtent,
     },
-    array::{Array, ArrayCopySrc, ArrayN, FastLz4CompressedArrayN},
+    array::{ArrayCopySrc, ArrayN, FastLz4CompressedArrayN, HasArrayIndexer},
     FastLz4, Get, GetMut,
 };
 
@@ -348,7 +348,7 @@ where
         create_chunk: impl Fn(&PointN<N>, &ExtentN<N>) -> Chunk<N, T, M>,
     ) -> (PointN<N>, &mut T)
     where
-        ArrayN<N, T>: Array<N>,
+        ArrayN<N, T>: HasArrayIndexer<N>,
     {
         let key = self.chunk_key(p);
         let chunk = self.get_mut_chunk_or_insert_with(key, create_chunk);
@@ -360,7 +360,7 @@ where
     /// will first be filled with the ambient value and default metadata.
     pub fn get_mut_and_key(&mut self, p: &PointN<N>) -> (PointN<N>, &mut T)
     where
-        ArrayN<N, T>: Array<N>,
+        ArrayN<N, T>: HasArrayIndexer<N>,
     {
         let key = self.chunk_key(p);
         let ChunkMap {
@@ -568,7 +568,7 @@ where
     M: Clone,
     PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
-    ArrayN<N, T>: Array<N>,
+    ArrayN<N, T>: HasArrayIndexer<N>,
 {
     type Data = T;
 
@@ -585,7 +585,7 @@ where
     M: Clone,
     PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
-    ArrayN<N, T>: Array<N>,
+    ArrayN<N, T>: HasArrayIndexer<N>,
 {
     type Data = T;
 
@@ -610,7 +610,7 @@ where
     M: Clone,
     PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
-    ArrayN<N, T>: Array<N> + ForEach<N, PointN<N>, Data = T>,
+    ArrayN<N, T>: HasArrayIndexer<N> + ForEach<N, PointN<N>, Data = T>,
 {
     type Data = T;
 
@@ -684,7 +684,7 @@ impl<'a, N, T, M> ReadExtent<'a, N> for ChunkMapReader<'a, N, T, M>
 where
     T: Copy,
     M: Clone,
-    ArrayN<N, T>: Array<N>,
+    ArrayN<N, T>: HasArrayIndexer<N>,
     PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
 {

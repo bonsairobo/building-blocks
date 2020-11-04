@@ -1,4 +1,4 @@
-use crate::{Array, ArrayN, Local, Stride};
+use crate::array::{ArrayIndexer, ArrayIndexerN, ArrayN, HasArrayIndexer, Local, Stride};
 
 use building_blocks_core::prelude::*;
 
@@ -7,13 +7,19 @@ pub type Local3i = Local<[i32; 3]>;
 
 pub type Array3<T> = ArrayN<[i32; 3], T>;
 
-impl<T> Array<[i32; 3]> for Array3<T> {
+pub type ArrayIndexer3 = ArrayIndexerN<[i32; 2]>;
+
+impl<T> HasArrayIndexer<[i32; 3]> for Array3<T> {
+    type Indexer = ArrayIndexer3;
+}
+
+impl ArrayIndexer<[i32; 3]> for ArrayIndexer3 {
     #[inline]
-    fn stride_from_local_point_static(s: &Point3i, p: &Local3i) -> Stride {
+    fn stride_from_local_point(s: &Point3i, p: &Local3i) -> Stride {
         Stride((p.z() * s.y() * s.x() + p.y() * s.x() + p.x()) as usize)
     }
 
-    fn for_each_point_and_stride_static(
+    fn for_each_point_and_stride(
         array_extent: &Extent3i,
         extent: &Extent3i,
         mut f: impl FnMut(Point3i, Stride),

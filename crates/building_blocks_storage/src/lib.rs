@@ -18,7 +18,7 @@ pub mod func;
 pub mod transform_map;
 
 pub use access::{copy_extent, ForEach, ForEachMut, Get, GetMut, ReadExtent, WriteExtent};
-pub use array::{Array, ArrayExtent, ArrayN, FastLz4, Local, Stride};
+pub use array::{ArrayExtent, ArrayN, FastLz4, HasArrayIndexer, Local, Stride};
 pub use array2::Array2;
 pub use array3::Array3;
 pub use chunk_map::{
@@ -35,10 +35,10 @@ pub trait IsEmpty {
 
 pub mod prelude {
     pub use super::{
-        copy_extent, Array, Array2, Array3, ArrayExtent, ArrayN, Chunk2, Chunk3, ChunkMap2,
-        ChunkMap3, ChunkMapReader2, ChunkMapReader3, Compressible, Decompressible, FastLz4,
-        ForEach, ForEachMut, Get, GetMut, IsEmpty, Local, LocalChunkCache2, LocalChunkCache3,
-        ReadExtent, Stride, TransformMap, WriteExtent,
+        copy_extent, Array2, Array3, ArrayExtent, ArrayN, Chunk2, Chunk3, ChunkMap2, ChunkMap3,
+        ChunkMapReader2, ChunkMapReader3, Compressible, Decompressible, FastLz4, ForEach,
+        ForEachMut, Get, GetMut, HasArrayIndexer, IsEmpty, Local, LocalChunkCache2,
+        LocalChunkCache3, ReadExtent, Stride, TransformMap, WriteExtent,
     };
 }
 

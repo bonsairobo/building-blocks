@@ -71,7 +71,7 @@ impl SurfaceNetsBuffer {
 /// those points.
 pub fn surface_nets<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    V: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+    V: HasArrayIndexer<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     output.reset(sdf.extent().num_points());
@@ -84,7 +84,7 @@ where
 // to be used to look up vertices when generating quads.
 fn estimate_surface<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    V: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+    V: HasArrayIndexer<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     // Precalculate these offsets to do faster linear indexing.
@@ -218,7 +218,7 @@ fn estimate_surface_edge_intersection(
 // with understanding the indexing.
 fn make_all_quads<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    V: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+    V: HasArrayIndexer<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     let mut xyz_strides = [Stride(0); 3];

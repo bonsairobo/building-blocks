@@ -29,8 +29,9 @@ impl Octree {
     /// defined by the `IsEmpty` trait). `extent` must be cube-shaped with edge length being a power
     /// of 2. For exponent E where edge length is 2^E, we must have `0 < E <= 6`, because there is a
     /// maximum fixed depth of the octree.
-    pub fn from_array3<T>(array: &Array3<T>, extent: Extent3i) -> Self
+    pub fn from_array3<A, T>(array: &A, extent: Extent3i) -> Self
     where
+        A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
         T: Clone + IsEmpty,
     {
         assert!(extent.shape.dimensions_are_powers_of_2());
@@ -72,15 +73,16 @@ impl Octree {
         }
     }
 
-    fn partition_array<T>(
+    fn partition_array<A, T>(
         location: LocationCode,
         minimum: Stride,
         edge_len: i32,
         corner_strides: &[Stride],
-        array: &Array3<T>,
+        array: &A,
         nodes: &mut FnvHashMap<LocationCode, ChildBitMask>,
     ) -> bool
     where
+        A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
         T: Clone + IsEmpty,
     {
         // Base case where the octant is a single voxel.

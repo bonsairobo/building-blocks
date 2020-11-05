@@ -28,7 +28,7 @@ pub use chunk_map::{
 };
 pub use transform_map::TransformMap;
 
-// Used in many generic algorithms to check if a voxel is considered empty.
+/// Used in many generic algorithms to check if a voxel is considered empty.
 pub trait IsEmpty {
     fn is_empty(&self) -> bool;
 }

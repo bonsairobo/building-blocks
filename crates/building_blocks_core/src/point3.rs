@@ -115,6 +115,16 @@ where
     }
 }
 
+impl Point3f {
+    pub fn round(&self) -> Point3i {
+        PointN([
+            self.x().round() as i32,
+            self.y().round() as i32,
+            self.z().round() as i32,
+        ])
+    }
+}
+
 impl<T> Bounded for Point3<T>
 where
     T: Bounded,

@@ -71,7 +71,7 @@
 //!
 //! let extent = Extent2i::from_min_and_shape(PointN([0; 2]), PointN([50; 2]));
 //! let array = Array2::fill(extent, 0.0);
-//! let tfm_array = TransformMap::new(&array, &|h: f32| OtherHeight(h));
+//! let tfm_array = TransformMap::new(&array, |h: f32| OtherHeight(h));
 //! let mut hm_buffer = HeightMapMeshBuffer::default();
 //! triangulate_height_map(&tfm_array, &extent, &mut hm_buffer);
 //! ```

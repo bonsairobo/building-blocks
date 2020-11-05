@@ -54,21 +54,25 @@ use core::iter::{once, Once};
 /// using some `Fn(T) -> S`.
 pub struct TransformMap<'a, M, F> {
     delegate: &'a M,
-    transform: &'a F,
+    transform: F,
 }
 
-impl<'a, M, F> Clone for TransformMap<'a, M, F> {
+impl<'a, M, F> Clone for TransformMap<'a, M, F>
+where
+    F: Clone,
+{
     fn clone(&self) -> Self {
         Self {
             delegate: self.delegate,
-            transform: self.transform,
+            transform: self.transform.clone(),
         }
     }
 }
-impl<'a, M, F> Copy for TransformMap<'a, M, F> {}
+
+impl<'a, M, F> Copy for TransformMap<'a, M, F> where F: Copy {}
 
 impl<'a, M, F> TransformMap<'a, M, F> {
-    pub fn new(delegate: &'a M, transform: &'a F) -> Self {
+    pub fn new(delegate: &'a M, transform: F) -> Self {
         Self {
             delegate,
             transform,
@@ -134,7 +138,7 @@ where
 
 impl<'a, F, S, N, T> ReadExtent<'a, N> for TransformMap<'a, ArrayN<N, S>, F>
 where
-    Self: ArrayExtent<N>,
+    Self: ArrayExtent<N> + Copy,
     F: 'a + Fn(S) -> T,
     PointN<N>: IntegerPoint,
 {
@@ -156,7 +160,7 @@ where
         Src = ArrayChunkCopySrc<'a, N, S>,
         SrcIter = ArrayChunkCopySrcIter<'a, N, S>,
     >,
-    F: 'a + Fn(S) -> T,
+    F: 'a + Copy + Fn(S) -> T,
     S: Copy,
     T: 'a,
     M: Clone,
@@ -169,7 +173,7 @@ where
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
         TransformChunkCopySrcIter {
             chunk_iter: self.delegate.read_extent(extent),
-            transform: &self.transform,
+            transform: self.transform,
         }
     }
 }
@@ -182,12 +186,12 @@ where
     F: Fn(S) -> T,
 {
     chunk_iter: ArrayChunkCopySrcIter<'a, N, S>,
-    transform: &'a F,
+    transform: F,
 }
 
 impl<'a, F, S, N, T> Iterator for TransformChunkCopySrcIter<'a, F, S, N, T>
 where
-    F: 'a + Fn(S) -> T,
+    F: Copy + Fn(S) -> T,
 {
     type Item = (ExtentN<N>, TransformChunkCopySrc<'a, F, S, N, T>);
 
@@ -223,8 +227,7 @@ mod tests {
         let inner_map: Array3<usize> = Array3::fill(extent, 0usize);
 
         let palette = vec![1, 2, 3];
-        let f = |i: usize| palette[i];
-        let outer_map = TransformMap::new(&inner_map, &f);
+        let outer_map = TransformMap::new(&inner_map, |i: usize| palette[i]);
 
         assert_eq!(outer_map.get(&PointN([0; 3])), 1);
 
@@ -238,8 +241,7 @@ mod tests {
             assert_eq!(value, 1);
         });
 
-        let f = |i: usize| palette[i];
-        let outer_map = TransformMap::new(&inner_map, &f);
+        let outer_map = TransformMap::new(&inner_map, |i: usize| palette[i]);
         assert_eq!(outer_map.get(&PointN([0; 3])), 1);
     }
 
@@ -248,7 +250,7 @@ mod tests {
         let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
         let src = Array3::fill(extent, 0);
         let mut dst = ChunkMap3::new(PointN([4; 3]), 0, (), FastLz4 { level: 10 });
-        let tfm = TransformMap::new(&src, &|value: i32| value + 1);
+        let tfm = TransformMap::new(&src, |value: i32| value + 1);
         copy_extent(&extent, &tfm, &mut dst);
     }
 
@@ -261,7 +263,7 @@ mod tests {
 
         let local_cache = LocalChunkCache3::new();
         let src_reader = ChunkMapReader3::new(&src, &local_cache);
-        let tfm = TransformMap::new(&src_reader, &|value: i32| value + 1);
+        let tfm = TransformMap::new(&src_reader, |value: i32| value + 1);
 
         let dst_extent = Extent3::from_min_and_shape(PointN([-16; 3]), PointN([32; 3]));
         let mut dst = ChunkMap3::new(PointN([2; 3]), 0, (), FastLz4 { level: 10 });

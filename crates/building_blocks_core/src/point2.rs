@@ -55,8 +55,12 @@ where
 }
 
 impl Point2f {
-    pub fn round(&self) -> Point2i {
-        PointN([self.x().round() as i32, self.y().round() as i32])
+    pub fn round(&self) -> Self {
+        self.map_components(|c| c.round())
+    }
+
+    pub fn floor(&self) -> Self {
+        self.map_components(|c| c.floor())
     }
 }
 
@@ -362,6 +366,8 @@ impl From<Point2i> for Point2f {
 }
 
 pub fn pixel_containing_point2f(p: &Point2f) -> Point2i {
+    let p = p.floor();
+
     PointN([p.x() as i32, p.y() as i32])
 }
 

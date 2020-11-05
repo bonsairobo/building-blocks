@@ -116,12 +116,12 @@ where
 }
 
 impl Point3f {
-    pub fn round(&self) -> Point3i {
-        PointN([
-            self.x().round() as i32,
-            self.y().round() as i32,
-            self.z().round() as i32,
-        ])
+    pub fn round(&self) -> Self {
+        self.map_components(|c| c.round())
+    }
+
+    pub fn floor(&self) -> Self {
+        self.map_components(|c| c.floor())
     }
 }
 
@@ -480,6 +480,8 @@ impl From<Point3i> for Point3f {
 }
 
 pub fn voxel_containing_point3f(p: &Point3f) -> Point3i {
+    let p = p.floor();
+
     PointN([p.x() as i32, p.y() as i32, p.z() as i32])
 }
 

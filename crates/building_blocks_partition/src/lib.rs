@@ -15,3 +15,6 @@ pub mod octree_dbvt;
 
 #[cfg(feature = "ncollide")]
 pub use octree_dbvt::{OctreeDBVT, OctreeDBVTVisitor};
+
+#[cfg(feature = "ncollide")]
+pub use ncollide3d;

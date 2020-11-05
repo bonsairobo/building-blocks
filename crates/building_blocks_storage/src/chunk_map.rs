@@ -471,8 +471,8 @@ where
     local_cache: &'a LocalChunkCache<N, T, M>,
 }
 
-pub type ChunkMapReader2<'a, T, M> = ChunkMapReader<'a, [i32; 2], T, M>;
-pub type ChunkMapReader3<'a, T, M> = ChunkMapReader<'a, [i32; 3], T, M>;
+pub type ChunkMapReader2<'a, T, M = ()> = ChunkMapReader<'a, [i32; 2], T, M>;
+pub type ChunkMapReader3<'a, T, M = ()> = ChunkMapReader<'a, [i32; 3], T, M>;
 
 impl<'a, N, T, M> ChunkMapReader<'a, N, T, M>
 where

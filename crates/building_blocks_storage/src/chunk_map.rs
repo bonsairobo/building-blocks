@@ -95,6 +95,10 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 /// same-shaped chunks using a `CompressibleMap`. The data can either be addressed by chunk with the
 /// `get_chunk*` methods or by individual points using the `Get*` and `ForEach*` trait impls.
 ///
+/// The map of chunks uses `Point3i` keys. The key for a chunk is the minimum point in that chunk.
+/// Chunk dimensions must be powers of 2, which allows for efficiently calculating a chunk key from
+/// any point in the chunk.
+///
 /// Because chunks are either cached or compressed, accesses should eventually mutate the cache. If
 /// you need to read from the map without mutating it, the const `get_chunk*` methods take a
 /// `LocalChunkCache`. To read individual points, you can use the `ChunkMapReader`, which

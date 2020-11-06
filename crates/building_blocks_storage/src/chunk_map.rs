@@ -471,8 +471,8 @@ where
     PointN<N>: Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
 {
-    map: &'a ChunkMap<N, T, M>,
-    local_cache: &'a LocalChunkCache<N, T, M>,
+    pub map: &'a ChunkMap<N, T, M>,
+    pub local_cache: &'a LocalChunkCache<N, T, M>,
 }
 
 pub type ChunkMapReader2<'a, T, M = ()> = ChunkMapReader<'a, [i32; 2], T, M>;

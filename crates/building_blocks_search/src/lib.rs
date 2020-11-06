@@ -12,9 +12,7 @@ use std::collections::BinaryHeap;
 /// ensure that those points are within the bounds of `map`.
 pub fn find_surface_points<M, N, T>(map: &M, extent: &ExtentN<N>) -> (Vec<PointN<N>>, Vec<Stride>)
 where
-    M: HasArrayIndexer<N>
-        + ForEach<N, (PointN<N>, Stride), Data = T>
-        + GetUncheckedRelease<Stride, T>,
+    M: Array<N> + ForEach<N, (PointN<N>, Stride), Data = T> + GetUncheckedRelease<Stride, T>,
     T: IsEmpty,
     PointN<N>: IntegerPoint,
     ExtentN<N>: IntegerExtent<N>,

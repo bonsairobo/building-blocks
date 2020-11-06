@@ -71,7 +71,7 @@ pub fn greedy_quads<V, T>(
     extent: &Extent3i,
     output: &mut GreedyQuadsBuffer<T::Material>,
 ) where
-    V: HasArrayIndexer<[i32; 3]>
+    V: Array<[i32; 3]>
         + GetUncheckedRelease<Stride, T>
         + ForEach<[i32; 3], (Point3i, Stride), Data = T>,
     T: IsEmpty + MaterialVoxel,
@@ -100,7 +100,7 @@ fn greedy_quads_for_group<V, T>(
     visited: &mut Array3<bool>,
     quad_group: &mut QuadGroup<T::Material>,
 ) where
-    V: HasArrayIndexer<[i32; 3]>
+    V: Array<[i32; 3]>
         + GetUncheckedRelease<Stride, T>
         + ForEach<[i32; 3], (Point3i, Stride), Data = T>,
     T: IsEmpty + MaterialVoxel,
@@ -219,7 +219,7 @@ fn get_row_width<V, T>(
     max_width: i32,
 ) -> i32
 where
-    V: HasArrayIndexer<[i32; 3]>
+    V: Array<[i32; 3]>
         + GetUncheckedRelease<Stride, T>
         + ForEach<[i32; 3], (Point3i, Stride), Data = T>,
     T: IsEmpty + MaterialVoxel,

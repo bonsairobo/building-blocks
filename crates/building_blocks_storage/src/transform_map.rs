@@ -40,9 +40,9 @@
 
 use crate::{
     access::GetUnchecked,
-    array::{ArrayCopySrc, HasArrayIndexer},
+    array::{Array, ArrayCopySrc},
     chunk_map::{AmbientExtent, ArrayChunkCopySrc, ArrayChunkCopySrcIter, ChunkCopySrc},
-    ArrayExtent, ArrayN, ChunkMapReader, ForEach, Get, ReadExtent,
+    ArrayN, ChunkMapReader, ForEach, Get, ReadExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -117,20 +117,15 @@ where
     }
 }
 
-impl<'a, N, M, F> ArrayExtent<N> for TransformMap<'a, M, F>
+impl<'a, N, M, F> Array<N> for TransformMap<'a, M, F>
 where
-    M: ArrayExtent<N>,
+    M: Array<N>,
 {
+    type Indexer = M::Indexer;
+
     fn extent(&self) -> &ExtentN<N> {
         self.delegate.extent()
     }
-}
-
-impl<'a, N, M, F> HasArrayIndexer<N> for TransformMap<'a, M, F>
-where
-    M: HasArrayIndexer<N>,
-{
-    type Indexer = M::Indexer;
 }
 
 // TODO: try to make a generic ReadExtent impl, it's hard because we need a way to define the src
@@ -138,7 +133,7 @@ where
 
 impl<'a, F, S, N, T> ReadExtent<'a, N> for TransformMap<'a, ArrayN<N, S>, F>
 where
-    Self: ArrayExtent<N> + Copy,
+    Self: Array<N> + Copy,
     F: 'a + Fn(S) -> T,
     PointN<N>: IntegerPoint,
 {

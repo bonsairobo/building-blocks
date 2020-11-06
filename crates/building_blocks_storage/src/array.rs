@@ -84,23 +84,40 @@ use either::Either;
 use num::Zero;
 use serde::{Deserialize, Serialize};
 
-/// When a lattice map implements `ArrayExtent`, that means there is some underlying array with the
+/// When a lattice map implements `Array`, that means there is some underlying array with the
 /// location and shape dictated by the extent.
 ///
 /// For the sake of generic impls, if the same map also implements `Get*<Stride>`, it must use the
 /// same data layout as `ArrayN`.
-pub trait ArrayExtent<N> {
-    fn extent(&self) -> &ExtentN<N>;
-}
+pub trait Array<N> {
+    type Indexer: ArrayIndexer<N>;
 
-impl<N, T> ArrayExtent<N> for ArrayN<N, T> {
-    fn extent(&self) -> &ExtentN<N> {
-        self.extent()
+    fn extent(&self) -> &ExtentN<N>;
+
+    fn for_each_point_and_stride(&self, extent: &ExtentN<N>, f: impl FnMut(PointN<N>, Stride)) {
+        Self::Indexer::for_each_point_and_stride(self.extent(), extent, f);
+    }
+
+    fn stride_from_local_point(&self, p: &Local<N>) -> Stride {
+        Self::Indexer::stride_from_local_point(&self.extent().shape, p)
+    }
+
+    fn strides_from_local_points(&self, points: &[Local<N>], strides: &mut [Stride]) {
+        for (i, p) in points.iter().enumerate() {
+            strides[i] = self.stride_from_local_point(p);
+        }
     }
 }
 
-pub struct ArrayIndexerN<N> {
-    _marker: std::marker::PhantomData<N>,
+impl<N, T> Array<N> for ArrayN<N, T>
+where
+    N: ArrayIndexer<N>,
+{
+    type Indexer = N;
+
+    fn extent(&self) -> &ExtentN<N> {
+        self.extent()
+    }
 }
 
 pub trait ArrayIndexer<N> {
@@ -118,24 +135,6 @@ pub trait ArrayIndexer<N> {
         array2_extent: &ExtentN<N>,
         f: impl FnMut(Stride, Stride),
     );
-}
-
-pub trait HasArrayIndexer<N>: ArrayExtent<N> {
-    type Indexer: ArrayIndexer<N>;
-
-    fn for_each_point_and_stride(&self, extent: &ExtentN<N>, f: impl FnMut(PointN<N>, Stride)) {
-        Self::Indexer::for_each_point_and_stride(self.extent(), extent, f);
-    }
-
-    fn stride_from_local_point(&self, p: &Local<N>) -> Stride {
-        Self::Indexer::stride_from_local_point(&self.extent().shape, p)
-    }
-
-    fn strides_from_local_points(&self, points: &[Local<N>], strides: &mut [Stride]) {
-        for (i, p) in points.iter().enumerate() {
-            strides[i] = self.stride_from_local_point(p);
-        }
-    }
 }
 
 /// A map from lattice location `PointN<N>` to data `T`, stored as a flat array on the heap.
@@ -409,7 +408,7 @@ impl<N, T> GetUncheckedMut<Stride> for ArrayN<N, T> {
 impl<N, T> Get<&Local<N>> for ArrayN<N, T>
 where
     T: Clone,
-    Self: HasArrayIndexer<N> + Get<Stride, Data = T>,
+    Self: Array<N> + Get<Stride, Data = T>,
 {
     type Data = T;
 
@@ -421,7 +420,7 @@ where
 
 impl<N, T> GetMut<&Local<N>> for ArrayN<N, T>
 where
-    Self: HasArrayIndexer<N> + GetMut<Stride, Data = T>,
+    Self: Array<N> + GetMut<Stride, Data = T>,
 {
     type Data = T;
 
@@ -434,7 +433,7 @@ where
 impl<N, T> Get<&PointN<N>> for ArrayN<N, T>
 where
     T: Clone,
-    Self: HasArrayIndexer<N> + for<'r> Get<&'r Local<N>, Data = T>,
+    Self: Array<N> + for<'r> Get<&'r Local<N>, Data = T>,
     PointN<N>: Point,
 {
     type Data = T;
@@ -449,7 +448,7 @@ where
 
 impl<N, T> GetMut<&PointN<N>> for ArrayN<N, T>
 where
-    Self: HasArrayIndexer<N> + for<'r> GetMut<&'r Local<N>, Data = T>,
+    Self: Array<N> + for<'r> GetMut<&'r Local<N>, Data = T>,
     PointN<N>: Point,
 {
     type Data = T;
@@ -465,7 +464,7 @@ where
 impl<N, T> GetUnchecked<&Local<N>> for ArrayN<N, T>
 where
     T: Clone,
-    Self: HasArrayIndexer<N> + GetUnchecked<Stride, Data = T>,
+    Self: Array<N> + GetUnchecked<Stride, Data = T>,
 {
     type Data = T;
 
@@ -477,7 +476,7 @@ where
 
 impl<N, T> GetUncheckedMut<&Local<N>> for ArrayN<N, T>
 where
-    Self: HasArrayIndexer<N> + GetUncheckedMut<Stride, Data = T>,
+    Self: Array<N> + GetUncheckedMut<Stride, Data = T>,
 {
     type Data = T;
 
@@ -490,7 +489,7 @@ where
 impl<N, T> GetUnchecked<&PointN<N>> for ArrayN<N, T>
 where
     T: Clone,
-    Self: HasArrayIndexer<N> + for<'r> GetUnchecked<&'r Local<N>, Data = T>,
+    Self: Array<N> + for<'r> GetUnchecked<&'r Local<N>, Data = T>,
     PointN<N>: Point,
 {
     type Data = T;
@@ -505,7 +504,7 @@ where
 
 impl<N, T> GetUncheckedMut<&PointN<N>> for ArrayN<N, T>
 where
-    Self: HasArrayIndexer<N> + for<'r> GetUncheckedMut<&'r Local<N>, Data = T>,
+    Self: Array<N> + for<'r> GetUncheckedMut<&'r Local<N>, Data = T>,
     PointN<N>: Point,
 {
     type Data = T;
@@ -529,13 +528,12 @@ macro_rules! impl_array_for_each {
     (coords: $coords:ty; forwarder = |$p:ident, $stride:ident| $forward_coords:expr;) => {
         impl<N, T> ForEach<N, $coords> for ArrayN<N, T>
         where
-            Self:
-                Sized + HasArrayIndexer<N> + Get<Stride, Data = T> + GetUnchecked<Stride, Data = T>,
+            Self: Sized + Array<N> + Get<Stride, Data = T> + GetUnchecked<Stride, Data = T>,
         {
             type Data = T;
 
             fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut($coords, T)) {
-                <Self as HasArrayIndexer<N>>::Indexer::for_each_point_and_stride(
+                <Self as Array<N>>::Indexer::for_each_point_and_stride(
                     self.extent(),
                     &extent,
                     |$p, $stride| f($forward_coords, self.get_unchecked_release($stride)),
@@ -545,17 +543,14 @@ macro_rules! impl_array_for_each {
 
         impl<N, T> ForEachMut<N, $coords> for ArrayN<N, T>
         where
-            Self: Sized
-                + HasArrayIndexer<N>
-                + GetMut<Stride, Data = T>
-                + GetUncheckedMut<Stride, Data = T>,
+            Self: Sized + Array<N> + GetMut<Stride, Data = T> + GetUncheckedMut<Stride, Data = T>,
             ExtentN<N>: Copy,
         {
             type Data = T;
 
             fn for_each_mut(&mut self, extent: &ExtentN<N>, mut f: impl FnMut($coords, &mut T)) {
                 let array_extent = *self.extent();
-                <Self as HasArrayIndexer<N>>::Indexer::for_each_point_and_stride(
+                <Self as Array<N>>::Indexer::for_each_point_and_stride(
                     &array_extent,
                     &extent,
                     |$p, $stride| f($forward_coords, self.get_unchecked_mut_release($stride)),
@@ -621,9 +616,9 @@ where
 
 impl<'a, N, T, M, Ms> WriteExtent<N, ArrayCopySrc<Ms>> for ArrayN<N, T>
 where
-    Self: HasArrayIndexer<N>,
+    Self: Array<N>,
     ArrayCopySrc<Ms>: Deref<Target = M>,
-    M: 'a + ArrayExtent<N> + GetUncheckedRelease<Stride, T>,
+    M: 'a + Array<N> + GetUncheckedRelease<Stride, T>,
     PointN<N>: IntegerPoint,
     ExtentN<N>: Copy,
 {
@@ -633,7 +628,7 @@ where
         let dst_extent = *self.extent();
         let in_bounds_extent = extent.intersection(&dst_extent);
 
-        <Self as HasArrayIndexer<N>>::Indexer::for_each_stride_parallel(
+        <Self as Array<N>>::Indexer::for_each_stride_parallel(
             &in_bounds_extent,
             &dst_extent,
             src_array.extent(),
@@ -649,7 +644,7 @@ where
 impl<M, N, T> WriteExtent<N, ChunkCopySrc<M, N, T>> for ArrayN<N, T>
 where
     T: Clone,
-    Self: HasArrayIndexer<N> + WriteExtent<N, ArrayCopySrc<M>>,
+    Self: Array<N> + WriteExtent<N, ArrayCopySrc<M>>,
     ExtentN<N>: Copy,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<M, N, T>) {

@@ -3,7 +3,7 @@ use crate::{
     octree_dbvt::{OctreeDBVT, OctreeDBVTVisitor},
 };
 
-use building_blocks_core::{prelude::*, voxel_containing_point3f};
+use building_blocks_core::prelude::*;
 
 use core::hash::Hash;
 use ncollide3d::{
@@ -270,9 +270,9 @@ fn impact_with_leaf_octant(
         // Maybe converting the intersection coordinates to integers will not always
         // land in the correct voxel. It should help to nudge the point along the
         // intersection normal by some epsilon.
-        let nudge_p = contact - std::f32::EPSILON * octant_normal;
+        let nudged_p: Point3f = (contact - std::f32::EPSILON * octant_normal).into();
 
-        voxel_containing_point3f(&nudge_p.into())
+        nudged_p.in_voxel()
     }
 }
 

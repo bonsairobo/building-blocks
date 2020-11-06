@@ -15,8 +15,8 @@ pub use extent3::{Extent3, Extent3f, Extent3i};
 pub use point::{
     Bounded, Distance, DotProduct, IntegerPoint, Norm, NormSquared, Ones, Point, PointN, SmallZero,
 };
-pub use point2::{pixel_containing_point2f, Point2, Point2f, Point2i};
-pub use point3::{voxel_containing_point3f, Point3, Point3f, Point3i};
+pub use point2::{Point2, Point2f, Point2i};
+pub use point3::{Point3, Point3f, Point3i};
 
 pub use num;
 

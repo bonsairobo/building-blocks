@@ -479,10 +479,14 @@ impl From<Point3i> for Point3f {
     }
 }
 
-pub fn voxel_containing_point3f(p: &Point3f) -> Point3i {
-    let p = p.floor();
+impl Point3f {
+    pub fn as_3i(&self) -> Point3i {
+        PointN([self.x() as i32, self.y() as i32, self.z() as i32])
+    }
 
-    PointN([p.x() as i32, p.y() as i32, p.z() as i32])
+    pub fn in_voxel(&self) -> Point3i {
+        self.floor().as_3i()
+    }
 }
 
 #[cfg(feature = "nalg")]

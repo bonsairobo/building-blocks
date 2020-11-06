@@ -365,10 +365,14 @@ impl From<Point2i> for Point2f {
     }
 }
 
-pub fn pixel_containing_point2f(p: &Point2f) -> Point2i {
-    let p = p.floor();
+impl Point2f {
+    pub fn as_2i(&self) -> Point2i {
+        PointN([self.x() as i32, self.y() as i32])
+    }
 
-    PointN([p.x() as i32, p.y() as i32])
+    pub fn in_pixel(&self) -> Point2i {
+        self.floor().as_2i()
+    }
 }
 
 #[cfg(feature = "nalg")]

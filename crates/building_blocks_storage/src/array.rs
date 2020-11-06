@@ -584,22 +584,6 @@ impl_array_for_each!(
 #[derive(Copy, Clone)]
 pub struct ArrayCopySrc<M>(pub M);
 
-impl<'a, N, T> Deref for ArrayCopySrc<&'a ArrayN<N, T>> {
-    type Target = ArrayN<N, T>;
-
-    fn deref(&self) -> &Self::Target {
-        self.0
-    }
-}
-
-impl<'a, M, F> Deref for ArrayCopySrc<TransformMap<'a, M, F>> {
-    type Target = TransformMap<'a, M, F>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 impl<'a, N: 'a, T: 'a> ReadExtent<'a, N> for ArrayN<N, T>
 where
     PointN<N>: IntegerPoint,
@@ -614,31 +598,68 @@ where
     }
 }
 
-impl<'a, N, T, M, Ms> WriteExtent<N, ArrayCopySrc<Ms>> for ArrayN<N, T>
+impl<'a, N, T> WriteExtent<N, ArrayCopySrc<&'a Self>> for ArrayN<N, T>
 where
-    Self: Array<N>,
-    ArrayCopySrc<Ms>: Deref<Target = M>,
-    M: 'a + Array<N> + GetUncheckedRelease<Stride, T>,
+    Self: Array<N> + GetUncheckedRelease<Stride, T>,
+    T: Clone,
     PointN<N>: IntegerPoint,
     ExtentN<N>: Copy,
 {
-    fn write_extent(&mut self, extent: &ExtentN<N>, src_array: ArrayCopySrc<Ms>) {
+    fn write_extent(&mut self, extent: &ExtentN<N>, src_array: ArrayCopySrc<&'a Self>) {
         // It is assumed by the interface that extent is a subset of the src array, so we only need
         // to intersect with the destination.
-        let dst_extent = *self.extent();
-        let in_bounds_extent = extent.intersection(&dst_extent);
+        let in_bounds_extent = extent.intersection(self.extent());
 
-        <Self as Array<N>>::Indexer::for_each_stride_parallel(
-            &in_bounds_extent,
-            &dst_extent,
-            src_array.extent(),
-            |s_dst, s_src| {
-                // The actual copy.
-                // PERF: could be faster with SIMD copy
-                *self.get_unchecked_mut_release(s_dst) = src_array.get_unchecked_release(s_src);
-            },
-        );
+        let copy_entire_array = in_bounds_extent.shape == self.extent().shape
+            && in_bounds_extent.shape == src_array.0.extent().shape;
+
+        if copy_entire_array {
+            // Fast path, mostly for copying entire chunks between chunk maps.
+            self.values = src_array.0.values.clone();
+        } else {
+            unchecked_copy_extent_between_arrays(self, src_array.0, &in_bounds_extent);
+        }
     }
+}
+
+impl<'a, N, T, M, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, M, F>>> for ArrayN<N, T>
+where
+    Self: Array<N>,
+    T: Clone,
+    TransformMap<'a, M, F>: Array<N> + GetUncheckedRelease<Stride, T>,
+    PointN<N>: IntegerPoint,
+    ExtentN<N>: Copy,
+{
+    fn write_extent(
+        &mut self,
+        extent: &ExtentN<N>,
+        src_array: ArrayCopySrc<TransformMap<'a, M, F>>,
+    ) {
+        // It is assumed by the interface that extent is a subset of the src array, so we only need
+        // to intersect with the destination.
+        let in_bounds_extent = extent.intersection(self.extent());
+
+        unchecked_copy_extent_between_arrays(self, &src_array.0, &in_bounds_extent);
+    }
+}
+
+// SAFETY: `extent` must be in-bounds of both arrays.
+fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
+    dst: &mut Dst,
+    src: &Src,
+    extent: &ExtentN<N>,
+) where
+    Dst: Array<N> + GetUncheckedMutRelease<Stride, T>,
+    Src: Array<N> + GetUncheckedRelease<Stride, T>,
+    ExtentN<N>: Copy,
+{
+    let dst_extent = *dst.extent();
+    // It shoudn't matter which type we use for the indexer.
+    Dst::Indexer::for_each_stride_parallel(&extent, &dst_extent, src.extent(), |s_dst, s_src| {
+        // The actual copy.
+        // PERF: could be faster with SIMD copy
+        *dst.get_unchecked_mut_release(s_dst) = src.get_unchecked_release(s_src);
+    });
 }
 
 impl<M, N, T> WriteExtent<N, ChunkCopySrc<M, N, T>> for ArrayN<N, T>

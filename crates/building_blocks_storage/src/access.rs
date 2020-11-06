@@ -158,6 +158,7 @@ pub trait ReadExtent<'a, N> {
     type Src: 'a;
     type SrcIter: Iterator<Item = (ExtentN<N>, Self::Src)>;
 
+    /// `SrcIter` must return extents that are subsets of `extent`.
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter;
 }
 
@@ -171,7 +172,7 @@ where
     Ms: ReadExtent<'a, N, Src = Src>,
     Md: WriteExtent<N, Src>,
 {
-    for (extent, extent_src) in src_map.read_extent(extent) {
-        dst_map.write_extent(&extent, extent_src);
+    for (sub_extent, extent_src) in src_map.read_extent(extent) {
+        dst_map.write_extent(&sub_extent, extent_src);
     }
 }

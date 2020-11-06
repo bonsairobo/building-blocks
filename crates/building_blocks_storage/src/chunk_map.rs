@@ -491,6 +491,20 @@ where
     }
 }
 
+impl<'a, N, T, M> std::ops::Deref for ChunkMapReader<'a, N, T, M>
+where
+    T: Copy,
+    M: Clone,
+    PointN<N>: Eq + Hash,
+    ExtentN<N>: IntegerExtent<N>,
+{
+    type Target = ChunkMap<N, T, M>;
+
+    fn deref(&self) -> &Self::Target {
+        self.map
+    }
+}
+
 /// Call `ChunkMap::to_serializable` to get this type, which is an LZ4-compressed,
 /// serde-serializable type.
 #[allow(clippy::type_complexity)]

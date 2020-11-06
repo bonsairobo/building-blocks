@@ -260,7 +260,7 @@ where
     }
 
     /// Returns the key of the chunk that contains `point`.
-    pub fn chunk_key(&self, point: &PointN<N>) -> PointN<N> {
+    pub fn chunk_key_containing_point(&self, point: &PointN<N>) -> PointN<N> {
         PointN::chunk_key_containing_point(self.chunk_shape_mask(), point)
     }
 
@@ -313,7 +313,7 @@ where
         point: &PointN<N>,
         local_cache: &'a LocalChunkCache<N, T, M>,
     ) -> Option<(PointN<N>, &Chunk<N, T, M>)> {
-        let chunk_key = self.chunk_key(point);
+        let chunk_key = self.chunk_key_containing_point(point);
 
         self.get_chunk(chunk_key, local_cache)
             .map(|c| (chunk_key, c))
@@ -325,7 +325,7 @@ where
         &mut self,
         point: &PointN<N>,
     ) -> Option<(PointN<N>, &mut Chunk<N, T, M>)> {
-        let chunk_key = self.chunk_key(point);
+        let chunk_key = self.chunk_key_containing_point(point);
 
         self.get_mut_chunk(chunk_key).map(|c| (chunk_key, c))
     }
@@ -354,7 +354,7 @@ where
     where
         ArrayN<N, T>: HasArrayIndexer<N>,
     {
-        let key = self.chunk_key(p);
+        let key = self.chunk_key_containing_point(p);
         let chunk = self.get_mut_chunk_or_insert_with(key, create_chunk);
 
         (key, chunk.array.get_unchecked_mut_release(p))
@@ -366,7 +366,7 @@ where
     where
         ArrayN<N, T>: HasArrayIndexer<N>,
     {
-        let key = self.chunk_key(p);
+        let key = self.chunk_key_containing_point(p);
         let ChunkMap {
             chunk_shape,
             ambient_value,

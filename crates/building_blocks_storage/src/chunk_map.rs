@@ -120,6 +120,8 @@ where
     default_chunk_metadata: M,
 
     /// The chunks themselves, stored in a `CompressibleMap`.
+    ///
+    /// SAFETY: Don't modify this directly unless you know what you're doing.
     pub chunks: CompressibleFnvMap<PointN<N>, Chunk<N, T, M>, FastLz4>,
 }
 
@@ -436,22 +438,33 @@ where
 
     /// Returns a new map from the serialized, compressed version. This will decompress each chunk
     /// and compress it again, but in a faster format.
-    pub fn from_serializable(map: &SerializableChunkMap<N, T, M>, params: FastLz4) -> Self
+    pub async fn from_serializable(map: &SerializableChunkMap<N, T, M>, params: FastLz4) -> Self
     where
         Chunk<N, T, M>: DeserializeOwned + Serialize,
     {
-        let mut compressible_map = CompressibleFnvMap::new(params);
-        for (chunk_key, compressed_chunk) in map.compressed_chunks.iter() {
-            compressible_map.insert(*chunk_key, compressed_chunk.decompress());
-            compressible_map.compress_lru();
-        }
+        let all_futures: Vec<_> = map
+            .compressed_chunks
+            .iter()
+            .map(|(chunk_key, compressed_chunk)| {
+                let future = async move {
+                    let decompressed = compressed_chunk.decompress();
+                    let recompressed = decompressed.compress(params);
+
+                    (*chunk_key, recompressed)
+                };
+
+                future
+            })
+            .collect();
+
+        let all_compressed = join_all(all_futures).await.into_iter().collect();
 
         Self {
             chunk_shape: map.chunk_shape,
             chunk_shape_mask: map.chunk_shape.mask(),
             ambient_value: map.ambient_value,
             default_chunk_metadata: map.default_chunk_metadata.clone(),
-            chunks: compressible_map,
+            chunks: CompressibleFnvMap::from_all_compressed(params, all_compressed),
         }
     }
 }

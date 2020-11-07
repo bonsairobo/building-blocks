@@ -20,7 +20,7 @@ serde = { version = "1.0", features = ["derive"] }
 
 building_blocks_core = { path = "../building_blocks_core", version = "0.1" }
 
-compressible-map = { version = "0.1.1", features = ["bincode_lz4"] }
+compressible-map = { version = "0.1", features = ["bincode_lz4"] }
 
 [dev-dependencies]
 criterion = "0.3"

@@ -1,6 +1,6 @@
 [package]
 name = "building_blocks_search"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2018"
 authors = ["Duncan <bonsairobo@gmail.com>"]
 license = "MIT"
@@ -13,8 +13,8 @@ description = "Search algorithms for voxel data."
 indexmap = "1.5"
 itertools = "0.9"
 
-building_blocks_core = { path = "../building_blocks_core", version = "0.1" }
-building_blocks_storage = { path = "../building_blocks_storage", version = "0.1" }
+building_blocks_core = { path = "../building_blocks_core", version = "0.2" }
+building_blocks_storage = { path = "../building_blocks_storage", version = "0.2" }
 
 [dev-dependencies]
 criterion = "0.3"

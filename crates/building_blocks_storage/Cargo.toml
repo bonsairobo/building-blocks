@@ -12,6 +12,7 @@ description = "Efficient storage for maps on sparse or dense, 2D and 3D integer 
 [dependencies]
 either = "1.6"
 fnv = "1.0"
+futures = "0.3"
 itertools = "0.9"
 lz4 = "1.23"
 num = "0.3"

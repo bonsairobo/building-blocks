@@ -89,6 +89,7 @@ use compressible_map::{
 use core::hash::Hash;
 use either::Either;
 use fnv::FnvHashMap;
+use futures::future::join_all;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 /// Stores a partial (sparse) function on the N-dimensional integers (where N=2 or N=3) in
@@ -400,31 +401,36 @@ where
 
     /// Returns a serializable version of this map. This will compress every chunk in a portable
     /// way.
-    pub fn to_serializable(&self, params: BincodeLz4) -> SerializableChunkMap<N, T, M>
+    pub async fn to_serializable(&self, params: BincodeLz4) -> SerializableChunkMap<N, T, M>
     where
         Chunk<N, T, M>: DeserializeOwned + Serialize,
     {
-        // PERF: this could easily be done in parallel
-        let portable_chunks = self
+        let chunk_futures: Vec<_> = self
             .chunks
             .iter_maybe_compressed()
             .map(|(chunk_key, chunk)| {
-                let portable_chunk: BincodeLz4Compressed<Chunk<N, T, M>> = match chunk {
-                    MaybeCompressed::Compressed(compressed_chunk) => {
-                        compressed_chunk.decompress().compress(params)
-                    }
-                    MaybeCompressed::Decompressed(chunk) => chunk.compress(params),
+                let future = async move {
+                    let portable_chunk: BincodeLz4Compressed<Chunk<N, T, M>> = match chunk {
+                        MaybeCompressed::Compressed(compressed_chunk) => {
+                            compressed_chunk.decompress().compress(params)
+                        }
+                        MaybeCompressed::Decompressed(chunk) => chunk.compress(params),
+                    };
+
+                    (*chunk_key, portable_chunk)
                 };
 
-                (*chunk_key, portable_chunk)
+                future
             })
             .collect();
+
+        let compressed_chunks = join_all(chunk_futures).await.into_iter().collect();
 
         SerializableChunkMap {
             chunk_shape: self.chunk_shape,
             ambient_value: self.ambient_value,
             default_chunk_metadata: self.default_chunk_metadata.clone(),
-            compressed_chunks: portable_chunks,
+            compressed_chunks,
         }
     }
 
@@ -434,7 +440,6 @@ where
     where
         Chunk<N, T, M>: DeserializeOwned + Serialize,
     {
-        // PERF: this could easily be done in parallel
         let mut compressible_map = CompressibleFnvMap::new(params);
         for (chunk_key, compressed_chunk) in map.compressed_chunks.iter() {
             compressible_map.insert(*chunk_key, compressed_chunk.decompress());

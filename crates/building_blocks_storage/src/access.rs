@@ -97,6 +97,9 @@ pub trait GetUncheckedMut<L> {
 }
 
 pub trait GetUncheckedRelease<L, T>: Get<L, Data = T> + GetUnchecked<L, Data = T> {
+    /// Get the value at location. Skips bounds checking in release mode.
+    /// # Safety
+    /// Don't access out of bounds.
     #[inline]
     fn get_unchecked_release(&self, location: L) -> T {
         if cfg!(debug_assertions) {
@@ -109,8 +112,10 @@ pub trait GetUncheckedRelease<L, T>: Get<L, Data = T> + GetUnchecked<L, Data = T
 
 impl<M, L, T> GetUncheckedRelease<L, T> for M where M: Get<L, Data = T> + GetUnchecked<L, Data = T> {}
 
-/// A lattice map that supports getting without bounds checking only in release mode.
 pub trait GetUncheckedMutRelease<L, T>: GetMut<L, Data = T> + GetUncheckedMut<L, Data = T> {
+    /// Get mutable reference to the value at location. Skips bounds checking in release mode.
+    /// # Safety
+    /// Don't access out of bounds.
     #[inline]
     fn get_unchecked_mut_release(&mut self, location: L) -> &mut T {
         if cfg!(debug_assertions) {
@@ -152,6 +157,8 @@ pub trait ForEachMut<N, Coord> {
 // ╚██████╗╚██████╔╝██║        ██║
 //  ╚═════╝ ╚═════╝ ╚═╝        ╚═╝
 
+/// A trait to facilitate the generic implementation of `copy_extent`.
+///
 /// Some lattice maps, like `ChunkMap`, have nonlinear layouts. This means that, in order for a
 /// writer to receive data efficiently, it must come as an iterator over multiple extents.
 pub trait ReadExtent<'a, N> {
@@ -162,6 +169,7 @@ pub trait ReadExtent<'a, N> {
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter;
 }
 
+/// A trait to facilitate the generic implementation of `copy_extent`.
 pub trait WriteExtent<N, Src> {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src);
 }

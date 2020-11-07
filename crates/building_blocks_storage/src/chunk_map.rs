@@ -234,6 +234,8 @@ where
     ExtentN<N>: IntegerExtent<N>,
 {
     /// Creates an empty map.
+    ///
+    /// All dimensions of `chunk_shape` must be powers of 2.
     pub fn new(
         chunk_shape: PointN<N>,
         ambient_value: T,
@@ -482,12 +484,24 @@ impl<'a, N, T, M> ChunkMapReader<'a, N, T, M>
 where
     T: Copy,
     M: Clone,
-    PointN<N>: Eq + Hash,
+    PointN<N>: ChunkShape<N> + Eq + Hash + IntegerPoint,
     ExtentN<N>: IntegerExtent<N>,
 {
     /// Construct a new reader for `map` using a `local_cache`.
     pub fn new(map: &'a ChunkMap<N, T, M>, local_cache: &'a LocalChunkCache<N, T, M>) -> Self {
         Self { map, local_cache }
+    }
+
+    pub fn get_chunk_containing_point(
+        &self,
+        point: &PointN<N>,
+    ) -> Option<(PointN<N>, &Chunk<N, T, M>)> {
+        self.map
+            .get_chunk_containing_point(point, &self.local_cache)
+    }
+
+    pub fn get_chunk(&self, key: PointN<N>) -> Option<&Chunk<N, T, M>> {
+        self.map.get_chunk(key, &self.local_cache)
     }
 }
 

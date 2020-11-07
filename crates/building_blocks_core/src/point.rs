@@ -174,12 +174,13 @@ pub trait IntegerPoint: Point {
     /// Right bitshifts all dimensions.
     fn right_shift(&self, shift_by: Self::Scalar) -> Self;
 
+    /// All corners of an N-dimensional unit cube.
     fn corner_offsets() -> Vec<Self>;
 
-    /// https://en.wikipedia.org/wiki/Von_Neumann_neighborhood
+    /// [Von Neumann Neighborhood](https://en.wikipedia.org/wiki/Von_Neumann_neighborhood)
     fn von_neumann_offsets() -> Vec<Self>;
 
-    /// https://en.wikipedia.org/wiki/Moore_neighborhood
+    /// [Moore Neighborhood](https://en.wikipedia.org/wiki/Moore_neighborhood)
     fn moore_offsets() -> Vec<Self>;
 
     /// Returns `true` iff all dimensions are powers of 2.

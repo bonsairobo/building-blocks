@@ -60,13 +60,24 @@ where
 
 struct DBVTVisitorImpl<'a, V>(&'a mut V);
 
+impl<'a, V> OctreeVisitor for DBVTVisitorImpl<'a, V>
+where
+    V: OctreeDBVTVisitor,
+{
+    fn visit_octant(&mut self, octant: Octant, is_leaf: bool) -> VisitStatus {
+        let aabb = octant.aabb();
+
+        self.0.visit(&aabb, Some(&octant), is_leaf)
+    }
+}
+
 impl<'a, V> nc_part::Visitor<Octree, AABB<f32>> for DBVTVisitorImpl<'a, V>
 where
     V: OctreeDBVTVisitor,
 {
     fn visit(&mut self, aabb: &AABB<f32>, octree: Option<&Octree>) -> nc_part::VisitStatus {
         let status = if let Some(octree) = octree {
-            octree.visit(self.0)
+            octree.visit(self)
         } else {
             self.0.visit(aabb, None, false)
         };
@@ -79,18 +90,7 @@ where
     }
 }
 
-impl<V> OctreeVisitor for V
-where
-    V: OctreeDBVTVisitor,
-{
-    fn visit_octant(&mut self, octant: Octant, is_leaf: bool) -> VisitStatus {
-        let aabb = octant.aabb();
-
-        self.visit(&aabb, Some(&octant), is_leaf)
-    }
-}
-
-pub trait OctreeDBVTVisitor: OctreeVisitor {
+pub trait OctreeDBVTVisitor {
     /// `octant` is only `Some` when traversing an `Octree`. Otherwise, you are traversing an
     /// upper-level internal node.
     fn visit(&mut self, aabb: &AABB<f32>, octant: Option<&Octant>, is_leaf: bool) -> VisitStatus;

@@ -282,14 +282,12 @@ pub trait OctreeVisitor {
     fn visit_octant(&mut self, octant: Octant, is_leaf: bool) -> VisitStatus;
 }
 
-pub struct FuncVisitor<F>(pub F);
-
-impl<F> OctreeVisitor for FuncVisitor<F>
+impl<F> OctreeVisitor for F
 where
     F: FnMut(Octant, bool) -> VisitStatus,
 {
     fn visit_octant(&mut self, octant: Octant, is_leaf: bool) -> VisitStatus {
-        (self.0)(octant, is_leaf)
+        (self)(octant, is_leaf)
     }
 }
 
@@ -348,7 +346,7 @@ mod tests {
 
         let mut octant_voxels = HashSet::new();
 
-        octree.visit(&mut FuncVisitor(|octant: Octant, is_leaf: bool| {
+        octree.visit(&mut |octant: Octant, is_leaf: bool| {
             if is_leaf {
                 voxels.for_each(&Extent3i::from(octant), |p, _v| {
                     octant_voxels.insert(p);
@@ -356,7 +354,7 @@ mod tests {
             }
 
             VisitStatus::Continue
-        }));
+        });
 
         assert_eq!(non_empty_voxels, octant_voxels);
     }

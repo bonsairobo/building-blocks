@@ -56,7 +56,7 @@ impl Octree {
         let min_local = Local(extent.minimum - array.extent().minimum);
         let root_minimum = array.stride_from_local_point(&min_local);
         let root_location = LocationCode(1);
-        let root_exists = Self::partition_array(
+        let (root_exists, _full) = Self::partition_array(
             root_location,
             root_minimum,
             edge_len,
@@ -80,14 +80,15 @@ impl Octree {
         corner_strides: &[Stride],
         array: &A,
         nodes: &mut FnvHashMap<LocationCode, ChildBitMask>,
-    ) -> bool
+    ) -> (bool, bool)
     where
         A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
         T: Clone + IsEmpty,
     {
         // Base case where the octant is a single voxel.
         if edge_len == 1 {
-            return !array.get_unchecked_release(minimum).is_empty();
+            let exists = !array.get_unchecked_release(minimum).is_empty();
+            return (exists, exists);
         }
 
         let mut octant_corner_strides = [Stride(0); 8];
@@ -99,11 +100,12 @@ impl Octree {
 
         let half_edge_len = edge_len >> 1;
         let mut child_bitmask = 0;
+        let mut all_children_full = true;
         let extended_location = location.extend();
         for (octant, offset) in octant_corner_strides.iter().enumerate() {
             let octant_min = minimum + *offset;
             let octant_location = extended_location.with_lowest_octant(octant as u16);
-            let child_exists = Self::partition_array(
+            let (child_exists, child_full) = Self::partition_array(
                 octant_location,
                 octant_min,
                 half_edge_len,
@@ -112,16 +114,16 @@ impl Octree {
                 nodes,
             );
             child_bitmask |= (child_exists as u8) << octant;
+            all_children_full = all_children_full && child_full;
         }
 
-        let is_leaf = child_bitmask == 0xff;
         let exists = child_bitmask != 0;
 
-        if exists && !is_leaf {
+        if exists && !all_children_full {
             nodes.insert(location, child_bitmask);
         }
 
-        exists
+        (exists, all_children_full)
     }
 
     pub fn edge_length(&self) -> i32 {
@@ -280,6 +282,17 @@ pub trait OctreeVisitor {
     fn visit_octant(&mut self, octant: Octant, is_leaf: bool) -> VisitStatus;
 }
 
+pub struct FuncVisitor<F>(pub F);
+
+impl<F> OctreeVisitor for FuncVisitor<F>
+where
+    F: FnMut(Octant, bool) -> VisitStatus,
+{
+    fn visit_octant(&mut self, octant: Octant, is_leaf: bool) -> VisitStatus {
+        (self.0)(octant, is_leaf)
+    }
+}
+
 #[derive(Eq, PartialEq)]
 pub enum VisitStatus {
     /// Continue traversing this branch.
@@ -302,6 +315,65 @@ mod ncollide_support {
             let aabb_max = self.minimum + PointN([self.edge_length; 3]);
 
             AABB::new(aabb_min.into(), aabb_max.into())
+        }
+    }
+}
+
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use rand::Rng;
+    use std::collections::HashSet;
+
+    #[test]
+    fn octants_occupied_iff_not_empty() {
+        let voxels = random_voxels();
+        let octree = Octree::from_array3(&voxels, *voxels.extent());
+
+        let mut non_empty_voxels = HashSet::new();
+
+        voxels.for_each(voxels.extent(), |p: Point3i, v: Voxel| {
+            if !v.is_empty() {
+                non_empty_voxels.insert(p);
+            }
+        });
+
+        let mut octant_voxels = HashSet::new();
+
+        octree.visit(&mut FuncVisitor(|octant: Octant, is_leaf: bool| {
+            if is_leaf {
+                voxels.for_each(&Extent3i::from(octant), |p, _v| {
+                    octant_voxels.insert(p);
+                });
+            }
+
+            VisitStatus::Continue
+        }));
+
+        assert_eq!(non_empty_voxels, octant_voxels);
+    }
+
+    fn random_voxels() -> Array3<Voxel> {
+        let mut rng = rand::thread_rng();
+        let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
+
+        Array3::fill_with(extent, |_| Voxel(rng.gen()))
+    }
+
+    #[derive(Clone)]
+    struct Voxel(bool);
+
+    impl IsEmpty for Voxel {
+        fn is_empty(&self) -> bool {
+            !self.0
         }
     }
 }

@@ -222,7 +222,7 @@ where
     PointN<N>: Point,
     ExtentN<N>: IntegerExtent<N>,
 {
-    pub fn fill_with(extent: ExtentN<N>, filler: impl Fn(&PointN<N>) -> T) -> Self
+    pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(&PointN<N>) -> T) -> Self
     where
         ArrayN<N, MaybeUninit<T>>: for<'r> GetMut<&'r PointN<N>, Data = MaybeUninit<T>>,
     {
@@ -314,7 +314,7 @@ impl<N> Deref for Local<N> {
 
 /// The most efficient coordinates for slice-backed lattice maps. A single number that translates
 /// directly to a slice offset.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Stride(pub usize);
 
 impl Zero for Stride {

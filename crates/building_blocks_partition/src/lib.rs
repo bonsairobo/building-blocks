@@ -2,7 +2,7 @@
 
 pub mod octree;
 
-pub use octree::{Octant, Octree, OctreeVisitor};
+pub use octree::{FuncVisitor, Octant, Octree, OctreeVisitor};
 
 #[cfg(feature = "ncollide")]
 pub mod collision;

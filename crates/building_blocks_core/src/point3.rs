@@ -489,6 +489,41 @@ impl Point3f {
     }
 }
 
+#[cfg(feature = "mint")]
+pub mod mint_conversions {
+    use super::*;
+
+    impl<T> From<mint::Point3<T>> for Point3<T> {
+        fn from(p: mint::Point3<T>) -> Self {
+            PointN([p.x, p.y, p.z])
+        }
+    }
+
+    impl<T> From<Point3<T>> for mint::Point3<T>
+    where
+        T: Clone,
+    {
+        fn from(p: Point3<T>) -> Self {
+            mint::Point3::from_slice(&p.0)
+        }
+    }
+
+    impl<T> From<mint::Vector3<T>> for Point3<T> {
+        fn from(p: mint::Vector3<T>) -> Self {
+            PointN([p.x, p.y, p.z])
+        }
+    }
+
+    impl<T> From<Point3<T>> for mint::Vector3<T>
+    where
+        T: Clone,
+    {
+        fn from(p: Point3<T>) -> Self {
+            mint::Vector3::from_slice(&p.0)
+        }
+    }
+}
+
 #[cfg(feature = "nalgebra")]
 pub mod nalgebra_conversions {
     use super::*;

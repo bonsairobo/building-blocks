@@ -13,6 +13,7 @@ default = ["mesh", "partition", "procgen", "search"]
 
 image = ["building_blocks_image"]
 mesh = ["building_blocks_mesh"]
+mint = ["building_blocks_core/mint"]
 nalg = ["building_blocks_core/nalgebra"]
 ncollide = ["building_blocks_partition/ncollide"]
 partition = ["building_blocks_partition"]

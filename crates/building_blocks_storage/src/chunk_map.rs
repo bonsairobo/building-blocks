@@ -45,8 +45,8 @@
 //!
 //! // It's perfectly safe to gather up some const chunk references. We can reuse our local cache.
 //! let mut chunk_refs = Vec::new();
-//! for chunk_key in map.chunk_keys() {
-//!     chunk_refs.push(map.get_chunk(*chunk_key, &local_cache));
+//! for chunk_key in reader.chunk_keys() {
+//!     chunk_refs.push(reader.get_chunk(*chunk_key));
 //! }
 //!
 //! // You can also access individual points like you can with a `ArrayN`. This is about
@@ -57,11 +57,10 @@
 //! assert_eq!(reader.get(&PointN([1, 1, 1])), 0);
 //!
 //! // Sometimes you need to implement very fast algorithms (like kernel-based methods) that do a
-//! // lot of random access, and the `ChunkMap` can't always support that. Instead, assuming that
-//! // you can't just use an exact chunk, you can copy an arbitrary extent into a dense map first.
-//! // (The copy itself is fast).
+//! // lot of random access. In this case it's most efficient to use `Stride`s, but `ChunkMap`
+//! // doesn't support random indexing by `Stride`. Instead, assuming that your query spans multiple
+//! // chunks, you should copy the extent into a dense map first. (The copy is fast).
 //! let query_extent = Extent3i::from_min_and_shape(PointN([10; 3]), PointN([32; 3]));
-//! let reader = ChunkMapReader3::new(&map, &local_cache);
 //! let mut dense_map = Array3::fill(query_extent, ambient_value);
 //! copy_extent(&query_extent, &reader, &mut dense_map);
 //!

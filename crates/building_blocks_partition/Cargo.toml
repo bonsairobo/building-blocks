@@ -12,7 +12,7 @@ description = "Acceleration structures for spatial queries on voxel data."
 [features]
 default = []
 
-ncollide = ["ncollide3d", "building_blocks_core/nalg"]
+ncollide = ["ncollide3d", "building_blocks_core/nalgebra"]
 
 [dependencies]
 fnv = "1.0"

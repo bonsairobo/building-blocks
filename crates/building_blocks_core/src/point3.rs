@@ -489,7 +489,7 @@ impl Point3f {
     }
 }
 
-#[cfg(feature = "nalg")]
+#[cfg(feature = "nalgebra")]
 pub mod nalgebra_conversions {
     use super::*;
 

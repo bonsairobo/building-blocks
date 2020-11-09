@@ -98,6 +98,7 @@ use compressible_map::{
     MaybeCompressed,
 };
 use core::hash::Hash;
+use core::ops::{Div, Mul};
 use either::Either;
 use fnv::FnvHashMap;
 use futures::future::join_all;
@@ -259,8 +260,8 @@ where
 
     /// Determines whether `key` is a valid chunk key. This means it must be a multiple of the chunk
     /// shape.
-    pub fn chunk_key_is_valid(&self, key: PointN<N>) -> bool {
-        self.chunk_shape * (key / self.chunk_shape) == key
+    pub fn chunk_key_is_valid(&self, key: &PointN<N>) -> bool {
+        self.chunk_shape.mul(key.div(self.chunk_shape)).eq(key)
     }
 
     /// The constant shape of a chunk. The same for all chunks.
@@ -292,7 +293,7 @@ where
     /// key must be a multiple of the chunk shape. These assertions will be made in debug mode.
     pub fn insert_chunk(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) {
         debug_assert!(chunk.array.extent().shape.eq(self.chunk_shape()));
-        debug_assert!(self.chunk_key_is_valid(key));
+        debug_assert!(self.chunk_key_is_valid(&key));
 
         self.chunks.insert(key, chunk);
     }
@@ -303,14 +304,28 @@ where
         key: PointN<N>,
         local_cache: &'a LocalChunkCache<N, T, M>,
     ) -> Option<&Chunk<N, T, M>> {
-        debug_assert!(self.chunk_key_is_valid(key));
+        debug_assert!(self.chunk_key_is_valid(&key));
 
         self.chunks.get_const(key, local_cache)
     }
 
+    /// Returns a copy of the chunk at `key`.
+    ///
+    /// WARNING: the cache will not be updated. This method should be used for a read-modify-write
+    /// workflow where it would be inefficient to cache the chunk only for it to be overwritten by
+    /// the modified version.
+    pub fn copy_chunk_without_caching(&self, key: &PointN<N>) -> Option<Chunk<N, T, M>>
+    where
+        Chunk<N, T, M>: Clone,
+    {
+        debug_assert!(self.chunk_key_is_valid(key));
+
+        self.chunks.get_copy_without_caching(key)
+    }
+
     /// Returns the mutable chunk at `key` if it exists.
     pub fn get_mut_chunk(&mut self, key: PointN<N>) -> Option<&mut Chunk<N, T, M>> {
-        debug_assert!(self.chunk_key_is_valid(key));
+        debug_assert!(self.chunk_key_is_valid(&key));
 
         self.chunks.get_mut(key)
     }
@@ -322,7 +337,7 @@ where
         key: PointN<N>,
         create_chunk: impl Fn(&PointN<N>, &ExtentN<N>) -> Chunk<N, T, M>,
     ) -> &mut Chunk<N, T, M> {
-        debug_assert!(self.chunk_key_is_valid(key));
+        debug_assert!(self.chunk_key_is_valid(&key));
 
         let ChunkMap {
             chunk_shape,

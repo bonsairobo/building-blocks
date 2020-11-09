@@ -304,6 +304,7 @@ where
 pub struct Local<N>(pub PointN<N>);
 
 impl<N> Local<N> {
+    /// Wraps all of the `points` using the `Local` constructor.
     pub fn localize_points(points: &[PointN<N>]) -> Vec<Local<N>>
     where
         PointN<N>: Clone,

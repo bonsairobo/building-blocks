@@ -222,6 +222,8 @@ where
     PointN<N>: Point,
     ExtentN<N>: IntegerExtent<N>,
 {
+    /// Create a new array for `extent` where each point's value is determined by the `filler`
+    /// function.
     pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(&PointN<N>) -> T) -> Self
     where
         ArrayN<N, MaybeUninit<T>>: for<'r> GetMut<&'r PointN<N>, Data = MaybeUninit<T>>,

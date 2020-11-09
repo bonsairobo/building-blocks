@@ -7,7 +7,9 @@ use core::ops::{Add, AddAssign, Sub, SubAssign};
 use serde::{Deserialize, Serialize};
 
 /// An N-dimensional extent. This is mathematically the Cartesian product of a half-closed interval
-/// `[a, b)` in each dimension.
+/// `[a, b)` in each dimension. You can also just think of it as an axis-aligned box with some shape
+/// and a minimum point. When doing queries against lattice maps, this is the primary structure used
+/// to determine the bounds of your query.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ExtentN<N> {
     /// The least point contained in the extent.

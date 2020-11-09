@@ -1,7 +1,19 @@
-//! A memory-efficient sparse lattice map.
+//! A memory-efficient sparse lattice map made of up array chunks.
+//!
+//! The data can either be addressed by chunk key with the `get_chunk*` methods or by individual
+//! points using the `Get*` and `ForEach*` trait impls. The map of chunks uses `Point3i` keys. The
+//! key for a chunk is the minimum point in that chunk, which is always a multiple of the chunk
+//! shape. Chunk shape dimensions must be powers of 2, which allows for efficiently calculating a
+//! chunk key from any point in the chunk.
+//!
+//! The chunk map supports chunk compression, and an LRU cache stores chunks after they are
+//! decompressed. Because reading a chunk may result in decompression, we will eventually want to
+//! mutate the cache in order to store that chunk. If you need to read from the map without mutating
+//! it, the const `get_chunk*` methods take a `LocalChunkCache`. To read individual points, you can
+//! use the `ChunkMapReader`, which also uses a `LocalChunkCache`. A `LocalChunkCache` can be
+//! written back to the `ChunkMap` using the `flush_chunk_cache` method.
 //!
 //! # Example Usage
-//!
 //! ```
 //! use building_blocks_core::prelude::*;
 //! use building_blocks_storage::prelude::*;
@@ -19,7 +31,7 @@
 //!     *map.get_mut(&p) = 1;
 //! }
 //!
-//! // Maybe we are tight on memory. Sparse or repetitive maps are very compressible. In a game
+//! // Maybe we are tight on memory. Repetitive maps are very compressible. In a game
 //! // setting, you would probably have a system dedicated to monitoring the memory usage and
 //! // compressing chunks when appropriate.
 //! map.compress_lru_chunk();
@@ -43,7 +55,7 @@
 //!     }
 //! });
 //!
-//! // It's perfectly safe to gather up some const chunk references. We can reuse our local cache.
+//! // It's safe to gather up some const chunk references. The reader will reuse our local cache.
 //! let mut chunk_refs = Vec::new();
 //! for chunk_key in reader.chunk_keys() {
 //!     chunk_refs.push(reader.get_chunk(*chunk_key));
@@ -91,19 +103,11 @@ use fnv::FnvHashMap;
 use futures::future::join_all;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-/// Stores a partial (sparse) function on the N-dimensional integers (where N=2 or N=3) in
-/// same-shaped chunks using a `CompressibleMap`. The data can either be addressed by chunk with the
-/// `get_chunk*` methods or by individual points using the `Get*` and `ForEach*` trait impls.
+/// A lattice map made up of same-shaped `ArrayN` chunks. It takes a value at every possible
+/// `PointN`, because accesses made outside of the stored chunks will return some ambient value
+/// specified on creation.
 ///
-/// The map of chunks uses `Point3i` keys. The key for a chunk is the minimum point in that chunk.
-/// Chunk dimensions must be powers of 2, which allows for efficiently calculating a chunk key from
-/// any point in the chunk.
-///
-/// Because chunks are either cached or compressed, accesses should eventually mutate the cache. If
-/// you need to read from the map without mutating it, the const `get_chunk*` methods take a
-/// `LocalChunkCache`. To read individual points, you can use the `ChunkMapReader`, which
-/// also uses a `LocalChunkCache`. A `LocalChunkCache` can be written back to the
-/// `ChunkMap` using the `flush_chunk_cache` method.
+/// See the [module-level docs](../chunk_map/index.html) for more details and examples.
 pub struct ChunkMap<N, T, M = ()>
 where
     T: Copy,
@@ -120,7 +124,7 @@ where
 
     /// The chunks themselves, stored in a `CompressibleMap`.
     ///
-    /// SAFETY: Don't modify this directly unless you know what you're doing.
+    /// SAFETY: Don't mutate this directly unless you know what you're doing.
     pub chunks: CompressibleFnvMap<PointN<N>, Chunk<N, T, M>, FastLz4>,
 }
 
@@ -253,6 +257,12 @@ where
         }
     }
 
+    /// Determines whether `key` is a valid chunk key. This means it must be a multiple of the chunk
+    /// shape.
+    pub fn chunk_key_is_valid(&self, key: PointN<N>) -> bool {
+        self.chunk_shape * (key / self.chunk_shape) == key
+    }
+
     /// The constant shape of a chunk. The same for all chunks.
     pub fn chunk_shape(&self) -> &PointN<N> {
         &self.chunk_shape
@@ -276,6 +286,15 @@ where
     /// The extent spanned by the chunk at `key`.
     pub fn extent_for_chunk_at_key(&self, key: &PointN<N>) -> ExtentN<N> {
         extent_for_chunk_at_key(&self.chunk_shape, key)
+    }
+
+    /// Insert a chunk at `key`. The chunk must have the same shape as `Self::chunk_shape`, and the
+    /// key must be a multiple of the chunk shape. These assertions will be made in debug mode.
+    pub fn insert_chunk(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) {
+        debug_assert!(chunk.array.extent().shape.eq(self.chunk_shape()));
+        debug_assert!(self.chunk_key_is_valid(key));
+
+        self.chunks.insert(key, chunk);
     }
 
     /// Returns the chunk at `key` if it exists.

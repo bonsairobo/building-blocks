@@ -1,11 +1,12 @@
 //! N-dimensional arrays, where N is 2 or 3.
 //!
-//! All arrays are located within an ambient space, a signed integer lattice. This means they
-//! contain data at exactly the set of points in an `ExtentN`, and no more.
+//! The domains of all arrays are located within an ambient space, a signed integer lattice where
+//! the elements are `Point2i` or `Point3i`. This means they contain data at exactly the set of
+//! points in an `ExtentN`, and no more.
 //!
 //! You can index an array with 3 kinds of coordinates, with traits:
 //!   - `Get*<Stride>`: flat array offset
-//!   - `Get*<&LocalN>`: N-dimensional point in local coordinates
+//!   - `Get*<&LocalN>`: N-dimensional point in extent-local coordinates (i.e. min = `[0, 0, 0]`)
 //!   - `Get*<&PointN>`: N-dimensional point in global (ambient) coordinates
 //!
 //! Indexing assumes that the coordinates are in-bounds of the array, panicking otherwise.

@@ -2,8 +2,8 @@ use core::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 use num::Zero;
 use serde::{Deserialize, Serialize};
 
-/// An N-dimensional point (where N=2 or N=3), which is usually just a primitive array of type `D`.
-/// It is most convenient to construct points of any dimension as:
+/// An N-dimensional point (where N=2 or N=3), which is usually just a primitive array like
+/// `[i32; 2]` or `[i32; 3]`. It is most convenient to construct points of any dimension as:
 ///
 /// ```
 /// use building_blocks_core::PointN;
@@ -16,8 +16,8 @@ use serde::{Deserialize, Serialize};
 /// multiplication, and scalar division.
 ///
 /// ```
-/// use building_blocks_core::PointN;
-///
+/// # use building_blocks_core::PointN;
+/// #
 /// let p1 = PointN([1, 2]);
 /// let p2 = PointN([3, 4]);
 ///
@@ -26,6 +26,11 @@ use serde::{Deserialize, Serialize};
 ///
 /// assert_eq!(p1 * 2, PointN([2, 4]));
 /// assert_eq!(p1 / 2, PointN([0, 1]));
+///
+/// // Also some component-wise operations.
+/// assert_eq!(p1 * p2, PointN([3, 8]));
+/// assert_eq!(p1 / p2, PointN([0, 0]));
+/// assert_eq!(p2 / p1, PointN([3, 2]));
 /// ```
 ///
 /// There is also a partial order defined on points which says that a point A is greater than a
@@ -33,8 +38,8 @@ use serde::{Deserialize, Serialize};
 /// for easily checking is a point is inside of the extent between two other points:
 ///
 /// ```
-/// use building_blocks_core::PointN;
-///
+/// # use building_blocks_core::PointN;
+/// #
 /// let min = PointN([0, 0, 0]);
 /// let least_upper_bound = PointN([3, 3, 3]);
 ///

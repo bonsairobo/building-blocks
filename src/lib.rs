@@ -10,6 +10,18 @@
 //! - **search**: search algorithms on lattice maps
 //! - **storage**: compressed storage for lattice maps, i.e. functions defined on `Z^2` and `Z^3`
 //! - **vox**: conversion of 3D lattice maps to/from VOX data format
+//!
+//! To learn the basics about lattice maps, start with these doc pages:
+//!
+//! - [points](https://docs.rs/building_blocks_core/latest/building_blocks_core/point/struct.PointN.html)
+//! - [extents](https://docs.rs/building_blocks_core/latest/building_blocks_core/extent/struct.ExtentN.html)
+//! - [arrays](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/array/index.html)
+//! - [access traits](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/access/index.html)
+//! - [chunk maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/chunk_map/index.html)
+//! - [transform maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/transform_map/index.html)
+//! - [fn maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/func/index.html)
+
+// TODO: when rust 1.49 is stable, update the the hyperlinks above to use RFC 1946 "intra-links"
 
 pub use building_blocks_core as core;
 pub use building_blocks_storage as storage;

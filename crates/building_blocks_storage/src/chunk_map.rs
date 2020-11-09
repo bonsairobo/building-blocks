@@ -303,11 +303,15 @@ where
         key: PointN<N>,
         local_cache: &'a LocalChunkCache<N, T, M>,
     ) -> Option<&Chunk<N, T, M>> {
+        debug_assert!(self.chunk_key_is_valid(key));
+
         self.chunks.get_const(key, local_cache)
     }
 
     /// Returns the mutable chunk at `key` if it exists.
     pub fn get_mut_chunk(&mut self, key: PointN<N>) -> Option<&mut Chunk<N, T, M>> {
+        debug_assert!(self.chunk_key_is_valid(key));
+
         self.chunks.get_mut(key)
     }
 
@@ -318,6 +322,8 @@ where
         key: PointN<N>,
         create_chunk: impl Fn(&PointN<N>, &ExtentN<N>) -> Chunk<N, T, M>,
     ) -> &mut Chunk<N, T, M> {
+        debug_assert!(self.chunk_key_is_valid(key));
+
         let ChunkMap {
             chunk_shape,
             chunks,

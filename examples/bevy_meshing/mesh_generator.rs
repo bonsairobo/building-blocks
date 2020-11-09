@@ -159,10 +159,6 @@ pub fn mesh_generator_system(
 
         for mesh in chunk_meshes.into_iter() {
             if let Some(mesh) = mesh {
-                if mesh.indices.is_empty() {
-                    continue;
-                }
-
                 state.chunk_mesh_entities.push(create_mesh_entity(
                     mesh,
                     &mut commands,

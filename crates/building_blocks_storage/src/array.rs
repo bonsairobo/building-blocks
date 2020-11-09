@@ -246,12 +246,17 @@ where
 impl<N, T> ArrayN<N, T>
 where
     Self: ForEachMut<N, Stride, Data = T>,
+    ExtentN<N>: IntegerExtent<N> + PartialEq,
 {
     pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: T)
     where
         T: Clone,
     {
-        self.for_each_mut(extent, |_s: Stride, v| *v = value.clone());
+        if self.extent.eq(extent) {
+            self.values = vec![value; self.extent().num_points()];
+        } else {
+            self.for_each_mut(extent, |_s: Stride, v| *v = value.clone());
+        }
     }
 }
 
@@ -666,7 +671,7 @@ impl<M, N, T> WriteExtent<N, ChunkCopySrc<M, N, T>> for ArrayN<N, T>
 where
     T: Clone,
     Self: Array<N> + WriteExtent<N, ArrayCopySrc<M>>,
-    ExtentN<N>: Copy,
+    ExtentN<N>: Copy + IntegerExtent<N> + PartialEq,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<M, N, T>) {
         match src {

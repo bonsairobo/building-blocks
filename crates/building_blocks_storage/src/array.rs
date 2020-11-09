@@ -250,6 +250,7 @@ where
     Self: ForEachMut<N, Stride, Data = T>,
     ExtentN<N>: IntegerExtent<N> + PartialEq,
 {
+    /// Fill the entire `extent` with the same `value`.
     pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: T)
     where
         T: Clone,

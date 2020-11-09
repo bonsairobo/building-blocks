@@ -1,6 +1,6 @@
 [package]
 name = "building_blocks_partition"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2018"
 authors = ["Duncan Fairbanks <bonsairobo@gmail.com>"]
 license = "MIT"

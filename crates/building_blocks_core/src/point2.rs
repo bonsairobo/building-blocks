@@ -41,16 +41,13 @@ where
     }
 }
 
-impl<T> Point2<T>
-where
-    T: Copy + Integer,
-{
+impl Point2i {
     pub fn vector_div_floor(&self, rhs: &Self) -> Self {
         PointN([self.x().div_floor(&rhs.x()), self.y().div_floor(&rhs.y())])
     }
 
-    pub fn scalar_div_floor(&self, rhs: T) -> Self {
-        PointN([self.x().div_floor(&rhs), self.y().div_floor(&rhs)])
+    pub fn scalar_div_floor(&self, rhs: i32) -> Self {
+        self.map_components(|c| c.div_floor(&rhs))
     }
 }
 
@@ -81,7 +78,7 @@ impl Point for Point2i {
 
     #[inline]
     fn abs(&self) -> Self {
-        PointN([self.x().abs(), self.y().abs()])
+        self.map_components(|c| c.abs())
     }
 
     #[inline]
@@ -103,7 +100,7 @@ impl Point for Point2f {
 
     #[inline]
     fn abs(&self) -> Self {
-        PointN([self.x().abs(), self.y().abs()])
+        self.map_components(|c| c.abs())
     }
 
     #[inline]
@@ -185,12 +182,12 @@ impl IntegerPoint for Point2i {
 
     #[inline]
     fn left_shift(&self, shift_by: i32) -> Self {
-        PointN([self.x() << shift_by, self.y() << shift_by])
+        self.map_components(|c| c << shift_by)
     }
 
     #[inline]
     fn right_shift(&self, shift_by: i32) -> Self {
-        PointN([self.x() >> shift_by, self.y() >> shift_by])
+        self.map_components(|c| c >> shift_by)
     }
 
     fn corner_offsets() -> Vec<Self> {

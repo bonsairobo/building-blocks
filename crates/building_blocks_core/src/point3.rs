@@ -94,27 +94,6 @@ where
     }
 }
 
-impl<T> Point3<T>
-where
-    T: Copy + Integer,
-{
-    pub fn vector_div_floor(&self, rhs: &Self) -> Self {
-        PointN([
-            self.x().div_floor(&rhs.x()),
-            self.y().div_floor(&rhs.y()),
-            self.z().div_floor(&rhs.z()),
-        ])
-    }
-
-    pub fn scalar_div_floor(&self, rhs: T) -> Self {
-        PointN([
-            self.x().div_floor(&rhs),
-            self.y().div_floor(&rhs),
-            self.z().div_floor(&rhs),
-        ])
-    }
-}
-
 impl Point3f {
     pub fn round(&self) -> Self {
         self.map_components(|c| c.round())
@@ -133,6 +112,20 @@ where
     const MIN: Self = PointN([T::MIN; 3]);
 }
 
+impl Point3i {
+    pub fn vector_div_floor(&self, rhs: &Self) -> Self {
+        PointN([
+            self.x().div_floor(&rhs.x()),
+            self.y().div_floor(&rhs.y()),
+            self.z().div_floor(&rhs.z()),
+        ])
+    }
+
+    pub fn scalar_div_floor(&self, rhs: i32) -> Self {
+        self.map_components(|c| c.div_floor(&rhs))
+    }
+}
+
 impl Point for Point3i {
     type Scalar = i32;
 
@@ -142,7 +135,7 @@ impl Point for Point3i {
 
     #[inline]
     fn abs(&self) -> Self {
-        PointN([self.x().abs(), self.y().abs(), self.z().abs()])
+        self.map_components(|c| c.abs())
     }
 
     #[inline]
@@ -168,7 +161,7 @@ impl Point for Point3f {
 
     #[inline]
     fn abs(&self) -> Self {
-        PointN([self.x().abs(), self.y().abs(), self.z().abs()])
+        self.map_components(|c| c.abs())
     }
 
     #[inline]
@@ -258,20 +251,12 @@ impl IntegerPoint for Point3i {
 
     #[inline]
     fn left_shift(&self, shift_by: i32) -> Self {
-        PointN([
-            self.x() << shift_by,
-            self.y() << shift_by,
-            self.z() << shift_by,
-        ])
+        self.map_components(|c| c << shift_by)
     }
 
     #[inline]
     fn right_shift(&self, shift_by: i32) -> Self {
-        PointN([
-            self.x() >> shift_by,
-            self.y() >> shift_by,
-            self.z() >> shift_by,
-        ])
+        self.map_components(|c| c >> shift_by)
     }
 
     fn corner_offsets() -> Vec<Self> {

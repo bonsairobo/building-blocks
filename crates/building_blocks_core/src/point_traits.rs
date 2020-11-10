@@ -1,5 +1,6 @@
 use core::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 use num::Zero;
+use std::cmp::{max, min};
 
 /// A trait that bundles op traits that all `PointN<N>` (and its components) should have.
 pub trait Point:
@@ -90,7 +91,15 @@ pub trait DotProduct {
     fn dot(&self, other: &Self) -> Self::Scalar;
 }
 
-pub trait IntegerPoint: Point {
+pub trait IntegerPoint: ComponentwiseIntegerOps + Neighborhoods + Point {
+    /// Returns `true` iff all dimensions are powers of 2.
+    fn dimensions_are_powers_of_2(&self) -> bool;
+
+    /// Returns `true` iff all dimensions are equal.
+    fn is_cube(&self) -> bool;
+}
+
+pub trait ComponentwiseIntegerOps: Point {
     /// Component-wise maximum.
     fn join(&self, other: &Self) -> Self;
 
@@ -108,7 +117,44 @@ pub trait IntegerPoint: Point {
 
     /// Right bitshifts all dimensions, component-wise.
     fn vector_right_shift(&self, shift_by: &Self) -> Self;
+}
 
+impl<T> ComponentwiseIntegerOps for T
+where
+    T: MapComponents<Scalar = i32> + Point<Scalar = i32>,
+{
+    #[inline]
+    fn join(&self, other: &Self) -> Self {
+        self.map_components_binary(other, |c1, c2| max(c1, c2))
+    }
+
+    #[inline]
+    fn meet(&self, other: &Self) -> Self {
+        self.map_components_binary(other, |c1, c2| min(c1, c2))
+    }
+
+    #[inline]
+    fn scalar_left_shift(&self, shift_by: i32) -> Self {
+        self.map_components_unary(|c| c << shift_by)
+    }
+
+    #[inline]
+    fn scalar_right_shift(&self, shift_by: i32) -> Self {
+        self.map_components_unary(|c| c >> shift_by)
+    }
+
+    #[inline]
+    fn vector_left_shift(&self, shift_by: &Self) -> Self {
+        self.map_components_binary(shift_by, |c1, c2| c1 << c2)
+    }
+
+    #[inline]
+    fn vector_right_shift(&self, shift_by: &Self) -> Self {
+        self.map_components_binary(shift_by, |c1, c2| c1 >> c2)
+    }
+}
+
+pub trait Neighborhoods: Sized {
     /// All corners of an N-dimensional unit cube.
     fn corner_offsets() -> Vec<Self>;
 
@@ -117,12 +163,6 @@ pub trait IntegerPoint: Point {
 
     /// [Moore Neighborhood](https://en.wikipedia.org/wiki/Moore_neighborhood)
     fn moore_offsets() -> Vec<Self>;
-
-    /// Returns `true` iff all dimensions are powers of 2.
-    fn dimensions_are_powers_of_2(&self) -> bool;
-
-    /// Returns `true` iff all dimensions are equal.
-    fn is_cube(&self) -> bool;
 }
 
 // `Zero` trait doesn't allow associated constants for zero because of bignums.

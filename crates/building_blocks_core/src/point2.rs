@@ -1,12 +1,12 @@
 use crate::{
-    point_traits::{GetComponent, SmallOne},
+    point_traits::{GetComponent, Neighborhoods, SmallOne},
     Bounded, Distance, DotProduct, IntegerPoint, MapComponents, NormSquared, Ones, Point, PointN,
     SmallZero,
 };
 
 use core::ops::{Add, Div, Mul};
 use num::{traits::Pow, Integer, Signed};
-use std::cmp::{max, min, Ordering};
+use std::cmp::Ordering;
 
 /// A 2-dimensional point with scalar type `T`.
 pub type Point2<T> = PointN<[T; 2]>;
@@ -189,8 +189,19 @@ where
 }
 
 impl IntegerPoint for Point2i {
-    componentwise_integer_point_impl!();
+    fn dimensions_are_powers_of_2(&self) -> bool {
+        self.x().is_positive()
+            && self.y().is_positive()
+            && (self.x() as u32).is_power_of_two()
+            && (self.y() as u32).is_power_of_two()
+    }
 
+    fn is_cube(&self) -> bool {
+        self.x() == self.y()
+    }
+}
+
+impl Neighborhoods for Point2i {
     fn corner_offsets() -> Vec<Self> {
         vec![
             PointN([0, 0]),
@@ -220,17 +231,6 @@ impl IntegerPoint for Point2i {
             PointN([0, 1]),
             PointN([1, 1]),
         ]
-    }
-
-    fn dimensions_are_powers_of_2(&self) -> bool {
-        self.x().is_positive()
-            && self.y().is_positive()
-            && (self.x() as u32).is_power_of_two()
-            && (self.y() as u32).is_power_of_two()
-    }
-
-    fn is_cube(&self) -> bool {
-        self.x() == self.y()
     }
 }
 

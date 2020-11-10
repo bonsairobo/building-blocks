@@ -90,8 +90,8 @@ use crate::{
 };
 
 use building_blocks_core::{
-    bounding_extent, ExtentN, IntegerExtent, IntegerPoint, MapComponents, Ones, Point2i, Point3i,
-    PointN,
+    bounding_extent, ComponentwiseIntegerOps, ExtentN, IntegerExtent, IntegerPoint, MapComponents,
+    Ones, Point2i, Point3i, PointN,
 };
 
 use compressible_map::{

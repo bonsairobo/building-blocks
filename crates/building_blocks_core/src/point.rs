@@ -137,37 +137,3 @@ where
         *self == Self::zero()
     }
 }
-
-macro_rules! componentwise_integer_point_impl {
-    () => {
-        #[inline]
-        fn join(&self, other: &Self) -> Self {
-            self.map_components_binary(other, |c1, c2| max(c1, c2))
-        }
-
-        #[inline]
-        fn meet(&self, other: &Self) -> Self {
-            self.map_components_binary(other, |c1, c2| min(c1, c2))
-        }
-
-        #[inline]
-        fn scalar_left_shift(&self, shift_by: i32) -> Self {
-            self.map_components_unary(|c| c << shift_by)
-        }
-
-        #[inline]
-        fn scalar_right_shift(&self, shift_by: i32) -> Self {
-            self.map_components_unary(|c| c >> shift_by)
-        }
-
-        #[inline]
-        fn vector_left_shift(&self, shift_by: &Self) -> Self {
-            self.map_components_binary(shift_by, |c1, c2| c1 << c2)
-        }
-
-        #[inline]
-        fn vector_right_shift(&self, shift_by: &Self) -> Self {
-            self.map_components_binary(shift_by, |c1, c2| c1 >> c2)
-        }
-    };
-}

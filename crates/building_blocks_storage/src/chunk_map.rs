@@ -90,7 +90,8 @@ use crate::{
 };
 
 use building_blocks_core::{
-    bounding_extent, ExtentN, IntegerExtent, IntegerPoint, Ones, Point, Point2i, Point3i, PointN,
+    bounding_extent, ExtentN, IntegerExtent, IntegerPoint, MapComponents, Ones, Point2i, Point3i,
+    PointN,
 };
 
 use compressible_map::{
@@ -117,6 +118,7 @@ where
 {
     chunk_shape: PointN<N>,
     chunk_shape_mask: PointN<N>,
+    chunk_shape_log2: PointN<N>,
 
     // The value to use when none is specified, i.e. when filling new chunks or erasing points.
     ambient_value: T,
@@ -207,31 +209,32 @@ pub trait ChunkShape<N> {
     /// A chunk key is just the leading m bits of each component of a point, where m depends on the
     /// size of the chunk. It can also be interpreted as the minimum point of a chunk extent.
     fn chunk_key_containing_point(mask: &PointN<N>, p: &PointN<N>) -> PointN<N>;
+
+    fn ilog2(&self) -> PointN<N>;
 }
 
-impl ChunkShape<[i32; 2]> for Point2i {
-    fn mask(&self) -> Point2i {
-        assert!(self.dimensions_are_powers_of_2());
+macro_rules! impl_chunk_shape {
+    ($point:ty, $dims:ty) => {
+        impl ChunkShape<$dims> for $point {
+            fn mask(&self) -> $point {
+                assert!(self.dimensions_are_powers_of_2());
 
-        PointN([!(self.x() - 1), !(self.y() - 1)])
-    }
+                self.map_components_unary(|c| !(c - 1))
+            }
 
-    fn chunk_key_containing_point(mask: &Point2i, p: &Point2i) -> Point2i {
-        PointN([mask.x() & p.x(), mask.y() & p.y()])
-    }
+            fn chunk_key_containing_point(mask: &$point, p: &$point) -> $point {
+                mask.map_components_binary(p, |c1, c2| c1 & c2)
+            }
+
+            fn ilog2(&self) -> $point {
+                self.map_components_unary(|c| c.trailing_zeros() as i32)
+            }
+        }
+    };
 }
 
-impl ChunkShape<[i32; 3]> for Point3i {
-    fn mask(&self) -> Point3i {
-        assert!(self.dimensions_are_powers_of_2());
-
-        PointN([!(self.x() - 1), !(self.y() - 1), !(self.z() - 1)])
-    }
-
-    fn chunk_key_containing_point(mask: &Point3i, p: &Point3i) -> Point3i {
-        PointN([mask.x() & p.x(), mask.y() & p.y(), mask.z() & p.z()])
-    }
-}
+impl_chunk_shape!(Point2i, [i32; 2]);
+impl_chunk_shape!(Point3i, [i32; 3]);
 
 impl<N, T, M> ChunkMap<N, T, M>
 where
@@ -252,6 +255,7 @@ where
         Self {
             chunk_shape,
             chunk_shape_mask: chunk_shape.mask(),
+            chunk_shape_log2: chunk_shape.ilog2(),
             ambient_value,
             default_chunk_metadata,
             chunks: CompressibleFnvMap::new(compression_params),
@@ -281,7 +285,7 @@ where
 
     /// Returns an iterator over all chunk keys for chunks that overlap the given extent.
     pub fn chunk_keys_for_extent(&self, extent: &ExtentN<N>) -> impl Iterator<Item = PointN<N>> {
-        chunk_keys_for_extent(self.chunk_shape, extent)
+        chunk_keys_for_extent(self.chunk_shape_log2, extent)
     }
 
     /// The extent spanned by the chunk at `key`.
@@ -501,6 +505,7 @@ where
         Self {
             chunk_shape: map.chunk_shape,
             chunk_shape_mask: map.chunk_shape.mask(),
+            chunk_shape_log2: map.chunk_shape.ilog2(),
             ambient_value: map.ambient_value,
             default_chunk_metadata: map.default_chunk_metadata.clone(),
             chunks: CompressibleFnvMap::from_all_compressed(params, all_compressed),
@@ -629,19 +634,19 @@ where
 
 /// Returns an iterator over all chunk keys for chunks that overlap the given extent.
 pub fn chunk_keys_for_extent<N>(
-    chunk_shape: PointN<N>,
+    chunk_shape_log2: PointN<N>,
     extent: &ExtentN<N>,
 ) -> impl Iterator<Item = PointN<N>>
 where
-    PointN<N>: Point + Ones,
+    PointN<N>: IntegerPoint + Ones,
     ExtentN<N>: IntegerExtent<N>,
 {
-    let key_min = extent.minimum / chunk_shape;
-    let key_max = extent.max() / chunk_shape;
+    let key_min = extent.minimum.vector_right_shift(&chunk_shape_log2);
+    let key_max = extent.max().vector_right_shift(&chunk_shape_log2);
 
     ExtentN::from_min_and_max(key_min, key_max)
         .iter_points()
-        .map(move |p| p * chunk_shape)
+        .map(move |p| p.vector_left_shift(&chunk_shape_log2))
 }
 
 //  ██████╗ ███████╗████████╗████████╗███████╗██████╗ ███████╗
@@ -734,7 +739,7 @@ impl<'a, N, T, M> ForEachMut<N, PointN<N>> for ChunkMap<N, T, M>
 where
     T: Copy,
     M: Clone,
-    PointN<N>: Point + ChunkShape<N> + Eq + Hash,
+    PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: ForEachMut<N, PointN<N>, Data = T>,
 {
@@ -743,13 +748,14 @@ where
     fn for_each_mut(&mut self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &mut Self::Data)) {
         let ChunkMap {
             chunk_shape,
+            chunk_shape_log2,
             ambient_value,
             default_chunk_metadata,
             chunks,
             ..
         } = self;
 
-        for chunk_key in chunk_keys_for_extent(*chunk_shape, extent) {
+        for chunk_key in chunk_keys_for_extent(*chunk_shape_log2, extent) {
             let chunk = chunks.get_or_insert_with(chunk_key, || Chunk {
                 metadata: default_chunk_metadata.clone(),
                 array: ArrayN::fill(
@@ -817,20 +823,21 @@ where
     T: Copy,
     M: Clone,
     Src: Copy,
-    PointN<N>: Point + Eq + Hash,
+    PointN<N>: IntegerPoint + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: WriteExtent<N, Src>,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src) {
         let ChunkMap {
             chunk_shape,
+            chunk_shape_log2,
             ambient_value,
             default_chunk_metadata,
             chunks,
             ..
         } = self;
 
-        for chunk_key in chunk_keys_for_extent(*chunk_shape, extent) {
+        for chunk_key in chunk_keys_for_extent(*chunk_shape_log2, extent) {
             let chunk = chunks.get_or_insert_with(chunk_key, || Chunk {
                 metadata: default_chunk_metadata.clone(),
                 array: ArrayN::fill(
@@ -862,7 +869,8 @@ mod tests {
     fn chunk_keys_for_extent_gives_keys_for_chunks_overlapping_extent() {
         let chunk_shape = PointN([16; 3]);
         let query_extent = Extent3i::from_min_and_shape(PointN([15; 3]), PointN([16; 3]));
-        let chunk_keys: Vec<_> = chunk_keys_for_extent(chunk_shape, &query_extent).collect();
+        let chunk_keys: Vec<_> =
+            chunk_keys_for_extent(chunk_shape.ilog2(), &query_extent).collect();
 
         assert_eq!(
             chunk_keys,

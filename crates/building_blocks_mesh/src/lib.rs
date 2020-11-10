@@ -90,7 +90,7 @@ pub use surface_nets::{
     padded_surface_nets_chunk_extent, surface_nets, SignedDistance, SurfaceNetsBuffer,
 };
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PosNormMesh {
     pub positions: Vec<[f32; 3]>,
     /// Surface normal vectors. Not guaranteed to be normalized.
@@ -111,7 +111,7 @@ impl PosNormMesh {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PosNormTexMesh {
     pub positions: Vec<[f32; 3]>,
     /// Surface normal vectors. Not guaranteed to be normalized.

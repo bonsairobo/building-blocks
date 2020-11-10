@@ -1,4 +1,5 @@
 use crate::{
+    na_conversions::na_point3f_from_point3i,
     octree::{Octant, VisitStatus},
     octree_dbvt::{OctreeDBVT, OctreeDBVTVisitor},
 };
@@ -6,9 +7,9 @@ use crate::{
 use building_blocks_core::prelude::*;
 
 use core::hash::Hash;
+use nalgebra::{self as na, zero, Isometry3, Translation3, UnitQuaternion};
 use ncollide3d::{
     bounding_volume::{BoundingVolume, HasBoundingVolume, AABB},
-    na::{self, zero, Isometry3, Translation3, UnitQuaternion, Vector3},
     query::{time_of_impact, DefaultTOIDispatcher, Ray, RayCast, RayIntersection, TOIStatus, TOI},
     shape::{Ball, Cuboid},
 };
@@ -213,7 +214,7 @@ where
         if let Some(octant) = octant {
             // Cast a sphere at this octant.
             let octant_extent = Extent3i::from(*octant);
-            let voxel_velocity = Vector3::zeros();
+            let voxel_velocity = na::Vector3::zeros();
             let target_distance = 0.0;
             if let Some(impact) = time_of_impact(
                 &DefaultTOIDispatcher,
@@ -259,7 +260,7 @@ where
 fn impact_with_leaf_octant(
     octant: &Octant,
     contact: &na::Point3<f32>,
-    octant_normal: &Vector3<f32>,
+    octant_normal: &na::Vector3<f32>,
 ) -> Point3i {
     if octant.edge_length == 1 {
         octant.minimum
@@ -270,9 +271,9 @@ fn impact_with_leaf_octant(
         // Maybe converting the intersection coordinates to integers will not always
         // land in the correct voxel. It should help to nudge the point along the
         // intersection normal by some epsilon.
-        let nudged_p: Point3f = (contact - std::f32::EPSILON * octant_normal).into();
+        let nudged_p: mint::Point3<f32> = (contact - std::f32::EPSILON * octant_normal).into();
 
-        nudged_p.in_voxel()
+        Point3f::from(nudged_p).in_voxel()
     }
 }
 
@@ -281,13 +282,14 @@ fn extent3i_cuboid(e: &Extent3i) -> Cuboid<f32> {
 }
 
 fn extent3i_cuboid_transform(e: &Extent3i) -> Isometry3<f32> {
-    let center = Vector3::<f32>::from(e.minimum) + half_extent(e.shape);
+    let min = na_point3f_from_point3i(e.minimum);
+    let center = min + half_extent(e.shape);
 
-    Isometry3::new(center, zero())
+    Isometry3::new(center.coords, zero())
 }
 
-fn half_extent(shape: Point3i) -> Vector3<f32> {
-    Vector3::<f32>::from(shape) / 2.0
+fn half_extent(shape: Point3i) -> na::Vector3<f32> {
+    na_point3f_from_point3i(shape).coords / 2.0
 }
 
 // ████████╗███████╗███████╗████████╗

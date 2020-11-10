@@ -204,7 +204,7 @@ impl Octree {
         for (child_corner, parent_corner) in
             octant_corner_offsets.iter_mut().zip(corner_offsets.iter())
         {
-            *child_corner = parent_corner.right_shift(1);
+            *child_corner = parent_corner.scalar_right_shift(1);
         }
 
         let half_edge_length = edge_length >> 1;
@@ -304,15 +304,16 @@ pub enum VisitStatus {
 #[cfg(feature = "ncollide")]
 mod ncollide_support {
     use super::*;
+    use crate::na_conversions::na_point3f_from_point3i;
 
     use ncollide3d::bounding_volume::AABB;
 
     impl Octant {
         pub fn aabb(&self) -> AABB<f32> {
-            let aabb_min = self.minimum;
-            let aabb_max = self.minimum + PointN([self.edge_length; 3]);
+            let aabb_min = na_point3f_from_point3i(self.minimum);
+            let aabb_max = na_point3f_from_point3i(self.minimum + PointN([self.edge_length; 3]));
 
-            AABB::new(aabb_min.into(), aabb_max.into())
+            AABB::new(aabb_min, aabb_max)
         }
     }
 }

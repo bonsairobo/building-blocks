@@ -1,9 +1,9 @@
 use crate::{
-    point::SmallOne, Bounded, Distance, DotProduct, IntegerPoint, NormSquared, Ones, Point, PointN,
-    SmallZero,
+    point::SmallOne, Bounded, Distance, DotProduct, IntegerPoint, MapComponents, NormSquared, Ones,
+    Point, PointN, SmallZero,
 };
 
-use core::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
+use core::ops::{Add, Div, Mul, Sub};
 use num::{traits::Pow, Integer, Signed};
 use std::cmp::{max, min, Ordering};
 
@@ -15,10 +15,12 @@ pub type Point2i = PointN<[i32; 2]>;
 pub type Point2f = PointN<[f32; 2]>;
 
 impl<T> Point2<T> {
+    #[inline]
     pub fn x_mut(&mut self) -> &mut T {
         &mut self.0[0]
     }
 
+    #[inline]
     pub fn y_mut(&mut self) -> &mut T {
         &mut self.0[1]
     }
@@ -28,36 +30,43 @@ impl<T> Point2<T>
 where
     T: Copy,
 {
+    #[inline]
     pub fn x(&self) -> T {
         self.0[0]
     }
 
+    #[inline]
     pub fn y(&self) -> T {
         self.0[1]
     }
 
+    #[inline]
     pub fn yx(&self) -> Self {
         PointN([self.y(), self.x()])
     }
 }
 
 impl Point2i {
+    #[inline]
     pub fn vector_div_floor(&self, rhs: &Self) -> Self {
-        PointN([self.x().div_floor(&rhs.x()), self.y().div_floor(&rhs.y())])
+        self.map_components_binary(rhs, |c1, c2| c1.div_floor(&c2))
     }
 
+    #[inline]
     pub fn scalar_div_floor(&self, rhs: i32) -> Self {
-        self.map_components(|c| c.div_floor(&rhs))
+        self.map_components_unary(|c| c.div_floor(&rhs))
     }
 }
 
 impl Point2f {
+    #[inline]
     pub fn round(&self) -> Self {
-        self.map_components(|c| c.round())
+        self.map_components_unary(|c| c.round())
     }
 
+    #[inline]
     pub fn floor(&self) -> Self {
-        self.map_components(|c| c.floor())
+        self.map_components_unary(|c| c.floor())
     }
 }
 
@@ -69,6 +78,27 @@ where
     const MIN: Self = PointN([T::MIN; 2]);
 }
 
+impl<T> MapComponents for Point2<T>
+where
+    T: Copy,
+{
+    type Scalar = T;
+
+    #[inline]
+    fn map_components_unary(&self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self {
+        PointN([f(self.x()), f(self.y())])
+    }
+
+    #[inline]
+    fn map_components_binary(
+        &self,
+        other: &Self,
+        f: impl Fn(Self::Scalar, Self::Scalar) -> Self::Scalar,
+    ) -> Self {
+        PointN([f(self.x(), other.x()), f(self.y(), other.y())])
+    }
+}
+
 impl Point for Point2i {
     type Scalar = i32;
 
@@ -78,16 +108,12 @@ impl Point for Point2i {
 
     #[inline]
     fn abs(&self) -> Self {
-        self.map_components(|c| c.abs())
+        self.map_components_unary(|c| c.abs())
     }
 
     #[inline]
-    fn at(&self, component_index: usize) -> Self::Scalar {
+    fn at(&self, component_index: usize) -> i32 {
         self.0[component_index]
-    }
-
-    fn map_components(&self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self {
-        PointN([f(self.x()), f(self.y())])
     }
 }
 
@@ -100,16 +126,12 @@ impl Point for Point2f {
 
     #[inline]
     fn abs(&self) -> Self {
-        self.map_components(|c| c.abs())
+        self.map_components_unary(|c| c.abs())
     }
 
     #[inline]
-    fn at(&self, component_index: usize) -> Self::Scalar {
+    fn at(&self, component_index: usize) -> f32 {
         self.0[component_index]
-    }
-
-    fn map_components(&self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self {
-        PointN([f(self.x()), f(self.y())])
     }
 }
 
@@ -132,13 +154,15 @@ where
     T: Copy + Signed + Add<Output = T> + Pow<u16, Output = T>,
     Point2<T>: Point<Scalar = T>,
 {
-    fn l1_distance(&self, other: &Self) -> Self::Scalar {
+    #[inline]
+    fn l1_distance(&self, other: &Self) -> T {
         let diff = *self - *other;
 
         diff.x().abs() + diff.y().abs()
     }
 
-    fn l2_distance_squared(&self, other: &Self) -> Self::Scalar {
+    #[inline]
+    fn l2_distance_squared(&self, other: &Self) -> T {
         let diff = *self - *other;
 
         diff.x().pow(2) + diff.y().pow(2)
@@ -146,12 +170,14 @@ where
 }
 
 impl NormSquared for Point2i {
+    #[inline]
     fn norm_squared(&self) -> f32 {
         self.dot(&self) as f32
     }
 }
 
 impl NormSquared for Point2f {
+    #[inline]
     fn norm_squared(&self) -> f32 {
         self.dot(&self)
     }
@@ -163,32 +189,14 @@ where
 {
     type Scalar = T;
 
+    #[inline]
     fn dot(&self, other: &Self) -> Self::Scalar {
         self.x() * other.x() + self.y() * other.y()
     }
 }
 
 impl IntegerPoint for Point2i {
-    const MIN: Self = PointN([i32::MIN; 2]);
-    const MAX: Self = PointN([i32::MAX; 2]);
-
-    fn join(&self, other: &Self) -> Self {
-        PointN([max(self.x(), other.x()), max(self.y(), other.y())])
-    }
-
-    fn meet(&self, other: &Self) -> Self {
-        PointN([min(self.x(), other.x()), min(self.y(), other.y())])
-    }
-
-    #[inline]
-    fn left_shift(&self, shift_by: i32) -> Self {
-        self.map_components(|c| c << shift_by)
-    }
-
-    #[inline]
-    fn right_shift(&self, shift_by: i32) -> Self {
-        self.map_components(|c| c >> shift_by)
-    }
+    componentwise_integer_point_impl!();
 
     fn corner_offsets() -> Vec<Self> {
         vec![
@@ -235,31 +243,25 @@ impl IntegerPoint for Point2i {
 
 impl<T> Add for Point2<T>
 where
-    T: Copy + AddAssign,
+    T: Add<Output = T> + Copy,
 {
     type Output = Self;
 
+    #[inline]
     fn add(self, rhs: Self) -> Self::Output {
-        let mut sum = self;
-        *sum.x_mut() += rhs.x();
-        *sum.y_mut() += rhs.y();
-
-        sum
+        self.map_components_binary(&rhs, |c1, c2| c1 + c2)
     }
 }
 
 impl<T> Sub for Point2<T>
 where
-    T: Copy + SubAssign,
+    T: Sub<Output = T> + Copy,
 {
     type Output = Self;
 
+    #[inline]
     fn sub(self, rhs: Self) -> Self::Output {
-        let mut sub = self;
-        *sub.x_mut() -= rhs.x();
-        *sub.y_mut() -= rhs.y();
-
-        sub
+        self.map_components_binary(&rhs, |c1, c2| c1 - c2)
     }
 }
 
@@ -269,6 +271,7 @@ impl<T> PartialOrd for Point2<T>
 where
     T: Copy + PartialOrd,
 {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self < other {
             Some(Ordering::Less)
@@ -281,18 +284,22 @@ where
         }
     }
 
+    #[inline]
     fn lt(&self, other: &Self) -> bool {
         self.x() < other.x() && self.y() < other.y()
     }
 
+    #[inline]
     fn gt(&self, other: &Self) -> bool {
         self.x() > other.x() && self.y() > other.y()
     }
 
+    #[inline]
     fn le(&self, other: &Self) -> bool {
         self.x() <= other.x() && self.y() <= other.y()
     }
 
+    #[inline]
     fn ge(&self, other: &Self) -> bool {
         self.x() >= other.x() && self.y() >= other.y()
     }
@@ -304,8 +311,9 @@ where
 {
     type Output = Self;
 
+    #[inline]
     fn mul(self, rhs: T) -> Self {
-        PointN([rhs * self.x(), rhs * self.y()])
+        self.map_components_unary(|c| rhs * c)
     }
 }
 
@@ -315,8 +323,9 @@ where
 {
     type Output = Self;
 
+    #[inline]
     fn mul(self, other: Self) -> Self {
-        PointN([other.x() * self.x(), other.y() * self.y()])
+        self.map_components_binary(&other, |c1, c2| c1 * c2)
     }
 }
 
@@ -325,6 +334,7 @@ where
 impl Div<i32> for Point2i {
     type Output = Self;
 
+    #[inline]
     fn div(self, rhs: i32) -> Self {
         self.scalar_div_floor(rhs)
     }
@@ -333,16 +343,18 @@ impl Div<i32> for Point2i {
 impl Div<f32> for Point2f {
     type Output = Self;
 
+    #[inline]
     fn div(self, rhs: f32) -> Self {
-        Self([self.x() / rhs, self.y() / rhs])
+        self.map_components_unary(|c| c / rhs)
     }
 }
 
 impl Div<Self> for Point2f {
     type Output = Self;
 
+    #[inline]
     fn div(self, rhs: Self) -> Self {
-        Self([self.x() / rhs.x(), self.y() / rhs.y()])
+        self.map_components_binary(&rhs, |c1, c2| c1 / c2)
     }
 }
 
@@ -351,22 +363,26 @@ impl Div<Self> for Point2f {
 impl Div<Point2i> for Point2i {
     type Output = Self;
 
+    #[inline]
     fn div(self, rhs: Point2i) -> Self {
         self.vector_div_floor(&rhs)
     }
 }
 
 impl From<Point2i> for Point2f {
+    #[inline]
     fn from(p: Point2i) -> Self {
         PointN([p.x() as f32, p.y() as f32])
     }
 }
 
 impl Point2f {
+    #[inline]
     pub fn as_2i(&self) -> Point2i {
         PointN([self.x() as i32, self.y() as i32])
     }
 
+    #[inline]
     pub fn in_pixel(&self) -> Point2i {
         self.floor().as_2i()
     }
@@ -377,6 +393,7 @@ pub mod mint_conversions {
     use super::*;
 
     impl<T> From<mint::Point2<T>> for Point2<T> {
+        #[inline]
         fn from(p: mint::Point2<T>) -> Self {
             PointN([p.x, p.y])
         }
@@ -386,12 +403,14 @@ pub mod mint_conversions {
     where
         T: Clone,
     {
+        #[inline]
         fn from(p: Point2<T>) -> Self {
             mint::Point2::from_slice(&p.0)
         }
     }
 
     impl<T> From<mint::Vector2<T>> for Point2<T> {
+        #[inline]
         fn from(p: mint::Vector2<T>) -> Self {
             PointN([p.x, p.y])
         }
@@ -401,68 +420,9 @@ pub mod mint_conversions {
     where
         T: Clone,
     {
+        #[inline]
         fn from(p: Point2<T>) -> Self {
             mint::Vector2::from_slice(&p.0)
-        }
-    }
-}
-
-#[cfg(feature = "nalgebra")]
-pub mod nalgebra_conversions {
-    use super::*;
-
-    use nalgebra as na;
-
-    impl From<Point2i> for na::Point2<i32> {
-        fn from(p: Point2i) -> Self {
-            na::Point2::new(p.x(), p.y())
-        }
-    }
-    impl From<Point2f> for na::Point2<f32> {
-        fn from(p: Point2f) -> Self {
-            na::Point2::new(p.x(), p.y())
-        }
-    }
-    impl From<Point2i> for na::Vector2<i32> {
-        fn from(p: Point2i) -> Self {
-            na::Vector2::new(p.x(), p.y())
-        }
-    }
-    impl From<Point2f> for na::Vector2<f32> {
-        fn from(p: Point2f) -> Self {
-            na::Vector2::new(p.x(), p.y())
-        }
-    }
-
-    impl From<na::Point2<i32>> for Point2i {
-        fn from(p: na::Point2<i32>) -> Self {
-            PointN([p.x, p.y])
-        }
-    }
-    impl From<na::Point2<f32>> for Point2f {
-        fn from(p: na::Point2<f32>) -> Self {
-            PointN([p.x, p.y])
-        }
-    }
-    impl From<na::Vector2<i32>> for Point2i {
-        fn from(p: na::Vector2<i32>) -> Self {
-            PointN([p.x, p.y])
-        }
-    }
-    impl From<na::Vector2<f32>> for Point2f {
-        fn from(p: na::Vector2<f32>) -> Self {
-            PointN([p.x, p.y])
-        }
-    }
-
-    impl From<Point2i> for na::Point2<f32> {
-        fn from(p: Point2i) -> Self {
-            na::Point2::new(p.x() as f32, p.y() as f32)
-        }
-    }
-    impl From<Point2i> for na::Vector2<f32> {
-        fn from(p: Point2i) -> Self {
-            na::Vector2::new(p.x() as f32, p.y() as f32)
         }
     }
 }

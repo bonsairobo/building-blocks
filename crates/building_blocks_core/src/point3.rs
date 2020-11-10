@@ -1,9 +1,9 @@
 use crate::{
-    point::SmallOne, Bounded, Distance, DotProduct, IntegerPoint, NormSquared, Ones, Point, Point2,
-    PointN, SmallZero,
+    point::SmallOne, Bounded, Distance, DotProduct, IntegerPoint, MapComponents, NormSquared, Ones,
+    Point, Point2, PointN, SmallZero,
 };
 
-use core::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
+use core::ops::{Add, Div, Mul, Sub};
 use num::{traits::Pow, Integer, Signed};
 use std::cmp::{max, min, Ordering};
 
@@ -15,14 +15,17 @@ pub type Point3i = PointN<[i32; 3]>;
 pub type Point3f = PointN<[f32; 3]>;
 
 impl<T> Point3<T> {
+    #[inline]
     pub fn x_mut(&mut self) -> &mut T {
         &mut self.0[0]
     }
 
+    #[inline]
     pub fn y_mut(&mut self) -> &mut T {
         &mut self.0[1]
     }
 
+    #[inline]
     pub fn z_mut(&mut self) -> &mut T {
         &mut self.0[2]
     }
@@ -32,50 +35,62 @@ impl<T> Point3<T>
 where
     T: Copy,
 {
+    #[inline]
     pub fn x(&self) -> T {
         self.0[0]
     }
 
+    #[inline]
     pub fn y(&self) -> T {
         self.0[1]
     }
 
+    #[inline]
     pub fn z(&self) -> T {
         self.0[2]
     }
 
+    #[inline]
     pub fn xy(&self) -> Point2<T> {
         PointN([self.x(), self.y()])
     }
 
+    #[inline]
     pub fn yx(&self) -> Point2<T> {
         PointN([self.y(), self.x()])
     }
 
+    #[inline]
     pub fn yz(&self) -> Point2<T> {
         PointN([self.y(), self.z()])
     }
 
+    #[inline]
     pub fn zy(&self) -> Point2<T> {
         PointN([self.z(), self.y()])
     }
 
+    #[inline]
     pub fn zx(&self) -> Point2<T> {
         PointN([self.z(), self.x()])
     }
 
+    #[inline]
     pub fn xz(&self) -> Point2<T> {
         PointN([self.x(), self.z()])
     }
 
+    #[inline]
     pub fn yzx(&self) -> Point3<T> {
         PointN([self.y(), self.z(), self.x()])
     }
 
+    #[inline]
     pub fn zxy(&self) -> Point3<T> {
         PointN([self.z(), self.x(), self.y()])
     }
 
+    #[inline]
     pub fn zyx(&self) -> Point3<T> {
         PointN([self.z(), self.y(), self.x()])
     }
@@ -85,6 +100,7 @@ impl<T> Point3<T>
 where
     T: Copy + Mul<Output = T> + Sub<Output = T>,
 {
+    #[inline]
     pub fn cross(&self, other: &Self) -> Self {
         Self([
             self.y() * other.z() - self.z() * other.y(),
@@ -95,12 +111,14 @@ where
 }
 
 impl Point3f {
+    #[inline]
     pub fn round(&self) -> Self {
-        self.map_components(|c| c.round())
+        self.map_components_unary(|c| c.round())
     }
 
+    #[inline]
     pub fn floor(&self) -> Self {
-        self.map_components(|c| c.floor())
+        self.map_components_unary(|c| c.floor())
     }
 }
 
@@ -113,16 +131,39 @@ where
 }
 
 impl Point3i {
+    #[inline]
     pub fn vector_div_floor(&self, rhs: &Self) -> Self {
-        PointN([
-            self.x().div_floor(&rhs.x()),
-            self.y().div_floor(&rhs.y()),
-            self.z().div_floor(&rhs.z()),
-        ])
+        self.map_components_binary(rhs, |c1, c2| c1.div_floor(&c2))
     }
 
+    #[inline]
     pub fn scalar_div_floor(&self, rhs: i32) -> Self {
-        self.map_components(|c| c.div_floor(&rhs))
+        self.map_components_unary(|c| c.div_floor(&rhs))
+    }
+}
+
+impl<T> MapComponents for Point3<T>
+where
+    T: Copy,
+{
+    type Scalar = T;
+
+    #[inline]
+    fn map_components_unary(&self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self {
+        PointN([f(self.x()), f(self.y()), f(self.z())])
+    }
+
+    #[inline]
+    fn map_components_binary(
+        &self,
+        other: &Self,
+        f: impl Fn(Self::Scalar, Self::Scalar) -> Self::Scalar,
+    ) -> Self {
+        PointN([
+            f(self.x(), other.x()),
+            f(self.y(), other.y()),
+            f(self.z(), other.z()),
+        ])
     }
 }
 
@@ -135,16 +176,12 @@ impl Point for Point3i {
 
     #[inline]
     fn abs(&self) -> Self {
-        self.map_components(|c| c.abs())
+        self.map_components_unary(|c| c.abs())
     }
 
     #[inline]
-    fn at(&self, component_index: usize) -> Self::Scalar {
+    fn at(&self, component_index: usize) -> i32 {
         self.0[component_index]
-    }
-
-    fn map_components(&self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self {
-        PointN([f(self.x()), f(self.y()), f(self.z())])
     }
 }
 
@@ -161,16 +198,12 @@ impl Point for Point3f {
 
     #[inline]
     fn abs(&self) -> Self {
-        self.map_components(|c| c.abs())
+        self.map_components_unary(|c| c.abs())
     }
 
     #[inline]
-    fn at(&self, component_index: usize) -> Self::Scalar {
+    fn at(&self, component_index: usize) -> f32 {
         self.0[component_index]
-    }
-
-    fn map_components(&self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self {
-        PointN([f(self.x()), f(self.y()), f(self.z())])
     }
 }
 
@@ -193,13 +226,15 @@ where
     T: Copy + Signed + Add<Output = T> + Pow<u16, Output = T>,
     Point3<T>: Point<Scalar = T>,
 {
-    fn l1_distance(&self, other: &Self) -> Self::Scalar {
+    #[inline]
+    fn l1_distance(&self, other: &Self) -> T {
         let diff = *self - *other;
 
         diff.x().abs() + diff.y().abs() + diff.z().abs()
     }
 
-    fn l2_distance_squared(&self, other: &Self) -> Self::Scalar {
+    #[inline]
+    fn l2_distance_squared(&self, other: &Self) -> T {
         let diff = *self - *other;
 
         diff.x().pow(2) + diff.y().pow(2) + diff.z().pow(2)
@@ -207,12 +242,14 @@ where
 }
 
 impl NormSquared for Point3i {
+    #[inline]
     fn norm_squared(&self) -> f32 {
         self.dot(&self) as f32
     }
 }
 
 impl NormSquared for Point3f {
+    #[inline]
     fn norm_squared(&self) -> f32 {
         self.dot(&self)
     }
@@ -224,40 +261,14 @@ where
 {
     type Scalar = T;
 
+    #[inline]
     fn dot(&self, other: &Self) -> Self::Scalar {
         self.x() * other.x() + self.y() * other.y() + self.z() * other.z()
     }
 }
 
 impl IntegerPoint for Point3i {
-    const MIN: Self = PointN([i32::MIN; 3]);
-    const MAX: Self = PointN([i32::MAX; 3]);
-
-    fn join(&self, other: &Self) -> Self {
-        PointN([
-            max(self.x(), other.x()),
-            max(self.y(), other.y()),
-            max(self.z(), other.z()),
-        ])
-    }
-
-    fn meet(&self, other: &Self) -> Self {
-        PointN([
-            min(self.x(), other.x()),
-            min(self.y(), other.y()),
-            min(self.z(), other.z()),
-        ])
-    }
-
-    #[inline]
-    fn left_shift(&self, shift_by: i32) -> Self {
-        self.map_components(|c| c << shift_by)
-    }
-
-    #[inline]
-    fn right_shift(&self, shift_by: i32) -> Self {
-        self.map_components(|c| c >> shift_by)
-    }
+    componentwise_integer_point_impl!();
 
     fn corner_offsets() -> Vec<Self> {
         vec![
@@ -329,35 +340,27 @@ impl IntegerPoint for Point3i {
     }
 }
 
-impl<T> Add for PointN<[T; 3]>
+impl<T> Add for Point3<T>
 where
-    T: AddAssign + Copy,
+    T: Add<Output = T> + Copy,
 {
     type Output = Self;
 
+    #[inline]
     fn add(self, rhs: Self) -> Self::Output {
-        let mut sum = self;
-        *sum.x_mut() += rhs.x();
-        *sum.y_mut() += rhs.y();
-        *sum.z_mut() += rhs.z();
-
-        sum
+        self.map_components_binary(&rhs, |c1, c2| c1 + c2)
     }
 }
 
-impl<T> Sub for PointN<[T; 3]>
+impl<T> Sub for Point3<T>
 where
-    T: SubAssign + Copy,
+    T: Sub<Output = T> + Copy,
 {
     type Output = Self;
 
+    #[inline]
     fn sub(self, rhs: Self) -> Self::Output {
-        let mut sub = self;
-        *sub.x_mut() -= rhs.x();
-        *sub.y_mut() -= rhs.y();
-        *sub.z_mut() -= rhs.z();
-
-        sub
+        self.map_components_binary(&rhs, |c1, c2| c1 - c2)
     }
 }
 
@@ -367,6 +370,7 @@ impl<T> PartialOrd for Point3<T>
 where
     T: Copy + PartialOrd,
 {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self < other {
             Some(Ordering::Less)
@@ -379,18 +383,22 @@ where
         }
     }
 
+    #[inline]
     fn lt(&self, other: &Self) -> bool {
         self.x() < other.x() && self.y() < other.y() && self.z() < other.z()
     }
 
+    #[inline]
     fn gt(&self, other: &Self) -> bool {
         self.x() > other.x() && self.y() > other.y() && self.z() > other.z()
     }
 
+    #[inline]
     fn le(&self, other: &Self) -> bool {
         self.x() <= other.x() && self.y() <= other.y() && self.z() <= other.z()
     }
 
+    #[inline]
     fn ge(&self, other: &Self) -> bool {
         self.x() >= other.x() && self.y() >= other.y() && self.z() >= other.z()
     }
@@ -402,8 +410,9 @@ where
 {
     type Output = Self;
 
+    #[inline]
     fn mul(self, rhs: T) -> Self {
-        PointN([rhs * self.x(), rhs * self.y(), rhs * self.z()])
+        self.map_components_unary(|c| rhs * c)
     }
 }
 
@@ -413,12 +422,9 @@ where
 {
     type Output = Self;
 
+    #[inline]
     fn mul(self, other: Self) -> Self {
-        PointN([
-            other.x() * self.x(),
-            other.y() * self.y(),
-            other.z() * self.z(),
-        ])
+        self.map_components_binary(&other, |c1, c2| c1 * c2)
     }
 }
 
@@ -427,6 +433,7 @@ where
 impl Div<i32> for Point3i {
     type Output = Self;
 
+    #[inline]
     fn div(self, rhs: i32) -> Self {
         self.scalar_div_floor(rhs)
     }
@@ -435,40 +442,46 @@ impl Div<i32> for Point3i {
 impl Div<f32> for Point3f {
     type Output = Self;
 
+    #[inline]
     fn div(self, rhs: f32) -> Self {
-        Self([self.x() / rhs, self.y() / rhs, self.z() / rhs])
+        self.map_components_unary(|c| c / rhs)
     }
 }
 
 impl Div<Self> for Point3f {
     type Output = Self;
 
+    #[inline]
     fn div(self, rhs: Self) -> Self {
-        Self([self.x() / rhs.x(), self.y() / rhs.y(), self.z() / rhs.z()])
+        self.map_components_binary(&rhs, |c1, c2| c1 / c2)
     }
 }
 
 // Use specialized implementation for integers because the default Div impl rounds towards zero,
 // which is not what we want.
-impl Div<Point3i> for Point3i {
+impl Div<Self> for Point3i {
     type Output = Self;
 
+    #[inline]
     fn div(self, rhs: Point3i) -> Self {
         self.vector_div_floor(&rhs)
     }
 }
 
 impl From<Point3i> for Point3f {
+    #[inline]
     fn from(p: Point3i) -> Self {
         PointN([p.x() as f32, p.y() as f32, p.z() as f32])
     }
 }
 
 impl Point3f {
+    #[inline]
     pub fn as_3i(&self) -> Point3i {
         PointN([self.x() as i32, self.y() as i32, self.z() as i32])
     }
 
+    #[inline]
     pub fn in_voxel(&self) -> Point3i {
         self.floor().as_3i()
     }
@@ -479,6 +492,7 @@ pub mod mint_conversions {
     use super::*;
 
     impl<T> From<mint::Point3<T>> for Point3<T> {
+        #[inline]
         fn from(p: mint::Point3<T>) -> Self {
             PointN([p.x, p.y, p.z])
         }
@@ -488,12 +502,14 @@ pub mod mint_conversions {
     where
         T: Clone,
     {
+        #[inline]
         fn from(p: Point3<T>) -> Self {
             mint::Point3::from_slice(&p.0)
         }
     }
 
     impl<T> From<mint::Vector3<T>> for Point3<T> {
+        #[inline]
         fn from(p: mint::Vector3<T>) -> Self {
             PointN([p.x, p.y, p.z])
         }
@@ -503,68 +519,9 @@ pub mod mint_conversions {
     where
         T: Clone,
     {
+        #[inline]
         fn from(p: Point3<T>) -> Self {
             mint::Vector3::from_slice(&p.0)
-        }
-    }
-}
-
-#[cfg(feature = "nalgebra")]
-pub mod nalgebra_conversions {
-    use super::*;
-
-    use nalgebra as na;
-
-    impl From<Point3i> for na::Point3<i32> {
-        fn from(p: Point3i) -> Self {
-            na::Point3::from(p.0)
-        }
-    }
-    impl From<Point3f> for na::Point3<f32> {
-        fn from(p: Point3f) -> Self {
-            na::Point3::from(p.0)
-        }
-    }
-    impl From<Point3i> for na::Vector3<i32> {
-        fn from(p: Point3i) -> Self {
-            na::Vector3::from(p.0)
-        }
-    }
-    impl From<Point3f> for na::Vector3<f32> {
-        fn from(p: Point3f) -> Self {
-            na::Vector3::from(p.0)
-        }
-    }
-
-    impl From<na::Point3<i32>> for Point3i {
-        fn from(p: na::Point3<i32>) -> Self {
-            PointN([p.x, p.y, p.z])
-        }
-    }
-    impl From<na::Point3<f32>> for Point3f {
-        fn from(p: na::Point3<f32>) -> Self {
-            PointN([p.x, p.y, p.z])
-        }
-    }
-    impl From<na::Vector3<i32>> for Point3i {
-        fn from(p: na::Vector3<i32>) -> Self {
-            PointN([p.x, p.y, p.z])
-        }
-    }
-    impl From<na::Vector3<f32>> for Point3f {
-        fn from(p: na::Vector3<f32>) -> Self {
-            PointN([p.x, p.y, p.z])
-        }
-    }
-
-    impl From<Point3i> for na::Point3<f32> {
-        fn from(p: Point3i) -> Self {
-            na::Point3::new(p.x() as f32, p.y() as f32, p.z() as f32)
-        }
-    }
-    impl From<Point3i> for na::Vector3<f32> {
-        fn from(p: Point3i) -> Self {
-            na::Vector3::new(p.x() as f32, p.y() as f32, p.z() as f32)
         }
     }
 }

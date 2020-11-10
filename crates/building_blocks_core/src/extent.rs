@@ -1,5 +1,5 @@
 use crate::{
-    point::{Bounded, IntegerPoint, Ones, Point},
+    point_traits::{Bounded, IntegerPoint, Ones, Point},
     PointN,
 };
 

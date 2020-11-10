@@ -1,9 +1,10 @@
 use crate::{
-    point::SmallOne, Bounded, Distance, DotProduct, IntegerPoint, MapComponents, NormSquared, Ones,
-    Point, PointN, SmallZero,
+    point_traits::{GetComponent, SmallOne},
+    Bounded, Distance, DotProduct, IntegerPoint, MapComponents, NormSquared, Ones, Point, PointN,
+    SmallZero,
 };
 
-use core::ops::{Add, Div, Mul, Sub};
+use core::ops::{Add, Div, Mul};
 use num::{traits::Pow, Integer, Signed};
 use std::cmp::{max, min, Ordering};
 
@@ -99,21 +100,23 @@ where
     }
 }
 
+impl<T> GetComponent for Point2<T>
+where
+    T: Copy,
+{
+    type Scalar = T;
+
+    #[inline]
+    fn at(&self, component_index: usize) -> T {
+        self.0[component_index]
+    }
+}
+
 impl Point for Point2i {
     type Scalar = i32;
 
     fn basis() -> Vec<Self> {
         vec![PointN([1, 0]), PointN([0, 1])]
-    }
-
-    #[inline]
-    fn abs(&self) -> Self {
-        self.map_components_unary(|c| c.abs())
-    }
-
-    #[inline]
-    fn at(&self, component_index: usize) -> i32 {
-        self.0[component_index]
     }
 }
 
@@ -122,16 +125,6 @@ impl Point for Point2f {
 
     fn basis() -> Vec<Self> {
         vec![PointN([1.0, 0.0]), PointN([0.0, 1.0])]
-    }
-
-    #[inline]
-    fn abs(&self) -> Self {
-        self.map_components_unary(|c| c.abs())
-    }
-
-    #[inline]
-    fn at(&self, component_index: usize) -> f32 {
-        self.0[component_index]
     }
 }
 
@@ -238,30 +231,6 @@ impl IntegerPoint for Point2i {
 
     fn is_cube(&self) -> bool {
         self.x() == self.y()
-    }
-}
-
-impl<T> Add for Point2<T>
-where
-    T: Add<Output = T> + Copy,
-{
-    type Output = Self;
-
-    #[inline]
-    fn add(self, rhs: Self) -> Self::Output {
-        self.map_components_binary(&rhs, |c1, c2| c1 + c2)
-    }
-}
-
-impl<T> Sub for Point2<T>
-where
-    T: Sub<Output = T> + Copy,
-{
-    type Output = Self;
-
-    #[inline]
-    fn sub(self, rhs: Self) -> Self::Output {
-        self.map_components_binary(&rhs, |c1, c2| c1 - c2)
     }
 }
 

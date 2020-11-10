@@ -1,4 +1,4 @@
-use building_blocks_core::{point::Point, prelude::*};
+use building_blocks_core::{point_traits::Point, prelude::*};
 use building_blocks_storage::{access::GetUncheckedRelease, prelude::*, IsEmpty};
 
 use core::cmp::Ordering;

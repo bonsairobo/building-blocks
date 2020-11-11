@@ -93,7 +93,7 @@ where
 
 impl<N> ExtentN<N>
 where
-    PointN<N>: Point + Ones,
+    PointN<N>: IntegerPoint + Ones,
     ExtentN<N>: IntegerExtent<N>,
 {
     /// An alternative representation of an integer extent as the minimum point and maximum point.
@@ -107,6 +107,13 @@ where
         let lub = self.least_upper_bound();
 
         lub - PointN::ONES
+    }
+
+    pub fn from_two_corners(p1: PointN<N>, p2: PointN<N>) -> Self {
+        let min = p1.meet(&p2);
+        let max = p1.join(&p2);
+
+        Self::from_min_and_max(min, max)
     }
 }
 

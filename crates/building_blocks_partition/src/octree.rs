@@ -18,7 +18,8 @@ pub struct Octree {
     root_level: u8,
     root_exists: bool,
     // Save memory by using 2-byte location codes as hash map keys instead of 64-bit node pointers.
-    // The total memory usage can be approximated as 3 bytes per node, assuming a hashbrown table.
+    // The total memory usage can be approximated as 4 bytes per node, assuming the hashbrown table
+    // has 1 byte of overhead per entry.
     nodes: FnvHashMap<LocationCode, ChildBitMask>,
 }
 

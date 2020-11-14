@@ -46,3 +46,9 @@ log = "0.4"
 [[example]]
 name = "bevy_meshing"
 path = "examples/bevy_meshing/bevy_meshing.rs"
+
+[profile.release]
+lto = true
+
+[profile.bench]
+lto = true

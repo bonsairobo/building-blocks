@@ -75,7 +75,7 @@ impl<F> VoxelRayCast<F> {
         self.earliest_impact
             .as_ref()
             .map(|i| i.impact.toi)
-            .unwrap_or(std::f32::MAX)
+            .unwrap_or(std::f32::INFINITY)
     }
 }
 
@@ -196,7 +196,7 @@ impl<F> VoxelSphereCast<F> {
         self.earliest_impact
             .as_ref()
             .map(|i| i.impact.toi)
-            .unwrap_or(std::f32::MAX)
+            .unwrap_or(std::f32::INFINITY)
     }
 }
 
@@ -318,17 +318,17 @@ mod tests {
         let start = na::Point3::new(-1.0, -1.0, -1.0);
 
         let ray = Ray::new(start, na::Point3::new(0.5, 0.5, 0.5) - start);
-        let result = voxel_ray_cast(&bvt, ray, std::f32::MAX, |_| true).unwrap();
+        let result = voxel_ray_cast(&bvt, ray, std::f32::INFINITY, |_| true).unwrap();
         assert_eq!(result.point, PointN([0, 0, 0]));
 
         let ray = Ray::new(start, na::Point3::new(0.0, 15.5, 0.0) - start);
-        let result = voxel_ray_cast(&bvt, ray, std::f32::MAX, |_| true).unwrap();
+        let result = voxel_ray_cast(&bvt, ray, std::f32::INFINITY, |_| true).unwrap();
         assert_eq!(result.point, PointN([0, 15, 0]));
 
         // Cast into the middle where we shouldn't hit anything.
 
         let ray = Ray::new(start, na::Point3::new(0.0, 3.0, 0.0) - start);
-        let result = voxel_ray_cast(&bvt, ray, std::f32::MAX, |_| true);
+        let result = voxel_ray_cast(&bvt, ray, std::f32::INFINITY, |_| true);
         assert!(result.is_none());
     }
 
@@ -338,7 +338,7 @@ mod tests {
 
         let start = na::Point3::new(-1.0, -1.0, -1.0);
         let ray = Ray::new(start, na::Point3::new(0.5, 0.5, 0.5) - start);
-        let result = voxel_ray_cast(&bvt, ray, std::f32::MAX, |_| true).unwrap();
+        let result = voxel_ray_cast(&bvt, ray, std::f32::INFINITY, |_| true).unwrap();
         assert_eq!(result.point, PointN([0, 0, 0]));
     }
 
@@ -352,17 +352,17 @@ mod tests {
         let radius = 0.5;
 
         let ray = Ray::new(start, na::Point3::new(0.5, 0.5, 0.5) - start);
-        let result = voxel_sphere_cast(&bvt, radius, ray, std::f32::MAX, |_| true).unwrap();
+        let result = voxel_sphere_cast(&bvt, radius, ray, std::f32::INFINITY, |_| true).unwrap();
         assert_eq!(result.point, PointN([0, 0, 0]));
 
         let ray = Ray::new(start, na::Point3::new(0.0, 15.5, 0.0) - start);
-        let result = voxel_sphere_cast(&bvt, radius, ray, std::f32::MAX, |_| true).unwrap();
+        let result = voxel_sphere_cast(&bvt, radius, ray, std::f32::INFINITY, |_| true).unwrap();
         assert_eq!(result.point, PointN([0, 15, 0]));
 
         // Cast into the middle where we shouldn't hit anything.
 
         let ray = Ray::new(start, na::Point3::new(0.0, 3.0, 0.0) - start);
-        let result = voxel_sphere_cast(&bvt, radius, ray, std::f32::MAX, |_| true);
+        let result = voxel_sphere_cast(&bvt, radius, ray, std::f32::INFINITY, |_| true);
         assert!(result.is_none());
     }
 
@@ -373,7 +373,7 @@ mod tests {
         let start = na::Point3::new(-1.0, -1.0, -1.0);
         let radius = 0.5;
         let ray = Ray::new(start, na::Point3::new(0.5, 0.5, 0.5) - start);
-        let result = voxel_sphere_cast(&bvt, radius, ray, std::f32::MAX, |_| true).unwrap();
+        let result = voxel_sphere_cast(&bvt, radius, ray, std::f32::INFINITY, |_| true).unwrap();
         assert_eq!(result.point, PointN([0, 0, 0]));
     }
 

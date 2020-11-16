@@ -1,7 +1,7 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::prelude::*;
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
 fn array_for_each_stride(c: &mut Criterion) {
     let mut group = c.benchmark_group("array_for_each_stride");
@@ -14,6 +14,7 @@ fn array_for_each_stride(c: &mut Criterion) {
                     array.for_each(&iter_extent, |_stride: Stride, value| {
                         sum += value;
                     });
+                    black_box(sum);
                 },
             );
         });
@@ -32,6 +33,7 @@ fn array_for_each_point(c: &mut Criterion) {
                     array.for_each(&iter_extent, |_p: Point3i, value| {
                         sum += value;
                     });
+                    black_box(sum);
                 },
             );
         });
@@ -53,6 +55,7 @@ fn chunk_map_for_each_point(c: &mut Criterion) {
                     reader.for_each(&iter_extent, |_p: Point3i, value| {
                         sum += value;
                     });
+                    black_box(sum);
                 },
             );
         });
@@ -71,6 +74,7 @@ fn array_point_indexing(c: &mut Criterion) {
                     for p in iter_extent.iter_points() {
                         sum += array.get(&p);
                     }
+                    black_box(sum);
                 },
             );
         });
@@ -92,6 +96,7 @@ fn chunk_map_point_indexing(c: &mut Criterion) {
                     for p in iter_extent.iter_points() {
                         sum += reader.get(&p);
                     }
+                    black_box(sum);
                 },
             );
         });

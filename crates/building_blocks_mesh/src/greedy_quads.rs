@@ -1,6 +1,6 @@
-use super::quad::{Axis3Permutation, OrientedCubeFace, Quad, QuadGroup};
+use super::quad::{OrientedCubeFace, Quad, QuadGroup};
 
-use building_blocks_core::prelude::*;
+use building_blocks_core::{axis::Axis3Permutation, prelude::*};
 use building_blocks_storage::{access::GetUncheckedRelease, prelude::*, IsEmpty};
 
 pub trait MaterialVoxel {

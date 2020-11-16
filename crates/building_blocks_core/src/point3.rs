@@ -1,7 +1,9 @@
 use crate::{
-    point_traits::{GetComponent, Neighborhoods, SmallOne},
-    Bounded, Distance, DotProduct, IntegerPoint, MapComponents, NormSquared, Ones, Point, Point2,
-    PointN, SmallZero,
+    point_traits::{
+        Bounded, Distance, DotProduct, GetComponent, IntegerPoint, MapComponents, Neighborhoods,
+        NormSquared, Ones, Point, SmallOne, SmallZero,
+    },
+    Axis3, Point2, PointN,
 };
 
 use core::ops::{Add, Div, Mul, Sub};
@@ -497,20 +499,5 @@ pub mod mint_conversions {
         fn from(p: Point3<T>) -> Self {
             mint::Vector3::from_slice(&p.0)
         }
-    }
-}
-
-/// Either the X, Y, or Z axis.
-#[derive(Clone, Copy)]
-pub enum Axis3 {
-    X = 0,
-    Y = 1,
-    Z = 2,
-}
-
-impl Axis3 {
-    /// The index for a point's component on this axis.
-    pub fn index(&self) -> usize {
-        *self as usize
     }
 }

@@ -1,6 +1,6 @@
 use super::{PosNormMesh, PosNormTexMesh};
 
-use building_blocks_core::prelude::*;
+use building_blocks_core::{axis::Axis3Permutation, prelude::*};
 
 /// A set of `Quad`s that share an orientation.
 pub struct QuadGroup<M> {
@@ -150,38 +150,5 @@ impl Quad {
             [0.0, self.height as f32],
             [self.width as f32, self.height as f32],
         ]
-    }
-}
-
-pub enum Axis3Permutation {
-    XYZ,
-    ZXY,
-    YZX,
-    ZYX,
-    XZY,
-    YXZ,
-}
-
-impl Axis3Permutation {
-    pub fn sign(&self) -> i32 {
-        match self {
-            Axis3Permutation::XYZ => 1,
-            Axis3Permutation::ZXY => 1,
-            Axis3Permutation::YZX => 1,
-            Axis3Permutation::ZYX => -1,
-            Axis3Permutation::XZY => -1,
-            Axis3Permutation::YXZ => -1,
-        }
-    }
-
-    pub fn axes(&self) -> [Axis3; 3] {
-        match self {
-            Axis3Permutation::XYZ => [Axis3::X, Axis3::Y, Axis3::Z],
-            Axis3Permutation::ZXY => [Axis3::Z, Axis3::X, Axis3::Y],
-            Axis3Permutation::YZX => [Axis3::Y, Axis3::Z, Axis3::X],
-            Axis3Permutation::ZYX => [Axis3::Z, Axis3::Y, Axis3::X],
-            Axis3Permutation::XZY => [Axis3::X, Axis3::Z, Axis3::Y],
-            Axis3Permutation::YXZ => [Axis3::Y, Axis3::X, Axis3::Z],
-        }
     }
 }

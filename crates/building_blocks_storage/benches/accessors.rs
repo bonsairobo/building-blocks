@@ -37,6 +37,23 @@ fn array_for_each_point(c: &mut Criterion) {
     group.finish();
 }
 
+fn array_for_each_point_and_stride(c: &mut Criterion) {
+    let mut group = c.benchmark_group("array_for_each_point_and_stride");
+    for size in ARRAY_SIZES.iter() {
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
+            b.iter_with_setup(
+                || set_up_array(size),
+                |(array, iter_extent)| {
+                    array.for_each(&iter_extent, |(p, stride): (Point3i, Stride), value| {
+                        black_box((p, stride, value));
+                    });
+                },
+            );
+        });
+    }
+    group.finish();
+}
+
 fn chunk_map_for_each_point(c: &mut Criterion) {
     let mut group = c.benchmark_group("chunk_map_for_each_point");
     for size in ARRAY_SIZES.iter() {
@@ -147,6 +164,7 @@ criterion_group!(
     benches,
     array_for_each_stride,
     array_for_each_point,
+    array_for_each_point_and_stride,
     array_point_indexing,
     array_copy,
     chunk_map_for_each_point,

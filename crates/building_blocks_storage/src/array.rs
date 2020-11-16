@@ -95,6 +95,7 @@ pub trait Array<N> {
 
     fn extent(&self) -> &ExtentN<N>;
 
+    #[inline]
     fn for_each_point_and_stride(&self, extent: &ExtentN<N>, f: impl FnMut(PointN<N>, Stride)) {
         Self::Indexer::for_each_point_and_stride(self.extent(), extent, f);
     }
@@ -402,6 +403,7 @@ where
 impl<N, T> GetMut<Stride> for ArrayN<N, T> {
     type Data = T;
 
+    #[inline]
     fn get_mut(&mut self, stride: Stride) -> &mut Self::Data {
         &mut self.values[stride.0]
     }
@@ -410,6 +412,7 @@ impl<N, T> GetMut<Stride> for ArrayN<N, T> {
 impl<N, T> GetUncheckedMut<Stride> for ArrayN<N, T> {
     type Data = T;
 
+    #[inline]
     unsafe fn get_unchecked_mut(&mut self, stride: Stride) -> &mut Self::Data {
         self.values.get_unchecked_mut(stride.0)
     }
@@ -542,6 +545,7 @@ macro_rules! impl_array_for_each {
         {
             type Data = T;
 
+            #[inline]
             fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut($coords, T)) {
                 <Self as Array<N>>::Indexer::for_each_point_and_stride(
                     self.extent(),
@@ -558,6 +562,7 @@ macro_rules! impl_array_for_each {
         {
             type Data = T;
 
+            #[inline]
             fn for_each_mut(&mut self, extent: &ExtentN<N>, mut f: impl FnMut($coords, &mut T)) {
                 let array_extent = *self.extent();
                 <Self as Array<N>>::Indexer::for_each_point_and_stride(

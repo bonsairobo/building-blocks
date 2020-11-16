@@ -13,6 +13,7 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
         Stride((p.y() * s.x() + p.x()) as usize)
     }
 
+    #[inline]
     fn for_each_point_and_stride(
         array_extent: &Extent2i,
         extent: &Extent2i,
@@ -35,6 +36,7 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
         }
     }
 
+    #[inline]
     fn for_each_stride_parallel(
         iter_extent: &Extent2i,
         array1_extent: &Extent2i,

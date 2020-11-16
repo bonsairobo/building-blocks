@@ -120,16 +120,15 @@ fn greedy_quads_for_group<V, T>(
         face:
             OrientedCubeFace {
                 n_sign,
+                permutation,
                 n,
                 u,
                 v,
-                n_axis,
-                u_axis,
-                v_axis,
                 ..
             },
     } = quad_group;
 
+    let [n_axis, u_axis, v_axis] = permutation.axes();
     let i_n = n_axis.index();
     let i_u = u_axis.index();
     let i_v = v_axis.index();

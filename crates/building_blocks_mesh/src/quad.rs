@@ -26,11 +26,6 @@ pub struct OrientedCubeFace {
     // Determines the {N, U, V} <--> {X, Y, Z} relation.
     pub permutation: Axis3Permutation,
 
-    // Used for indexing points for their components along the given axis.
-    pub n_axis: Axis3,
-    pub u_axis: Axis3,
-    pub v_axis: Axis3,
-
     // These vectors are always some permutation of +X, +Y, and +Z.
     pub n: Point3i,
     pub u: Point3i,
@@ -51,9 +46,6 @@ impl OrientedCubeFace {
             n_sign,
 
             permutation,
-            n_axis,
-            u_axis,
-            v_axis,
 
             n,
             u: xyz[u_axis.index()],

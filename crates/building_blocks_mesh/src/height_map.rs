@@ -28,7 +28,7 @@ pub struct HeightMapMeshBuffer {
     pub mesh: PosNormMesh,
 
     // Used to map back from voxel stride to vertex index.
-    stride_to_index: Vec<usize>,
+    stride_to_index: Vec<u32>,
 }
 
 impl HeightMapMeshBuffer {
@@ -85,7 +85,7 @@ pub fn triangulate_height_map<V, H>(
             let pz = p.y();
             let y = height.height();
 
-            output.stride_to_index[stride.0] = output.mesh.positions.len();
+            output.stride_to_index[stride.0] = output.mesh.positions.len() as u32;
             output.mesh.positions.push([p.x() as f32, y, pz as f32]);
 
             // Use central differencing to calculate the surface normal.

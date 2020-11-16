@@ -1,3 +1,5 @@
+use super::{Point3i, PointN};
+
 /// Either the X or Y axis.
 #[derive(Clone, Copy)]
 pub enum Axis2 {
@@ -12,6 +14,11 @@ impl Axis2 {
     }
 }
 
+pub struct SignedAxis2 {
+    pub sign: i32,
+    pub axis: Axis2,
+}
+
 /// Either the X, Y, or Z axis.
 #[derive(Clone, Copy)]
 pub enum Axis3 {
@@ -24,6 +31,14 @@ impl Axis3 {
     /// The index for a point's component on this axis.
     pub fn index(&self) -> usize {
         *self as usize
+    }
+
+    pub fn get_unit_vector(&self) -> Point3i {
+        match self {
+            Axis3::X => PointN([1, 0, 0]),
+            Axis3::Y => PointN([0, 1, 0]),
+            Axis3::Z => PointN([0, 0, 1]),
+        }
     }
 }
 
@@ -74,6 +89,30 @@ impl Axis3Permutation {
             Axis3Permutation::ZYX => [Axis3::Z, Axis3::Y, Axis3::X],
             Axis3Permutation::XZY => [Axis3::X, Axis3::Z, Axis3::Y],
             Axis3Permutation::YXZ => [Axis3::Y, Axis3::X, Axis3::Z],
+        }
+    }
+}
+
+pub struct SignedAxis3 {
+    pub sign: i32,
+    pub axis: Axis3,
+}
+
+impl SignedAxis3 {
+    pub fn new(sign: i32, axis: Axis3) -> Self {
+        Self { sign, axis }
+    }
+
+    pub fn get_vector(&self) -> Point3i {
+        self.axis.get_unit_vector() * self.sign
+    }
+
+    pub fn from_vector(v: Point3i) -> Option<Self> {
+        match v {
+            PointN([x, 0, 0]) => Some(SignedAxis3::new(x, Axis3::X)),
+            PointN([0, y, 0]) => Some(SignedAxis3::new(y, Axis3::Y)),
+            PointN([0, 0, z]) => Some(SignedAxis3::new(z, Axis3::Z)),
+            _ => None,
         }
     }
 }

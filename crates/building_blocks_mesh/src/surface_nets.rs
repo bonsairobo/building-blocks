@@ -33,7 +33,7 @@ pub struct SurfaceNetsBuffer {
     pub surface_strides: Vec<Stride>,
 
     // Used to map back from voxel stride to vertex index.
-    stride_to_index: Vec<usize>,
+    stride_to_index: Vec<u32>,
 }
 
 impl SurfaceNetsBuffer {
@@ -103,7 +103,7 @@ where
         }
 
         if let Some((position, normal)) = estimate_surface_in_voxel(sdf, &p, &corner_strides) {
-            output.stride_to_index[p_stride.0] = output.mesh.positions.len();
+            output.stride_to_index[p_stride.0] = output.mesh.positions.len() as u32;
             output.surface_points.push(p);
             output.surface_strides.push(p_stride);
             output.mesh.positions.push(position);
@@ -313,13 +313,13 @@ where
 #[allow(clippy::too_many_arguments)]
 fn maybe_make_quad<V, T>(
     sdf: &V,
-    stride_to_index: &[usize],
+    stride_to_index: &[u32],
     positions: &[[f32; 3]],
     p1: Stride,
     p2: Stride,
     axis_b_stride: Stride,
     axis_c_stride: Stride,
-    indices: &mut Vec<usize>,
+    indices: &mut Vec<u32>,
 ) where
     V: GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
@@ -340,7 +340,12 @@ fn maybe_make_quad<V, T>(
     let v2 = stride_to_index[(p1 - axis_b_stride).0];
     let v3 = stride_to_index[(p1 - axis_c_stride).0];
     let v4 = stride_to_index[(p1 - axis_b_stride - axis_c_stride).0];
-    let (pos1, pos2, pos3, pos4) = (positions[v1], positions[v2], positions[v3], positions[v4]);
+    let (pos1, pos2, pos3, pos4) = (
+        positions[v1 as usize],
+        positions[v2 as usize],
+        positions[v3 as usize],
+        positions[v4 as usize],
+    );
     // Split the quad along the shorter axis, rather than the longer one.
     let quad = if sq_dist(pos1, pos4) < sq_dist(pos2, pos3) {
         match face_result {

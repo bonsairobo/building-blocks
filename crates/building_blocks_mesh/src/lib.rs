@@ -98,7 +98,7 @@ pub struct PosNormMesh {
     /// Surface normal vectors. Not guaranteed to be normalized.
     pub normals: Vec<[f32; 3]>,
     /// All of the triangles in the mesh, wound counter-clockwise (right-hand rule).
-    pub indices: Vec<usize>,
+    pub indices: Vec<u32>,
 }
 
 impl PosNormMesh {
@@ -121,7 +121,7 @@ pub struct PosNormTexMesh {
     /// Texture coordinates, AKA UVs.
     pub tex_coords: Vec<[f32; 2]>,
     /// All of the triangles in the mesh, wound counter-clockwise (right-hand rule).
-    pub indices: Vec<usize>,
+    pub indices: Vec<u32>,
 }
 
 impl PosNormTexMesh {

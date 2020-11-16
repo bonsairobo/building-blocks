@@ -1,6 +1,9 @@
 use super::{PosNormMesh, PosNormTexMesh};
 
-use building_blocks_core::{axis::Axis3Permutation, prelude::*};
+use building_blocks_core::{
+    axis::{Axis3Permutation, SignedAxis3},
+    prelude::*,
+};
 
 /// A set of `Quad`s that share an orientation.
 pub struct QuadGroup<M> {
@@ -36,10 +39,8 @@ pub struct OrientedCubeFace {
 
 impl OrientedCubeFace {
     pub fn new(n_sign: i32, permutation: Axis3Permutation) -> Self {
-        let xyz = [PointN([1, 0, 0]), PointN([0, 1, 0]), PointN([0, 0, 1])];
-
         let [n_axis, u_axis, v_axis] = permutation.axes();
-        let n = xyz[n_axis.index()];
+        let n = n_axis.get_unit_vector();
         let mesh_normal: Point3f = (n * n_sign).into();
 
         Self {
@@ -48,11 +49,18 @@ impl OrientedCubeFace {
             permutation,
 
             n,
-            u: xyz[u_axis.index()],
-            v: xyz[v_axis.index()],
+            u: u_axis.get_unit_vector(),
+            v: v_axis.get_unit_vector(),
 
             mesh_normal,
         }
+    }
+
+    pub fn canonical(normal: SignedAxis3) -> Self {
+        Self::new(
+            normal.sign,
+            Axis3Permutation::even_with_normal_axis(normal.axis),
+        )
     }
 
     /// Returns the 4 corners of the quad in this order:
@@ -88,36 +96,49 @@ impl OrientedCubeFace {
         ]
     }
 
-    /// Extends `mesh` with the given `quad` that belongs to this group.
-    pub fn add_quad_to_pos_norm_mesh(&self, quad: &Quad, mesh: &mut PosNormMesh) {
-        let cur_idx = mesh.positions.len();
-        mesh.indices.extend_from_slice(&self.indices(cur_idx));
+    pub fn quad_mesh_positions(&self, quad: &Quad) -> [[f32; 3]; 4] {
         let [c0, c1, c2, c3] = self.quad_corners(quad);
-        mesh.positions.extend_from_slice(&[c0.0, c1.0, c2.0, c3.0]);
-        mesh.normals.extend_from_slice(&[self.mesh_normal.0; 4]);
+
+        [c0.0, c1.0, c2.0, c3.0]
+    }
+
+    pub fn quad_mesh_normals(&self) -> [[f32; 3]; 4] {
+        [self.mesh_normal.0; 4]
+    }
+
+    /// Returns the 6 vertex indices for the quad in order to make two triangles in a mesh. Winding
+    /// order depends on both the sign of the surface normal and the permutation of the UVs.
+    pub fn quad_mesh_indices(&self, start: u32) -> [u32; 6] {
+        quad_indices(start, self.n_sign * self.permutation.sign() > 0)
+    }
+
+    /// Extends `mesh` with the given `quad` that belongs to this face.
+    pub fn add_quad_to_pos_norm_mesh(&self, quad: &Quad, mesh: &mut PosNormMesh) {
+        let start_index = mesh.positions.len() as u32;
+        mesh.positions
+            .extend_from_slice(&self.quad_mesh_positions(quad));
+        mesh.normals.extend_from_slice(&self.quad_mesh_normals());
+        mesh.indices
+            .extend_from_slice(&self.quad_mesh_indices(start_index));
     }
 
     /// Extends `mesh` with the given `quad` that belongs to this group.
     ///
     /// The texture coordinates come from `Quad::simple_tex_coords`.
     pub fn add_quad_to_pos_norm_tex_mesh(&self, quad: &Quad, mesh: &mut PosNormTexMesh) {
-        let cur_idx = mesh.positions.len();
-        mesh.indices.extend_from_slice(&self.indices(cur_idx));
-        let [c0, c1, c2, c3] = self.quad_corners(quad);
-        mesh.positions.extend_from_slice(&[c0.0, c1.0, c2.0, c3.0]);
-        mesh.normals.extend_from_slice(&[self.mesh_normal.0; 4]);
+        let start_index = mesh.positions.len() as u32;
+        mesh.positions
+            .extend_from_slice(&self.quad_mesh_positions(quad));
+        mesh.normals.extend_from_slice(&self.quad_mesh_normals());
         mesh.tex_coords.extend_from_slice(&quad.simple_tex_coords());
-    }
-
-    /// Returns the 6 vertex indices for the quad in order to make two triangles in a mesh.
-    pub fn indices(&self, start: usize) -> [usize; 6] {
-        quad_indices(start, self.n_sign * self.permutation.sign() > 0)
+        mesh.indices
+            .extend_from_slice(&self.quad_mesh_indices(start_index));
     }
 }
 
 /// Returns the vertex indices for a single quad (two triangles). The triangles may have either
 /// clockwise or counter-clockwise winding. `start` is the first index.
-pub fn quad_indices(start: usize, counter_clockwise: bool) -> [usize; 6] {
+pub fn quad_indices(start: u32, counter_clockwise: bool) -> [u32; 6] {
     if counter_clockwise {
         [start, start + 1, start + 2, start + 1, start + 3, start + 2]
     } else {
@@ -134,6 +155,19 @@ pub struct Quad {
 }
 
 impl Quad {
+    pub fn for_voxel_face(voxel_point: Point3i, face: SignedAxis3) -> Self {
+        let mut minimum = voxel_point;
+        if face.sign > 0 {
+            minimum += face.axis.get_unit_vector();
+        }
+
+        Self {
+            minimum,
+            width: 1,
+            height: 1,
+        }
+    }
+
     /// Returns the UV coordinates of the 4 corners of the quad. Returns in the same order as
     /// `OrientedCubeFace::quad_corners`.
     ///

@@ -11,7 +11,7 @@ pub mod point2;
 pub mod point3;
 pub mod point_traits;
 
-pub use axis::{Axis2, Axis3, Axis3Permutation};
+pub use axis::{Axis2, Axis3, Axis3Permutation, SignedAxis2, SignedAxis3};
 pub use extent::{bounding_extent, Extent, ExtentN, IntegerExtent};
 pub use extent2::{Extent2, Extent2f, Extent2i};
 pub use extent3::{Extent3, Extent3f, Extent3i};

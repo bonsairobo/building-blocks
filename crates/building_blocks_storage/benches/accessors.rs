@@ -10,11 +10,9 @@ fn array_for_each_stride(c: &mut Criterion) {
             b.iter_with_setup(
                 || set_up_array(size),
                 |(array, iter_extent)| {
-                    let mut sum = 0;
-                    array.for_each(&iter_extent, |_stride: Stride, value| {
-                        sum += value;
+                    array.for_each(&iter_extent, |stride: Stride, value| {
+                        black_box((stride, value));
                     });
-                    black_box(sum);
                 },
             );
         });
@@ -29,11 +27,9 @@ fn array_for_each_point(c: &mut Criterion) {
             b.iter_with_setup(
                 || set_up_array(size),
                 |(array, iter_extent)| {
-                    let mut sum = 0;
-                    array.for_each(&iter_extent, |_p: Point3i, value| {
-                        sum += value;
+                    array.for_each(&iter_extent, |p: Point3i, value| {
+                        black_box((p, value));
                     });
-                    black_box(sum);
                 },
             );
         });
@@ -51,11 +47,9 @@ fn chunk_map_for_each_point(c: &mut Criterion) {
                     let local_cache = LocalChunkCache3::new();
                     let reader = ChunkMapReader3::new(&chunk_map, &local_cache);
 
-                    let mut sum = 0;
-                    reader.for_each(&iter_extent, |_p: Point3i, value| {
-                        sum += value;
+                    reader.for_each(&iter_extent, |p: Point3i, value| {
+                        black_box((p, value));
                     });
-                    black_box(sum);
                 },
             );
         });
@@ -70,11 +64,9 @@ fn array_point_indexing(c: &mut Criterion) {
             b.iter_with_setup(
                 || set_up_array(size),
                 |(array, iter_extent)| {
-                    let mut sum = 0;
                     for p in iter_extent.iter_points() {
-                        sum += array.get(&p);
+                        black_box(array.get(&p));
                     }
-                    black_box(sum);
                 },
             );
         });
@@ -92,11 +84,9 @@ fn chunk_map_point_indexing(c: &mut Criterion) {
                     let local_cache = LocalChunkCache3::new();
                     let reader = ChunkMapReader3::new(&chunk_map, &local_cache);
 
-                    let mut sum = 0;
                     for p in iter_extent.iter_points() {
-                        sum += reader.get(&p);
+                        black_box(reader.get(&p));
                     }
-                    black_box(sum);
                 },
             );
         });

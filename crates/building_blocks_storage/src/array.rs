@@ -580,7 +580,7 @@ impl_array_for_each!(
 );
 impl_array_for_each!(
     coords: PointN<N>;
-    forwarder = |p, stride| p;
+    forwarder = |p, _stride| p;
 );
 
 //  ██████╗ ██████╗ ██████╗ ██╗   ██╗

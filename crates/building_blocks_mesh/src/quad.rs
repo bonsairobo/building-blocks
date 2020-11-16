@@ -135,7 +135,7 @@ pub struct Quad {
 
 impl Quad {
     /// Returns the UV coordinates of the 4 corners of the quad. Returns in the same order as
-    /// `QuadGroup::quad_corners`.
+    /// `OrientedCubeFace::quad_corners`.
     ///
     /// This is just one way of assigning UVs to voxel quads. It assumes that each material has a
     /// single tile texture with wrapping coordinates, and each voxel face should show the entire

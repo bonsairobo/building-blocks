@@ -1,4 +1,4 @@
-use super::{PosNormMesh, PosNormTexMesh};
+use super::quad::{Axis3Permutation, OrientedCubeFace, Quad, QuadGroup};
 
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{access::GetUncheckedRelease, prelude::*, IsEmpty};
@@ -23,8 +23,17 @@ pub struct GreedyQuadsBuffer<M> {
 
 impl<M> GreedyQuadsBuffer<M> {
     pub fn new(extent: Extent3i) -> Self {
+        let quad_groups = [
+            QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::XZY)),
+            QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::YXZ)),
+            QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::ZXY)),
+            QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::XZY)),
+            QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::YXZ)),
+            QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::ZXY)),
+        ];
+
         Self {
-            quad_groups: QuadGroup::init_all_groups(),
+            quad_groups,
             visited: Array3::fill(extent, false),
         }
     }
@@ -82,11 +91,10 @@ pub fn greedy_quads<V, T>(
         quad_groups,
     } = output;
 
-    // Avoid accessing out of bounds with a 3x3x3 kernel.
     let Extent3i {
         shape: interior_shape,
         minimum: interior_min,
-    } = extent.padded(-1);
+    } = extent.padded(-1); // Avoid accessing out of bounds with a 3x3x3 kernel.
 
     for group in quad_groups.iter_mut() {
         greedy_quads_for_group(voxels, interior_min, interior_shape, visited, group);
@@ -109,8 +117,8 @@ fn greedy_quads_for_group<V, T>(
 
     let QuadGroup {
         quads,
-        meta:
-            QuadGroupMeta {
+        face:
+            OrientedCubeFace {
                 n_sign,
                 n,
                 u,
@@ -249,191 +257,4 @@ where
     }
 
     quad_width
-}
-
-#[derive(Clone, Copy)]
-pub enum Axis {
-    X = 0,
-    Y = 1,
-    Z = 2,
-}
-
-impl Axis {
-    fn index(&self) -> usize {
-        *self as usize
-    }
-}
-
-/// A set of `Quad`s that share an orientation.
-pub struct QuadGroup<M> {
-    /// The quads themselves. We rely on the group's metadata to interpret them.
-    pub quads: Vec<(Quad, M)>,
-    pub meta: QuadGroupMeta,
-}
-
-impl<M> QuadGroup<M> {
-    pub fn new(meta: QuadGroupMeta) -> Self {
-        Self {
-            quads: Vec::new(),
-            meta,
-        }
-    }
-
-    pub fn init_all_groups() -> [Self; 6] {
-        // NOTE: As a heuristic, we intentionally avoid using Y as the U direction, because we
-        // expect that X and Z will be longer for most voxel terrains.
-        [
-            //                                 +/- N        U        V
-            Self::new(QuadGroupMeta::new(-1, Axis::X, Axis::Z, Axis::Y)),
-            Self::new(QuadGroupMeta::new(-1, Axis::Y, Axis::X, Axis::Z)),
-            Self::new(QuadGroupMeta::new(-1, Axis::Z, Axis::X, Axis::Y)),
-            Self::new(QuadGroupMeta::new(1, Axis::X, Axis::Z, Axis::Y)),
-            Self::new(QuadGroupMeta::new(1, Axis::Y, Axis::X, Axis::Z)),
-            Self::new(QuadGroupMeta::new(1, Axis::Z, Axis::X, Axis::Y)),
-        ]
-    }
-}
-
-/// Metadata that's used to aid in the geometric calculations for one of the 6 possible cube faces.
-pub struct QuadGroupMeta {
-    // Determines whether we're looking at a positive or negative face of each cube.
-    pub n_sign: i32,
-
-    // Used for indexing.
-    pub n_axis: Axis,
-    pub u_axis: Axis,
-    pub v_axis: Axis,
-
-    // These vectors are always some permutation of +X, +Y, and +Z.
-    pub n: Point3i,
-    pub u: Point3i,
-    pub v: Point3i,
-
-    pub mesh_normal: Point3f,
-}
-
-impl QuadGroupMeta {
-    pub fn new(n_sign: i32, n_axis: Axis, u_axis: Axis, v_axis: Axis) -> Self {
-        let xyz = [PointN([1, 0, 0]), PointN([0, 1, 0]), PointN([0, 0, 1])];
-
-        let n = xyz[n_axis.index()];
-        let mesh_normal: Point3f = (n * n_sign).into();
-
-        Self {
-            n_sign,
-
-            n_axis,
-            u_axis,
-            v_axis,
-
-            n,
-            u: xyz[u_axis.index()],
-            v: xyz[v_axis.index()],
-
-            mesh_normal,
-        }
-    }
-
-    /// Returns the 4 corners of the quad in this order:
-    ///
-    /// ```text
-    ///         2 ----> 3
-    ///           ^
-    ///     ^       \
-    ///     |         \
-    ///  +v |   0 ----> 1
-    ///     |
-    ///      -------->
-    ///        +u
-    /// ```
-    pub fn quad_corners(&self, quad: &Quad) -> [Point3f; 4] {
-        let w_vec = self.u * quad.width;
-        let h_vec = self.v * quad.height;
-
-        let minu_minv = if self.n_sign > 0 {
-            quad.minimum + self.n
-        } else {
-            quad.minimum
-        };
-        let maxu_minv = minu_minv + w_vec;
-        let minu_maxv = minu_minv + h_vec;
-        let maxu_maxv = minu_minv + w_vec + h_vec;
-
-        [
-            minu_minv.into(),
-            maxu_minv.into(),
-            minu_maxv.into(),
-            maxu_maxv.into(),
-        ]
-    }
-
-    /// Returns the 6 vertex indices for the quad in order to make two triangles in a mesh.
-    pub fn indices(&self, start: usize) -> [usize; 6] {
-        match self.n_axis {
-            Axis::X => quad_indices(start, self.n_sign > 0),
-            Axis::Y => quad_indices(start, self.n_sign > 0),
-            // Sign is intentionally flipped because sign of NUV permutation is different when using
-            // our heuristic.
-            Axis::Z => quad_indices(start, self.n_sign < 0),
-        }
-    }
-
-    /// Extends `mesh` with the given `quad` that belongs to this group.
-    pub fn add_quad_to_pos_norm_mesh(&self, quad: &Quad, mesh: &mut PosNormMesh) {
-        let cur_idx = mesh.positions.len();
-        mesh.indices.extend_from_slice(&self.indices(cur_idx));
-        let [c0, c1, c2, c3] = self.quad_corners(quad);
-        mesh.positions.extend_from_slice(&[c0.0, c1.0, c2.0, c3.0]);
-        mesh.normals.extend_from_slice(&[self.mesh_normal.0; 4]);
-    }
-
-    /// Extends `mesh` with the given `quad` that belongs to this group.
-    ///
-    /// The texture coordinates come from `Quad::simple_tex_coords`.
-    pub fn add_quad_to_pos_norm_tex_mesh(&self, quad: &Quad, mesh: &mut PosNormTexMesh) {
-        let cur_idx = mesh.positions.len();
-        mesh.indices.extend_from_slice(&self.indices(cur_idx));
-        let [c0, c1, c2, c3] = self.quad_corners(quad);
-        mesh.positions.extend_from_slice(&[c0.0, c1.0, c2.0, c3.0]);
-        mesh.normals.extend_from_slice(&[self.mesh_normal.0; 4]);
-        mesh.tex_coords.extend_from_slice(&quad.simple_tex_coords());
-    }
-}
-
-/// Returns the vertex indices for a single quad (two triangles). The triangles may have either
-/// clockwise or counter-clockwise winding. `start` is the first index.
-pub fn quad_indices(start: usize, clockwise: bool) -> [usize; 6] {
-    if clockwise {
-        [start, start + 2, start + 1, start + 1, start + 2, start + 3]
-    } else {
-        [start, start + 1, start + 2, start + 1, start + 3, start + 2]
-    }
-}
-
-/// A single quad of connected cubic voxel faces. Must belong to a `QuadGroup` to be useful.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Quad {
-    pub minimum: Point3i,
-    pub width: i32,
-    pub height: i32,
-}
-
-impl Quad {
-    /// Returns the UV coordinates of the 4 corners of the quad. Returns in the same order as
-    /// `QuadGroup::quad_corners`.
-    ///
-    /// This is just one way of assigning UVs to voxel quads. It assumes that each material has a
-    /// single tile texture with wrapping coordinates, and each voxel face should show the entire
-    /// texture. It also assumes a particular orientation for the texture. This should be sufficient
-    /// for minecraft-style meshing.
-    ///
-    /// If you need to use a texture atlas, you must calculate your own coordinates from the `Quad`.
-    pub fn simple_tex_coords(&self) -> [[f32; 2]; 4] {
-        [
-            [0.0, 0.0],
-            [self.width as f32, 0.0],
-            [0.0, self.height as f32],
-            [self.width as f32, self.height as f32],
-        ]
-    }
 }

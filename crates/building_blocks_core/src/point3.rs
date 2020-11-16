@@ -30,6 +30,11 @@ impl<T> Point3<T> {
     pub fn z_mut(&mut self) -> &mut T {
         &mut self.0[2]
     }
+
+    #[inline]
+    pub fn axis_component(&self, axis: Axis3) -> &T {
+        &self.0[axis.index()]
+    }
 }
 
 impl<T> Point3<T>
@@ -492,5 +497,20 @@ pub mod mint_conversions {
         fn from(p: Point3<T>) -> Self {
             mint::Vector3::from_slice(&p.0)
         }
+    }
+}
+
+/// Either the X, Y, or Z axis.
+#[derive(Clone, Copy)]
+pub enum Axis3 {
+    X = 0,
+    Y = 1,
+    Z = 2,
+}
+
+impl Axis3 {
+    /// The index for a point's component on this axis.
+    pub fn index(&self) -> usize {
+        *self as usize
     }
 }

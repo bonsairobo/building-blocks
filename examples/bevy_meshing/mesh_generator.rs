@@ -317,7 +317,7 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
                 let mut mesh = PosNormMesh::default();
                 for group in buffer.quad_groups.iter() {
                     for (quad, _material) in group.quads.iter() {
-                        group.meta.add_quad_to_pos_norm_mesh(&quad, &mut mesh);
+                        group.face.add_quad_to_pos_norm_mesh(&quad, &mut mesh);
                     }
                 }
 

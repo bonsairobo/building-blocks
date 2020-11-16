@@ -14,8 +14,8 @@ pub use extent::{bounding_extent, Extent, ExtentN, IntegerExtent};
 pub use extent2::{Extent2, Extent2f, Extent2i};
 pub use extent3::{Extent3, Extent3f, Extent3i};
 pub use point::PointN;
-pub use point2::{Point2, Point2f, Point2i};
-pub use point3::{Point3, Point3f, Point3i};
+pub use point2::{Axis2, Point2, Point2f, Point2i};
+pub use point3::{Axis3, Point3, Point3f, Point3i};
 pub use point_traits::{
     Bounded, ComponentwiseIntegerOps, Distance, DotProduct, GetComponent, IntegerPoint,
     MapComponents, Neighborhoods, Norm, NormSquared, Ones, Point, SmallZero,
@@ -25,9 +25,9 @@ pub use num;
 
 pub mod prelude {
     pub use super::{
-        Bounded, ComponentwiseIntegerOps, Distance, DotProduct, Extent, Extent2, Extent2f,
-        Extent2i, Extent3, Extent3f, Extent3i, ExtentN, GetComponent, IntegerExtent, IntegerPoint,
-        MapComponents, Neighborhoods, Norm, NormSquared, Ones, Point, Point2, Point2f, Point2i,
-        Point3, Point3f, Point3i, PointN, SmallZero,
+        Axis2, Axis3, Bounded, ComponentwiseIntegerOps, Distance, DotProduct, Extent, Extent2,
+        Extent2f, Extent2i, Extent3, Extent3f, Extent3i, ExtentN, GetComponent, IntegerExtent,
+        IntegerPoint, MapComponents, Neighborhoods, Norm, NormSquared, Ones, Point, Point2,
+        Point2f, Point2i, Point3, Point3f, Point3i, PointN, SmallZero,
     };
 }

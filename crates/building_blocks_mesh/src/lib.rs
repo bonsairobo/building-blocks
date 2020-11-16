@@ -78,14 +78,16 @@
 
 pub mod greedy_quads;
 pub mod height_map;
+pub mod quad;
 pub mod surface_nets;
 
 pub use greedy_quads::{
-    greedy_quads, padded_greedy_quads_chunk_extent, GreedyQuadsBuffer, MaterialVoxel, Quad,
+    greedy_quads, padded_greedy_quads_chunk_extent, GreedyQuadsBuffer, MaterialVoxel,
 };
 pub use height_map::{
     padded_height_map_chunk_extent, triangulate_height_map, Height, HeightMapMeshBuffer,
 };
+pub use quad::{OrientedCubeFace, Quad, QuadGroup};
 pub use surface_nets::{
     padded_surface_nets_chunk_extent, surface_nets, SignedDistance, SurfaceNetsBuffer,
 };

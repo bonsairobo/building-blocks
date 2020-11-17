@@ -176,7 +176,7 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
     let sdf = sdf.get_sdf();
     let sample_extent = Extent3i::from_min_and_shape(PointN([-20; 3]), PointN([40; 3])).padded(1);
     let chunk_shape = PointN([CHUNK_SIZE; 3]);
-    let ambient_value = std::f32::INFINITY; // air
+    let ambient_value = std::f32::MAX; // air
     let default_chunk_meta = ();
     // Normally we'd keep this map around in a resource, but we don't need to for this specific
     // example. We could also use an Array3 here instead of a ChunkMap3, but we use chunks for

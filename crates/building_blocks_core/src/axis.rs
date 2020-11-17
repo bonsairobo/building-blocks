@@ -14,6 +14,7 @@ impl Axis2 {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct SignedAxis2 {
     pub sign: i32,
     pub axis: Axis2,
@@ -42,6 +43,7 @@ impl Axis3 {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum Axis3Permutation {
     // Even permutations
     XYZ,
@@ -93,6 +95,7 @@ impl Axis3Permutation {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct SignedAxis3 {
     pub sign: i32,
     pub axis: Axis3,

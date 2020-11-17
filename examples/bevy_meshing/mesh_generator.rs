@@ -350,9 +350,7 @@ fn create_mesh_entity(
         "Vertex_UV",
         VertexAttributeValues::Float2(vec![[0.0; 2]; num_vertices]),
     );
-    render_mesh.set_indices(Some(Indices::U32(
-        mesh.indices.iter().map(|i| *i as u32).collect(),
-    )));
+    render_mesh.set_indices(Some(Indices::U32(mesh.indices)));
 
     commands
         .spawn(PbrComponents {

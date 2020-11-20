@@ -12,8 +12,10 @@ keywords = ["voxel"]
 all-features = true
 
 [features]
-default = ["mesh", "partition", "procgen", "search"]
+default = ["mesh", "partition", "procgen", "search", "compress-lz4"]
 
+compress-lz4 = ["building_blocks_storage/compress-lz4"]
+compress-snappy = ["building_blocks_storage/compress-snappy"]
 image = ["building_blocks_image"]
 mesh = ["building_blocks_mesh"]
 mint = ["building_blocks_core/mint"]

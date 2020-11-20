@@ -9,18 +9,24 @@ keywords = ["voxel"]
 
 description = "Efficient storage for maps on sparse or dense, 2D and 3D integer lattices."
 
+[features]
+compress-lz4 = ["lz4", "compressible-map/bincode_lz4"]
+compress-snappy = ["snap", "compressible-map/bincode_snappy"]
+
 [dependencies]
 either = "1.6"
 fnv = "1.0"
 futures = "0.3"
 itertools = "0.9"
-lz4 = "1.23"
+lz4 = { version = "1.23", optional = true }
 num = "0.3"
 serde = { version = "1.0", features = ["derive"] }
+snap = { version = "1.0.3", optional = true }
 
 building_blocks_core = { path = "../building_blocks_core", version = "0.2" }
 
-compressible-map = { version = "^0.1.5", features = ["bincode_lz4"] }
+# FIXME: point this at the new release once compressible-map gets a new release
+compressible-map = { git = "https://github.com/bonsairobo/compressible-map", rev = "c7d80e1" }
 
 [dev-dependencies]
 criterion = "0.3"

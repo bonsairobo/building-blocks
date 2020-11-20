@@ -18,7 +18,11 @@ pub mod func;
 pub mod transform_map;
 
 pub use access::{copy_extent, ForEach, ForEachMut, Get, GetMut, ReadExtent, WriteExtent};
-pub use array::{Array, ArrayN, FastLz4, Local, Stride};
+#[cfg(feature = "compress-lz4")]
+pub use array::FastLz4;
+#[cfg(feature = "compress-snappy")]
+pub use array::FastSnappy;
+pub use array::{Array, ArrayN, Local, Stride};
 pub use array2::Array2;
 pub use array3::Array3;
 pub use chunk_map::{
@@ -36,10 +40,14 @@ pub trait IsEmpty {
 pub mod prelude {
     pub use super::{
         copy_extent, Array, Array2, Array3, ArrayN, Chunk2, Chunk3, ChunkMap2, ChunkMap3,
-        ChunkMapReader2, ChunkMapReader3, Compressible, Decompressible, FastLz4, ForEach,
+        ChunkMapReader2, ChunkMapReader3, Compressible, Decompressible, ForEach,
         ForEachMut, Get, GetMut, IsEmpty, Local, LocalChunkCache2, LocalChunkCache3, ReadExtent,
         Stride, TransformMap, WriteExtent,
     };
+    #[cfg(feature = "compress-lz4")]
+    pub use super::FastLz4;
+    #[cfg(feature = "compress-snappy")]
+    pub use super::FastSnappy;
 }
 
 pub use compressible_map::{self, Compressible, Decompressible};

@@ -46,8 +46,13 @@
 //! let chunk_shape = PointN([16; 3]);
 //! let ambient_value = 0;
 //! let default_chunk_metadata = ();
+//! # #[cfg(feature = "compress-lz4")]
 //! let mut other_map = ChunkMap3::new(
 //!     chunk_shape, ambient_value, default_chunk_metadata, FastLz4 { level: 10 }
+//! );
+//! # #[cfg(feature = "compress-snappy")]
+//! let mut other_map = ChunkMap3::new(
+//!     chunk_shape, ambient_value, default_chunk_metadata, FastSnappy
 //! );
 //! copy_extent(&subextent, &map, &mut other_map);
 //! let local_cache = LocalChunkCache3::new();

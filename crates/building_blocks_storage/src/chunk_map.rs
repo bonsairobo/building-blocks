@@ -21,8 +21,13 @@
 //! let chunk_shape = PointN([16; 3]); // components must be powers of 2
 //! let ambient_value = 0;
 //! let default_chunk_meta = (); // chunk metadata is optional
+//! # #[cfg(feature = "compress-lz4")]
 //! let mut map = ChunkMap3::new(
 //!     chunk_shape, ambient_value, default_chunk_meta, FastLz4 { level: 10 }
+//! );
+//! # #[cfg(feature = "compress-snappy")]
+//! let mut map = ChunkMap3::new(
+//!     chunk_shape, ambient_value, default_chunk_meta, FastSnappy
 //! );
 //!
 //! // Although we only write 3 points, 3 whole dense chunks will be inserted and cached.
@@ -85,17 +90,25 @@ use crate::{
     access::{
         ForEach, ForEachMut, GetUncheckedMutRelease, GetUncheckedRelease, ReadExtent, WriteExtent,
     },
-    array::{Array, ArrayCopySrc, ArrayN, FastLz4CompressedArrayN},
-    FastLz4, Get, GetMut,
+    array::{Array, ArrayCopySrc, ArrayN},
+    Get, GetMut,
 };
+#[cfg(feature = "compress-lz4")]
+use crate::{FastLz4, array::FastLz4CompressedArrayN};
+#[cfg(feature = "compress-snappy")]
+use crate::{FastSnappy, array::FastSnappyCompressedArrayN};
 
 use building_blocks_core::{
     bounding_extent, ComponentwiseIntegerOps, ExtentN, IntegerExtent, IntegerPoint, MapComponents,
     Ones, Point2i, Point3i, PointN,
 };
 
+#[cfg(feature = "compress-lz4")]
+use compressible_map::{BincodeLz4, BincodeLz4Compressed};
+#[cfg(feature = "compress-snappy")]
+use compressible_map::{BincodeSnappy, BincodeSnappyCompressed};
 use compressible_map::{
-    BincodeLz4, BincodeLz4Compressed, Compressible, CompressibleMap, Decompressible, LocalCache,
+    Compressible, CompressibleMap, Decompressible, LocalCache,
     MaybeCompressed,
 };
 use core::hash::Hash;
@@ -128,7 +141,10 @@ where
     /// The chunks themselves, stored in a `CompressibleMap`.
     ///
     /// SAFETY: Don't mutate this directly unless you know what you're doing.
+    #[cfg(feature = "compress-lz4")]
     pub chunks: CompressibleFnvMap<PointN<N>, Chunk<N, T, M>, FastLz4>,
+    #[cfg(feature = "compress-snappy")]
+    pub chunks: CompressibleFnvMap<PointN<N>, Chunk<N, T, M>, FastSnappy>,
 }
 
 pub type ChunkMap2<T, M = ()> = ChunkMap<[i32; 2], T, M>;
@@ -165,11 +181,15 @@ impl<N, T> Chunk<N, T, ()> {
 
 pub struct FastCompressedChunk<N, T, M = ()> {
     pub metadata: M, // metadata doesn't get compressed, hope it's small!
+    #[cfg(feature = "compress-lz4")]
     pub compressed_array: FastLz4CompressedArrayN<N, T>,
+    #[cfg(feature = "compress-snappy")]
+    pub compressed_array: FastSnappyCompressedArrayN<N, T>,
 }
 
 // PERF: cloning the metadata is unfortunate
 
+#[cfg(feature = "compress-lz4")]
 impl<N, T, M> Decompressible<FastLz4> for FastCompressedChunk<N, T, M>
 where
     T: Copy,
@@ -186,6 +206,24 @@ where
     }
 }
 
+#[cfg(feature = "compress-snappy")]
+impl<N, T, M> Decompressible<FastSnappy> for FastCompressedChunk<N, T, M>
+where
+    T: Copy,
+    M: Clone,
+    ExtentN<N>: IntegerExtent<N>,
+{
+    type Decompressed = Chunk<N, T, M>;
+
+    fn decompress(&self) -> Self::Decompressed {
+        Chunk {
+            metadata: self.metadata.clone(),
+            array: self.compressed_array.decompress(),
+        }
+    }
+}
+
+#[cfg(feature = "compress-lz4")]
 impl<N, T, M> Compressible<FastLz4> for Chunk<N, T, M>
 where
     T: Copy,
@@ -195,6 +233,23 @@ where
     type Compressed = FastCompressedChunk<N, T, M>;
 
     fn compress(&self, params: FastLz4) -> Self::Compressed {
+        FastCompressedChunk {
+            metadata: self.metadata.clone(),
+            compressed_array: self.array.compress(params),
+        }
+    }
+}
+
+#[cfg(feature = "compress-snappy")]
+impl<N, T, M> Compressible<FastSnappy> for Chunk<N, T, M>
+where
+    T: Copy,
+    M: Clone,
+    ExtentN<N>: IntegerExtent<N>,
+{
+    type Compressed = FastCompressedChunk<N, T, M>;
+
+    fn compress(&self, params: FastSnappy) -> Self::Compressed {
         FastCompressedChunk {
             metadata: self.metadata.clone(),
             compressed_array: self.array.compress(params),
@@ -243,6 +298,7 @@ where
     PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
 {
+    #[cfg(feature = "compress-lz4")]
     /// Creates an empty map.
     ///
     /// All dimensions of `chunk_shape` must be powers of 2.
@@ -250,7 +306,30 @@ where
         chunk_shape: PointN<N>,
         ambient_value: T,
         default_chunk_metadata: M,
+        #[cfg(feature = "compress-lz4")]
         compression_params: FastLz4,
+        #[cfg(feature = "compress-snappy")]
+        compression_params: FastSnappy,
+    ) -> Self {
+        Self {
+            chunk_shape,
+            chunk_shape_mask: chunk_shape.mask(),
+            chunk_shape_log2: chunk_shape.ilog2(),
+            ambient_value,
+            default_chunk_metadata,
+            chunks: CompressibleFnvMap::new(compression_params),
+        }
+    }
+
+    #[cfg(feature = "compress-snappy")]
+    /// Creates an empty map.
+    ///
+    /// All dimensions of `chunk_shape` must be powers of 2.
+    pub fn new(
+        chunk_shape: PointN<N>,
+        ambient_value: T,
+        default_chunk_metadata: M,
+        compression_params: FastSnappy,
     ) -> Self {
         Self {
             chunk_shape,
@@ -432,7 +511,15 @@ where
         (key, array.get_unchecked_mut_release(p))
     }
 
+    #[cfg(feature = "compress-lz4")]
     /// Compressed the least-recently-used chunk using LZ4 compression. On access, compressed chunks
+    /// will be decompressed and cached.
+    pub fn compress_lru_chunk(&mut self) {
+        self.chunks.compress_lru();
+    }
+
+    #[cfg(feature = "compress-snappy")]
+    /// Compressed the least-recently-used chunk using snappy compression. On access, compressed chunks
     /// will be decompressed and cached.
     pub fn compress_lru_chunk(&mut self) {
         self.chunks.compress_lru();
@@ -444,6 +531,7 @@ where
         self.chunks.flush_local_cache(local_cache);
     }
 
+    #[cfg(feature = "compress-lz4")]
     /// Returns a serializable version of this map. This will compress every chunk in a portable
     /// way.
     pub async fn to_serializable(&self, params: BincodeLz4) -> SerializableChunkMap<N, T, M>
@@ -479,9 +567,80 @@ where
         }
     }
 
+    #[cfg(feature = "compress-snappy")]
+    /// Returns a serializable version of this map. This will compress every chunk in a portable
+    /// way.
+    pub async fn to_serializable(&self, params: BincodeSnappy) -> SerializableChunkMap<N, T, M>
+    where
+        Chunk<N, T, M>: DeserializeOwned + Serialize,
+    {
+        let chunk_futures: Vec<_> = self
+            .chunks
+            .iter_maybe_compressed()
+            .map(|(chunk_key, chunk)| {
+                let future = async move {
+                    let portable_chunk: BincodeSnappyCompressed<Chunk<N, T, M>> = match chunk {
+                        MaybeCompressed::Compressed(compressed_chunk) => {
+                            compressed_chunk.decompress().compress(params)
+                        }
+                        MaybeCompressed::Decompressed(chunk) => chunk.compress(params),
+                    };
+
+                    (*chunk_key, portable_chunk)
+                };
+
+                future
+            })
+            .collect();
+
+        let compressed_chunks = join_all(chunk_futures).await.into_iter().collect();
+
+        SerializableChunkMap {
+            chunk_shape: self.chunk_shape,
+            ambient_value: self.ambient_value,
+            default_chunk_metadata: self.default_chunk_metadata.clone(),
+            compressed_chunks,
+        }
+    }
+
+    #[cfg(feature = "compress-lz4")]
     /// Returns a new map from the serialized, compressed version. This will decompress each chunk
     /// and compress it again, but in a faster format.
     pub async fn from_serializable(map: &SerializableChunkMap<N, T, M>, params: FastLz4) -> Self
+    where
+        Chunk<N, T, M>: DeserializeOwned + Serialize,
+    {
+        let all_futures: Vec<_> = map
+            .compressed_chunks
+            .iter()
+            .map(|(chunk_key, compressed_chunk)| {
+                let future = async move {
+                    let decompressed = compressed_chunk.decompress();
+                    let recompressed = decompressed.compress(params);
+
+                    (*chunk_key, recompressed)
+                };
+
+                future
+            })
+            .collect();
+
+        let all_compressed = join_all(all_futures).await.into_iter().collect();
+
+        Self {
+            chunk_shape: map.chunk_shape,
+            chunk_shape_mask: map.chunk_shape.mask(),
+            chunk_shape_log2: map.chunk_shape.ilog2(),
+            ambient_value: map.ambient_value,
+            default_chunk_metadata: map.default_chunk_metadata.clone(),
+            chunks: CompressibleFnvMap::from_all_compressed(params, all_compressed),
+        }
+    }
+
+    #[cfg(feature = "compress-snappy")]
+    /// Returns a new map from the serialized, compressed version. This will decompress each chunk
+    /// and compress it again, but in a faster format.
+    pub async fn from_serializable(map: &SerializableChunkMap<N, T, M>, params: FastSnappy) -> Self
     where
         Chunk<N, T, M>: DeserializeOwned + Serialize,
     {
@@ -581,6 +740,7 @@ where
     }
 }
 
+#[cfg(feature = "compress-lz4")]
 /// Call `ChunkMap::to_serializable` to get this type, which is an LZ4-compressed,
 /// serde-serializable type.
 #[allow(clippy::type_complexity)]
@@ -593,6 +753,21 @@ where
     pub ambient_value: T,
     pub default_chunk_metadata: M,
     pub compressed_chunks: FnvHashMap<PointN<N>, BincodeLz4Compressed<Chunk<N, T, M>>>,
+}
+
+#[cfg(feature = "compress-snappy")]
+/// Call `ChunkMap::to_serializable` to get this type, which is an snappy-compressed,
+/// serde-serializable type.
+#[allow(clippy::type_complexity)]
+#[derive(Deserialize, Serialize)]
+pub struct SerializableChunkMap<N, T, M = ()>
+where
+    PointN<N>: Eq + Hash,
+{
+    pub chunk_shape: PointN<N>,
+    pub ambient_value: T,
+    pub default_chunk_metadata: M,
+    pub compressed_chunks: FnvHashMap<PointN<N>, BincodeSnappyCompressed<Chunk<N, T, M>>>,
 }
 
 pub type SerializableChunkMap2<T, M = ()> = SerializableChunkMap<[i32; 2], T, M>;
@@ -887,6 +1062,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "compress-lz4")]
     #[test]
     fn write_and_read_points() {
         let chunk_shape = PointN([16; 3]);
@@ -910,6 +1086,31 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "compress-snappy")]
+    #[test]
+    fn write_and_read_points() {
+        let chunk_shape = PointN([16; 3]);
+        let ambient_value = 0;
+        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), FastSnappy);
+
+        let points = [
+            [0, 0, 0],
+            [1, 2, 3],
+            [16, 0, 0],
+            [0, 16, 0],
+            [0, 0, 16],
+            [15, 0, 0],
+            [-15, 0, 0],
+        ];
+
+        for p in points.iter().cloned() {
+            assert_eq!(map.get_mut(&PointN(p)), &mut 0);
+            *map.get_mut(&PointN(p)) = 1;
+            assert_eq!(map.get_mut(&PointN(p)), &mut 1);
+        }
+    }
+
+    #[cfg(feature = "compress-lz4")]
     #[test]
     fn write_extent_with_for_each_then_read() {
         let chunk_shape = PointN([16; 3]);
@@ -931,6 +1132,29 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "compress-snappy")]
+    #[test]
+    fn write_extent_with_for_each_then_read() {
+        let chunk_shape = PointN([16; 3]);
+        let ambient_value = 0;
+        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), FastSnappy);
+
+        let write_extent = Extent3i::from_min_and_shape(PointN([10; 3]), PointN([80; 3]));
+        map.for_each_mut(&write_extent, |_p, value| *value = 1);
+
+        let read_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
+        let local_cache = LocalChunkCache3::new();
+        let reader = ChunkMapReader3::new(&map, &local_cache);
+        for p in read_extent.iter_points() {
+            if write_extent.contains(&p) {
+                assert_eq!(reader.get(&p), 1);
+            } else {
+                assert_eq!(reader.get(&p), 0);
+            }
+        }
+    }
+
+    #[cfg(feature = "compress-lz4")]
     #[test]
     fn copy_extent_from_array_then_read() {
         let extent_to_copy = Extent3i::from_min_and_shape(PointN([10; 3]), PointN([80; 3]));
@@ -939,6 +1163,30 @@ mod tests {
         let chunk_shape = PointN([16; 3]);
         let ambient_value = 0;
         let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), FastLz4 { level: 10 });
+
+        copy_extent(&extent_to_copy, &array, &mut map);
+
+        let read_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
+        let local_cache = LocalChunkCache3::new();
+        let reader = ChunkMapReader3::new(&map, &local_cache);
+        for p in read_extent.iter_points() {
+            if extent_to_copy.contains(&p) {
+                assert_eq!(reader.get(&p), 1);
+            } else {
+                assert_eq!(reader.get(&p), 0);
+            }
+        }
+    }
+
+    #[cfg(feature = "compress-snappy")]
+    #[test]
+    fn copy_extent_from_array_then_read() {
+        let extent_to_copy = Extent3i::from_min_and_shape(PointN([10; 3]), PointN([80; 3]));
+        let array = Array3::fill(extent_to_copy, 1);
+
+        let chunk_shape = PointN([16; 3]);
+        let ambient_value = 0;
+        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), FastSnappy);
 
         copy_extent(&extent_to_copy, &array, &mut map);
 

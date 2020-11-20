@@ -5,9 +5,9 @@ use building_blocks_core::{
     prelude::*,
 };
 
-/// A set of `Quad`s that share an orientation.
+/// A set of `Quad`s that share an orientation. Each quad may specify a material of type `M`.
 pub struct OrientedQuads<M> {
-    /// The quads themselves. We rely on the group's metadata to interpret them.
+    /// The quads themselves. We rely on the cube face metadata to interpret them.
     pub quads: Vec<(Quad, M)>,
     /// One of 6 cube faces. All quads in this struct are comprised of only this face.
     pub face: OrientedCubeFace,

@@ -87,7 +87,7 @@ pub use greedy_quads::{
 pub use height_map::{
     padded_height_map_chunk_extent, triangulate_height_map, Height, HeightMapMeshBuffer,
 };
-pub use quad::{OrientedCubeFace, Quad, QuadGroup};
+pub use quad::{OrientedCubeFace, OrientedQuads, Quad};
 pub use surface_nets::{
     padded_surface_nets_chunk_extent, surface_nets, SignedDistance, SurfaceNetsBuffer,
 };

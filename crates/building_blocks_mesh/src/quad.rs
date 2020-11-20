@@ -6,13 +6,14 @@ use building_blocks_core::{
 };
 
 /// A set of `Quad`s that share an orientation.
-pub struct QuadGroup<M> {
+pub struct OrientedQuads<M> {
     /// The quads themselves. We rely on the group's metadata to interpret them.
     pub quads: Vec<(Quad, M)>,
+    /// One of 6 cube faces. All quads in this struct are comprised of only this face.
     pub face: OrientedCubeFace,
 }
 
-impl<M> QuadGroup<M> {
+impl<M> OrientedQuads<M> {
     pub fn new(face: OrientedCubeFace) -> Self {
         Self {
             quads: Vec::new(),
@@ -146,7 +147,7 @@ pub fn quad_indices(start: u32, counter_clockwise: bool) -> [u32; 6] {
     }
 }
 
-/// A single quad of connected cubic voxel faces. Must belong to a `QuadGroup` to be useful.
+/// A single quad of connected cubic voxel faces. Takes on more meaning when used with an `OrientedCubeFace`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Quad {
     pub minimum: Point3i,

@@ -21,7 +21,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Get Dependencies
-      run: sudo apt-get install libsdl2-dev
+      run: sudo apt install libsdl2-dev --fix-missing
     - name: Lint
       run: cargo clippy --all --all-features
     - name: Build

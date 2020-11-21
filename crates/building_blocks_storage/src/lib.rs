@@ -11,16 +11,14 @@
 
 pub mod access;
 pub mod array;
-pub mod array2;
-pub mod array3;
 pub mod chunk_map;
 pub mod func;
 pub mod transform_map;
 
 pub use access::{copy_extent, ForEach, ForEachMut, Get, GetMut, ReadExtent, WriteExtent};
-pub use array::{Array, ArrayN, FastLz4, Local, Stride};
-pub use array2::Array2;
-pub use array3::Array3;
+pub use array::{
+    Array, Array2, Array3, ArrayN, FastArrayCompression, FastCompressedArray, Local, Stride,
+};
 pub use chunk_map::{
     Chunk, Chunk2, Chunk3, ChunkMap, ChunkMap2, ChunkMap3, ChunkMapReader, ChunkMapReader2,
     ChunkMapReader3, LocalChunkCache, LocalChunkCache2, LocalChunkCache3, SerializableChunkMap,
@@ -36,10 +34,10 @@ pub trait IsEmpty {
 pub mod prelude {
     pub use super::{
         copy_extent, Array, Array2, Array3, ArrayN, Chunk2, Chunk3, ChunkMap2, ChunkMap3,
-        ChunkMapReader2, ChunkMapReader3, Compressible, Decompressible, FastLz4, ForEach,
-        ForEachMut, Get, GetMut, IsEmpty, Local, LocalChunkCache2, LocalChunkCache3, ReadExtent,
-        Stride, TransformMap, WriteExtent,
+        ChunkMapReader2, ChunkMapReader3, Compressed, Compression, FastArrayCompression, ForEach,
+        ForEachMut, Get, GetMut, IsEmpty, Local, LocalChunkCache2, LocalChunkCache3, Lz4,
+        ReadExtent, Stride, TransformMap, WriteExtent,
     };
 }
 
-pub use compressible_map::{self, Compressible, Decompressible};
+pub use compressible_map::{self, Compressed, Compression, Lz4};

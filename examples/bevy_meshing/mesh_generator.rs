@@ -185,7 +185,7 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
         chunk_shape,
         ambient_value,
         default_chunk_meta,
-        FastLz4 { level: 10 },
+        Lz4 { level: 10 },
     );
     copy_extent(&sample_extent, &sdf, &mut map);
 
@@ -238,7 +238,7 @@ fn generate_chunk_meshes_from_height_map(
         chunk_shape,
         ambient_value,
         default_chunk_meta,
-        FastLz4 { level: 10 },
+        Lz4 { level: 10 },
     );
     copy_extent(&sample_extent, &height_map, &mut map);
 
@@ -291,7 +291,7 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
         chunk_shape,
         ambient_value,
         default_chunk_meta,
-        FastLz4 { level: 10 },
+        Lz4 { level: 10 },
     );
     copy_extent(voxels.extent(), &voxels, &mut map);
 

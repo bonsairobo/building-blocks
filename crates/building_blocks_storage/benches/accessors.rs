@@ -196,5 +196,5 @@ fn default_chunk_map() -> ChunkMap3<i32, ()> {
     let chunk_shape = PointN([16; 3]);
     let ambient_value = 0;
 
-    ChunkMap3::new(chunk_shape, ambient_value, (), FastLz4 { level: 10 })
+    ChunkMap3::new(chunk_shape, ambient_value, (), Lz4 { level: 10 })
 }

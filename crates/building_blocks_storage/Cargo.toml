@@ -20,7 +20,8 @@ serde = { version = "1.0", features = ["derive"] }
 
 building_blocks_core = { path = "../building_blocks_core", version = "0.2" }
 
-compressible-map = { version = "^0.1.5", features = ["bincode_lz4"] }
+# compressible-map = { version = "^0.1.5", features = ["bincode_lz4"] }
+compressible-map = { git = "https://github.com/bonsairobo/compressible-map.git", features = ["compressed-bincode", "lz4"] }
 
 [dev-dependencies]
 criterion = "0.3"

@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{compressible_map::BincodeLz4, prelude::*};
+use building_blocks_storage::{compressible_map::BincodeCompression, prelude::*};
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
@@ -8,7 +8,7 @@ fn decompress_array_with_bincode_lz4(c: &mut Criterion) {
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
-                || set_up_array(size).compress(BincodeLz4 { level: 10 }),
+                || BincodeCompression::new(Lz4 { level: 10 }).compress(&set_up_array(size)),
                 |compressed_array| {
                     compressed_array.decompress();
                 },
@@ -23,7 +23,7 @@ fn decompress_array_with_fast_lz4(c: &mut Criterion) {
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
-                || set_up_array(size).compress(FastLz4 { level: 10 }),
+                || FastArrayCompression::new(Lz4 { level: 10 }).compress(&set_up_array(size)),
                 |compressed_array| {
                     compressed_array.decompress();
                 },

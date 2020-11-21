@@ -22,7 +22,7 @@
 //! let ambient_value = 0;
 //! let default_chunk_meta = (); // chunk metadata is optional
 //! let mut map = ChunkMap3::new(
-//!     chunk_shape, ambient_value, default_chunk_meta, FastLz4 { level: 10 }
+//!     chunk_shape, ambient_value, default_chunk_meta, Lz4 { level: 10 }
 //! );
 //!
 //! // Although we only write 3 points, 3 whole dense chunks will be inserted and cached.
@@ -85,8 +85,8 @@ use crate::{
     access::{
         ForEach, ForEachMut, GetUncheckedMutRelease, GetUncheckedRelease, ReadExtent, WriteExtent,
     },
-    array::{Array, ArrayCopySrc, ArrayN, FastLz4CompressedArrayN},
-    FastLz4, Get, GetMut,
+    array::{Array, ArrayCopySrc, ArrayN, FastArrayCompression},
+    Get, GetMut,
 };
 
 use building_blocks_core::{
@@ -95,8 +95,7 @@ use building_blocks_core::{
 };
 
 use compressible_map::{
-    BincodeLz4, BincodeLz4Compressed, Compressible, CompressibleMap, Decompressible, LocalCache,
-    MaybeCompressed,
+    BincodeCompression, Compressed, CompressibleMap, Compression, LocalCache, Lz4, MaybeCompressed,
 };
 use core::hash::Hash;
 use core::ops::{Div, Mul};
@@ -128,7 +127,7 @@ where
     /// The chunks themselves, stored in a `CompressibleMap`.
     ///
     /// SAFETY: Don't mutate this directly unless you know what you're doing.
-    pub chunks: CompressibleFnvMap<PointN<N>, Chunk<N, T, M>, FastLz4>,
+    pub chunks: CompressibleFnvMap<PointN<N>, Chunk<N, T, M>, FastChunkCompression<N, T, M>>,
 }
 
 pub type ChunkMap2<T, M = ()> = ChunkMap<[i32; 2], T, M>;
@@ -163,44 +162,57 @@ impl<N, T> Chunk<N, T, ()> {
     }
 }
 
-pub struct FastCompressedChunk<N, T, M = ()> {
+pub struct FastChunkCompression<N, T, M> {
+    pub array_compression: FastArrayCompression<N, T, Lz4>, // TODO: replace Lz4 with parameter
+    marker: std::marker::PhantomData<(N, T, M)>,
+}
+
+impl<N, T, M> FastChunkCompression<N, T, M> {
+    pub fn new(bytes_compression: Lz4) -> Self {
+        Self {
+            array_compression: FastArrayCompression::new(bytes_compression),
+            marker: Default::default(),
+        }
+    }
+}
+
+pub struct FastCompressedChunk<N, T, M = ()>
+where
+    T: Copy,
+    ExtentN<N>: IntegerExtent<N>,
+{
     pub metadata: M, // metadata doesn't get compressed, hope it's small!
-    pub compressed_array: FastLz4CompressedArrayN<N, T>,
+    pub compressed_array: Compressed<FastArrayCompression<N, T, Lz4>>,
 }
 
-// PERF: cloning the metadata is unfortunate
-
-impl<N, T, M> Decompressible<FastLz4> for FastCompressedChunk<N, T, M>
+impl<N, T, M> Compression for FastChunkCompression<N, T, M>
 where
     T: Copy,
     M: Clone,
     ExtentN<N>: IntegerExtent<N>,
 {
-    type Decompressed = Chunk<N, T, M>;
+    type Data = Chunk<N, T, M>;
+    type CompressedData = FastCompressedChunk<N, T, M>;
 
-    fn decompress(&self) -> Self::Decompressed {
+    // PERF: cloning the metadata is unfortunate
+
+    fn compress(&self, chunk: &Self::Data) -> Compressed<Self> {
+        Compressed::new(FastCompressedChunk {
+            metadata: chunk.metadata.clone(),
+            compressed_array: self.array_compression.compress(&chunk.array),
+        })
+    }
+
+    fn decompress(compressed: &Self::CompressedData) -> Self::Data {
         Chunk {
-            metadata: self.metadata.clone(),
-            array: self.compressed_array.decompress(),
+            metadata: compressed.metadata.clone(),
+            array: compressed.compressed_array.decompress(),
         }
     }
 }
 
-impl<N, T, M> Compressible<FastLz4> for Chunk<N, T, M>
-where
-    T: Copy,
-    M: Clone,
-    ExtentN<N>: IntegerExtent<N>,
-{
-    type Compressed = FastCompressedChunk<N, T, M>;
-
-    fn compress(&self, params: FastLz4) -> Self::Compressed {
-        FastCompressedChunk {
-            metadata: self.metadata.clone(),
-            compressed_array: self.array.compress(params),
-        }
-    }
-}
+pub type BincodeChunkCompression<N, T, M> = BincodeCompression<Chunk<N, T, M>, Lz4>;
+pub type BincodeCompressedChunk<N, T, M> = Compressed<BincodeCompression<Chunk<N, T, M>, Lz4>>;
 
 pub trait ChunkShape<N> {
     /// Makes the mask required to convert points to chunk keys.
@@ -250,7 +262,7 @@ where
         chunk_shape: PointN<N>,
         ambient_value: T,
         default_chunk_metadata: M,
-        compression_params: FastLz4,
+        compression_params: Lz4,
     ) -> Self {
         Self {
             chunk_shape,
@@ -258,7 +270,7 @@ where
             chunk_shape_log2: chunk_shape.ilog2(),
             ambient_value,
             default_chunk_metadata,
-            chunks: CompressibleFnvMap::new(compression_params),
+            chunks: CompressibleFnvMap::new(FastChunkCompression::new(compression_params)),
         }
     }
 
@@ -446,20 +458,24 @@ where
 
     /// Returns a serializable version of this map. This will compress every chunk in a portable
     /// way.
-    pub async fn to_serializable(&self, params: BincodeLz4) -> SerializableChunkMap<N, T, M>
+    pub async fn to_serializable(
+        &self,
+        params: BincodeCompression<Chunk<N, T, M>, Lz4>,
+    ) -> SerializableChunkMap<N, T, M>
     where
         Chunk<N, T, M>: DeserializeOwned + Serialize,
+        BincodeCompression<Chunk<N, T, M>, Lz4>: Copy, // TODO: this should be inferred
     {
         let chunk_futures: Vec<_> = self
             .chunks
             .iter_maybe_compressed()
             .map(|(chunk_key, chunk)| {
                 let future = async move {
-                    let portable_chunk: BincodeLz4Compressed<Chunk<N, T, M>> = match chunk {
+                    let portable_chunk = match chunk {
                         MaybeCompressed::Compressed(compressed_chunk) => {
-                            compressed_chunk.decompress().compress(params)
+                            params.compress(&compressed_chunk.decompress())
                         }
-                        MaybeCompressed::Decompressed(chunk) => chunk.compress(params),
+                        MaybeCompressed::Decompressed(chunk) => params.compress(chunk),
                     };
 
                     (*chunk_key, portable_chunk)
@@ -481,17 +497,19 @@ where
 
     /// Returns a new map from the serialized, compressed version. This will decompress each chunk
     /// and compress it again, but in a faster format.
-    pub async fn from_serializable(map: &SerializableChunkMap<N, T, M>, params: FastLz4) -> Self
+    pub async fn from_serializable(map: &SerializableChunkMap<N, T, M>, params: Lz4) -> Self
     where
         Chunk<N, T, M>: DeserializeOwned + Serialize,
+        FastChunkCompression<N, T, M>: Copy, // TODO: should be inferred
     {
+        let params = FastChunkCompression::new(params);
         let all_futures: Vec<_> = map
             .compressed_chunks
             .iter()
             .map(|(chunk_key, compressed_chunk)| {
                 let future = async move {
                     let decompressed = compressed_chunk.decompress();
-                    let recompressed = decompressed.compress(params);
+                    let recompressed = params.compress(&decompressed);
 
                     (*chunk_key, recompressed)
                 };
@@ -587,12 +605,13 @@ where
 #[derive(Deserialize, Serialize)]
 pub struct SerializableChunkMap<N, T, M = ()>
 where
+    Chunk<N, T, M>: DeserializeOwned + Serialize,
     PointN<N>: Eq + Hash,
 {
     pub chunk_shape: PointN<N>,
     pub ambient_value: T,
     pub default_chunk_metadata: M,
-    pub compressed_chunks: FnvHashMap<PointN<N>, BincodeLz4Compressed<Chunk<N, T, M>>>,
+    pub compressed_chunks: FnvHashMap<PointN<N>, BincodeCompressedChunk<N, T, M>>,
 }
 
 pub type SerializableChunkMap2<T, M = ()> = SerializableChunkMap<[i32; 2], T, M>;
@@ -891,7 +910,7 @@ mod tests {
     fn write_and_read_points() {
         let chunk_shape = PointN([16; 3]);
         let ambient_value = 0;
-        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), FastLz4 { level: 10 });
+        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), Lz4 { level: 10 });
 
         let points = [
             [0, 0, 0],
@@ -914,7 +933,7 @@ mod tests {
     fn write_extent_with_for_each_then_read() {
         let chunk_shape = PointN([16; 3]);
         let ambient_value = 0;
-        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), FastLz4 { level: 10 });
+        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), Lz4 { level: 10 });
 
         let write_extent = Extent3i::from_min_and_shape(PointN([10; 3]), PointN([80; 3]));
         map.for_each_mut(&write_extent, |_p, value| *value = 1);
@@ -938,7 +957,7 @@ mod tests {
 
         let chunk_shape = PointN([16; 3]);
         let ambient_value = 0;
-        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), FastLz4 { level: 10 });
+        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), Lz4 { level: 10 });
 
         copy_extent(&extent_to_copy, &array, &mut map);
 

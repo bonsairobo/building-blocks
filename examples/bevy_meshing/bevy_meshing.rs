@@ -14,6 +14,7 @@ fn main() {
 
     App::build()
         .add_resource(window_desc)
+        .add_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_resource(ClearColor(Color::rgb(0.3, 0.3, 0.3)))
         .add_startup_system(setup.system())

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 /// One piece of the `ChunkMap`. Contains both some generic metadata and the data for each point in
 /// the chunk extent.
 #[derive(Clone, Deserialize, Serialize)]
-pub struct Chunk<N, T, M = ()> {
+pub struct Chunk<N, T, M> {
     pub metadata: M,
     pub array: ArrayN<N, T>,
 }

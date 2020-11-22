@@ -147,7 +147,7 @@ pub type ChunkMap3<T, M = (), B = Snappy> = ChunkMap<[i32; 3], T, M, B>;
 
 type CompressibleFnvMap<K, V, A> = CompressibleMap<K, V, A, fnv::FnvBuildHasher>;
 
-pub type LocalChunkCache<N, T, M = ()> = LocalCache<PointN<N>, Chunk<N, T, M>, fnv::FnvBuildHasher>;
+pub type LocalChunkCache<N, T, M> = LocalCache<PointN<N>, Chunk<N, T, M>, fnv::FnvBuildHasher>;
 pub type LocalChunkCache2<T, M = ()> =
     LocalCache<Point2i, Chunk<[i32; 2], T, M>, fnv::FnvBuildHasher>;
 pub type LocalChunkCache3<T, M = ()> =

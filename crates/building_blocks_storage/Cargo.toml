@@ -10,7 +10,7 @@ keywords = ["voxel", "mesh"]
 description = "Efficient storage for maps on sparse or dense, 2D and 3D integer lattices."
 
 [features]
-lz4 = ["compressible-map/lz4"]
+snappy = ["compressible-map/snap"]
 
 [dependencies]
 either = "1.6"
@@ -22,7 +22,7 @@ serde = { version = "1.0", features = ["derive"] }
 
 building_blocks_core = { path = "../building_blocks_core", version = "0.2" }
 
-compressible-map = { version = "0.2", features = ["compressed-bincode", "snap"] }
+compressible-map = { version = "0.2", features = ["compressed-bincode", "lz4"] }
 
 [dev-dependencies]
 criterion = "0.3"

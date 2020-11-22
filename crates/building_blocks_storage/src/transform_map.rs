@@ -33,7 +33,7 @@
 //! # use building_blocks_storage::prelude::*;
 //! # let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
 //! let src = Array3::fill(extent, 0);
-//! let mut dst = ChunkMap3::new(PointN([4; 3]), 0, (), Snappy);
+//! let mut dst = ChunkMap3::new(PointN([4; 3]), 0, (), Lz4 { level: 10 });
 //! let tfm = TransformMap::new(&src, &|value: i32| value + 1);
 //! copy_extent(&extent, &tfm, &mut dst);
 //! ```
@@ -246,7 +246,7 @@ mod tests {
     fn copy_from_transformed_array() {
         let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
         let src = Array3::fill(extent, 0);
-        let mut dst = ChunkMap3::new(PointN([4; 3]), 0, (), Snappy);
+        let mut dst = ChunkMap3::new(PointN([4; 3]), 0, (), Lz4 { level: 10 });
         let tfm = TransformMap::new(&src, |value: i32| value + 1);
         copy_extent(&extent, &tfm, &mut dst);
     }
@@ -255,7 +255,7 @@ mod tests {
     fn copy_from_transformed_chunk_map_reader() {
         let src_extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
         let src_array = Array3::fill(src_extent, 1);
-        let mut src = ChunkMap3::new(PointN([4; 3]), 0, (), Snappy);
+        let mut src = ChunkMap3::new(PointN([4; 3]), 0, (), Lz4 { level: 10 });
         copy_extent(&src_extent, &src_array, &mut src);
 
         let local_cache = LocalChunkCache3::new();
@@ -263,7 +263,7 @@ mod tests {
         let tfm = TransformMap::new(&src_reader, |value: i32| value + 1);
 
         let dst_extent = Extent3::from_min_and_shape(PointN([-16; 3]), PointN([32; 3]));
-        let mut dst = ChunkMap3::new(PointN([2; 3]), 0, (), Snappy);
+        let mut dst = ChunkMap3::new(PointN([2; 3]), 0, (), Lz4 { level: 10 });
         copy_extent(&dst_extent, &tfm, &mut dst);
     }
 }

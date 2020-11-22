@@ -37,14 +37,14 @@ pub mod prelude {
         copy_extent, Array, Array2, Array3, ArrayN, Chunk2, Chunk3, ChunkMap2, ChunkMap3,
         ChunkMapReader2, ChunkMapReader3, Compressed, Compression, FastArrayCompression,
         FastChunkCompression, ForEach, ForEachMut, Get, GetMut, IsEmpty, Local, LocalChunkCache2,
-        LocalChunkCache3, ReadExtent, Snappy, Stride, TransformMap, WriteExtent,
+        LocalChunkCache3, Lz4, ReadExtent, Stride, TransformMap, WriteExtent,
     };
 
-    #[cfg(feature = "lz4")]
-    pub use super::Lz4;
+    #[cfg(feature = "snappy")]
+    pub use super::Snappy;
 }
 
-pub use compressible_map::{self, BytesCompression, Compressed, Compression, Snappy};
+pub use compressible_map::{self, BytesCompression, Compressed, Compression, Lz4};
 
-#[cfg(feature = "lz4")]
-pub use compressible_map::Lz4;
+#[cfg(feature = "snappy")]
+pub use compressible_map::Snappy;

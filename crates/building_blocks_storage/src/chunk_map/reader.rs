@@ -8,7 +8,7 @@ use crate::{
 
 use building_blocks_core::{ExtentN, IntegerExtent, IntegerPoint, PointN};
 
-use compressible_map::{BytesCompression, Snappy};
+use compressible_map::{BytesCompression, Lz4};
 use core::hash::Hash;
 use either::Either;
 
@@ -26,8 +26,8 @@ where
     pub local_cache: &'a LocalChunkCache<N, T, M>,
 }
 
-pub type ChunkMapReader2<'a, T, M = (), B = Snappy> = ChunkMapReader<'a, [i32; 2], T, M, B>;
-pub type ChunkMapReader3<'a, T, M = (), B = Snappy> = ChunkMapReader<'a, [i32; 3], T, M, B>;
+pub type ChunkMapReader2<'a, T, M = (), B = Lz4> = ChunkMapReader<'a, [i32; 2], T, M, B>;
+pub type ChunkMapReader3<'a, T, M = (), B = Lz4> = ChunkMapReader<'a, [i32; 3], T, M, B>;
 
 impl<'a, N, T, M, B> ChunkMapReader<'a, N, T, M, B>
 where

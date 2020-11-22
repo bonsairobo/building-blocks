@@ -15,12 +15,12 @@ all-features = true
 default = ["mesh", "procgen", "search"]
 
 image = ["building_blocks_image"]
-lz4 = ["building_blocks_storage/lz4"]
 mesh = ["building_blocks_mesh"]
 mint = ["building_blocks_core/mint"]
 ncollide = ["building_blocks_search/ncollide"]
 procgen = ["building_blocks_procgen"]
 search = ["building_blocks_search"]
+snappy = ["building_blocks_storage/snappy"]
 vox = ["building_blocks_vox"]
 
 [workspace]

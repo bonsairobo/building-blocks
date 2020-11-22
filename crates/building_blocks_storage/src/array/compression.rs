@@ -93,17 +93,17 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{Array3, Snappy};
+    use crate::{Array3, Lz4};
 
-    #[cfg(feature = "lz4")]
-    use crate::Lz4;
+    #[cfg(feature = "snappy")]
+    use crate::Snappy;
 
+    #[cfg(feature = "snappy")]
     #[test]
     fn sphere_array_compression_rate_snappy() {
         sphere_array_compression_rate(Snappy);
     }
 
-    #[cfg(feature = "lz4")]
     #[test]
     fn sphere_array_compression_rate_lz4() {
         sphere_array_compression_rate(Lz4 { level: 10 });

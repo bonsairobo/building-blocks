@@ -5,7 +5,7 @@ edition = "2018"
 authors = ["Duncan <bonsairobo@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/bonsairobo/building-blocks"
-keywords = ["voxel"]
+keywords = ["voxel", "mesh"]
 
 description = "Efficient storage for maps on sparse or dense, 2D and 3D integer lattices."
 
@@ -22,8 +22,7 @@ serde = { version = "1.0", features = ["derive"] }
 
 building_blocks_core = { path = "../building_blocks_core", version = "0.2" }
 
-# compressible-map = { version = "^0.1.5", features = ["compressed-bincode", "snap"] }
-compressible-map = { git = "https://github.com/bonsairobo/compressible-map.git", features = ["compressed-bincode", "snap"] }
+compressible-map = { version = "0.2", features = ["compressed-bincode", "snap"] }
 
 [dev-dependencies]
 criterion = "0.3"

@@ -125,12 +125,12 @@ where
 {
     #[inline]
     fn join(&self, other: &Self) -> Self {
-        self.map_components_binary(other, |c1, c2| max(c1, c2))
+        self.map_components_binary(other, max)
     }
 
     #[inline]
     fn meet(&self, other: &Self) -> Self {
-        self.map_components_binary(other, |c1, c2| min(c1, c2))
+        self.map_components_binary(other, min)
     }
 
     #[inline]

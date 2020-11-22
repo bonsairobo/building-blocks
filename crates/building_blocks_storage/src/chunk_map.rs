@@ -375,19 +375,15 @@ where
         let chunk_futures: Vec<_> = self
             .chunks
             .iter_maybe_compressed()
-            .map(|(chunk_key, chunk)| {
-                let future = async move {
-                    let portable_chunk = match chunk {
-                        MaybeCompressed::Compressed(compressed_chunk) => {
-                            params.compress(&compressed_chunk.decompress())
-                        }
-                        MaybeCompressed::Decompressed(chunk) => params.compress(chunk),
-                    };
-
-                    (*chunk_key, portable_chunk)
+            .map(|(chunk_key, chunk)| async move {
+                let portable_chunk = match chunk {
+                    MaybeCompressed::Compressed(compressed_chunk) => {
+                        params.compress(&compressed_chunk.decompress())
+                    }
+                    MaybeCompressed::Decompressed(chunk) => params.compress(chunk),
                 };
 
-                future
+                (*chunk_key, portable_chunk)
             })
             .collect();
 
@@ -412,15 +408,11 @@ where
         let all_futures: Vec<_> = map
             .compressed_chunks
             .iter()
-            .map(|(chunk_key, compressed_chunk)| {
-                let future = async move {
-                    let decompressed = compressed_chunk.decompress();
-                    let recompressed = params.compress(&decompressed);
+            .map(|(chunk_key, compressed_chunk)| async move {
+                let decompressed = compressed_chunk.decompress();
+                let recompressed = params.compress(&decompressed);
 
-                    (*chunk_key, recompressed)
-                };
-
-                future
+                (*chunk_key, recompressed)
             })
             .collect();
 

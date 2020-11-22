@@ -33,7 +33,7 @@
 //! # use building_blocks_storage::prelude::*;
 //! # let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
 //! let src = Array3::fill(extent, 0);
-//! let mut dst = ChunkMap3::new(PointN([4; 3]), 0, (), Lz4 { level: 10 });
+//! let mut dst = ChunkMap3::new(PointN([4; 3]), 0, (), Snappy);
 //! let tfm = TransformMap::new(&src, &|value: i32| value + 1);
 //! copy_extent(&extent, &tfm, &mut dst);
 //! ```
@@ -46,6 +46,7 @@ use crate::{
 };
 
 use building_blocks_core::prelude::*;
+use compressible_map::BytesCompression;
 
 use core::hash::Hash;
 use core::iter::{once, Once};
@@ -147,9 +148,9 @@ where
     }
 }
 
-impl<'a, F, S, N, T, M> ReadExtent<'a, N> for TransformMap<'a, ChunkMapReader<'a, N, S, M>, F>
+impl<'a, F, S, N, T, M, B> ReadExtent<'a, N> for TransformMap<'a, ChunkMapReader<'a, N, S, M, B>, F>
 where
-    ChunkMapReader<'a, N, S, M>: ReadExtent<
+    ChunkMapReader<'a, N, S, M, B>: ReadExtent<
         'a,
         N,
         Src = ArrayChunkCopySrc<'a, N, S>,
@@ -159,6 +160,7 @@ where
     S: Copy,
     T: 'a,
     M: Clone,
+    B: BytesCompression,
     PointN<N>: Point + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
 {
@@ -244,7 +246,7 @@ mod tests {
     fn copy_from_transformed_array() {
         let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
         let src = Array3::fill(extent, 0);
-        let mut dst = ChunkMap3::new(PointN([4; 3]), 0, (), Lz4 { level: 10 });
+        let mut dst = ChunkMap3::new(PointN([4; 3]), 0, (), Snappy);
         let tfm = TransformMap::new(&src, |value: i32| value + 1);
         copy_extent(&extent, &tfm, &mut dst);
     }
@@ -253,7 +255,7 @@ mod tests {
     fn copy_from_transformed_chunk_map_reader() {
         let src_extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
         let src_array = Array3::fill(src_extent, 1);
-        let mut src = ChunkMap3::new(PointN([4; 3]), 0, (), Lz4 { level: 10 });
+        let mut src = ChunkMap3::new(PointN([4; 3]), 0, (), Snappy);
         copy_extent(&src_extent, &src_array, &mut src);
 
         let local_cache = LocalChunkCache3::new();
@@ -261,7 +263,7 @@ mod tests {
         let tfm = TransformMap::new(&src_reader, |value: i32| value + 1);
 
         let dst_extent = Extent3::from_min_and_shape(PointN([-16; 3]), PointN([32; 3]));
-        let mut dst = ChunkMap3::new(PointN([2; 3]), 0, (), Lz4 { level: 10 });
+        let mut dst = ChunkMap3::new(PointN([2; 3]), 0, (), Snappy);
         copy_extent(&dst_extent, &tfm, &mut dst);
     }
 }

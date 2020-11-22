@@ -3,6 +3,10 @@ use building_blocks_storage::{compressible_map::BincodeCompression, prelude::*};
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
+#[cfg(feature = "lz4")]
+use compressible_map::Lz4;
+
+#[cfg(feature = "lz4")]
 fn decompress_array_with_bincode_lz4(c: &mut Criterion) {
     let mut group = c.benchmark_group("decompress_array_with_bincode_lz4");
     for size in ARRAY_SIZES.iter() {
@@ -18,6 +22,7 @@ fn decompress_array_with_bincode_lz4(c: &mut Criterion) {
     group.finish();
 }
 
+#[cfg(feature = "lz4")]
 fn decompress_array_with_fast_lz4(c: &mut Criterion) {
     let mut group = c.benchmark_group("decompress_array_with_fast_lz4");
     for size in ARRAY_SIZES.iter() {
@@ -33,10 +38,49 @@ fn decompress_array_with_fast_lz4(c: &mut Criterion) {
     group.finish();
 }
 
+fn decompress_array_with_bincode_snappy(c: &mut Criterion) {
+    let mut group = c.benchmark_group("decompress_array_with_bincode_snappy");
+    for size in ARRAY_SIZES.iter() {
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
+            b.iter_with_setup(
+                || BincodeCompression::new(Snappy).compress(&set_up_array(size)),
+                |compressed_array| {
+                    compressed_array.decompress();
+                },
+            );
+        });
+    }
+    group.finish();
+}
+
+fn decompress_array_with_fast_snappy(c: &mut Criterion) {
+    let mut group = c.benchmark_group("decompress_array_with_fast_snappy");
+    for size in ARRAY_SIZES.iter() {
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
+            b.iter_with_setup(
+                || FastArrayCompression::new(Snappy).compress(&set_up_array(size)),
+                |compressed_array| {
+                    compressed_array.decompress();
+                },
+            );
+        });
+    }
+    group.finish();
+}
+
+#[cfg(not(feature = "lz4"))]
+criterion_group!(
+    benches,
+    decompress_array_with_bincode_snappy,
+    decompress_array_with_fast_snappy
+);
+#[cfg(feature = "lz4")]
 criterion_group!(
     benches,
     decompress_array_with_bincode_lz4,
-    decompress_array_with_fast_lz4
+    decompress_array_with_fast_lz4,
+    decompress_array_with_bincode_snappy,
+    decompress_array_with_fast_snappy
 );
 criterion_main!(benches);
 

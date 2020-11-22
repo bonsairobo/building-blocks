@@ -9,19 +9,21 @@ keywords = ["voxel"]
 
 description = "Efficient storage for maps on sparse or dense, 2D and 3D integer lattices."
 
+[features]
+lz4 = ["compressible-map/lz4"]
+
 [dependencies]
 either = "1.6"
 fnv = "1.0"
 futures = "0.3"
 itertools = "0.9"
-lz4 = "1.23"
 num = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 
 building_blocks_core = { path = "../building_blocks_core", version = "0.2" }
 
-# compressible-map = { version = "^0.1.5", features = ["bincode_lz4"] }
-compressible-map = { git = "https://github.com/bonsairobo/compressible-map.git", features = ["compressed-bincode", "lz4"] }
+# compressible-map = { version = "^0.1.5", features = ["compressed-bincode", "snap"] }
+compressible-map = { git = "https://github.com/bonsairobo/compressible-map.git", features = ["compressed-bincode", "snap"] }
 
 [dev-dependencies]
 criterion = "0.3"

@@ -13,6 +13,9 @@
 //! use the `ChunkMapReader`, which also uses a `LocalChunkCache`. A `LocalChunkCache` can be
 //! written back to the `ChunkMap` using the `flush_chunk_cache` method.
 //!
+//! Two compression backends are usable. The default is Snappy, which has a pure-rust
+//! implementation. The other is LZ4, which can be used by enabling the "lz4" feature.
+//!
 //! # Example Usage
 //! ```
 //! use building_blocks_core::prelude::*;
@@ -21,9 +24,7 @@
 //! let chunk_shape = PointN([16; 3]); // components must be powers of 2
 //! let ambient_value = 0;
 //! let default_chunk_meta = (); // chunk metadata is optional
-//! let mut map = ChunkMap3::new(
-//!     chunk_shape, ambient_value, default_chunk_meta, Lz4 { level: 10 }
-//! );
+//! let mut map = ChunkMap3::new(chunk_shape, ambient_value, default_chunk_meta, Snappy);
 //!
 //! // Although we only write 3 points, 3 whole dense chunks will be inserted and cached.
 //! let write_points = [PointN([-100; 3]), PointN([0; 3]), PointN([100; 3])];
@@ -95,7 +96,8 @@ use building_blocks_core::{
 };
 
 use compressible_map::{
-    BincodeCompression, Compressed, CompressibleMap, Compression, LocalCache, Lz4, MaybeCompressed,
+    BincodeCompression, BytesCompression, Compressed, CompressibleMap, Compression, LocalCache,
+    MaybeCompressed, Snappy,
 };
 use core::hash::Hash;
 use core::ops::{Div, Mul};
@@ -109,10 +111,11 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 /// specified on creation.
 ///
 /// See the [module-level docs](../chunk_map/index.html) for more details and examples.
-pub struct ChunkMap<N, T, M = ()>
+pub struct ChunkMap<N, T, M, B>
 where
     T: Copy,
     M: Clone,
+    B: BytesCompression,
     ExtentN<N>: IntegerExtent<N>,
 {
     chunk_shape: PointN<N>,
@@ -127,11 +130,11 @@ where
     /// The chunks themselves, stored in a `CompressibleMap`.
     ///
     /// SAFETY: Don't mutate this directly unless you know what you're doing.
-    pub chunks: CompressibleFnvMap<PointN<N>, Chunk<N, T, M>, FastChunkCompression<N, T, M>>,
+    pub chunks: CompressibleFnvMap<PointN<N>, Chunk<N, T, M>, FastChunkCompression<N, T, M, B>>,
 }
 
-pub type ChunkMap2<T, M = ()> = ChunkMap<[i32; 2], T, M>;
-pub type ChunkMap3<T, M = ()> = ChunkMap<[i32; 3], T, M>;
+pub type ChunkMap2<T, M = (), B = Snappy> = ChunkMap<[i32; 2], T, M, B>;
+pub type ChunkMap3<T, M = (), B = Snappy> = ChunkMap<[i32; 3], T, M, B>;
 
 type CompressibleFnvMap<K, V, A> = CompressibleMap<K, V, A, fnv::FnvBuildHasher>;
 
@@ -162,13 +165,13 @@ impl<N, T> Chunk<N, T, ()> {
     }
 }
 
-pub struct FastChunkCompression<N, T, M> {
-    pub array_compression: FastArrayCompression<N, T, Lz4>, // TODO: replace Lz4 with parameter
+pub struct FastChunkCompression<N, T, M, B> {
+    pub array_compression: FastArrayCompression<N, T, B>,
     marker: std::marker::PhantomData<(N, T, M)>,
 }
 
-impl<N, T, M> FastChunkCompression<N, T, M> {
-    pub fn new(bytes_compression: Lz4) -> Self {
+impl<N, T, M, B> FastChunkCompression<N, T, M, B> {
+    pub fn new(bytes_compression: B) -> Self {
         Self {
             array_compression: FastArrayCompression::new(bytes_compression),
             marker: Default::default(),
@@ -176,23 +179,25 @@ impl<N, T, M> FastChunkCompression<N, T, M> {
     }
 }
 
-pub struct FastCompressedChunk<N, T, M = ()>
+pub struct FastCompressedChunk<N, T, M, B>
 where
     T: Copy,
+    B: BytesCompression,
     ExtentN<N>: IntegerExtent<N>,
 {
     pub metadata: M, // metadata doesn't get compressed, hope it's small!
-    pub compressed_array: Compressed<FastArrayCompression<N, T, Lz4>>,
+    pub compressed_array: Compressed<FastArrayCompression<N, T, B>>,
 }
 
-impl<N, T, M> Compression for FastChunkCompression<N, T, M>
+impl<N, T, M, B> Compression for FastChunkCompression<N, T, M, B>
 where
     T: Copy,
     M: Clone,
+    B: BytesCompression,
     ExtentN<N>: IntegerExtent<N>,
 {
     type Data = Chunk<N, T, M>;
-    type CompressedData = FastCompressedChunk<N, T, M>;
+    type CompressedData = FastCompressedChunk<N, T, M, B>;
 
     // PERF: cloning the metadata is unfortunate
 
@@ -211,8 +216,8 @@ where
     }
 }
 
-pub type BincodeChunkCompression<N, T, M> = BincodeCompression<Chunk<N, T, M>, Lz4>;
-pub type BincodeCompressedChunk<N, T, M> = Compressed<BincodeCompression<Chunk<N, T, M>, Lz4>>;
+pub type BincodeChunkCompression<N, T, M, B> = BincodeCompression<Chunk<N, T, M>, B>;
+pub type BincodeCompressedChunk<N, T, M, B> = Compressed<BincodeCompression<Chunk<N, T, M>, B>>;
 
 pub trait ChunkShape<N> {
     /// Makes the mask required to convert points to chunk keys.
@@ -248,10 +253,11 @@ macro_rules! impl_chunk_shape {
 impl_chunk_shape!(Point2i, [i32; 2]);
 impl_chunk_shape!(Point3i, [i32; 3]);
 
-impl<N, T, M> ChunkMap<N, T, M>
+impl<N, T, M, B> ChunkMap<N, T, M, B>
 where
     T: Copy,
     M: Clone,
+    B: BytesCompression,
     PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
 {
@@ -262,7 +268,7 @@ where
         chunk_shape: PointN<N>,
         ambient_value: T,
         default_chunk_metadata: M,
-        compression_params: Lz4,
+        compression_params: B,
     ) -> Self {
         Self {
             chunk_shape,
@@ -444,8 +450,8 @@ where
         (key, array.get_unchecked_mut_release(p))
     }
 
-    /// Compressed the least-recently-used chunk using LZ4 compression. On access, compressed chunks
-    /// will be decompressed and cached.
+    /// Compressed the least-recently-used chunk. On access, compressed chunks will be decompressed
+    /// and cached.
     pub fn compress_lru_chunk(&mut self) {
         self.chunks.compress_lru();
     }
@@ -460,11 +466,11 @@ where
     /// way.
     pub async fn to_serializable(
         &self,
-        params: BincodeCompression<Chunk<N, T, M>, Lz4>,
-    ) -> SerializableChunkMap<N, T, M>
+        params: BincodeCompression<Chunk<N, T, M>, B>,
+    ) -> SerializableChunkMap<N, T, M, B>
     where
         Chunk<N, T, M>: DeserializeOwned + Serialize,
-        BincodeCompression<Chunk<N, T, M>, Lz4>: Copy, // TODO: this should be inferred
+        BincodeCompression<Chunk<N, T, M>, B>: Copy, // TODO: this should be inferred
     {
         let chunk_futures: Vec<_> = self
             .chunks
@@ -497,10 +503,10 @@ where
 
     /// Returns a new map from the serialized, compressed version. This will decompress each chunk
     /// and compress it again, but in a faster format.
-    pub async fn from_serializable(map: &SerializableChunkMap<N, T, M>, params: Lz4) -> Self
+    pub async fn from_serializable(map: &SerializableChunkMap<N, T, M, B>, params: B) -> Self
     where
         Chunk<N, T, M>: DeserializeOwned + Serialize,
-        FastChunkCompression<N, T, M>: Copy, // TODO: should be inferred
+        FastChunkCompression<N, T, M, B>: Copy, // TODO: should be inferred
     {
         let params = FastChunkCompression::new(params);
         let all_futures: Vec<_> = map
@@ -531,11 +537,12 @@ where
     }
 }
 
-impl<N, T, M> ChunkMap<N, T, M>
+impl<N, T, M, B> ChunkMap<N, T, M, B>
 where
     Self: ForEachMut<N, PointN<N>, Data = T>,
     T: Copy,
     M: Clone,
+    B: BytesCompression,
     PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
 {
@@ -546,29 +553,31 @@ where
 
 /// A thread-local reader of a `ChunkMap` which stores a cache of chunks that were
 /// decompressed after missing the global cache of chunks.
-pub struct ChunkMapReader<'a, N, T, M = ()>
+pub struct ChunkMapReader<'a, N, T, M, B>
 where
     T: Copy,
     M: Clone,
+    B: BytesCompression,
     PointN<N>: Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
 {
-    pub map: &'a ChunkMap<N, T, M>,
+    pub map: &'a ChunkMap<N, T, M, B>,
     pub local_cache: &'a LocalChunkCache<N, T, M>,
 }
 
-pub type ChunkMapReader2<'a, T, M = ()> = ChunkMapReader<'a, [i32; 2], T, M>;
-pub type ChunkMapReader3<'a, T, M = ()> = ChunkMapReader<'a, [i32; 3], T, M>;
+pub type ChunkMapReader2<'a, T, M = (), B = Snappy> = ChunkMapReader<'a, [i32; 2], T, M, B>;
+pub type ChunkMapReader3<'a, T, M = (), B = Snappy> = ChunkMapReader<'a, [i32; 3], T, M, B>;
 
-impl<'a, N, T, M> ChunkMapReader<'a, N, T, M>
+impl<'a, N, T, M, B> ChunkMapReader<'a, N, T, M, B>
 where
     T: Copy,
     M: Clone,
+    B: BytesCompression,
     PointN<N>: ChunkShape<N> + Eq + Hash + IntegerPoint,
     ExtentN<N>: IntegerExtent<N>,
 {
     /// Construct a new reader for `map` using a `local_cache`.
-    pub fn new(map: &'a ChunkMap<N, T, M>, local_cache: &'a LocalChunkCache<N, T, M>) -> Self {
+    pub fn new(map: &'a ChunkMap<N, T, M, B>, local_cache: &'a LocalChunkCache<N, T, M>) -> Self {
         Self { map, local_cache }
     }
 
@@ -585,37 +594,39 @@ where
     }
 }
 
-impl<'a, N, T, M> std::ops::Deref for ChunkMapReader<'a, N, T, M>
+impl<'a, N, T, M, B> std::ops::Deref for ChunkMapReader<'a, N, T, M, B>
 where
     T: Copy,
     M: Clone,
+    B: BytesCompression,
     PointN<N>: Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
 {
-    type Target = ChunkMap<N, T, M>;
+    type Target = ChunkMap<N, T, M, B>;
 
     fn deref(&self) -> &Self::Target {
         self.map
     }
 }
 
-/// Call `ChunkMap::to_serializable` to get this type, which is an LZ4-compressed,
-/// serde-serializable type.
+/// Call `ChunkMap::to_serializable` to get this type, which is an compressed, serde-serializable
+/// type.
 #[allow(clippy::type_complexity)]
 #[derive(Deserialize, Serialize)]
-pub struct SerializableChunkMap<N, T, M = ()>
+pub struct SerializableChunkMap<N, T, M, B>
 where
+    B: BytesCompression,
     Chunk<N, T, M>: DeserializeOwned + Serialize,
     PointN<N>: Eq + Hash,
 {
     pub chunk_shape: PointN<N>,
     pub ambient_value: T,
     pub default_chunk_metadata: M,
-    pub compressed_chunks: FnvHashMap<PointN<N>, BincodeCompressedChunk<N, T, M>>,
+    pub compressed_chunks: FnvHashMap<PointN<N>, BincodeCompressedChunk<N, T, M, B>>,
 }
 
-pub type SerializableChunkMap2<T, M = ()> = SerializableChunkMap<[i32; 2], T, M>;
-pub type SerializableChunkMap3<T, M = ()> = SerializableChunkMap<[i32; 3], T, M>;
+pub type SerializableChunkMap2<T, M = (), B = Snappy> = SerializableChunkMap<[i32; 2], T, M, B>;
+pub type SerializableChunkMap3<T, M = (), B = Snappy> = SerializableChunkMap<[i32; 3], T, M, B>;
 
 /// An extent that takes the same value everywhere.
 #[derive(Copy, Clone)]
@@ -675,10 +686,11 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<N, T, M> GetMut<&PointN<N>> for ChunkMap<N, T, M>
+impl<N, T, M, B> GetMut<&PointN<N>> for ChunkMap<N, T, M, B>
 where
     T: Copy,
     M: Clone,
+    B: BytesCompression,
     PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: Array<N>,
@@ -692,10 +704,11 @@ where
     }
 }
 
-impl<'a, N, T, M> Get<&PointN<N>> for ChunkMapReader<'a, N, T, M>
+impl<'a, N, T, M, B> Get<&PointN<N>> for ChunkMapReader<'a, N, T, M, B>
 where
     T: Copy,
     M: Clone,
+    B: BytesCompression,
     PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: Array<N>,
@@ -717,10 +730,11 @@ where
 // ██║     ╚██████╔╝██║  ██║    ███████╗██║  ██║╚██████╗██║  ██║
 // ╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
-impl<'a, N, T, M> ForEach<N, PointN<N>> for ChunkMapReader<'a, N, T, M>
+impl<'a, N, T, M, B> ForEach<N, PointN<N>> for ChunkMapReader<'a, N, T, M, B>
 where
     T: Copy,
     M: Clone,
+    B: BytesCompression,
     PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: Array<N> + ForEach<N, PointN<N>, Data = T>,
@@ -754,10 +768,11 @@ where
     }
 }
 
-impl<'a, N, T, M> ForEachMut<N, PointN<N>> for ChunkMap<N, T, M>
+impl<'a, N, T, M, B> ForEachMut<N, PointN<N>> for ChunkMap<N, T, M, B>
 where
     T: Copy,
     M: Clone,
+    B: BytesCompression,
     PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: ForEachMut<N, PointN<N>, Data = T>,
@@ -794,10 +809,11 @@ where
 // ╚██████╗╚██████╔╝██║        ██║
 //  ╚═════╝ ╚═════╝ ╚═╝        ╚═╝
 
-impl<'a, N, T, M> ReadExtent<'a, N> for ChunkMapReader<'a, N, T, M>
+impl<'a, N, T, M, B> ReadExtent<'a, N> for ChunkMapReader<'a, N, T, M, B>
 where
     T: Copy,
     M: Clone,
+    B: BytesCompression,
     ArrayN<N, T>: Array<N>,
     PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
@@ -837,10 +853,11 @@ pub type ArrayChunkCopySrcIter<'a, N, T> =
 pub type ArrayChunkCopySrc<'a, N, T> = Either<ArrayCopySrc<&'a ArrayN<N, T>>, AmbientExtent<N, T>>;
 
 // If ArrayN supports writing from type Src, then so does ChunkMap.
-impl<'a, N, T, M, Src> WriteExtent<N, Src> for ChunkMap<N, T, M>
+impl<'a, N, T, M, B, Src> WriteExtent<N, Src> for ChunkMap<N, T, M, B>
 where
     T: Copy,
     M: Clone,
+    B: BytesCompression,
     Src: Copy,
     PointN<N>: IntegerPoint + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
@@ -910,7 +927,7 @@ mod tests {
     fn write_and_read_points() {
         let chunk_shape = PointN([16; 3]);
         let ambient_value = 0;
-        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), Lz4 { level: 10 });
+        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), Snappy);
 
         let points = [
             [0, 0, 0],
@@ -933,7 +950,7 @@ mod tests {
     fn write_extent_with_for_each_then_read() {
         let chunk_shape = PointN([16; 3]);
         let ambient_value = 0;
-        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), Lz4 { level: 10 });
+        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), Snappy);
 
         let write_extent = Extent3i::from_min_and_shape(PointN([10; 3]), PointN([80; 3]));
         map.for_each_mut(&write_extent, |_p, value| *value = 1);
@@ -957,7 +974,7 @@ mod tests {
 
         let chunk_shape = PointN([16; 3]);
         let ambient_value = 0;
-        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), Lz4 { level: 10 });
+        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), Snappy);
 
         copy_extent(&extent_to_copy, &array, &mut map);
 

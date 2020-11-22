@@ -23,7 +23,7 @@
 //! use std::collections::HashSet;
 //!
 //! let chunk_shape = PointN([16; 2]);
-//! let mut map = ChunkMap2::new(chunk_shape, 0.0, (), Lz4 { level: 10 });
+//! let mut map = ChunkMap2::new(chunk_shape, 0.0, (), Snappy);
 //!
 //! // Mutate one or more of the chunks...
 //! let mutated_chunk_keys = [PointN([0; 2]), PointN([16; 2])];

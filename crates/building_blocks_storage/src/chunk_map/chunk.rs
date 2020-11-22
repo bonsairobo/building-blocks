@@ -26,6 +26,7 @@ impl<N, T> Chunk<N, T, ()> {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct FastChunkCompression<N, T, M, B> {
     pub array_compression: FastArrayCompression<N, T, B>,
     marker: std::marker::PhantomData<(N, T, M)>,

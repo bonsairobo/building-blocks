@@ -1,7 +1,7 @@
 use super::{Point3i, PointN};
 
 /// Either the X or Y axis.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Axis2 {
     X = 0,
     Y = 1,
@@ -14,14 +14,14 @@ impl Axis2 {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SignedAxis2 {
     pub sign: i32,
     pub axis: Axis2,
 }
 
 /// Either the X, Y, or Z axis.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Axis3 {
     X = 0,
     Y = 1,
@@ -43,7 +43,7 @@ impl Axis3 {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Axis3Permutation {
     // Even permutations
     XYZ,
@@ -95,7 +95,7 @@ impl Axis3Permutation {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SignedAxis3 {
     pub sign: i32,
     pub axis: Axis3,

@@ -1,10 +1,10 @@
 use crate::{
     na_conversions::na_point3f_from_point3i,
-    octree::{Octant, VisitStatus},
     octree_dbvt::{OctreeDBVT, OctreeDBVTVisitor},
 };
 
 use building_blocks_core::prelude::*;
+use building_blocks_storage::octree::{Octant, VisitStatus};
 
 use core::hash::Hash;
 use nalgebra::{self as na, zero, Isometry3, Translation3, UnitQuaternion};
@@ -303,9 +303,7 @@ fn half_extent(shape: Point3i) -> na::Vector3<f32> {
 mod tests {
     use super::*;
 
-    use crate::octree::Octree;
-
-    use building_blocks_storage::{prelude::*, IsEmpty};
+    use building_blocks_storage::{octree::OctreeSet, prelude::*, IsEmpty};
 
     use ncollide3d::na;
 
@@ -384,7 +382,7 @@ mod tests {
             *voxels.get_mut(p) = Voxel(true);
         }
 
-        let octree = Octree::from_array3(&voxels, *voxels.extent());
+        let octree = OctreeSet::from_array3(&voxels, *voxels.extent());
         let mut bvt = OctreeDBVT::default();
         let key = 0; // unimportant
         bvt.insert(key, octree);
@@ -396,7 +394,7 @@ mod tests {
         let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
         let voxels = Array3::fill(extent, Voxel(true));
 
-        let octree = Octree::from_array3(&voxels, *voxels.extent());
+        let octree = OctreeSet::from_array3(&voxels, *voxels.extent());
         let mut bvt = OctreeDBVT::default();
         let key = 0; // unimportant
         bvt.insert(key, octree);

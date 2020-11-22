@@ -12,14 +12,13 @@ keywords = ["voxel"]
 all-features = true
 
 [features]
-default = ["mesh", "partition", "procgen", "search"]
+default = ["mesh", "procgen", "search"]
 
 image = ["building_blocks_image"]
 lz4 = ["building_blocks_storage/lz4"]
 mesh = ["building_blocks_mesh"]
 mint = ["building_blocks_core/mint"]
-ncollide = ["building_blocks_partition/ncollide"]
-partition = ["building_blocks_partition"]
+ncollide = ["building_blocks_search/ncollide"]
 procgen = ["building_blocks_procgen"]
 search = ["building_blocks_search"]
 vox = ["building_blocks_vox"]
@@ -44,7 +43,6 @@ building_blocks_storage = { path = "crates/building_blocks_storage", version = "
 # Optional, feature-gated
 building_blocks_image = { path = "crates/building_blocks_image", version = "0.2", optional = true }
 building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.2", optional = true }
-building_blocks_partition = { path = "crates/building_blocks_partition", version = "0.2.1", optional = true }
 building_blocks_procgen = { path = "crates/building_blocks_procgen", version = "0.2", optional = true }
 building_blocks_search = { path = "crates/building_blocks_search", version = "0.2", optional = true }
 building_blocks_vox = { path = "crates/building_blocks_vox", version = "0.2", optional = true }

@@ -26,6 +26,7 @@ compressible-map = { version = "0.2", features = ["compressed-bincode", "snap"] 
 
 [dev-dependencies]
 criterion = "0.3"
+rand = "0.7"
 
 [[bench]]
 name = "accessors"
@@ -33,4 +34,8 @@ harness = false
 
 [[bench]]
 name = "compression"
+harness = false
+
+[[bench]]
+name = "octree"
 harness = false

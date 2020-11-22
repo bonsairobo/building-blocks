@@ -3,8 +3,10 @@
 //! This structure works well in tandem with a `ChunkMap3`, where an `Octree` can be generated from
 //! a chunk and subsequently placed into the `OctreeDBVT`.
 
-use crate::octree::{Octant, Octree, OctreeVisitor, VisitStatus};
+use building_blocks_core::prelude::*;
+use building_blocks_storage::octree::{Octant, OctreeSet, OctreeVisitor, VisitStatus};
 
+use crate::na_conversions::na_point3f_from_point3i;
 use core::hash::Hash;
 use fnv::FnvHashMap;
 use ncollide3d::{
@@ -15,7 +17,7 @@ use ncollide3d::{
 /// An ncollide `DBVT` containing `Octree`s. This turns the bounded `Octree` into an unbounded
 /// acceleration structure. You may use whatever key type `K` to uniquely identify the octrees.
 pub struct OctreeDBVT<K> {
-    dbvt: DBVT<f32, Octree, AABB<f32>>,
+    dbvt: DBVT<f32, OctreeSet, AABB<f32>>,
     leaf_ids: FnvHashMap<K, DBVTLeafId>,
 }
 
@@ -33,8 +35,8 @@ where
     K: Eq + Hash,
 {
     /// Inserts the octree, replacing any old octree at `key` and returning it.
-    pub fn insert(&mut self, key: K, octree: Octree) -> Option<Octree> {
-        let aabb = octree.octant().aabb();
+    pub fn insert(&mut self, key: K, octree: OctreeSet) -> Option<OctreeSet> {
+        let aabb = octant_aabb(&octree.octant());
         let new_leaf_id = self.dbvt.insert(DBVTLeaf::new(aabb, octree));
 
         self.leaf_ids
@@ -43,7 +45,7 @@ where
     }
 
     /// Remove the octree at `key`.
-    pub fn remove(&mut self, key: &K) -> Option<Octree> {
+    pub fn remove(&mut self, key: &K) -> Option<OctreeSet> {
         self.leaf_ids
             .remove(key)
             .map(|leaf_id| self.dbvt.remove(leaf_id).data)
@@ -65,17 +67,17 @@ where
     V: OctreeDBVTVisitor,
 {
     fn visit_octant(&mut self, octant: Octant, is_leaf: bool) -> VisitStatus {
-        let aabb = octant.aabb();
+        let aabb = octant_aabb(&octant);
 
         self.0.visit(&aabb, Some(&octant), is_leaf)
     }
 }
 
-impl<'a, V> nc_part::Visitor<Octree, AABB<f32>> for DBVTVisitorImpl<'a, V>
+impl<'a, V> nc_part::Visitor<OctreeSet, AABB<f32>> for DBVTVisitorImpl<'a, V>
 where
     V: OctreeDBVTVisitor,
 {
-    fn visit(&mut self, aabb: &AABB<f32>, octree: Option<&Octree>) -> nc_part::VisitStatus {
+    fn visit(&mut self, aabb: &AABB<f32>, octree: Option<&OctreeSet>) -> nc_part::VisitStatus {
         let status = if let Some(octree) = octree {
             octree.visit(self)
         } else {
@@ -94,4 +96,11 @@ pub trait OctreeDBVTVisitor {
     /// `octant` is only `Some` when traversing an `Octree`. Otherwise, you are traversing an
     /// upper-level internal node.
     fn visit(&mut self, aabb: &AABB<f32>, octant: Option<&Octant>, is_leaf: bool) -> VisitStatus;
+}
+
+pub fn octant_aabb(octant: &Octant) -> AABB<f32> {
+    let aabb_min = na_point3f_from_point3i(octant.minimum);
+    let aabb_max = na_point3f_from_point3i(octant.minimum + PointN([octant.edge_length; 3]));
+
+    AABB::new(aabb_min, aabb_max)
 }

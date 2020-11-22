@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_search::find_surface_points;
+use building_blocks_search::surface::find_surface_points;
 use building_blocks_storage::{prelude::*, IsEmpty};
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};

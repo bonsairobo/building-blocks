@@ -1,10 +1,11 @@
-//! The `Octree` type is a memory-efficient set of points.
+//! The `OctreeSet` type is a memory-efficient set of points.
 //!
 //! The typical workflow for using an `Octree` is to construct it from an `Array3`, then insert it
 //! into an `OctreeDBVT` in order to perform spatial queries like raycasting.
 
+use crate::{access::GetUncheckedRelease, prelude::*, IsEmpty};
+
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{access::GetUncheckedRelease, prelude::*, IsEmpty};
 
 use fnv::FnvHashMap;
 
@@ -13,7 +14,7 @@ use fnv::FnvHashMap;
 /// The octree is a cube shape and the edge lengths can only be a power of 2, at most 64. When an
 /// entire octant is full, it will be stored in a collapsed representation, so the leaves of the
 /// tree can be differently sized octants.
-pub struct Octree {
+pub struct OctreeSet {
     extent: Extent3i,
     root_level: u8,
     root_exists: bool,
@@ -23,7 +24,7 @@ pub struct Octree {
     nodes: FnvHashMap<LocationCode, ChildBitMask>,
 }
 
-impl Octree {
+impl OctreeSet {
     // TODO: from_height_map
 
     /// Constructs an `Octree` which contains all of the points in `extent` which are not empty (as
@@ -66,7 +67,7 @@ impl Octree {
             &mut nodes,
         );
 
-        Octree {
+        Self {
             root_level,
             root_exists,
             extent,
@@ -302,23 +303,6 @@ pub enum VisitStatus {
     ExitEarly,
 }
 
-#[cfg(feature = "ncollide")]
-mod ncollide_support {
-    use super::*;
-    use crate::na_conversions::na_point3f_from_point3i;
-
-    use ncollide3d::bounding_volume::AABB;
-
-    impl Octant {
-        pub fn aabb(&self) -> AABB<f32> {
-            let aabb_min = na_point3f_from_point3i(self.minimum);
-            let aabb_max = na_point3f_from_point3i(self.minimum + PointN([self.edge_length; 3]));
-
-            AABB::new(aabb_min, aabb_max)
-        }
-    }
-}
-
 // ████████╗███████╗███████╗████████╗
 // ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
 //    ██║   █████╗  ███████╗   ██║
@@ -336,7 +320,7 @@ mod tests {
     #[test]
     fn octants_occupied_iff_not_empty() {
         let voxels = random_voxels();
-        let octree = Octree::from_array3(&voxels, *voxels.extent());
+        let octree = OctreeSet::from_array3(&voxels, *voxels.extent());
 
         let mut non_empty_voxels = HashSet::new();
 

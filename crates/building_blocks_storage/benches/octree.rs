@@ -1,6 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_partition::octree::Octree;
-use building_blocks_storage::{prelude::*, IsEmpty};
+use building_blocks_storage::{octree::OctreeSet, prelude::*, IsEmpty};
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
@@ -33,7 +32,7 @@ fn octree_from_array3_sphere(c: &mut Criterion) {
 
                         map
                     },
-                    |map| Octree::from_array3(&map, *map.extent()),
+                    |map| OctreeSet::from_array3(&map, *map.extent()),
                 );
             },
         );
@@ -56,7 +55,7 @@ fn full_octree(c: &mut Criterion) {
                             Voxel(true),
                         )
                     },
-                    |map| Octree::from_array3(&map, *map.extent()),
+                    |map| OctreeSet::from_array3(&map, *map.extent()),
                 );
             },
         );

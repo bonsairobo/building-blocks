@@ -5,7 +5,6 @@
 //! - **core**: lattice point and extent data types
 //! - **image**: conversion of 2D lattice maps to/from images
 //! - **mesh**: 3D isosurface generation algorithms, smooth and cubic
-//! - **partition**: spatial queries on voxels, e.g. raycasting
 //! - **procgen**: procedural generation of lattice maps, including sampled SDFs and height maps
 //! - **search**: search algorithms on lattice maps
 //! - **storage**: compressed storage for lattice maps, i.e. functions defined on `Z^2` and `Z^3`
@@ -36,9 +35,6 @@ pub use building_blocks_image as image;
 
 #[cfg(feature = "mesh")]
 pub use building_blocks_mesh as mesh;
-
-#[cfg(feature = "partition")]
-pub use building_blocks_partition as partition;
 
 #[cfg(feature = "procgen")]
 pub use building_blocks_procgen as procgen;

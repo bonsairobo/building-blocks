@@ -9,9 +9,20 @@ keywords = ["voxel"]
 
 description = "Search algorithms for voxel data."
 
+[features]
+default = []
+
+ncollide = ["mint", "nalgebra", "ncollide3d", "building_blocks_core/mint"]
+
 [dependencies]
+fnv = "1.0"
 indexmap = "1.5"
 itertools = "0.9"
+
+# Optional, feature-gated
+mint = { version = "0.5", optional = true }
+nalgebra = { version = "0.23", optional = true, features = ["mint"] }
+ncollide3d = { version = "0.26", optional = true }
 
 building_blocks_core = { path = "../building_blocks_core", version = "0.2" }
 building_blocks_storage = { path = "../building_blocks_storage", version = "0.2" }

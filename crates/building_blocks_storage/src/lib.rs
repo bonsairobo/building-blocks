@@ -44,7 +44,7 @@ pub mod prelude {
     pub use super::Lz4;
 }
 
-pub use compressible_map::{self, Compressed, Compression, Snappy};
+pub use compressible_map::{self, BytesCompression, Compressed, Compression, Snappy};
 
 #[cfg(feature = "lz4")]
 pub use compressible_map::Lz4;

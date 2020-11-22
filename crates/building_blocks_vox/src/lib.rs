@@ -1,6 +1,8 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{prelude::*, Local};
 
+pub use dot_vox;
+
 use dot_vox::*;
 
 #[derive(Copy, Clone, Eq, PartialEq)]

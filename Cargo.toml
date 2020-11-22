@@ -51,6 +51,10 @@ building_blocks_vox = { path = "crates/building_blocks_vox", version = "0.2", op
 bevy = "0.3" # for examples
 log = "0.4"
 
+[[bin]]
+name = "measure_compression_rate"
+required-features = ["lz4", "snappy"]
+
 [[example]]
 name = "bevy_meshing"
 path = "examples/bevy_meshing/bevy_meshing.rs"

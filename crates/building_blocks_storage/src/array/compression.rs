@@ -82,3 +82,58 @@ where
         ArrayN::new(compressed.extent, decompressed_values)
     }
 }
+
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::{Array3, Snappy};
+
+    #[cfg(feature = "lz4")]
+    use crate::Lz4;
+
+    #[test]
+    fn sphere_array_compression_rate_snappy() {
+        sphere_array_compression_rate(Snappy);
+    }
+
+    #[cfg(feature = "lz4")]
+    #[test]
+    fn sphere_array_compression_rate_lz4() {
+        sphere_array_compression_rate(Lz4 { level: 10 });
+    }
+
+    fn sphere_array_compression_rate<B: BytesCompression>(compression: B) {
+        let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([64; 3]));
+        let array = Array3::fill_with(extent, |p| if p.norm() > 50.0 { 0u16 } else { 1u16 });
+
+        let source_size_bytes = array.extent().num_points() * 2;
+
+        let compression = FastArrayCompression::new(compression);
+        let compressed_array = compression.compress(&array);
+
+        let compressed_size_bytes = compressed_array.compressed_data.compressed_bytes().len();
+
+        test_print(&format!(
+            "source = {} bytes, compressed = {} bytes; rate = {:.1}%\n",
+            source_size_bytes,
+            compressed_size_bytes,
+            100.0 * (compressed_size_bytes as f32 / source_size_bytes as f32)
+        ));
+    }
+
+    fn test_print(message: &str) {
+        use std::io::Write;
+
+        std::io::stdout()
+            .lock()
+            .write_all(message.as_bytes())
+            .unwrap();
+    }
+}

@@ -8,9 +8,32 @@ use crate::{
 
 use building_blocks_core::{ExtentN, IntegerExtent, IntegerPoint, PointN};
 
-use compressible_map::{BytesCompression, Lz4};
+use compressible_map::BytesCompression;
 use core::hash::Hash;
 use either::Either;
+
+// We only use these for adding convenient type aliases.
+#[cfg(all(feature = "lz4", not(feature = "snappy")))]
+use compressible_map::Lz4;
+#[cfg(all(not(feature = "lz4"), feature = "snappy"))]
+use compressible_map::Snappy;
+
+// LZ4 and Snappy are not mutually exclusive, but if you only use one, then you want to have these
+// aliases refer to the choice you made.
+#[cfg(all(feature = "lz4", not(feature = "snappy")))]
+pub mod conditional_aliases {
+    use super::*;
+
+    pub type ChunkMapReader2<'a, T, M = (), B = Lz4> = ChunkMapReader<'a, [i32; 2], T, M, B>;
+    pub type ChunkMapReader3<'a, T, M = (), B = Lz4> = ChunkMapReader<'a, [i32; 3], T, M, B>;
+}
+#[cfg(all(not(feature = "lz4"), feature = "snappy"))]
+pub mod conditional_aliases {
+    use super::*;
+
+    pub type ChunkMapReader2<'a, T, M = (), B = Snappy> = ChunkMapReader<'a, [i32; 2], T, M, B>;
+    pub type ChunkMapReader3<'a, T, M = (), B = Snappy> = ChunkMapReader<'a, [i32; 3], T, M, B>;
+}
 
 /// A thread-local reader of a `ChunkMap` which stores a cache of chunks that were
 /// decompressed after missing the global cache of chunks.
@@ -25,9 +48,6 @@ where
     pub map: &'a ChunkMap<N, T, M, B>,
     pub local_cache: &'a LocalChunkCache<N, T, M>,
 }
-
-pub type ChunkMapReader2<'a, T, M = (), B = Lz4> = ChunkMapReader<'a, [i32; 2], T, M, B>;
-pub type ChunkMapReader3<'a, T, M = (), B = Lz4> = ChunkMapReader<'a, [i32; 3], T, M, B>;
 
 impl<'a, N, T, M, B> ChunkMapReader<'a, N, T, M, B>
 where

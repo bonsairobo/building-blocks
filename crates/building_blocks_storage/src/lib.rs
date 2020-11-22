@@ -21,11 +21,16 @@ pub use array::{
     Array, Array2, Array3, ArrayN, FastArrayCompression, FastCompressedArray, Local, Stride,
 };
 pub use chunk_map::{
-    Chunk, Chunk2, Chunk3, ChunkMap, ChunkMap2, ChunkMap3, ChunkMapReader, ChunkMapReader2,
-    ChunkMapReader3, FastChunkCompression, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
-    SerializableChunkMap, SerializableChunkMap2, SerializableChunkMap3,
+    Chunk, Chunk2, Chunk3, ChunkMap, ChunkMapReader, FastChunkCompression, LocalChunkCache,
+    LocalChunkCache2, LocalChunkCache3, SerializableChunkMap,
 };
 pub use transform_map::TransformMap;
+
+// Only export these aliases when one compression backend is used.
+#[cfg(all(feature = "lz4", not(feature = "snappy")))]
+pub use chunk_map::conditional_aliases::*;
+#[cfg(all(not(feature = "lz4"), feature = "snappy"))]
+pub use chunk_map::conditional_aliases::*;
 
 /// Used in many generic algorithms to check if a voxel is considered empty.
 pub trait IsEmpty {
@@ -34,17 +39,27 @@ pub trait IsEmpty {
 
 pub mod prelude {
     pub use super::{
-        copy_extent, Array, Array2, Array3, ArrayN, Chunk2, Chunk3, ChunkMap2, ChunkMap3,
-        ChunkMapReader2, ChunkMapReader3, Compressed, Compression, FastArrayCompression,
-        FastChunkCompression, ForEach, ForEachMut, Get, GetMut, IsEmpty, Local, LocalChunkCache2,
-        LocalChunkCache3, Lz4, ReadExtent, Stride, TransformMap, WriteExtent,
+        copy_extent, Array, Array2, Array3, ArrayN, Chunk2, Chunk3, Compressed, Compression,
+        FastArrayCompression, FastChunkCompression, ForEach, ForEachMut, Get, GetMut, IsEmpty,
+        Local, LocalChunkCache2, LocalChunkCache3, ReadExtent, Stride, TransformMap, WriteExtent,
     };
 
+    // Only export these aliases when one compression backend is used.
+    // Only export these aliases when one compression backend is used.
+    #[cfg(all(feature = "lz4", not(feature = "snappy")))]
+    pub use super::chunk_map::conditional_aliases::*;
+    #[cfg(all(not(feature = "lz4"), feature = "snappy"))]
+    pub use super::chunk_map::conditional_aliases::*;
+
+    #[cfg(feature = "lz4")]
+    pub use super::Lz4;
     #[cfg(feature = "snappy")]
     pub use super::Snappy;
 }
 
-pub use compressible_map::{self, BytesCompression, Compressed, Compression, Lz4};
+pub use compressible_map::{self, BytesCompression, Compressed, Compression};
 
+#[cfg(feature = "lz4")]
+pub use compressible_map::Lz4;
 #[cfg(feature = "snappy")]
 pub use compressible_map::Snappy;

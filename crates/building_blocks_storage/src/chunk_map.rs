@@ -92,7 +92,6 @@ pub use chunk::{
 };
 pub use reader::{
     AmbientExtent, ArrayChunkCopySrc, ArrayChunkCopySrcIter, ChunkCopySrc, ChunkMapReader,
-    ChunkMapReader2, ChunkMapReader3,
 };
 
 use crate::{
@@ -107,14 +106,44 @@ use building_blocks_core::{
 };
 
 use compressible_map::{
-    BincodeCompression, BytesCompression, CompressibleMap, Compression, LocalCache, Lz4,
-    MaybeCompressed,
+    BincodeCompression, BytesCompression, CompressibleMap, Compression, LocalCache, MaybeCompressed,
 };
 use core::hash::Hash;
 use core::ops::{Div, Mul};
 use fnv::FnvHashMap;
 use futures::future::join_all;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+
+// We only use these for adding convenient type aliases.
+#[cfg(all(feature = "lz4", not(feature = "snappy")))]
+use compressible_map::Lz4;
+#[cfg(all(not(feature = "lz4"), feature = "snappy"))]
+use compressible_map::Snappy;
+
+// LZ4 and Snappy are not mutually exclusive, but if you only use one, then you want to have these
+// aliases refer to the choice you made.
+#[cfg(all(feature = "lz4", not(feature = "snappy")))]
+pub mod conditional_aliases {
+    use super::*;
+
+    pub use reader::conditional_aliases::*;
+
+    pub type ChunkMap2<T, M = (), B = Lz4> = ChunkMap<[i32; 2], T, M, B>;
+    pub type ChunkMap3<T, M = (), B = Lz4> = ChunkMap<[i32; 3], T, M, B>;
+    pub type SerializableChunkMap2<T, M = (), B = Lz4> = SerializableChunkMap<[i32; 2], T, M, B>;
+    pub type SerializableChunkMap3<T, M = (), B = Lz4> = SerializableChunkMap<[i32; 3], T, M, B>;
+}
+#[cfg(all(not(feature = "lz4"), feature = "snappy"))]
+pub mod conditional_aliases {
+    use super::*;
+
+    pub use reader::conditional_aliases::*;
+
+    pub type ChunkMap2<T, M = (), B = Snappy> = ChunkMap<[i32; 2], T, M, B>;
+    pub type ChunkMap3<T, M = (), B = Snappy> = ChunkMap<[i32; 3], T, M, B>;
+    pub type SerializableChunkMap2<T, M = (), B = Snappy> = SerializableChunkMap<[i32; 2], T, M, B>;
+    pub type SerializableChunkMap3<T, M = (), B = Snappy> = SerializableChunkMap<[i32; 3], T, M, B>;
+}
 
 /// A lattice map made up of same-shaped `ArrayN` chunks. It takes a value at every possible
 /// `PointN`, because accesses made outside of the stored chunks will return some ambient value
@@ -142,9 +171,6 @@ where
     /// SAFETY: Don't mutate this directly unless you know what you're doing.
     pub chunks: CompressibleFnvMap<PointN<N>, Chunk<N, T, M>, FastChunkCompression<N, T, M, B>>,
 }
-
-pub type ChunkMap2<T, M = (), B = Lz4> = ChunkMap<[i32; 2], T, M, B>;
-pub type ChunkMap3<T, M = (), B = Lz4> = ChunkMap<[i32; 3], T, M, B>;
 
 type CompressibleFnvMap<K, V, A> = CompressibleMap<K, V, A, fnv::FnvBuildHasher>;
 
@@ -460,9 +486,6 @@ where
     pub compressed_chunks: FnvHashMap<PointN<N>, BincodeCompressedChunk<N, T, M, B>>,
 }
 
-pub type SerializableChunkMap2<T, M = (), B = Lz4> = SerializableChunkMap<[i32; 2], T, M, B>;
-pub type SerializableChunkMap3<T, M = (), B = Lz4> = SerializableChunkMap<[i32; 3], T, M, B>;
-
 /// Returns the extent of the chunk at `key`.
 pub fn extent_for_chunk_at_key<N>(chunk_shape: &PointN<N>, key: &PointN<N>) -> ExtentN<N>
 where
@@ -602,11 +625,11 @@ where
 //    ██║   ███████╗███████║   ██║
 //    ╚═╝   ╚══════╝╚══════╝   ╚═╝
 
-#[cfg(test)]
+#[cfg(all(test, feature = "lz4"))]
 mod tests {
     use super::*;
 
-    use crate::{access::Get, copy_extent, Array3};
+    use crate::{access::Get, copy_extent, Array3, Lz4};
 
     use building_blocks_core::Extent3i;
 
@@ -636,7 +659,7 @@ mod tests {
     fn write_and_read_points() {
         let chunk_shape = PointN([16; 3]);
         let ambient_value = 0;
-        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), Lz4 { level: 10 });
+        let mut map = ChunkMap::new(chunk_shape, ambient_value, (), Lz4 { level: 10 });
 
         let points = [
             [0, 0, 0],
@@ -659,14 +682,14 @@ mod tests {
     fn write_extent_with_for_each_then_read() {
         let chunk_shape = PointN([16; 3]);
         let ambient_value = 0;
-        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), Lz4 { level: 10 });
+        let mut map = ChunkMap::new(chunk_shape, ambient_value, (), Lz4 { level: 10 });
 
         let write_extent = Extent3i::from_min_and_shape(PointN([10; 3]), PointN([80; 3]));
         map.for_each_mut(&write_extent, |_p, value| *value = 1);
 
         let read_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
         let local_cache = LocalChunkCache3::new();
-        let reader = ChunkMapReader3::new(&map, &local_cache);
+        let reader = ChunkMapReader::new(&map, &local_cache);
         for p in read_extent.iter_points() {
             if write_extent.contains(&p) {
                 assert_eq!(reader.get(&p), 1);
@@ -683,13 +706,13 @@ mod tests {
 
         let chunk_shape = PointN([16; 3]);
         let ambient_value = 0;
-        let mut map = ChunkMap3::new(chunk_shape, ambient_value, (), Lz4 { level: 10 });
+        let mut map = ChunkMap::new(chunk_shape, ambient_value, (), Lz4 { level: 10 });
 
         copy_extent(&extent_to_copy, &array, &mut map);
 
         let read_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
         let local_cache = LocalChunkCache3::new();
-        let reader = ChunkMapReader3::new(&map, &local_cache);
+        let reader = ChunkMapReader::new(&map, &local_cache);
         for p in read_extent.iter_points() {
             if extent_to_copy.contains(&p) {
                 assert_eq!(reader.get(&p), 1);

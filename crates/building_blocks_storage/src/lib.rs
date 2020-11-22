@@ -22,8 +22,8 @@ pub use array::{
 };
 pub use chunk_map::{
     Chunk, Chunk2, Chunk3, ChunkMap, ChunkMap2, ChunkMap3, ChunkMapReader, ChunkMapReader2,
-    ChunkMapReader3, LocalChunkCache, LocalChunkCache2, LocalChunkCache3, SerializableChunkMap,
-    SerializableChunkMap2, SerializableChunkMap3,
+    ChunkMapReader3, FastChunkCompression, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
+    SerializableChunkMap, SerializableChunkMap2, SerializableChunkMap3,
 };
 pub use transform_map::TransformMap;
 
@@ -35,9 +35,9 @@ pub trait IsEmpty {
 pub mod prelude {
     pub use super::{
         copy_extent, Array, Array2, Array3, ArrayN, Chunk2, Chunk3, ChunkMap2, ChunkMap3,
-        ChunkMapReader2, ChunkMapReader3, Compressed, Compression, FastArrayCompression, ForEach,
-        ForEachMut, Get, GetMut, IsEmpty, Local, LocalChunkCache2, LocalChunkCache3, ReadExtent,
-        Snappy, Stride, TransformMap, WriteExtent,
+        ChunkMapReader2, ChunkMapReader3, Compressed, Compression, FastArrayCompression,
+        FastChunkCompression, ForEach, ForEachMut, Get, GetMut, IsEmpty, Local, LocalChunkCache2,
+        LocalChunkCache3, ReadExtent, Snappy, Stride, TransformMap, WriteExtent,
     };
 
     #[cfg(feature = "lz4")]

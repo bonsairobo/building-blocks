@@ -82,26 +82,35 @@
 //! map.flush_chunk_cache(local_cache);
 //! ```
 
+mod chunk;
+mod reader;
+
+pub use chunk::{
+    BincodeChunkCompression, BincodeCompressedChunk, Chunk, Chunk2, Chunk3, ChunkShape,
+    FastChunkCompression, FastCompressedChunk,
+};
+pub use reader::{
+    AmbientExtent, ArrayChunkCopySrc, ArrayChunkCopySrcIter, ChunkCopySrc, ChunkMapReader,
+    ChunkMapReader2, ChunkMapReader3,
+};
+
 use crate::{
-    access::{
-        ForEach, ForEachMut, GetUncheckedMutRelease, GetUncheckedRelease, ReadExtent, WriteExtent,
-    },
-    array::{Array, ArrayCopySrc, ArrayN, FastArrayCompression},
-    Get, GetMut,
+    access::{ForEachMut, GetUncheckedMutRelease, WriteExtent},
+    array::{Array, ArrayN},
+    GetMut,
 };
 
 use building_blocks_core::{
-    bounding_extent, ComponentwiseIntegerOps, ExtentN, IntegerExtent, IntegerPoint, MapComponents,
-    Ones, Point2i, Point3i, PointN,
+    bounding_extent, ComponentwiseIntegerOps, ExtentN, IntegerExtent, IntegerPoint, Ones, Point2i,
+    Point3i, PointN,
 };
 
 use compressible_map::{
-    BincodeCompression, BytesCompression, Compressed, CompressibleMap, Compression, LocalCache,
+    BincodeCompression, BytesCompression, CompressibleMap, Compression, LocalCache,
     MaybeCompressed, Snappy,
 };
 use core::hash::Hash;
 use core::ops::{Div, Mul};
-use either::Either;
 use fnv::FnvHashMap;
 use futures::future::join_all;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -143,115 +152,6 @@ pub type LocalChunkCache2<T, M = ()> =
     LocalCache<Point2i, Chunk<[i32; 2], T, M>, fnv::FnvBuildHasher>;
 pub type LocalChunkCache3<T, M = ()> =
     LocalCache<Point3i, Chunk<[i32; 3], T, M>, fnv::FnvBuildHasher>;
-
-/// One piece of the `ChunkMap`. Contains both some generic metadata and the data for each
-/// point in the chunk extent.
-#[derive(Clone, Deserialize, Serialize)]
-pub struct Chunk<N, T, M = ()> {
-    pub metadata: M,
-    pub array: ArrayN<N, T>,
-}
-
-pub type Chunk2<T, M> = Chunk<[i32; 2], T, M>;
-pub type Chunk3<T, M> = Chunk<[i32; 3], T, M>;
-
-impl<N, T> Chunk<N, T, ()> {
-    /// Constructs a chunk without metadata.
-    pub fn with_array(array: ArrayN<N, T>) -> Self {
-        Chunk {
-            metadata: (),
-            array,
-        }
-    }
-}
-
-pub struct FastChunkCompression<N, T, M, B> {
-    pub array_compression: FastArrayCompression<N, T, B>,
-    marker: std::marker::PhantomData<(N, T, M)>,
-}
-
-impl<N, T, M, B> FastChunkCompression<N, T, M, B> {
-    pub fn new(bytes_compression: B) -> Self {
-        Self {
-            array_compression: FastArrayCompression::new(bytes_compression),
-            marker: Default::default(),
-        }
-    }
-}
-
-pub struct FastCompressedChunk<N, T, M, B>
-where
-    T: Copy,
-    B: BytesCompression,
-    ExtentN<N>: IntegerExtent<N>,
-{
-    pub metadata: M, // metadata doesn't get compressed, hope it's small!
-    pub compressed_array: Compressed<FastArrayCompression<N, T, B>>,
-}
-
-impl<N, T, M, B> Compression for FastChunkCompression<N, T, M, B>
-where
-    T: Copy,
-    M: Clone,
-    B: BytesCompression,
-    ExtentN<N>: IntegerExtent<N>,
-{
-    type Data = Chunk<N, T, M>;
-    type CompressedData = FastCompressedChunk<N, T, M, B>;
-
-    // PERF: cloning the metadata is unfortunate
-
-    fn compress(&self, chunk: &Self::Data) -> Compressed<Self> {
-        Compressed::new(FastCompressedChunk {
-            metadata: chunk.metadata.clone(),
-            compressed_array: self.array_compression.compress(&chunk.array),
-        })
-    }
-
-    fn decompress(compressed: &Self::CompressedData) -> Self::Data {
-        Chunk {
-            metadata: compressed.metadata.clone(),
-            array: compressed.compressed_array.decompress(),
-        }
-    }
-}
-
-pub type BincodeChunkCompression<N, T, M, B> = BincodeCompression<Chunk<N, T, M>, B>;
-pub type BincodeCompressedChunk<N, T, M, B> = Compressed<BincodeCompression<Chunk<N, T, M>, B>>;
-
-pub trait ChunkShape<N> {
-    /// Makes the mask required to convert points to chunk keys.
-    fn mask(&self) -> PointN<N>;
-
-    /// A chunk key is just the leading m bits of each component of a point, where m depends on the
-    /// size of the chunk. It can also be interpreted as the minimum point of a chunk extent.
-    fn chunk_key_containing_point(mask: &PointN<N>, p: &PointN<N>) -> PointN<N>;
-
-    fn ilog2(&self) -> PointN<N>;
-}
-
-macro_rules! impl_chunk_shape {
-    ($point:ty, $dims:ty) => {
-        impl ChunkShape<$dims> for $point {
-            fn mask(&self) -> $point {
-                assert!(self.dimensions_are_powers_of_2());
-
-                self.map_components_unary(|c| !(c - 1))
-            }
-
-            fn chunk_key_containing_point(mask: &$point, p: &$point) -> $point {
-                mask.map_components_binary(p, |c1, c2| c1 & c2)
-            }
-
-            fn ilog2(&self) -> $point {
-                self.map_components_unary(|c| c.trailing_zeros() as i32)
-            }
-        }
-    };
-}
-
-impl_chunk_shape!(Point2i, [i32; 2]);
-impl_chunk_shape!(Point3i, [i32; 3]);
 
 impl<N, T, M, B> ChunkMap<N, T, M, B>
 where
@@ -551,64 +451,6 @@ where
     }
 }
 
-/// A thread-local reader of a `ChunkMap` which stores a cache of chunks that were
-/// decompressed after missing the global cache of chunks.
-pub struct ChunkMapReader<'a, N, T, M, B>
-where
-    T: Copy,
-    M: Clone,
-    B: BytesCompression,
-    PointN<N>: Eq + Hash,
-    ExtentN<N>: IntegerExtent<N>,
-{
-    pub map: &'a ChunkMap<N, T, M, B>,
-    pub local_cache: &'a LocalChunkCache<N, T, M>,
-}
-
-pub type ChunkMapReader2<'a, T, M = (), B = Snappy> = ChunkMapReader<'a, [i32; 2], T, M, B>;
-pub type ChunkMapReader3<'a, T, M = (), B = Snappy> = ChunkMapReader<'a, [i32; 3], T, M, B>;
-
-impl<'a, N, T, M, B> ChunkMapReader<'a, N, T, M, B>
-where
-    T: Copy,
-    M: Clone,
-    B: BytesCompression,
-    PointN<N>: ChunkShape<N> + Eq + Hash + IntegerPoint,
-    ExtentN<N>: IntegerExtent<N>,
-{
-    /// Construct a new reader for `map` using a `local_cache`.
-    pub fn new(map: &'a ChunkMap<N, T, M, B>, local_cache: &'a LocalChunkCache<N, T, M>) -> Self {
-        Self { map, local_cache }
-    }
-
-    pub fn get_chunk_containing_point(
-        &self,
-        point: &PointN<N>,
-    ) -> Option<(PointN<N>, &Chunk<N, T, M>)> {
-        self.map
-            .get_chunk_containing_point(point, &self.local_cache)
-    }
-
-    pub fn get_chunk(&self, key: PointN<N>) -> Option<&Chunk<N, T, M>> {
-        self.map.get_chunk(key, &self.local_cache)
-    }
-}
-
-impl<'a, N, T, M, B> std::ops::Deref for ChunkMapReader<'a, N, T, M, B>
-where
-    T: Copy,
-    M: Clone,
-    B: BytesCompression,
-    PointN<N>: Eq + Hash,
-    ExtentN<N>: IntegerExtent<N>,
-{
-    type Target = ChunkMap<N, T, M, B>;
-
-    fn deref(&self) -> &Self::Target {
-        self.map
-    }
-}
-
 /// Call `ChunkMap::to_serializable` to get this type, which is an compressed, serde-serializable
 /// type.
 #[allow(clippy::type_complexity)]
@@ -627,32 +469,6 @@ where
 
 pub type SerializableChunkMap2<T, M = (), B = Snappy> = SerializableChunkMap<[i32; 2], T, M, B>;
 pub type SerializableChunkMap3<T, M = (), B = Snappy> = SerializableChunkMap<[i32; 3], T, M, B>;
-
-/// An extent that takes the same value everywhere.
-#[derive(Copy, Clone)]
-pub struct AmbientExtent<N, T> {
-    pub value: T,
-    _n: std::marker::PhantomData<N>,
-}
-
-pub type AmbientExtent2<T> = AmbientExtent<[i32; 2], T>;
-pub type AmbientExtent3<T> = AmbientExtent<[i32; 3], T>;
-
-impl<N, T> AmbientExtent<N, T> {
-    pub fn new(value: T) -> Self {
-        Self {
-            value,
-            _n: Default::default(),
-        }
-    }
-
-    pub fn get(&self) -> T
-    where
-        T: Clone,
-    {
-        self.value.clone()
-    }
-}
 
 /// Returns the extent of the chunk at `key`.
 pub fn extent_for_chunk_at_key<N>(chunk_shape: &PointN<N>, key: &PointN<N>) -> ExtentN<N>
@@ -704,69 +520,12 @@ where
     }
 }
 
-impl<'a, N, T, M, B> Get<&PointN<N>> for ChunkMapReader<'a, N, T, M, B>
-where
-    T: Copy,
-    M: Clone,
-    B: BytesCompression,
-    PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
-    ExtentN<N>: IntegerExtent<N>,
-    ArrayN<N, T>: Array<N>,
-{
-    type Data = T;
-
-    fn get(&self, p: &PointN<N>) -> Self::Data {
-        self.map
-            .get_chunk_containing_point(p, &self.local_cache)
-            .map(|(_key, chunk)| chunk.array.get_unchecked_release(p))
-            .unwrap_or(self.map.ambient_value)
-    }
-}
-
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║
 // █████╗  ██║   ██║██████╔╝    █████╗  ███████║██║     ███████║
 // ██╔══╝  ██║   ██║██╔══██╗    ██╔══╝  ██╔══██║██║     ██╔══██║
 // ██║     ╚██████╔╝██║  ██║    ███████╗██║  ██║╚██████╗██║  ██║
 // ╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-
-impl<'a, N, T, M, B> ForEach<N, PointN<N>> for ChunkMapReader<'a, N, T, M, B>
-where
-    T: Copy,
-    M: Clone,
-    B: BytesCompression,
-    PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
-    ExtentN<N>: IntegerExtent<N>,
-    ArrayN<N, T>: Array<N> + ForEach<N, PointN<N>, Data = T>,
-{
-    type Data = T;
-
-    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
-        for chunk_key in self.map.chunk_keys_for_extent(extent) {
-            if let Some(chunk) = self.map.get_chunk(chunk_key, &self.local_cache) {
-                chunk.array.for_each(extent, |p, value| f(p, value));
-            } else {
-                let chunk_extent = self.map.extent_for_chunk_at_key(&chunk_key);
-                AmbientExtent::new(self.map.ambient_value)
-                    .for_each(&extent.intersection(&chunk_extent), |p, value| f(p, value))
-            }
-        }
-    }
-}
-
-impl<N, T> ForEach<N, PointN<N>> for AmbientExtent<N, T>
-where
-    T: Clone,
-    ExtentN<N>: IntegerExtent<N>,
-{
-    type Data = T;
-
-    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
-        for p in extent.iter_points() {
-            f(p, self.value.clone());
-        }
-    }
-}
 
 impl<'a, N, T, M, B> ForEachMut<N, PointN<N>> for ChunkMap<N, T, M, B>
 where
@@ -808,49 +567,6 @@ where
 // ██║     ██║   ██║██╔═══╝   ╚██╔╝
 // ╚██████╗╚██████╔╝██║        ██║
 //  ╚═════╝ ╚═════╝ ╚═╝        ╚═╝
-
-impl<'a, N, T, M, B> ReadExtent<'a, N> for ChunkMapReader<'a, N, T, M, B>
-where
-    T: Copy,
-    M: Clone,
-    B: BytesCompression,
-    ArrayN<N, T>: Array<N>,
-    PointN<N>: IntegerPoint + ChunkShape<N> + Eq + Hash,
-    ExtentN<N>: IntegerExtent<N>,
-{
-    type Src = ArrayChunkCopySrc<'a, N, T>;
-    type SrcIter = ArrayChunkCopySrcIter<'a, N, T>;
-
-    fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
-        let chunk_iters = self
-            .map
-            .chunk_keys_for_extent(extent)
-            .map(|key| {
-                let chunk_extent = self.map.extent_for_chunk_at_key(&key);
-                let intersection = extent.intersection(&chunk_extent);
-
-                (
-                    intersection,
-                    self.map
-                        .get_chunk(key, &self.local_cache)
-                        .map(|chunk| Either::Left(ArrayCopySrc(&chunk.array)))
-                        .unwrap_or_else(|| {
-                            Either::Right(AmbientExtent::new(self.map.ambient_value))
-                        }),
-                )
-            })
-            .collect::<Vec<_>>();
-
-        chunk_iters.into_iter()
-    }
-}
-
-pub type ChunkCopySrcIter<M, N, T> = std::vec::IntoIter<(ExtentN<N>, ChunkCopySrc<M, N, T>)>;
-pub type ChunkCopySrc<M, N, T> = Either<ArrayCopySrc<M>, AmbientExtent<N, T>>;
-
-pub type ArrayChunkCopySrcIter<'a, N, T> =
-    std::vec::IntoIter<(ExtentN<N>, ArrayChunkCopySrc<'a, N, T>)>;
-pub type ArrayChunkCopySrc<'a, N, T> = Either<ArrayCopySrc<&'a ArrayN<N, T>>, AmbientExtent<N, T>>;
 
 // If ArrayN supports writing from type Src, then so does ChunkMap.
 impl<'a, N, T, M, B, Src> WriteExtent<N, Src> for ChunkMap<N, T, M, B>
@@ -897,7 +613,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::{copy_extent, Array3};
+    use crate::{access::Get, copy_extent, Array3};
 
     use building_blocks_core::Extent3i;
 

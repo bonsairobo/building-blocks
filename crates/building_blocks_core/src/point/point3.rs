@@ -1,10 +1,6 @@
-use crate::{
-    point_traits::{
-        Bounded, Distance, DotProduct, GetComponent, IntegerPoint, MapComponents, Neighborhoods,
-        NormSquared, Ones, Point, SmallOne, SmallZero,
-    },
-    Axis3, Point2, PointN,
-};
+use crate::Axis3;
+
+use super::{point_traits::*, Point2, PointN};
 
 use core::ops::{Add, Div, Mul, Sub};
 use num::{traits::Pow, Integer, Signed};
@@ -465,44 +461,5 @@ impl Point3f {
     #[inline]
     pub fn in_voxel(&self) -> Point3i {
         self.floor().as_3i()
-    }
-}
-
-#[cfg(feature = "mint")]
-pub mod mint_conversions {
-    use super::*;
-
-    impl<T> From<mint::Point3<T>> for Point3<T> {
-        #[inline]
-        fn from(p: mint::Point3<T>) -> Self {
-            PointN([p.x, p.y, p.z])
-        }
-    }
-
-    impl<T> From<Point3<T>> for mint::Point3<T>
-    where
-        T: Clone,
-    {
-        #[inline]
-        fn from(p: Point3<T>) -> Self {
-            mint::Point3::from_slice(&p.0)
-        }
-    }
-
-    impl<T> From<mint::Vector3<T>> for Point3<T> {
-        #[inline]
-        fn from(p: mint::Vector3<T>) -> Self {
-            PointN([p.x, p.y, p.z])
-        }
-    }
-
-    impl<T> From<Point3<T>> for mint::Vector3<T>
-    where
-        T: Clone,
-    {
-        #[inline]
-        fn from(p: Point3<T>) -> Self {
-            mint::Vector3::from_slice(&p.0)
-        }
     }
 }

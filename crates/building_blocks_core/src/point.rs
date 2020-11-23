@@ -1,4 +1,18 @@
-use crate::point_traits::{Abs, MapComponents, Point, SmallZero};
+#[cfg(feature = "glam")]
+mod glam_conversions;
+#[cfg(feature = "mint")]
+mod mint_conversions;
+#[cfg(feature = "nalgebra")]
+mod nalgebra_conversions;
+
+mod point2;
+mod point3;
+pub mod point_traits;
+
+pub use point2::*;
+pub use point3::*;
+
+use point_traits::*;
 
 use core::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 use num::{Signed, Zero};

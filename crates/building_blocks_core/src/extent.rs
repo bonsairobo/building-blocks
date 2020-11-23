@@ -1,7 +1,10 @@
-use crate::{
-    point_traits::{Bounded, ComponentwiseIntegerOps, IntegerPoint, Ones, Point},
-    PointN,
-};
+mod extent2;
+mod extent3;
+
+pub use extent2::*;
+pub use extent3::*;
+
+use crate::{point::point_traits::*, PointN};
 
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 use serde::{Deserialize, Serialize};

@@ -1,4 +1,4 @@
-use super::{Point3i, PointN};
+use crate::{Point3i, PointN};
 
 /// Either the X or Y axis.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

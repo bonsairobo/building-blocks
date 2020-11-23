@@ -1,4 +1,4 @@
-use building_blocks_core::{point_traits::Point, prelude::*};
+use building_blocks_core::{prelude::*, Point};
 
 use core::cmp::Ordering;
 use core::hash::Hash;

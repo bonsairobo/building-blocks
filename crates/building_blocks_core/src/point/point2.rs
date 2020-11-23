@@ -1,10 +1,6 @@
-use crate::{
-    point_traits::{
-        Bounded, Distance, DotProduct, GetComponent, IntegerPoint, MapComponents, Neighborhoods,
-        NormSquared, Ones, Point, SmallOne, SmallZero,
-    },
-    Axis2, PointN,
-};
+use crate::Axis2;
+
+use super::{point_traits::*, PointN};
 
 use core::ops::{Add, Div, Mul};
 use num::{traits::Pow, Integer, Signed};
@@ -366,44 +362,5 @@ impl Point2f {
     #[inline]
     pub fn in_pixel(&self) -> Point2i {
         self.floor().as_2i()
-    }
-}
-
-#[cfg(feature = "mint")]
-pub mod mint_conversions {
-    use super::*;
-
-    impl<T> From<mint::Point2<T>> for Point2<T> {
-        #[inline]
-        fn from(p: mint::Point2<T>) -> Self {
-            PointN([p.x, p.y])
-        }
-    }
-
-    impl<T> From<Point2<T>> for mint::Point2<T>
-    where
-        T: Clone,
-    {
-        #[inline]
-        fn from(p: Point2<T>) -> Self {
-            mint::Point2::from_slice(&p.0)
-        }
-    }
-
-    impl<T> From<mint::Vector2<T>> for Point2<T> {
-        #[inline]
-        fn from(p: mint::Vector2<T>) -> Self {
-            PointN([p.x, p.y])
-        }
-    }
-
-    impl<T> From<Point2<T>> for mint::Vector2<T>
-    where
-        T: Clone,
-    {
-        #[inline]
-        fn from(p: Point2<T>) -> Self {
-            mint::Vector2::from_slice(&p.0)
-        }
     }
 }

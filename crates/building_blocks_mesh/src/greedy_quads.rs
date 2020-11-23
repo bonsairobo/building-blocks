@@ -1,4 +1,4 @@
-use super::quad::{OrientedCubeFace, OrientedQuads, Quad};
+use super::quad::{OrientedCubeFace, UnorientedQuad};
 
 use building_blocks_core::{axis::Axis3Permutation, prelude::*};
 use building_blocks_storage::{access::GetUncheckedRelease, prelude::*, IsEmpty};
@@ -14,22 +14,39 @@ pub trait MaterialVoxel {
 /// Contains the output from the `greedy_quads` algorithm. Can be reused to avoid re-allocations.
 pub struct GreedyQuadsBuffer<M> {
     /// One group of quads per cube face.
-    pub quad_groups: [OrientedQuads<M>; 6],
+    pub quad_groups: [QuadGroup<M>; 6],
 
     // A single array is used for the visited mask because it allows us to index by the same strides
     // as the voxels array. It also only requires a single allocation.
     visited: Array3<bool>,
 }
 
+/// A set of `Quad`s that share an orientation. Each quad may specify a material of type `M`.
+pub struct QuadGroup<M> {
+    /// The quads themselves. We rely on the cube face metadata to interpret them.
+    pub quads: Vec<(UnorientedQuad, M)>,
+    /// One of 6 cube faces. All quads in this struct are comprised of only this face.
+    pub face: OrientedCubeFace,
+}
+
+impl<M> QuadGroup<M> {
+    pub fn new(face: OrientedCubeFace) -> Self {
+        Self {
+            quads: Vec::new(),
+            face,
+        }
+    }
+}
+
 impl<M> GreedyQuadsBuffer<M> {
     pub fn new(extent: Extent3i) -> Self {
         let quad_groups = [
-            OrientedQuads::new(OrientedCubeFace::new(-1, Axis3Permutation::XZY)),
-            OrientedQuads::new(OrientedCubeFace::new(-1, Axis3Permutation::YXZ)),
-            OrientedQuads::new(OrientedCubeFace::new(-1, Axis3Permutation::ZXY)),
-            OrientedQuads::new(OrientedCubeFace::new(1, Axis3Permutation::XZY)),
-            OrientedQuads::new(OrientedCubeFace::new(1, Axis3Permutation::YXZ)),
-            OrientedQuads::new(OrientedCubeFace::new(1, Axis3Permutation::ZXY)),
+            QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::XZY)),
+            QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::YXZ)),
+            QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::ZXY)),
+            QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::XZY)),
+            QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::YXZ)),
+            QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::ZXY)),
         ];
 
         Self {
@@ -106,7 +123,7 @@ fn greedy_quads_for_group<V, T>(
     interior_min: Point3i,
     interior_shape: Point3i,
     visited: &mut Array3<bool>,
-    quad_group: &mut OrientedQuads<T::Material>,
+    quad_group: &mut QuadGroup<T::Material>,
 ) where
     V: Array<[i32; 3]>
         + GetUncheckedRelease<Stride, T>
@@ -115,7 +132,7 @@ fn greedy_quads_for_group<V, T>(
 {
     visited.reset_values(false);
 
-    let OrientedQuads {
+    let QuadGroup {
         quads,
         face:
             OrientedCubeFace {
@@ -197,7 +214,7 @@ fn greedy_quads_for_group<V, T>(
             }
 
             quads.push((
-                Quad {
+                UnorientedQuad {
                     minimum: p,
                     width: quad_width,
                     height: quad_height,

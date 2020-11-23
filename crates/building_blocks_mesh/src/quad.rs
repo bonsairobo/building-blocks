@@ -5,25 +5,8 @@ use building_blocks_core::{
     prelude::*,
 };
 
-/// A set of `Quad`s that share an orientation. Each quad may specify a material of type `M`.
-pub struct OrientedQuads<M> {
-    /// The quads themselves. We rely on the cube face metadata to interpret them.
-    pub quads: Vec<(Quad, M)>,
-    /// One of 6 cube faces. All quads in this struct are comprised of only this face.
-    pub face: OrientedCubeFace,
-}
-
-impl<M> OrientedQuads<M> {
-    pub fn new(face: OrientedCubeFace) -> Self {
-        Self {
-            quads: Vec::new(),
-            face,
-        }
-    }
-}
-
 /// Metadata that's used to aid in the geometric calculations for one of the 6 possible cube faces.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct OrientedCubeFace {
     // Determines the orientation of the plane.
     pub n_sign: i32,
@@ -31,38 +14,39 @@ pub struct OrientedCubeFace {
     // Determines the {N, U, V} <--> {X, Y, Z} relation.
     pub permutation: Axis3Permutation,
 
-    // These vectors are always some permutation of +X, +Y, and +Z.
+    // These vectors are some `permutation` of +X, +Y, and +Z.
     pub n: Point3i,
     pub u: Point3i,
     pub v: Point3i,
-
-    pub mesh_normal: Point3f,
 }
 
 impl OrientedCubeFace {
     pub fn new(n_sign: i32, permutation: Axis3Permutation) -> Self {
         let [n_axis, u_axis, v_axis] = permutation.axes();
-        let n = n_axis.get_unit_vector();
-        let mesh_normal: Point3f = (n * n_sign).into();
 
         Self {
             n_sign,
-
             permutation,
-
-            n,
+            n: n_axis.get_unit_vector(),
             u: u_axis.get_unit_vector(),
             v: v_axis.get_unit_vector(),
-
-            mesh_normal,
         }
     }
 
+    /// A cube face, using axes with an even permutation.
     pub fn canonical(normal: SignedAxis3) -> Self {
         Self::new(
             normal.sign,
             Axis3Permutation::even_with_normal_axis(normal.axis),
         )
+    }
+
+    pub fn signed_normal(&self) -> Point3i {
+        self.n * self.n_sign
+    }
+
+    pub fn mesh_normal(&self) -> Point3f {
+        self.signed_normal().into()
     }
 
     /// Returns the 4 corners of the quad in this order:
@@ -77,7 +61,7 @@ impl OrientedCubeFace {
     ///      -------->
     ///        +u
     /// ```
-    pub fn quad_corners(&self, quad: &Quad) -> [Point3f; 4] {
+    pub fn quad_corners(&self, quad: &UnorientedQuad) -> [Point3f; 4] {
         let w_vec = self.u * quad.width;
         let h_vec = self.v * quad.height;
 
@@ -98,14 +82,14 @@ impl OrientedCubeFace {
         ]
     }
 
-    pub fn quad_mesh_positions(&self, quad: &Quad) -> [[f32; 3]; 4] {
+    pub fn quad_mesh_positions(&self, quad: &UnorientedQuad) -> [[f32; 3]; 4] {
         let [c0, c1, c2, c3] = self.quad_corners(quad);
 
         [c0.0, c1.0, c2.0, c3.0]
     }
 
     pub fn quad_mesh_normals(&self) -> [[f32; 3]; 4] {
-        [self.mesh_normal.0; 4]
+        [self.mesh_normal().0; 4]
     }
 
     /// Returns the 6 vertex indices for the quad in order to make two triangles in a mesh. Winding
@@ -115,7 +99,7 @@ impl OrientedCubeFace {
     }
 
     /// Extends `mesh` with the given `quad` that belongs to this face.
-    pub fn add_quad_to_pos_norm_mesh(&self, quad: &Quad, mesh: &mut PosNormMesh) {
+    pub fn add_quad_to_pos_norm_mesh(&self, quad: &UnorientedQuad, mesh: &mut PosNormMesh) {
         let start_index = mesh.positions.len() as u32;
         mesh.positions
             .extend_from_slice(&self.quad_mesh_positions(quad));
@@ -127,7 +111,7 @@ impl OrientedCubeFace {
     /// Extends `mesh` with the given `quad` that belongs to this group.
     ///
     /// The texture coordinates come from `Quad::simple_tex_coords`.
-    pub fn add_quad_to_pos_norm_tex_mesh(&self, quad: &Quad, mesh: &mut PosNormTexMesh) {
+    pub fn add_quad_to_pos_norm_tex_mesh(&self, quad: &UnorientedQuad, mesh: &mut PosNormTexMesh) {
         let start_index = mesh.positions.len() as u32;
         mesh.positions
             .extend_from_slice(&self.quad_mesh_positions(quad));
@@ -148,16 +132,30 @@ pub fn quad_indices(start: u32, counter_clockwise: bool) -> [u32; 6] {
     }
 }
 
-/// A single quad of connected cubic voxel faces. Takes on more meaning when used with an `OrientedCubeFace`.
+/// The minimum voxel and size of a quad, without an orientation. To get the actual corners of the
+/// quad, combine with an `OrientedCubeFace`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Quad {
+pub struct UnorientedQuad {
+    /// The minimum voxel in the quad.
     pub minimum: Point3i,
+    /// Width of the quad.
     pub width: i32,
+    /// Height of the quad.
     pub height: i32,
 }
 
-impl Quad {
-    pub fn for_voxel_face(voxel_point: Point3i, face: SignedAxis3) -> Self {
+impl UnorientedQuad {
+    pub fn from_extent_face(normal: SignedAxis3, extent: &Extent3i) -> Self {
+        let face = OrientedCubeFace::canonical(normal);
+
+        Self {
+            minimum: extent.minimum,
+            width: face.u.dot(&extent.shape),
+            height: face.v.dot(&extent.shape),
+        }
+    }
+
+    pub fn from_voxel_face(voxel_point: Point3i, face: SignedAxis3) -> Self {
         let mut minimum = voxel_point;
         if face.sign > 0 {
             minimum += face.axis.get_unit_vector();
@@ -186,5 +184,37 @@ impl Quad {
             [0.0, self.height as f32],
             [self.width as f32, self.height as f32],
         ]
+    }
+}
+
+/// A fully determined quad, which is capable of generating a mesh on its own.
+#[derive(Clone, Copy, Debug)]
+pub struct OrientedQuad {
+    pub face: OrientedCubeFace,
+    pub quad: UnorientedQuad,
+}
+
+impl OrientedQuad {
+    pub fn from_face_and_corners(
+        face: OrientedCubeFace,
+        corner1: Point3i,
+        corner2: Point3i,
+    ) -> Self {
+        let extent = Extent3i::from_two_corners(corner1, corner2);
+        let quad = UnorientedQuad {
+            minimum: extent.minimum,
+            width: face.u.dot(&extent.shape),
+            height: face.v.dot(&extent.shape),
+        };
+
+        OrientedQuad { face, quad }
+    }
+
+    pub fn add_to_pos_norm_mesh(&self, mesh: &mut PosNormMesh) {
+        self.face.add_quad_to_pos_norm_mesh(&self.quad, mesh);
+    }
+
+    pub fn add_to_pos_norm_tex_mesh(&self, mesh: &mut PosNormTexMesh) {
+        self.face.add_quad_to_pos_norm_tex_mesh(&self.quad, mesh);
     }
 }

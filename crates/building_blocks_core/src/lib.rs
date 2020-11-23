@@ -27,5 +27,8 @@ pub mod prelude {
 #[cfg(feature = "glam")]
 pub use glam;
 
+#[cfg(feature = "mint")]
+pub use mint;
+
 #[cfg(feature = "nalgebra")]
 pub use nalgebra as na;

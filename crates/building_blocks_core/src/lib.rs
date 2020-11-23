@@ -23,3 +23,9 @@ pub mod prelude {
         Ones, Point, Point2, Point2f, Point2i, Point3, Point3f, Point3i, PointN, SmallZero,
     };
 }
+
+#[cfg(feature = "glam")]
+pub use glam;
+
+#[cfg(feature = "nalgebra")]
+pub use nalgebra as na;

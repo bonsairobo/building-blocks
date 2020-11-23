@@ -181,7 +181,7 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
     // Normally we'd keep this map around in a resource, but we don't need to for this specific
     // example. We could also use an Array3 here instead of a ChunkMap3, but we use chunks for
     // educational purposes.
-    let mut map = ChunkMap3::new(
+    let mut map = ChunkMap::new(
         chunk_shape,
         ambient_value,
         default_chunk_meta,
@@ -195,8 +195,8 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
     pool.scope(|s| {
         for chunk_key in map_ref.chunk_keys() {
             s.spawn(async move {
-                let local_cache = LocalChunkCache3::new();
-                let map_reader = ChunkMapReader3::new(map_ref, &local_cache);
+                let local_cache = LocalChunkCache::new();
+                let map_reader = ChunkMapReader::new(map_ref, &local_cache);
 
                 let padded_chunk_extent =
                     padded_surface_nets_chunk_extent(&map_ref.extent_for_chunk_at_key(chunk_key));
@@ -234,7 +234,7 @@ fn generate_chunk_meshes_from_height_map(
     // Normally we'd keep this map around in a resource, but we don't need to for this specific
     // example. We could also use an Array3 here instead of a ChunkMap3, but we use chunks for
     // educational purposes.
-    let mut map = ChunkMap2::new(
+    let mut map = ChunkMap::new(
         chunk_shape,
         ambient_value,
         default_chunk_meta,
@@ -248,8 +248,8 @@ fn generate_chunk_meshes_from_height_map(
     pool.scope(|s| {
         for chunk_key in map_ref.chunk_keys() {
             s.spawn(async move {
-                let local_cache = LocalChunkCache2::new();
-                let map_reader = ChunkMapReader2::new(map_ref, &local_cache);
+                let local_cache = LocalChunkCache::new();
+                let map_reader = ChunkMapReader::new(map_ref, &local_cache);
                 let padded_chunk_extent =
                     padded_height_map_chunk_extent(&map_ref.extent_for_chunk_at_key(chunk_key))
                         // Ignore the ambient values outside the sample extent.
@@ -287,7 +287,7 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
     // Normally we'd keep this map around in a resource, but we don't need to for this specific
     // example. We could also use an Array3 here instead of a ChunkMap3, but we use chunks for
     // educational purposes.
-    let mut map = ChunkMap3::new(
+    let mut map = ChunkMap::new(
         chunk_shape,
         ambient_value,
         default_chunk_meta,
@@ -302,7 +302,7 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
         for chunk_key in map_ref.chunk_keys() {
             s.spawn(async move {
                 let local_cache = LocalChunkCache3::new();
-                let map_reader = ChunkMapReader3::new(map_ref, &local_cache);
+                let map_reader = ChunkMapReader::new(map_ref, &local_cache);
                 let padded_chunk_extent =
                     padded_greedy_quads_chunk_extent(&map_ref.extent_for_chunk_at_key(chunk_key));
 

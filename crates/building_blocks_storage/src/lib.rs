@@ -39,12 +39,12 @@ pub trait IsEmpty {
 
 pub mod prelude {
     pub use super::{
-        copy_extent, Array, Array2, Array3, ArrayN, Chunk2, Chunk3, Compressed, Compression,
-        FastArrayCompression, FastChunkCompression, ForEach, ForEachMut, Get, GetMut, IsEmpty,
-        Local, LocalChunkCache2, LocalChunkCache3, ReadExtent, Stride, TransformMap, WriteExtent,
+        copy_extent, Array, Array2, Array3, ArrayN, Chunk2, Chunk3, ChunkMap, ChunkMapReader,
+        Compressed, Compression, FastArrayCompression, FastChunkCompression, ForEach, ForEachMut,
+        Get, GetMut, IsEmpty, Local, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
+        ReadExtent, Stride, TransformMap, WriteExtent,
     };
 
-    // Only export these aliases when one compression backend is used.
     // Only export these aliases when one compression backend is used.
     #[cfg(all(feature = "lz4", not(feature = "snappy")))]
     pub use super::chunk_map::conditional_aliases::*;

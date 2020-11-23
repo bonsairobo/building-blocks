@@ -23,7 +23,7 @@
 //! use std::collections::HashSet;
 //!
 //! let chunk_shape = PointN([16; 2]);
-//! let mut map = ChunkMap2::new(chunk_shape, 0.0, (), Lz4 { level: 10 });
+//! let mut map = ChunkMap::new(chunk_shape, 0.0, (), Lz4 { level: 10 });
 //!
 //! // Mutate one or more of the chunks...
 //! let mutated_chunk_keys = [PointN([0; 2]), PointN([16; 2])];
@@ -39,8 +39,8 @@
 //! }
 //!
 //! // Now we generate mesh vertices for each chunk.
-//! let local_cache = LocalChunkCache2::new();
-//! let reader = ChunkMapReader2::new(&map, &local_cache);
+//! let local_cache = LocalChunkCache::new();
+//! let reader = ChunkMapReader::new(&map, &local_cache);
 //! for chunk_key in chunk_keys_to_update.into_iter() {
 //!     // It's crucial that we pad the chunk so we have access to adjacent points during meshing.
 //!     let padded_chunk_extent = padded_height_map_chunk_extent(

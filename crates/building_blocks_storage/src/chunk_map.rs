@@ -25,7 +25,7 @@
 //! let chunk_shape = PointN([16; 3]); // components must be powers of 2
 //! let ambient_value = 0;
 //! let default_chunk_meta = (); // chunk metadata is optional
-//! let mut map = ChunkMap3::new(chunk_shape, ambient_value, default_chunk_meta, Lz4 { level: 10 });
+//! let mut map = ChunkMap::new(chunk_shape, ambient_value, default_chunk_meta, Lz4 { level: 10 });
 //!
 //! // Although we only write 3 points, 3 whole dense chunks will be inserted and cached.
 //! let write_points = [PointN([-100; 3]), PointN([0; 3]), PointN([100; 3])];
@@ -44,8 +44,8 @@
 //!
 //! // Now we can read back the values without mutating the map by using local caching. Compressed
 //! // chunks will be decompressed into our local cache.
-//! let local_cache = LocalChunkCache3::new();
-//! let reader = ChunkMapReader3::new(&map, &local_cache);
+//! let local_cache = LocalChunkCache::new();
+//! let reader = ChunkMapReader::new(&map, &local_cache);
 //! reader.for_each(&bounding_extent, |p, value| {
 //!     if write_points.iter().position(|pw| p == *pw) != None {
 //!         assert_eq!(value, 1);

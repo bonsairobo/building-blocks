@@ -41,6 +41,18 @@ impl OrientedCubeFace {
         )
     }
 
+    pub fn quad_from_extent(&self, extent: &Extent3i) -> UnorientedQuad {
+        UnorientedQuad {
+            minimum: extent.minimum,
+            width: self.u.dot(&extent.shape),
+            height: self.v.dot(&extent.shape),
+        }
+    }
+
+    pub fn quad_from_corners(&self, corner1: Point3i, corner2: Point3i) -> UnorientedQuad {
+        self.quad_from_extent(&Extent3i::from_corners(corner1, corner2))
+    }
+
     pub fn signed_normal(&self) -> Point3i {
         self.n * self.n_sign
     }
@@ -145,24 +157,9 @@ pub struct UnorientedQuad {
 }
 
 impl UnorientedQuad {
-    pub fn from_extent_face(normal: SignedAxis3, extent: &Extent3i) -> Self {
-        let face = OrientedCubeFace::canonical(normal);
-
+    pub fn from_voxel(voxel_point: Point3i) -> Self {
         Self {
-            minimum: extent.minimum,
-            width: face.u.dot(&extent.shape),
-            height: face.v.dot(&extent.shape),
-        }
-    }
-
-    pub fn from_voxel_face(voxel_point: Point3i, face: SignedAxis3) -> Self {
-        let mut minimum = voxel_point;
-        if face.sign > 0 {
-            minimum += face.axis.get_unit_vector();
-        }
-
-        Self {
-            minimum,
+            minimum: voxel_point,
             width: 1,
             height: 1,
         }
@@ -184,37 +181,5 @@ impl UnorientedQuad {
             [0.0, self.height as f32],
             [self.width as f32, self.height as f32],
         ]
-    }
-}
-
-/// A fully determined quad, which is capable of generating a mesh on its own.
-#[derive(Clone, Copy, Debug)]
-pub struct OrientedQuad {
-    pub face: OrientedCubeFace,
-    pub quad: UnorientedQuad,
-}
-
-impl OrientedQuad {
-    pub fn from_face_and_corners(
-        face: OrientedCubeFace,
-        corner1: Point3i,
-        corner2: Point3i,
-    ) -> Self {
-        let extent = Extent3i::from_two_corners(corner1, corner2);
-        let quad = UnorientedQuad {
-            minimum: extent.minimum,
-            width: face.u.dot(&extent.shape),
-            height: face.v.dot(&extent.shape),
-        };
-
-        OrientedQuad { face, quad }
-    }
-
-    pub fn add_to_pos_norm_mesh(&self, mesh: &mut PosNormMesh) {
-        self.face.add_quad_to_pos_norm_mesh(&self.quad, mesh);
-    }
-
-    pub fn add_to_pos_norm_tex_mesh(&self, mesh: &mut PosNormTexMesh) {
-        self.face.add_quad_to_pos_norm_tex_mesh(&self.quad, mesh);
     }
 }

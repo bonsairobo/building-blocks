@@ -109,7 +109,7 @@ where
         lub - PointN::ONES
     }
 
-    pub fn from_two_corners(p1: PointN<N>, p2: PointN<N>) -> Self {
+    pub fn from_corners(p1: PointN<N>, p2: PointN<N>) -> Self {
         let min = p1.meet(&p2);
         let max = p1.join(&p2);
 

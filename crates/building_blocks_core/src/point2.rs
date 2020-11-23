@@ -32,6 +32,11 @@ impl<T> Point2<T> {
     pub fn axis_component(&self, axis: Axis2) -> &T {
         &self.0[axis.index()]
     }
+
+    #[inline]
+    pub fn axis_component_mut(&mut self, axis: Axis2) -> &mut T {
+        &mut self.0[axis.index()]
+    }
 }
 
 impl<T> Point2<T>

@@ -23,6 +23,7 @@ impl<M> OrientedQuads<M> {
 }
 
 /// Metadata that's used to aid in the geometric calculations for one of the 6 possible cube faces.
+#[derive(Clone, Copy, Debug)]
 pub struct OrientedCubeFace {
     // Determines the orientation of the plane.
     pub n_sign: i32,

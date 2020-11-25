@@ -270,8 +270,9 @@ fn impact_with_leaf_octant(
         //
         // Maybe converting the intersection coordinates to integers will not always
         // land in the correct voxel. It should help to nudge the point along the
-        // intersection normal by some epsilon.
-        let nudged_p: mint::Point3<f32> = (contact - std::f32::EPSILON * octant_normal).into();
+        // intersection normal by some amount less than 1.0.
+        const NUDGE_AMOUNT: f32 = 0.25;
+        let nudged_p: mint::Point3<f32> = (contact - NUDGE_AMOUNT * octant_normal).into();
 
         Point3f::from(nudged_p).in_voxel()
     }

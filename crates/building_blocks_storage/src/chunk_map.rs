@@ -88,7 +88,7 @@ mod reader;
 
 pub use chunk::{
     BincodeChunkCompression, BincodeCompressedChunk, Chunk, Chunk2, Chunk3, ChunkShape,
-    FastChunkCompression, FastCompressedChunk,
+    FastChunkCompression, FastCompressedChunk, MaybeCompressedChunk,
 };
 pub use reader::{
     AmbientExtent, ArrayChunkCopySrc, ArrayChunkCopySrcIter, ChunkCopySrc, ChunkMapReader,
@@ -387,6 +387,11 @@ where
     /// it will help with caching efficiency.
     pub fn flush_chunk_cache(&mut self, local_cache: LocalChunkCache<N, T, M>) {
         self.chunks.flush_local_cache(local_cache);
+    }
+
+    /// Consume `self` and return an iterator over all chunks.
+    pub fn into_iter(self) -> impl Iterator<Item = (PointN<N>, MaybeCompressedChunk<N, T, M, B>)> {
+        self.chunks.into_iter()
     }
 
     /// Returns a serializable version of this map. This will compress every chunk in a portable

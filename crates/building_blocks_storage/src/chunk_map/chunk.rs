@@ -2,7 +2,9 @@ use crate::array::{ArrayN, FastArrayCompression};
 
 use building_blocks_core::prelude::*;
 
-use compressible_map::{BincodeCompression, BytesCompression, Compressed, Compression};
+use compressible_map::{
+    BincodeCompression, BytesCompression, Compressed, Compression, MaybeCompressed,
+};
 use serde::{Deserialize, Serialize};
 
 /// One piece of the `ChunkMap`. Contains both some generic metadata and the data for each point in
@@ -114,3 +116,6 @@ macro_rules! impl_chunk_shape {
 
 impl_chunk_shape!(Point2i, [i32; 2]);
 impl_chunk_shape!(Point3i, [i32; 3]);
+
+pub type MaybeCompressedChunk<N, T, M, B> =
+    MaybeCompressed<Chunk<N, T, M>, Compressed<FastChunkCompression<N, T, M, B>>>;

@@ -9,15 +9,15 @@ repository = "https://github.com/bonsairobo/building-blocks"
 keywords = ["voxel"]
 
 [package.metadata.docs.rs]
-all-features = true
+features = ["glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "procgen", "search", "vox"]
 
 [features]
-default = ["mesh", "procgen", "search"]
+default = ["lz4", "mesh", "procgen", "search"]
 
-image = ["building_blocks_image"]
-mesh = ["building_blocks_mesh"]
 glam = ["building_blocks_core/glam"]
+image = ["building_blocks_image"]
 lz4 = ["building_blocks_storage/lz4"]
+mesh = ["building_blocks_mesh"]
 mint = ["building_blocks_core/mint"]
 nalgebra = ["building_blocks_core/nalgebra"]
 ncollide = ["building_blocks_search/ncollide"]
@@ -61,3 +61,4 @@ required-features = ["lz4", "snappy"]
 [[example]]
 name = "bevy_meshing"
 path = "examples/bevy_meshing/bevy_meshing.rs"
+required-features = ["mesh"]

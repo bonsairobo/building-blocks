@@ -57,7 +57,7 @@ pub mod prelude {
     pub use super::Snappy;
 }
 
-pub use compressible_map::{self, BytesCompression, Compressed, Compression};
+pub use compressible_map::{self, BytesCompression, Compressed, Compression, MaybeCompressed};
 
 #[cfg(feature = "lz4")]
 pub use compressible_map::Lz4;

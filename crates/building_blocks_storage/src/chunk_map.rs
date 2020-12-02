@@ -86,13 +86,8 @@
 mod chunk;
 mod reader;
 
-pub use chunk::{
-    BincodeChunkCompression, BincodeCompressedChunk, Chunk, Chunk2, Chunk3, ChunkShape,
-    FastChunkCompression, FastCompressedChunk, MaybeCompressedChunk,
-};
-pub use reader::{
-    AmbientExtent, ArrayChunkCopySrc, ArrayChunkCopySrcIter, ChunkCopySrc, ChunkMapReader,
-};
+pub use chunk::*;
+pub use reader::*;
 
 use crate::{
     access::{ForEachMut, GetUncheckedMutRelease, WriteExtent},
@@ -106,7 +101,8 @@ use building_blocks_core::{
 };
 
 use compressible_map::{
-    BincodeCompression, BytesCompression, CompressibleMap, Compression, LocalCache, MaybeCompressed,
+    BincodeCompression, BytesCompression, Compressed, CompressibleMap, Compression, LocalCache,
+    MaybeCompressed,
 };
 use core::hash::Hash;
 use core::ops::{Div, Mul};
@@ -126,6 +122,7 @@ use compressible_map::Snappy;
 pub mod conditional_aliases {
     use super::*;
 
+    pub use chunk::conditional_aliases::*;
     pub use reader::conditional_aliases::*;
 
     pub type ChunkMap2<T, M = (), B = Lz4> = ChunkMap<[i32; 2], T, M, B>;
@@ -137,6 +134,7 @@ pub mod conditional_aliases {
 pub mod conditional_aliases {
     use super::*;
 
+    pub use chunk::conditional_aliases::*;
     pub use reader::conditional_aliases::*;
 
     pub type ChunkMap2<T, M = (), B = Snappy> = ChunkMap<[i32; 2], T, M, B>;
@@ -240,11 +238,35 @@ where
 
     /// Insert a chunk at `key`. The chunk must have the same shape as `Self::chunk_shape`, and the
     /// key must be a multiple of the chunk shape. These assertions will be made in debug mode.
-    pub fn insert_chunk(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) {
+    pub fn insert_chunk(
+        &mut self,
+        key: PointN<N>,
+        chunk: Chunk<N, T, M>,
+    ) -> Option<MaybeCompressedChunk<N, T, M, B>> {
         debug_assert!(chunk.array.extent().shape.eq(self.chunk_shape()));
         debug_assert!(self.chunk_key_is_valid(&key));
 
-        self.chunks.insert(key, chunk);
+        self.chunks.insert(key, chunk)
+    }
+
+    /// Same as `insert_chunk`, but only inserts when the slot for `key` is vacant.
+    pub fn insert_chunk_if_vacant(
+        &mut self,
+        key: PointN<N>,
+        chunk: Chunk<N, T, M>,
+    ) -> &mut Chunk<N, T, M> {
+        debug_assert!(chunk.array.extent().shape.eq(self.chunk_shape()));
+        debug_assert!(self.chunk_key_is_valid(&key));
+
+        self.chunks.insert_if_vacant(key, chunk)
+    }
+
+    /// Insert a chunk at `key`. The chunk must have the same shape as `Self::chunk_shape`, and the
+    /// key must be a multiple of the chunk shape. These assertions will be made in debug mode.
+    pub fn remove_chunk(&mut self, key: PointN<N>) -> Option<MaybeCompressedChunk<N, T, M, B>> {
+        debug_assert!(self.chunk_key_is_valid(&key));
+
+        self.chunks.remove(&key)
     }
 
     /// Returns the chunk at `key` if it exists.
@@ -263,9 +285,13 @@ where
     /// WARNING: the cache will not be updated. This method should be used for a read-modify-write
     /// workflow where it would be inefficient to cache the chunk only for it to be overwritten by
     /// the modified version.
-    pub fn copy_chunk_without_caching(&self, key: &PointN<N>) -> Option<Chunk<N, T, M>>
+    pub fn copy_chunk_without_caching(
+        &self,
+        key: &PointN<N>,
+    ) -> Option<MaybeCompressedChunk<N, T, M, B>>
     where
         Chunk<N, T, M>: Clone,
+        Compressed<FastChunkCompression<N, T, M, B>>: Clone,
     {
         debug_assert!(self.chunk_key_is_valid(key));
 
@@ -377,10 +403,15 @@ where
         (key, array.get_unchecked_mut_release(p))
     }
 
-    /// Compressed the least-recently-used chunk. On access, compressed chunks will be decompressed
-    /// and cached.
+    /// Compress the least-recently-used, cached chunk. On access, compressed chunks will be
+    /// decompressed and cached.
     pub fn compress_lru_chunk(&mut self) {
         self.chunks.compress_lru();
+    }
+
+    /// Remove the least-recently-used, cached chunk.
+    pub fn remove_lru_chunk(&mut self) -> Option<(PointN<N>, Chunk<N, T, M>)> {
+        self.chunks.remove_lru()
     }
 
     /// Consumes and flushes the chunk cache into the chunk map. This is not strictly necessary, but
@@ -389,8 +420,17 @@ where
         self.chunks.flush_local_cache(local_cache);
     }
 
+    /// Return an iterator over all chunk references.
+    pub fn chunk_iter(
+        &self,
+    ) -> impl Iterator<Item = (&PointN<N>, MaybeCompressedChunkRef<N, T, M, B>)> {
+        self.chunks.iter()
+    }
+
     /// Consume `self` and return an iterator over all chunks.
-    pub fn into_iter(self) -> impl Iterator<Item = (PointN<N>, MaybeCompressedChunk<N, T, M, B>)> {
+    pub fn into_chunk_iter(
+        self,
+    ) -> impl Iterator<Item = (PointN<N>, MaybeCompressedChunk<N, T, M, B>)> {
         self.chunks.into_iter()
     }
 
@@ -406,7 +446,7 @@ where
     {
         let chunk_futures: Vec<_> = self
             .chunks
-            .iter_maybe_compressed()
+            .iter()
             .map(|(chunk_key, chunk)| async move {
                 let portable_chunk = match chunk {
                     MaybeCompressed::Compressed(compressed_chunk) => {

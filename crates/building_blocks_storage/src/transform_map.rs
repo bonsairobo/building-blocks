@@ -242,6 +242,7 @@ mod tests {
         assert_eq!(outer_map.get(&PointN([0; 3])), 1);
     }
 
+    #[cfg(feature = "lz4")]
     #[test]
     fn copy_from_transformed_array() {
         let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
@@ -251,6 +252,7 @@ mod tests {
         copy_extent(&extent, &tfm, &mut dst);
     }
 
+    #[cfg(feature = "lz4")]
     #[test]
     fn copy_from_transformed_chunk_map_reader() {
         let src_extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));

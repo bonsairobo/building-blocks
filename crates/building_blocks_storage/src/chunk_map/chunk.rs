@@ -43,6 +43,7 @@ impl<N, T, M, B> FastChunkCompression<N, T, M, B> {
     }
 }
 
+#[derive(Clone)]
 pub struct FastCompressedChunk<N, T, M, B>
 where
     T: Copy,
@@ -119,3 +120,33 @@ impl_chunk_shape!(Point3i, [i32; 3]);
 
 pub type MaybeCompressedChunk<N, T, M, B> =
     MaybeCompressed<Chunk<N, T, M>, Compressed<FastChunkCompression<N, T, M, B>>>;
+
+pub type MaybeCompressedChunkRef<'a, N, T, M, B> =
+    MaybeCompressed<&'a Chunk<N, T, M>, &'a Compressed<FastChunkCompression<N, T, M, B>>>;
+
+// LZ4 and Snappy are not mutually exclusive, but if you only use one, then you want to have these
+// aliases refer to the choice you made.
+#[cfg(all(feature = "lz4", not(feature = "snappy")))]
+pub mod conditional_aliases {
+    use super::*;
+    use compressible_map::Lz4;
+
+    pub type MaybeCompressedChunk2<T, M = (), B = Lz4> = MaybeCompressedChunk<[i32; 2], T, M, B>;
+    pub type MaybeCompressedChunk3<T, M = (), B = Lz4> = MaybeCompressedChunk<[i32; 3], T, M, B>;
+    pub type MaybeCompressedChunkRef2<'a, T, M = (), B = Lz4> =
+        MaybeCompressedChunkRef<'a, [i32; 2], T, M, B>;
+    pub type MaybeCompressedChunkRef3<'a, T, M = (), B = Lz4> =
+        MaybeCompressedChunkRef<'a, [i32; 3], T, M, B>;
+}
+#[cfg(all(not(feature = "lz4"), feature = "snappy"))]
+pub mod conditional_aliases {
+    use super::*;
+    use compressible_map::Snappy;
+
+    pub type MaybeCompressedChunk2<T, M = (), B = Snappy> = MaybeCompressedChunk<[i32; 2], T, M, B>;
+    pub type MaybeCompressedChunk3<T, M = (), B = Snappy> = MaybeCompressedChunk<[i32; 3], T, M, B>;
+    pub type MaybeCompressedChunkRef2<'a, T, M = (), B = Snappy> =
+        MaybeCompressedChunkRef<'a, [i32; 2], T, M, B>;
+    pub type MaybeCompressedChunkRef3<'a, T, M = (), B = Snappy> =
+        MaybeCompressedChunkRef<'a, [i32; 3], T, M, B>;
+}

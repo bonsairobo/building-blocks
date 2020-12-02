@@ -249,18 +249,6 @@ where
         self.chunks.insert(key, chunk)
     }
 
-    /// Same as `insert_chunk`, but only inserts when the slot for `key` is vacant.
-    pub fn insert_chunk_if_vacant(
-        &mut self,
-        key: PointN<N>,
-        chunk: Chunk<N, T, M>,
-    ) -> &mut Chunk<N, T, M> {
-        debug_assert!(chunk.array.extent().shape.eq(self.chunk_shape()));
-        debug_assert!(self.chunk_key_is_valid(&key));
-
-        self.chunks.insert_if_vacant(key, chunk)
-    }
-
     /// Insert a chunk at `key`. The chunk must have the same shape as `Self::chunk_shape`, and the
     /// key must be a multiple of the chunk shape. These assertions will be made in debug mode.
     pub fn remove_chunk(&mut self, key: PointN<N>) -> Option<MaybeCompressedChunk<N, T, M, B>> {

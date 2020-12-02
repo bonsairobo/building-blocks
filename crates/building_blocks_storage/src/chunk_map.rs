@@ -249,8 +249,8 @@ where
         self.chunks.insert(key, chunk)
     }
 
-    /// Insert a chunk at `key`. The chunk must have the same shape as `Self::chunk_shape`, and the
-    /// key must be a multiple of the chunk shape. These assertions will be made in debug mode.
+    /// Remove the chunk at `key`. The key must be a multiple of the chunk shape. This will be
+    /// asserted win debug mode.
     pub fn remove_chunk(&mut self, key: PointN<N>) -> Option<MaybeCompressedChunk<N, T, M, B>> {
         debug_assert!(self.chunk_key_is_valid(&key));
 

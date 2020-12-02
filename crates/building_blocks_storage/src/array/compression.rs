@@ -103,35 +103,43 @@ mod test {
     #[cfg(feature = "snappy")]
     #[test]
     fn sphere_array_compression_rate_snappy() {
-        sphere_array_compression_rate(Snappy);
+        sphere_array_compression_rate(Snappy, 32);
+        sphere_array_compression_rate(Snappy, 64);
+        sphere_array_compression_rate(Snappy, 128);
     }
 
     #[cfg(feature = "snappy")]
     #[test]
     fn homogeneous_array_compression_rate_snappy() {
-        homogeneous_array_compression_rate(Snappy);
+        homogeneous_array_compression_rate(Snappy, 32);
+        homogeneous_array_compression_rate(Snappy, 64);
+        homogeneous_array_compression_rate(Snappy, 128);
     }
 
     #[cfg(feature = "lz4")]
     #[test]
     fn sphere_array_compression_rate_lz4() {
-        sphere_array_compression_rate(Lz4 { level: 10 });
+        sphere_array_compression_rate(Lz4 { level: 10 }, 32);
+        sphere_array_compression_rate(Lz4 { level: 10 }, 64);
+        sphere_array_compression_rate(Lz4 { level: 10 }, 128);
     }
 
     #[cfg(feature = "lz4")]
     #[test]
     fn homogeneous_array_compression_rate_lz4() {
-        homogeneous_array_compression_rate(Lz4 { level: 10 });
+        homogeneous_array_compression_rate(Lz4 { level: 10 }, 32);
+        homogeneous_array_compression_rate(Lz4 { level: 10 }, 64);
+        homogeneous_array_compression_rate(Lz4 { level: 10 }, 128);
     }
 
-    fn homogeneous_array_compression_rate<B: BytesCompression>(compression: B) {
-        let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([64; 3]));
+    fn homogeneous_array_compression_rate<B: BytesCompression>(compression: B, side_length: i32) {
+        let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([side_length; 3]));
         let array = Array3::fill_with(extent, |_p| 0u16);
         array_compression_rate(&array, compression);
     }
 
-    fn sphere_array_compression_rate<B: BytesCompression>(compression: B) {
-        let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([64; 3]));
+    fn sphere_array_compression_rate<B: BytesCompression>(compression: B, side_length: i32) {
+        let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([side_length; 3]));
         let array = Array3::fill_with(extent, |p| if p.norm() > 50.0 { 0u16 } else { 1u16 });
         array_compression_rate(&array, compression);
     }

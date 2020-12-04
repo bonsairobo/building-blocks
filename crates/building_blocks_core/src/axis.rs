@@ -1,4 +1,4 @@
-use crate::{Point3i, PointN};
+use crate::{Point2i, Point3i, PointN};
 
 /// Either the X or Y axis.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -12,12 +12,37 @@ impl Axis2 {
     pub fn index(&self) -> usize {
         *self as usize
     }
+
+    pub fn get_unit_vector(&self) -> Point2i {
+        match self {
+            Axis2::X => PointN([1, 0]),
+            Axis2::Y => PointN([0, 1]),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SignedAxis2 {
     pub sign: i32,
     pub axis: Axis2,
+}
+
+impl SignedAxis2 {
+    pub fn new(sign: i32, axis: Axis2) -> Self {
+        Self { sign, axis }
+    }
+
+    pub fn get_vector(&self) -> Point2i {
+        self.axis.get_unit_vector() * self.sign
+    }
+
+    pub fn from_vector(v: Point2i) -> Option<Self> {
+        match v {
+            PointN([x, 0]) => Some(SignedAxis2::new(x, Axis2::X)),
+            PointN([0, y]) => Some(SignedAxis2::new(y, Axis2::Y)),
+            _ => None,
+        }
+    }
 }
 
 /// Either the X, Y, or Z axis.

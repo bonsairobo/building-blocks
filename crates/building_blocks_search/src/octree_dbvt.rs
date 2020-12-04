@@ -10,7 +10,6 @@ use core::hash::Hash;
 use fnv::FnvHashMap;
 use ncollide3d::{
     bounding_volume::AABB,
-    na,
     partitioning::{self as nc_part, DBVTLeaf, DBVTLeafId, BVH, DBVT},
 };
 

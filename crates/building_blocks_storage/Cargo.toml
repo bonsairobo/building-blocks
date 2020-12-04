@@ -1,6 +1,6 @@
 [package]
 name = "building_blocks_storage"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2018"
 authors = ["Duncan <bonsairobo@gmail.com>"]
 license = "MIT"
@@ -21,7 +21,7 @@ itertools = "0.9"
 num = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 
-building_blocks_core = { path = "../building_blocks_core", version = "0.2" }
+building_blocks_core = { path = "../building_blocks_core", version = "0.3" }
 
 [dependencies.compressible-map]
 version = "0.3"

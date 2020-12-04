@@ -1,6 +1,6 @@
 [package]
 name = "building_blocks_core"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2018"
 authors = ["Duncan <bonsairobo@gmail.com>"]
 license = "MIT"

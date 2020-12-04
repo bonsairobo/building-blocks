@@ -6,11 +6,11 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::octree::{Octant, OctreeSet, OctreeVisitor, VisitStatus};
 
-use crate::na_conversions::na_point3f_from_point3i;
 use core::hash::Hash;
 use fnv::FnvHashMap;
 use ncollide3d::{
     bounding_volume::AABB,
+    na,
     partitioning::{self as nc_part, DBVTLeaf, DBVTLeafId, BVH, DBVT},
 };
 
@@ -99,8 +99,8 @@ pub trait OctreeDBVTVisitor {
 }
 
 pub fn octant_aabb(octant: &Octant) -> AABB<f32> {
-    let aabb_min = na_point3f_from_point3i(octant.minimum);
-    let aabb_max = na_point3f_from_point3i(octant.minimum + PointN([octant.edge_length; 3]));
+    let aabb_min = Point3f::from(octant.minimum).into();
+    let aabb_max = Point3f::from(octant.minimum + PointN([octant.edge_length; 3])).into();
 
     AABB::new(aabb_min, aabb_max)
 }

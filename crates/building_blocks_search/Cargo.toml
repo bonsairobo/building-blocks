@@ -12,7 +12,7 @@ description = "Search algorithms for voxel data."
 [features]
 default = []
 
-ncollide = ["mint", "nalgebra", "ncollide3d", "building_blocks_core/mint"]
+ncollide = ["nalgebra", "ncollide3d", "building_blocks_core/nalgebra"]
 
 [dependencies]
 fnv = "1.0"
@@ -20,7 +20,6 @@ indexmap = "1.5"
 itertools = "0.9"
 
 # Optional, feature-gated
-mint = { version = "0.5", optional = true }
 nalgebra = { version = "0.23", optional = true, features = ["mint"] }
 ncollide3d = { version = "0.26", optional = true }
 

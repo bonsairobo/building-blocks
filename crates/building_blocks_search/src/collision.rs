@@ -1,7 +1,4 @@
-use crate::{
-    na_conversions::na_point3f_from_point3i,
-    octree_dbvt::{OctreeDBVT, OctreeDBVTVisitor},
-};
+use crate::octree_dbvt::{OctreeDBVT, OctreeDBVTVisitor};
 
 use building_blocks_core::prelude::*;
 use building_blocks_storage::octree::{Octant, VisitStatus};
@@ -272,7 +269,7 @@ fn impact_with_leaf_octant(
         // land in the correct voxel. It should help to nudge the point along the
         // intersection normal by some amount less than 1.0.
         const NUDGE_AMOUNT: f32 = 0.25;
-        let nudged_p: mint::Point3<f32> = (contact - NUDGE_AMOUNT * octant_normal).into();
+        let nudged_p = contact - NUDGE_AMOUNT * octant_normal;
 
         Point3f::from(nudged_p).in_voxel()
     }
@@ -283,14 +280,14 @@ fn extent3i_cuboid(e: &Extent3i) -> Cuboid<f32> {
 }
 
 fn extent3i_cuboid_transform(e: &Extent3i) -> Isometry3<f32> {
-    let min = na_point3f_from_point3i(e.minimum);
+    let min = na::Point3::from(Point3f::from(e.minimum));
     let center = min + half_extent(e.shape);
 
     Isometry3::new(center.coords, zero())
 }
 
 fn half_extent(shape: Point3i) -> na::Vector3<f32> {
-    na_point3f_from_point3i(shape).coords / 2.0
+    na::Vector3::from(Point3f::from(shape)) / 2.0
 }
 
 // ████████╗███████╗███████╗████████╗

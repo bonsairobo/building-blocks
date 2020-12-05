@@ -530,9 +530,10 @@ mod tests {
                     for p in Extent3i::from(node.octant()).iter_points() {
                         octant_voxels.insert(p);
                     }
-                }
-                for octant in 0..8 {
-                    queue.push(octree.get_child(&offset_table, &node, octant));
+                } else {
+                    for octant in 0..8 {
+                        queue.push(octree.get_child(&offset_table, &node, octant));
+                    }
                 }
             }
         }

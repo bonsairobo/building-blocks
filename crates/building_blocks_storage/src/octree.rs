@@ -166,6 +166,31 @@ impl OctreeSet {
         self._visit(LocationCode(1), minimum, edge_len, &corner_offsets, visitor)
     }
 
+    /// Same as `visit`, but visit only the octants that overlap `extent`.
+    pub fn visit_extent(&self, extent: &Extent3i, visitor: &mut impl OctreeVisitor) -> VisitStatus {
+        self.visit(&mut |octant: Octant, is_leaf: bool| {
+            if Extent3i::from(octant).intersection(extent).is_empty() {
+                return VisitStatus::Stop;
+            }
+
+            visitor.visit_octant(octant, is_leaf)
+        })
+    }
+
+    /// Returns all leaf octants that overlap `extent`.
+    pub fn collect_leaves(&self, extent: &Extent3i) -> Vec<Octant> {
+        let mut leaves = Vec::new();
+        self.visit_extent(extent, &mut |octant: Octant, is_leaf: bool| {
+            if is_leaf {
+                leaves.push(octant);
+            }
+
+            VisitStatus::Continue
+        });
+
+        leaves
+    }
+
     fn _visit(
         &self,
         location: LocationCode,

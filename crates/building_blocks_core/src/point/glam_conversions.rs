@@ -29,3 +29,17 @@ impl From<Point3f> for gl::Vec3 {
         gl::Vec3::new(p.x(), p.y(), p.z())
     }
 }
+
+impl From<gl::Vec3A> for Point3f {
+    #[inline]
+    fn from(p: gl::Vec3A) -> Self {
+        PointN([p.x, p.y, p.z])
+    }
+}
+
+impl From<Point3f> for gl::Vec3A {
+    #[inline]
+    fn from(p: Point3f) -> Self {
+        gl::Vec3A::new(p.x(), p.y(), p.z())
+    }
+}

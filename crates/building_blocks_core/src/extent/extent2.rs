@@ -85,4 +85,14 @@ mod test {
             ]
         );
     }
+
+    #[test]
+    fn empty_intersection_is_empty() {
+        let e1 = Extent2i::from_min_and_max(PointN([0; 2]), PointN([1; 2]));
+        let e2 = Extent2i::from_min_and_max(PointN([3; 2]), PointN([4; 2]));
+
+        // A naive implementation might say the shape is [-1, -1].
+        assert_eq!(e1.intersection(&e2).shape, PointN([0; 2]));
+        assert!(e1.intersection(&e2).is_empty());
+    }
 }

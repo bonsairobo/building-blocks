@@ -7,6 +7,7 @@ pub use extent3::*;
 use crate::{point::point_traits::*, PointN};
 
 use core::ops::{Add, AddAssign, Sub, SubAssign};
+use num::Zero;
 use serde::{Deserialize, Serialize};
 
 /// An N-dimensional extent. This is mathematically the Cartesian product of a half-closed interval
@@ -32,14 +33,6 @@ impl<N> ExtentN<N>
 where
     PointN<N>: Point,
 {
-    /// An alternative representation of an extent as the minimum point and least upper bound.
-    pub fn from_min_and_lub(minimum: PointN<N>, least_upper_bound: PointN<N>) -> Self {
-        let minimum = minimum;
-        let shape = least_upper_bound - minimum;
-
-        Self { minimum, shape }
-    }
-
     /// Translate the extent such that it has `new_min` as it's new minimum.
     pub fn with_minimum(&self, new_min: PointN<N>) -> Self {
         Self::from_min_and_shape(new_min, self.shape)
@@ -77,6 +70,15 @@ impl<N> ExtentN<N>
 where
     PointN<N>: IntegerPoint,
 {
+    /// An alternative representation of an extent as the minimum point and least upper bound.
+    pub fn from_min_and_lub(minimum: PointN<N>, least_upper_bound: PointN<N>) -> Self {
+        let minimum = minimum;
+        // We want to avoid negative shape components.
+        let shape = (least_upper_bound - minimum).join(&PointN::zero());
+
+        Self { minimum, shape }
+    }
+
     /// Returns the extent containing only the points in both `self` and `other`.
     pub fn intersection(&self, other: &Self) -> Self {
         let minimum = self.minimum.join(&other.minimum);
@@ -149,6 +151,10 @@ pub trait IntegerExtent<N>: Extent<N> + Copy {
     /// ]);
     /// ```
     fn iter_points(&self) -> Self::PointIter;
+
+    fn is_empty(&self) -> bool {
+        self.num_points() == 0
+    }
 }
 
 impl<T> Add<PointN<T>> for ExtentN<T>

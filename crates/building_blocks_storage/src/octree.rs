@@ -131,6 +131,12 @@ impl OctreeSet {
         (exists, all_children_full)
     }
 
+    /// The exponent P such that `self.edge_length() = 2 ^ P`.
+    pub fn power(&self) -> u8 {
+        self.power
+    }
+
+    /// The length of any edge of the root octant.
     pub fn edge_length(&self) -> i32 {
         1 << self.power
     }
@@ -256,16 +262,16 @@ impl OctreeSet {
                 location: LocationCode(1),
                 octant: self.octant(),
                 child_bitmask: self.nodes.get(&LocationCode(1)).cloned().unwrap_or(0),
-                level: self.power,
+                power: self.power,
             })
         } else {
             None
         }
     }
 
-    /// Returns the child `OctreeNode` of `parent` at the given `child_octant`. `offset_table` is a
-    /// constant that can be constructed by `self.offset_table()` and reused with any octree of the
-    /// same size, indefinitely.
+    /// Returns the child `OctreeNode` of `parent` at the given `child_octant`, where
+    /// `0 < child_octant < 8`. `offset_table` is a constant that can be constructed by
+    /// `self.offset_table()` and reused with any octree of the same size, indefinitely.
     pub fn get_child(
         &self,
         offset_table: &OffsetTable,
@@ -278,7 +284,7 @@ impl OctreeSet {
             return None;
         }
 
-        let child_level = parent.level - 1;
+        let child_power = parent.power - 1;
 
         let child_location = parent
             .location
@@ -287,7 +293,7 @@ impl OctreeSet {
 
         let child_octant = Octant {
             minimum: parent.octant.minimum
-                + offset_table.get_octant_offset(child_level, child_octant),
+                + offset_table.get_octant_offset(child_power, child_octant),
             edge_length: parent.octant.edge_length >> 1,
         };
 
@@ -295,7 +301,7 @@ impl OctreeSet {
             location: child_location,
             octant: child_octant,
             child_bitmask: 0,
-            level: child_level,
+            power: child_power,
         };
 
         if let Some(bitmask) = self.nodes.get(&child_node.location) {
@@ -326,8 +332,8 @@ impl OffsetTable {
         }
     }
 
-    fn get_octant_offset(&self, level: u8, octant: u8) -> Point3i {
-        self.levels[level as usize].get_octant_offset(octant)
+    fn get_octant_offset(&self, power: u8, octant: u8) -> Point3i {
+        self.levels[power as usize].get_octant_offset(octant)
     }
 }
 
@@ -360,10 +366,11 @@ pub struct OctreeNode {
     location: LocationCode,
     octant: Octant,
     child_bitmask: ChildBitMask,
-    level: u8,
+    power: u8,
 }
 
 impl OctreeNode {
+    /// A leaf node is one whose octant is entirely full.
     pub fn is_leaf(&self) -> bool {
         self.child_bitmask == 0
     }
@@ -372,8 +379,11 @@ impl OctreeNode {
         self.octant
     }
 
-    pub fn level(&self) -> u8 {
-        self.level
+    /// The power of a node is directly related to the edge length of octants at that level of the
+    /// tree. So the power of the root node is `P` where `edge_length = 2 ^ P`. The power of any
+    /// single-point leaf octant is 0, because `edge_length = 1 = 2 ^ 0`.
+    pub fn power(&self) -> u8 {
+        self.power
     }
 }
 

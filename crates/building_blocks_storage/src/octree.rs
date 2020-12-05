@@ -301,7 +301,7 @@ impl OctreeSet {
         Some(child_node)
     }
 
-    /// Returns the `OffsetTable` for this octree's shape.
+    /// Returns the `OffsetTable` for this octree's shape. Used for manual node-based traversal.
     pub fn offset_table(&self) -> OffsetTable {
         OffsetTable::for_power(self.power)
     }
@@ -350,6 +350,8 @@ impl OctantOffsets {
     }
 }
 
+/// Represents a single non-empty octant in the octree. Used for manual traversal by calling
+/// `OctreeSet::get_child`.
 pub struct OctreeNode {
     location: LocationCode,
     octant: Octant,
@@ -364,6 +366,10 @@ impl OctreeNode {
 
     pub fn octant(&self) -> Octant {
         self.octant
+    }
+
+    pub fn level(&self) -> u8 {
+        self.level
     }
 }
 

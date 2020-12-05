@@ -2,6 +2,10 @@
 //!
 //! The typical workflow for using an `Octree` is to construct it from an `Array3`, then insert it
 //! into an `OctreeDBVT` in order to perform spatial queries like raycasting.
+//!
+//! `OctreeSet` supports two modes of traversal. One is using the visitor pattern, which is the most
+//! efficient. The other is "node-based," which is less efficient and more manual but also more
+//! flexible.
 
 use crate::{access::GetUncheckedRelease, prelude::*, IsEmpty};
 

@@ -16,7 +16,7 @@ use fnv::FnvHashMap;
 /// tree can be differently sized octants.
 pub struct OctreeSet {
     extent: Extent3i,
-    root_level: u8,
+    power: u8,
     root_exists: bool,
     // Save memory by using 2-byte location codes as hash map keys instead of 64-bit node pointers.
     // The total memory usage can be approximated as 4 bytes per node, assuming the hashbrown table
@@ -38,11 +38,10 @@ impl OctreeSet {
     {
         assert!(extent.shape.dimensions_are_powers_of_2());
         assert!(extent.shape.is_cube());
-        let power = extent.shape.x().trailing_zeros();
+        let power = extent.shape.x().trailing_zeros() as u8;
         // Constrained by 16-bit location code.
         assert!(power > 0 && power <= 6);
 
-        let root_level = (power - 1) as u8;
         let edge_len = 1 << power;
 
         // These are the corners of the root octant, in local coordinates.
@@ -68,7 +67,7 @@ impl OctreeSet {
         );
 
         Self {
-            root_level,
+            power,
             root_exists,
             extent,
             nodes,
@@ -129,7 +128,7 @@ impl OctreeSet {
     }
 
     pub fn edge_length(&self) -> i32 {
-        1 << (self.root_level + 1)
+        1 << self.power
     }
 
     /// The entire octant spanned by the octree.
@@ -175,20 +174,6 @@ impl OctreeSet {
 
             visitor.visit_octant(octant, is_leaf)
         })
-    }
-
-    /// Returns all leaf octants that overlap `extent`.
-    pub fn collect_leaves(&self, extent: &Extent3i) -> Vec<Octant> {
-        let mut leaves = Vec::new();
-        self.visit_extent(extent, &mut |octant: Octant, is_leaf: bool| {
-            if is_leaf {
-                leaves.push(octant);
-            }
-
-            VisitStatus::Continue
-        });
-
-        leaves
     }
 
     fn _visit(
@@ -259,6 +244,127 @@ impl OctreeSet {
         // Continue with the rest of the tree.
         VisitStatus::Continue
     }
+
+    /// The `OctreeNode` of the root, if it exists.
+    pub fn root_node(&self) -> Option<OctreeNode> {
+        if self.root_exists {
+            Some(OctreeNode {
+                location: LocationCode(1),
+                octant: self.octant(),
+                child_bitmask: self.nodes.get(&LocationCode(1)).cloned().unwrap_or(0),
+                level: self.power,
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Returns the child `OctreeNode` of `parent` at the given `child_octant`. `offset_table` is a
+    /// constant that can be constructed by `self.offset_table()` and reused with any octree of the
+    /// same size, indefinitely.
+    pub fn get_child(
+        &self,
+        offset_table: &OffsetTable,
+        parent: &OctreeNode,
+        child_octant: u8,
+    ) -> Option<OctreeNode> {
+        debug_assert!(child_octant < 8);
+
+        if parent.child_bitmask & (1 << child_octant) == 0 {
+            return None;
+        }
+
+        let child_level = parent.level - 1;
+
+        let child_location = parent
+            .location
+            .extend()
+            .with_lowest_octant(child_octant as u16);
+
+        let child_octant = Octant {
+            minimum: parent.octant.minimum
+                + offset_table.get_octant_offset(child_level, child_octant),
+            edge_length: parent.octant.edge_length >> 1,
+        };
+
+        let mut child_node = OctreeNode {
+            location: child_location,
+            octant: child_octant,
+            child_bitmask: 0,
+            level: child_level,
+        };
+
+        if let Some(bitmask) = self.nodes.get(&child_node.location) {
+            child_node.child_bitmask = *bitmask;
+        }
+
+        Some(child_node)
+    }
+
+    /// Returns the `OffsetTable` for this octree's shape.
+    pub fn offset_table(&self) -> OffsetTable {
+        OffsetTable::for_power(self.power)
+    }
+}
+
+/// A cache of offset values used for calculating octant minimums. These offsets never change for a
+/// given octree shape.
+pub struct OffsetTable {
+    levels: Vec<OctantOffsets>,
+}
+
+impl OffsetTable {
+    fn for_power(power: u8) -> Self {
+        Self {
+            levels: (0..power)
+                .map(|pow| OctantOffsets::with_edge_length(1 << pow))
+                .collect(),
+        }
+    }
+
+    fn get_octant_offset(&self, level: u8, octant: u8) -> Point3i {
+        self.levels[level as usize].get_octant_offset(octant)
+    }
+}
+
+#[derive(Clone, Copy)]
+struct OctantOffsets {
+    offsets: [Point3i; 8],
+}
+
+impl OctantOffsets {
+    fn with_edge_length(edge_length: i32) -> Self {
+        let mut offsets = [PointN([0; 3]); 8];
+        for (dst, src) in offsets
+            .iter_mut()
+            .zip(Point3i::corner_offsets().into_iter())
+        {
+            *dst = src * edge_length;
+        }
+
+        OctantOffsets { offsets }
+    }
+
+    fn get_octant_offset(&self, octant: u8) -> Point3i {
+        self.offsets[octant as usize]
+    }
+}
+
+pub struct OctreeNode {
+    location: LocationCode,
+    octant: Octant,
+    child_bitmask: ChildBitMask,
+    level: u8,
+}
+
+impl OctreeNode {
+    pub fn is_leaf(&self) -> bool {
+        self.child_bitmask == 0
+    }
+
+    pub fn octant(&self) -> Octant {
+        self.octant
+    }
 }
 
 type ChildBitMask = u8;
@@ -281,11 +387,11 @@ type ChildBitMask = u8;
 struct LocationCode(u16);
 
 impl LocationCode {
-    pub fn extend(self) -> Self {
+    fn extend(self) -> Self {
         LocationCode(self.0 << 3)
     }
 
-    pub fn with_lowest_octant(self, octant: u16) -> Self {
+    fn with_lowest_octant(self, octant: u16) -> Self {
         LocationCode(self.0 | octant)
     }
 }
@@ -294,8 +400,18 @@ impl LocationCode {
 /// represents a totally full set of points.
 #[derive(Clone, Copy)]
 pub struct Octant {
-    pub minimum: Point3i,
-    pub edge_length: i32,
+    minimum: Point3i,
+    edge_length: i32,
+}
+
+impl Octant {
+    pub fn minimum(&self) -> Point3i {
+        self.minimum
+    }
+
+    pub fn edge_length(&self) -> i32 {
+        self.edge_length
+    }
 }
 
 impl From<Octant> for Extent3i {
@@ -359,13 +475,37 @@ mod tests {
 
         octree.visit(&mut |octant: Octant, is_leaf: bool| {
             if is_leaf {
-                voxels.for_each(&Extent3i::from(octant), |p, _v| {
+                for p in Extent3i::from(octant).iter_points() {
                     octant_voxels.insert(p);
-                });
+                }
             }
 
             VisitStatus::Continue
         });
+
+        assert_eq!(non_empty_voxels, octant_voxels);
+
+        // Now do the same test with a manual node traversal.
+        let mut octant_voxels = HashSet::new();
+
+        let offset_table = octree.offset_table();
+        let mut queue = vec![octree.root_node()];
+        loop {
+            if let Some(node) = queue.pop() {
+                if let Some(node) = node {
+                    if node.is_leaf() {
+                        for p in Extent3i::from(node.octant()).iter_points() {
+                            octant_voxels.insert(p);
+                        }
+                    }
+                    for octant in 0..8 {
+                        queue.push(octree.get_child(&offset_table, &node, octant));
+                    }
+                }
+            } else {
+                break;
+            }
+        }
 
         assert_eq!(non_empty_voxels, octant_voxels);
     }

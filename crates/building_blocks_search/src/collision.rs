@@ -259,8 +259,8 @@ fn impact_with_leaf_octant(
     contact: &na::Point3<f32>,
     octant_normal: &na::Vector3<f32>,
 ) -> Point3i {
-    if octant.edge_length == 1 {
-        octant.minimum
+    if octant.edge_length() == 1 {
+        octant.minimum()
     } else {
         // Octant is not a single voxel, so we need to calculate which voxel in the
         // octant was hit.

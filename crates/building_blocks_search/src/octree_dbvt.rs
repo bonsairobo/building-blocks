@@ -98,8 +98,8 @@ pub trait OctreeDBVTVisitor {
 }
 
 pub fn octant_aabb(octant: &Octant) -> AABB<f32> {
-    let aabb_min = Point3f::from(octant.minimum).into();
-    let aabb_max = Point3f::from(octant.minimum + PointN([octant.edge_length; 3])).into();
+    let aabb_min = Point3f::from(octant.minimum()).into();
+    let aabb_max = Point3f::from(octant.minimum() + PointN([octant.edge_length(); 3])).into();
 
     AABB::new(aabb_min, aabb_max)
 }

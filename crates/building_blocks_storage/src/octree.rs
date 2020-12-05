@@ -46,12 +46,12 @@ impl OctreeSet {
         // Constrained by 16-bit location code.
         assert!(power > 0 && power <= 6);
 
-        let edge_len = 1 << power;
+        let edge_length = 1 << power;
 
         // These are the corners of the root octant, in local coordinates.
         let corner_offsets: Vec<_> = Point3i::corner_offsets()
             .into_iter()
-            .map(|p| Local(p * edge_len))
+            .map(|p| Local(p * edge_length))
             .collect();
         // Convert into strides for indexing efficiency.
         let mut corner_strides = [Stride(0); 8];
@@ -64,7 +64,7 @@ impl OctreeSet {
         let (root_exists, _full) = Self::partition_array(
             root_location,
             root_minimum,
-            edge_len,
+            edge_length,
             &corner_strides,
             array,
             &mut nodes,
@@ -81,7 +81,7 @@ impl OctreeSet {
     fn partition_array<A, T>(
         location: LocationCode,
         minimum: Stride,
-        edge_len: i32,
+        edge_length: i32,
         corner_strides: &[Stride],
         array: &A,
         nodes: &mut FnvHashMap<LocationCode, ChildBitMask>,
@@ -90,8 +90,9 @@ impl OctreeSet {
         A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
         T: Clone + IsEmpty,
     {
-        // Base case where the octant is a single voxel.
-        if edge_len == 1 {
+        // Base case where the octant is a single voxel. The `location` is invalid and unnecessary
+        // in this case; we avoid using it by returning early.
+        if edge_length == 1 {
             let exists = !array.get_unchecked_release(minimum).is_empty();
             return (exists, exists);
         }
@@ -103,7 +104,7 @@ impl OctreeSet {
             *child_corner = Stride(parent_corner.0 >> 1);
         }
 
-        let half_edge_len = edge_len >> 1;
+        let half_edge_length = edge_length >> 1;
         let mut child_bitmask = 0;
         let mut all_children_full = true;
         let extended_location = location.extend();
@@ -113,7 +114,7 @@ impl OctreeSet {
             let (child_exists, child_full) = Self::partition_array(
                 octant_location,
                 octant_min,
-                half_edge_len,
+                half_edge_length,
                 &octant_corner_strides,
                 array,
                 nodes,
@@ -269,46 +270,56 @@ impl OctreeSet {
         }
     }
 
-    /// Returns the child `OctreeNode` of `parent` at the given `child_octant`, where
+    /// Returns the child `OctreeNode` of `parent` at the given `child_octant_index`, where
     /// `0 < child_octant < 8`. `offset_table` is a constant that can be constructed by
     /// `self.offset_table()` and reused with any octree of the same size, indefinitely.
     pub fn get_child(
         &self,
         offset_table: &OffsetTable,
         parent: &OctreeNode,
-        child_octant: u8,
+        child_octant_index: u8,
     ) -> Option<OctreeNode> {
-        debug_assert!(child_octant < 8);
+        debug_assert!(child_octant_index < 8);
 
-        if parent.child_bitmask & (1 << child_octant) == 0 {
+        if parent.child_bitmask & (1 << child_octant_index) == 0 {
             return None;
         }
 
         let child_power = parent.power - 1;
+        let child_octant = Octant {
+            minimum: parent.octant.minimum
+                + offset_table.get_octant_offset(child_power, child_octant_index),
+            edge_length: parent.octant.edge_length >> 1,
+        };
+
+        if child_power == 0 {
+            // The child is a leaf, so we don't need to extend the location or look for a child
+            // bitmask.
+            return Some(OctreeNode {
+                location: LocationCode::LEAF,
+                octant: child_octant,
+                child_bitmask: 0,
+                power: child_power,
+            });
+        }
 
         let child_location = parent
             .location
             .extend()
-            .with_lowest_octant(child_octant as u16);
+            .with_lowest_octant(child_octant_index as u16);
 
-        let child_octant = Octant {
-            minimum: parent.octant.minimum
-                + offset_table.get_octant_offset(child_power, child_octant),
-            edge_length: parent.octant.edge_length >> 1,
+        let (location, child_bitmask) = if let Some(bitmask) = self.nodes.get(&child_location) {
+            (child_location, *bitmask)
+        } else {
+            (LocationCode::LEAF, 0)
         };
 
-        let mut child_node = OctreeNode {
-            location: child_location,
+        Some(OctreeNode {
+            location,
             octant: child_octant,
-            child_bitmask: 0,
+            child_bitmask,
             power: child_power,
-        };
-
-        if let Some(bitmask) = self.nodes.get(&child_node.location) {
-            child_node.child_bitmask = *bitmask;
-        }
-
-        Some(child_node)
+        })
     }
 
     /// Returns the `OffsetTable` for this octree's shape. Used for manual node-based traversal.
@@ -372,7 +383,7 @@ pub struct OctreeNode {
 impl OctreeNode {
     /// A leaf node is one whose octant is entirely full.
     pub fn is_leaf(&self) -> bool {
-        self.child_bitmask == 0
+        self.location == LocationCode::LEAF
     }
 
     pub fn octant(&self) -> Octant {
@@ -407,6 +418,9 @@ type ChildBitMask = u8;
 struct LocationCode(u16);
 
 impl LocationCode {
+    // Leaves don't need to store child bitmasks, so we can give them a sentinel code.
+    const LEAF: Self = LocationCode(0);
+
     fn extend(self) -> Self {
         LocationCode(self.0 << 3)
     }
@@ -510,20 +524,16 @@ mod tests {
 
         let offset_table = octree.offset_table();
         let mut queue = vec![octree.root_node()];
-        loop {
-            if let Some(node) = queue.pop() {
-                if let Some(node) = node {
-                    if node.is_leaf() {
-                        for p in Extent3i::from(node.octant()).iter_points() {
-                            octant_voxels.insert(p);
-                        }
-                    }
-                    for octant in 0..8 {
-                        queue.push(octree.get_child(&offset_table, &node, octant));
+        while !queue.is_empty() {
+            if let Some(node) = queue.pop().unwrap() {
+                if node.is_leaf() {
+                    for p in Extent3i::from(node.octant()).iter_points() {
+                        octant_voxels.insert(p);
                     }
                 }
-            } else {
-                break;
+                for octant in 0..8 {
+                    queue.push(octree.get_child(&offset_table, &node, octant));
+                }
             }
         }
 
@@ -532,7 +542,7 @@ mod tests {
 
     fn random_voxels() -> Array3<Voxel> {
         let mut rng = rand::thread_rng();
-        let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
+        let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([64; 3]));
 
         Array3::fill_with(extent, |_| Voxel(rng.gen()))
     }

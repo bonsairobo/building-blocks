@@ -48,8 +48,8 @@ fn octree_from_array3_full(c: &mut Criterion) {
     group.finish();
 }
 
-fn octree_visit_all_leaves_sphere(c: &mut Criterion) {
-    let mut group = c.benchmark_group("visit_all_leaves_sphere");
+fn octree_visit_all_octants_of_sphere(c: &mut Criterion) {
+    let mut group = c.benchmark_group("octree_visit_all_octants_of_sphere");
     for power in [4, 5, 6].iter() {
         let edge_len = 1 << *power;
         group.bench_with_input(
@@ -76,11 +76,48 @@ fn octree_visit_all_leaves_sphere(c: &mut Criterion) {
     group.finish();
 }
 
+fn octree_visit_all_octant_nodes_of_sphere(c: &mut Criterion) {
+    let mut group = c.benchmark_group("octree_visit_all_octant_nodes_of_sphere");
+    for power in [4, 5, 6].iter() {
+        let edge_len = 1 << *power;
+        group.bench_with_input(
+            BenchmarkId::from_parameter(edge_len),
+            &edge_len,
+            |b, &edge_len| {
+                b.iter_with_setup(
+                    || {
+                        let map = make_sphere_array(edge_len);
+                        let octree = OctreeSet::from_array3(&map, *map.extent());
+                        let offset_table = octree.offset_table();
+
+                        (octree, offset_table)
+                    },
+                    |(octree, offset_table)| {
+                        let mut queue = vec![octree.root_node()];
+                        while !queue.is_empty() {
+                            if let Some(node) = queue.pop().unwrap() {
+                                black_box(&node);
+                                if !node.is_leaf() {
+                                    for octant in 0..8 {
+                                        queue.push(octree.get_child(&offset_table, &node, octant));
+                                    }
+                                }
+                            }
+                        }
+                    },
+                );
+            },
+        );
+    }
+    group.finish();
+}
+
 criterion_group!(
     benches,
     octree_from_array3_sphere,
     octree_from_array3_full,
-    octree_visit_all_leaves_sphere
+    octree_visit_all_octants_of_sphere,
+    octree_visit_all_octant_nodes_of_sphere
 );
 criterion_main!(benches);
 

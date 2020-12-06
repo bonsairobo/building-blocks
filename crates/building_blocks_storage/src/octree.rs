@@ -376,6 +376,7 @@ impl OctantOffsets {
 
 /// Represents a single non-empty octant in the octree. Used for manual traversal by calling
 /// `OctreeSet::get_child`.
+#[derive(Clone, Copy)]
 pub struct OctreeNode {
     location: LocationCode,
     octant: Octant,

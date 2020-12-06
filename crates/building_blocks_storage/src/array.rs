@@ -107,10 +107,12 @@ pub trait Array<N> {
         Self::Indexer::for_each_point_and_stride(self.extent(), extent, f);
     }
 
+    #[inline]
     fn stride_from_local_point(&self, p: &Local<N>) -> Stride {
         Self::Indexer::stride_from_local_point(&self.extent().shape, p)
     }
 
+    #[inline]
     fn strides_from_local_points(&self, points: &[Local<N>], strides: &mut [Stride]) {
         for (i, p) in points.iter().enumerate() {
             strides[i] = self.stride_from_local_point(p);
@@ -124,6 +126,7 @@ where
 {
     type Indexer = N;
 
+    #[inline]
     fn extent(&self) -> &ExtentN<N> {
         self.extent()
     }
@@ -155,6 +158,7 @@ pub struct ArrayN<N, T> {
 
 impl<N, T> ArrayN<N, T> {
     /// Set all points to the same value.
+    #[inline]
     pub fn reset_values(&mut self, value: T)
     where
         T: Clone,
@@ -165,15 +169,18 @@ impl<N, T> ArrayN<N, T> {
     }
 
     /// Returns the entire slice of values.
+    #[inline]
     pub fn values_slice(&self) -> &[T] {
         &self.values[..]
     }
 
     /// Moves the raw extent and values `Vec` out of `self`.
+    #[inline]
     pub fn into_parts(self) -> (ExtentN<N>, Vec<T>) {
         (self.extent, self.values)
     }
 
+    #[inline]
     pub fn extent(&self) -> &ExtentN<N> {
         &self.extent
     }
@@ -184,6 +191,7 @@ where
     T: Copy,
 {
     /// Returns the slice of values, reinterpreted as raw bytes.
+    #[inline]
     pub fn bytes_slice(&self) -> &[u8] {
         unsafe {
             std::slice::from_raw_parts(
@@ -226,6 +234,7 @@ where
     }
 
     /// Sets the extent minimum to `p`.
+    #[inline]
     pub fn set_minimum(&mut self, p: PointN<N>) {
         self.extent.minimum = p;
     }
@@ -236,6 +245,7 @@ where
     PointN<N>: Point,
 {
     /// Returns `true` iff this map contains point `p`.
+    #[inline]
     pub fn contains(&self, p: &PointN<N>) -> bool {
         self.extent.contains(p)
     }
@@ -264,6 +274,7 @@ where
     }
 
     /// Adds `p` to the extent minimum.
+    #[inline]
     pub fn translate(&mut self, p: PointN<N>) {
         self.extent = self.extent.add(p);
     }
@@ -329,6 +340,7 @@ pub struct Local<N>(pub PointN<N>);
 
 impl<N> Local<N> {
     /// Wraps all of the `points` using the `Local` constructor.
+    #[inline]
     pub fn localize_points(points: &[PointN<N>]) -> Vec<Local<N>>
     where
         PointN<N>: Clone,
@@ -340,6 +352,7 @@ impl<N> Local<N> {
 impl<N> Deref for Local<N> {
     type Target = PointN<N>;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -351,10 +364,12 @@ impl<N> Deref for Local<N> {
 pub struct Stride(pub usize);
 
 impl Zero for Stride {
+    #[inline]
     fn zero() -> Self {
         Stride(0)
     }
 
+    #[inline]
     fn is_zero(&self) -> bool {
         self.0 == 0
     }
@@ -363,6 +378,7 @@ impl Zero for Stride {
 impl Add for Stride {
     type Output = Self;
 
+    #[inline]
     fn add(self, rhs: Self) -> Self::Output {
         // Wraps for negative point offsets.
         Self(self.0.wrapping_add(rhs.0))
@@ -372,6 +388,7 @@ impl Add for Stride {
 impl Sub for Stride {
     type Output = Self;
 
+    #[inline]
     fn sub(self, rhs: Self) -> Self::Output {
         // Wraps for negative point offsets.
         Self(self.0.wrapping_sub(rhs.0))
@@ -381,18 +398,21 @@ impl Sub for Stride {
 impl Mul<usize> for Stride {
     type Output = Self;
 
+    #[inline]
     fn mul(self, rhs: usize) -> Self::Output {
         Self(self.0.wrapping_mul(rhs))
     }
 }
 
 impl AddAssign for Stride {
+    #[inline]
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
 impl SubAssign for Stride {
+    #[inline]
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
     }

@@ -191,6 +191,7 @@ where
 impl Point for Point3i {
     type Scalar = i32;
 
+    #[inline]
     fn basis() -> Vec<Self> {
         vec![PointN([1, 0, 0]), PointN([0, 1, 0]), PointN([0, 0, 1])]
     }
@@ -199,6 +200,7 @@ impl Point for Point3i {
 impl Point for Point3f {
     type Scalar = f32;
 
+    #[inline]
     fn basis() -> Vec<Self> {
         vec![
             PointN([1.0, 0.0, 0.0]),
@@ -269,6 +271,7 @@ where
 }
 
 impl IntegerPoint for Point3i {
+    #[inline]
     fn dimensions_are_powers_of_2(&self) -> bool {
         self.x().is_positive()
             && self.y().is_positive()
@@ -278,12 +281,14 @@ impl IntegerPoint for Point3i {
             && (self.z() as u32).is_power_of_two()
     }
 
+    #[inline]
     fn is_cube(&self) -> bool {
         self.x() == self.y() && self.x() == self.z()
     }
 }
 
 impl Neighborhoods for Point3i {
+    #[inline]
     fn corner_offsets() -> Vec<Self> {
         vec![
             PointN([0, 0, 0]),
@@ -297,6 +302,7 @@ impl Neighborhoods for Point3i {
         ]
     }
 
+    #[inline]
     fn von_neumann_offsets() -> Vec<Self> {
         vec![
             PointN([-1, 0, 0]),
@@ -309,6 +315,7 @@ impl Neighborhoods for Point3i {
     }
 
     // Because there are "moore" of them... huehuehue
+    #[inline]
     fn moore_offsets() -> Vec<Self> {
         vec![
             PointN([-1, -1, -1]),

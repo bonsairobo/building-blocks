@@ -314,7 +314,6 @@ where
     }
 
     /// Returns the chunk containing `point` if it exists.
-    #[allow(clippy::type_complexity)]
     pub fn get_chunk_containing_point<'a>(
         &'a self,
         point: &PointN<N>,
@@ -327,7 +326,6 @@ where
     }
 
     /// Returns the mutable chunk containing `point` if it exists.
-    #[allow(clippy::type_complexity)]
     pub fn get_mut_chunk_containing_point(
         &mut self,
         point: &PointN<N>,
@@ -505,7 +503,6 @@ where
 
 /// Call `ChunkMap::to_serializable` to get this type, which is an compressed, serde-serializable
 /// type.
-#[allow(clippy::type_complexity)]
 #[derive(Deserialize, Serialize)]
 pub struct SerializableChunkMap<N, T, M, B>
 where

@@ -1,3 +1,9 @@
+#![allow(
+    clippy::type_complexity,
+    clippy::needless_collect,
+    clippy::too_many_arguments
+)]
+
 //! Algorithms for generating triangle meshes from:
 //!   - height maps
 //!   - signed distance fields

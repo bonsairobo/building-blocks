@@ -16,6 +16,7 @@ where
 {
     type VolumeType = T;
 
+    #[inline]
     fn volume(&self) -> T {
         self.shape.x() * self.shape.y()
     }
@@ -36,6 +37,7 @@ where
 {
     type Item = Point2<T>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         self.product_iter.next().map(|(y, x)| PointN([x, y]))
     }
@@ -44,10 +46,12 @@ where
 impl IntegerExtent<[i32; 2]> for Extent2i {
     type PointIter = Extent2PointIter<i32>;
 
+    #[inline]
     fn num_points(&self) -> usize {
         self.volume() as usize
     }
 
+    #[inline]
     fn iter_points(&self) -> Self::PointIter {
         let lub = self.least_upper_bound();
 

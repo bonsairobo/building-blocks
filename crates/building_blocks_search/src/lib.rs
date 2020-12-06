@@ -1,3 +1,9 @@
+#![allow(
+    clippy::type_complexity,
+    clippy::needless_collect,
+    clippy::too_many_arguments
+)]
+
 pub mod pathfinding;
 pub mod surface;
 

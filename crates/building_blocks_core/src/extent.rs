@@ -24,6 +24,7 @@ pub struct ExtentN<N> {
 
 impl<N> ExtentN<N> {
     /// The default representation of an extent as the minimum point and shape.
+    #[inline]
     pub fn from_min_and_shape(minimum: PointN<N>, shape: PointN<N>) -> Self {
         Self { minimum, shape }
     }
@@ -34,26 +35,31 @@ where
     PointN<N>: Point,
 {
     /// Translate the extent such that it has `new_min` as it's new minimum.
+    #[inline]
     pub fn with_minimum(&self, new_min: PointN<N>) -> Self {
         Self::from_min_and_shape(new_min, self.shape)
     }
 
     /// The least point `p` for which all points `q` in the extent satisfy `q < p`.
+    #[inline]
     pub fn least_upper_bound(&self) -> PointN<N> {
         self.minimum + self.shape
     }
 
     /// Returns `true` iff the point `p` is contained in this extent.
+    #[inline]
     pub fn contains(&self, p: &PointN<N>) -> bool {
         let lub = self.least_upper_bound();
 
         self.minimum <= *p && *p < lub
     }
 
+    #[inline]
     pub fn add_to_shape(&self, delta: PointN<N>) -> Self {
         Self::from_min_and_shape(self.minimum, self.shape + delta)
     }
 
+    #[inline]
     pub fn padded(&self, pad_amount: <PointN<N> as Point>::Scalar) -> Self
     where
         PointN<N>: Ones,
@@ -71,6 +77,7 @@ where
     PointN<N>: IntegerPoint,
 {
     /// An alternative representation of an extent as the minimum point and least upper bound.
+    #[inline]
     pub fn from_min_and_lub(minimum: PointN<N>, least_upper_bound: PointN<N>) -> Self {
         let minimum = minimum;
         // We want to avoid negative shape components.
@@ -80,6 +87,7 @@ where
     }
 
     /// Returns the extent containing only the points in both `self` and `other`.
+    #[inline]
     pub fn intersection(&self, other: &Self) -> Self {
         let minimum = self.minimum.join(&other.minimum);
         let lub = self.least_upper_bound().meet(&other.least_upper_bound());
@@ -87,6 +95,7 @@ where
         Self::from_min_and_lub(minimum, lub)
     }
 
+    #[inline]
     pub fn is_subset_of(&self, other: &Self) -> bool
     where
         // TODO: seems like the compiler ought to infer this is true when PointN<N>: PartialEq
@@ -103,17 +112,20 @@ where
 {
     /// An alternative representation of an integer extent as the minimum point and maximum point.
     /// This only works for integer extents, where there is a unique maximum point.
+    #[inline]
     pub fn from_min_and_max(minimum: PointN<N>, max: PointN<N>) -> Self {
         Self::from_min_and_lub(minimum, max + PointN::ONES)
     }
 
     /// The unique greatest point in the extent.
+    #[inline]
     pub fn max(&self) -> PointN<N> {
         let lub = self.least_upper_bound();
 
         lub - PointN::ONES
     }
 
+    #[inline]
     pub fn from_corners(p1: PointN<N>, p2: PointN<N>) -> Self {
         let min = p1.meet(&p2);
         let max = p1.join(&p2);
@@ -152,6 +164,7 @@ pub trait IntegerExtent<N>: Extent<N> + Copy {
     /// ```
     fn iter_points(&self) -> Self::PointIter;
 
+    #[inline]
     fn is_empty(&self) -> bool {
         self.num_points() == 0
     }
@@ -163,6 +176,7 @@ where
 {
     type Output = Self;
 
+    #[inline]
     fn add(self, rhs: PointN<T>) -> Self::Output {
         ExtentN {
             minimum: self.minimum + rhs,
@@ -177,6 +191,7 @@ where
 {
     type Output = Self;
 
+    #[inline]
     fn sub(self, rhs: PointN<T>) -> Self::Output {
         ExtentN {
             minimum: self.minimum - rhs,
@@ -189,6 +204,7 @@ impl<T> AddAssign<PointN<T>> for ExtentN<T>
 where
     Self: Copy + Add<PointN<T>, Output = ExtentN<T>>,
 {
+    #[inline]
     fn add_assign(&mut self, rhs: PointN<T>) {
         *self = *self + rhs;
     }
@@ -198,12 +214,14 @@ impl<T> SubAssign<PointN<T>> for ExtentN<T>
 where
     Self: Copy + Sub<PointN<T>, Output = ExtentN<T>>,
 {
+    #[inline]
     fn sub_assign(&mut self, rhs: PointN<T>) {
         *self = *self - rhs;
     }
 }
 
 /// Returns the smallest extent containing all of the given points.
+#[inline]
 pub fn bounding_extent<N, I>(points: I) -> ExtentN<N>
 where
     I: Iterator<Item = PointN<N>>,

@@ -1,3 +1,9 @@
+#![allow(
+    clippy::type_complexity,
+    clippy::needless_collect,
+    clippy::too_many_arguments
+)]
+
 //! Various types of storage for "lattice maps," functions defined on N-dimensional integer
 //! lattices.
 //!

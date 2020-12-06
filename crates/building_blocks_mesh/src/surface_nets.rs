@@ -310,7 +310,6 @@ where
 //
 // then we must find the other 3 quad corners by moving along the other two axes (those orthogonal
 // to A) in the negative directions; these are axis B and axis C.
-#[allow(clippy::too_many_arguments)]
 fn maybe_make_quad<V, T>(
     sdf: &V,
     stride_to_index: &[u32],

@@ -62,6 +62,7 @@ impl<'a, M, F> Clone for TransformMap<'a, M, F>
 where
     F: Clone,
 {
+    #[inline]
     fn clone(&self) -> Self {
         Self {
             delegate: self.delegate,
@@ -73,6 +74,7 @@ where
 impl<'a, M, F> Copy for TransformMap<'a, M, F> where F: Copy {}
 
 impl<'a, M, F> TransformMap<'a, M, F> {
+    #[inline]
     pub fn new(delegate: &'a M, transform: F) -> Self {
         Self {
             delegate,
@@ -88,6 +90,7 @@ where
 {
     type Data = S;
 
+    #[inline]
     fn get(&self, c: Coord) -> S {
         (self.transform)(self.delegate.get(c))
     }
@@ -100,6 +103,7 @@ where
 {
     type Data = S;
 
+    #[inline]
     unsafe fn get_unchecked(&self, c: Coord) -> S {
         (self.transform)(self.delegate.get_unchecked(c))
     }
@@ -112,6 +116,7 @@ where
 {
     type Data = S;
 
+    #[inline]
     fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(Coord, Self::Data)) {
         self.delegate
             .for_each(extent, |c, t| f(c, (self.transform)(t)))
@@ -124,6 +129,7 @@ where
 {
     type Indexer = M::Indexer;
 
+    #[inline]
     fn extent(&self) -> &ExtentN<N> {
         self.delegate.extent()
     }

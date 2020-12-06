@@ -257,6 +257,7 @@ impl OctreeSet {
     }
 
     /// The `OctreeNode` of the root, if it exists.
+    #[inline]
     pub fn root_node(&self) -> Option<OctreeNode> {
         if self.root_exists {
             Some(OctreeNode {
@@ -273,6 +274,7 @@ impl OctreeSet {
     /// Returns the child `OctreeNode` of `parent` at the given `child_octant_index`, where
     /// `0 < child_octant < 8`. `offset_table` is a constant that can be constructed by
     /// `self.offset_table()` and reused with any octree of the same size, indefinitely.
+    #[inline]
     pub fn get_child(
         &self,
         offset_table: &OffsetTable,
@@ -323,6 +325,7 @@ impl OctreeSet {
     }
 
     /// Returns the `OffsetTable` for this octree's shape. Used for manual node-based traversal.
+    #[inline]
     pub fn offset_table(&self) -> OffsetTable {
         OffsetTable::for_power(self.power)
     }
@@ -382,10 +385,12 @@ pub struct OctreeNode {
 
 impl OctreeNode {
     /// A leaf node is one whose octant is entirely full.
+    #[inline]
     pub fn is_leaf(&self) -> bool {
         self.location == LocationCode::LEAF
     }
 
+    #[inline]
     pub fn octant(&self) -> Octant {
         self.octant
     }
@@ -393,6 +398,7 @@ impl OctreeNode {
     /// The power of a node is directly related to the edge length of octants at that level of the
     /// tree. So the power of the root node is `P` where `edge_length = 2 ^ P`. The power of any
     /// single-point leaf octant is 0, because `edge_length = 1 = 2 ^ 0`.
+    #[inline]
     pub fn power(&self) -> u8 {
         self.power
     }
@@ -439,16 +445,19 @@ pub struct Octant {
 }
 
 impl Octant {
+    #[inline]
     pub fn minimum(&self) -> Point3i {
         self.minimum
     }
 
+    #[inline]
     pub fn edge_length(&self) -> i32 {
         self.edge_length
     }
 }
 
 impl From<Octant> for Extent3i {
+    #[inline]
     fn from(octant: Octant) -> Self {
         Extent3i::from_min_and_shape(octant.minimum, PointN([octant.edge_length; 3]))
     }
@@ -463,6 +472,7 @@ impl<F> OctreeVisitor for F
 where
     F: FnMut(Octant, bool) -> VisitStatus,
 {
+    #[inline]
     fn visit_octant(&mut self, octant: Octant, is_leaf: bool) -> VisitStatus {
         (self)(octant, is_leaf)
     }

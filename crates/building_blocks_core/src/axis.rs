@@ -9,10 +9,12 @@ pub enum Axis2 {
 
 impl Axis2 {
     /// The index for a point's component on this axis.
+    #[inline]
     pub fn index(&self) -> usize {
         *self as usize
     }
 
+    #[inline]
     pub fn get_unit_vector(&self) -> Point2i {
         match self {
             Axis2::X => PointN([1, 0]),
@@ -28,14 +30,17 @@ pub struct SignedAxis2 {
 }
 
 impl SignedAxis2 {
+    #[inline]
     pub fn new(sign: i32, axis: Axis2) -> Self {
         Self { sign, axis }
     }
 
+    #[inline]
     pub fn get_vector(&self) -> Point2i {
         self.axis.get_unit_vector() * self.sign
     }
 
+    #[inline]
     pub fn from_vector(v: Point2i) -> Option<Self> {
         match v {
             PointN([x, 0]) => Some(SignedAxis2::new(x, Axis2::X)),
@@ -55,10 +60,12 @@ pub enum Axis3 {
 
 impl Axis3 {
     /// The index for a point's component on this axis.
+    #[inline]
     pub fn index(&self) -> usize {
         *self as usize
     }
 
+    #[inline]
     pub fn get_unit_vector(&self) -> Point3i {
         match self {
             Axis3::X => PointN([1, 0, 0]),
@@ -81,6 +88,7 @@ pub enum Axis3Permutation {
 }
 
 impl Axis3Permutation {
+    #[inline]
     pub fn even_with_normal_axis(axis: Axis3) -> Self {
         match axis {
             Axis3::X => Axis3Permutation::XYZ,
@@ -89,6 +97,7 @@ impl Axis3Permutation {
         }
     }
 
+    #[inline]
     pub fn odd_with_normal_axis(axis: Axis3) -> Self {
         match axis {
             Axis3::X => Axis3Permutation::XZY,
@@ -97,6 +106,7 @@ impl Axis3Permutation {
         }
     }
 
+    #[inline]
     pub fn sign(&self) -> i32 {
         match self {
             Axis3Permutation::XYZ => 1,
@@ -108,6 +118,7 @@ impl Axis3Permutation {
         }
     }
 
+    #[inline]
     pub fn axes(&self) -> [Axis3; 3] {
         match self {
             Axis3Permutation::XYZ => [Axis3::X, Axis3::Y, Axis3::Z],
@@ -127,14 +138,17 @@ pub struct SignedAxis3 {
 }
 
 impl SignedAxis3 {
+    #[inline]
     pub fn new(sign: i32, axis: Axis3) -> Self {
         Self { sign, axis }
     }
 
+    #[inline]
     pub fn get_vector(&self) -> Point3i {
         self.axis.get_unit_vector() * self.sign
     }
 
+    #[inline]
     pub fn from_vector(v: Point3i) -> Option<Self> {
         match v {
             PointN([x, 0, 0]) => Some(SignedAxis3::new(x, Axis3::X)),

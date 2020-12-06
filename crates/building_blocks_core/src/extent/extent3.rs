@@ -16,6 +16,7 @@ where
 {
     type VolumeType = T;
 
+    #[inline]
     fn volume(&self) -> T {
         self.shape.x() * self.shape.y() * self.shape.z()
     }
@@ -40,6 +41,7 @@ where
 {
     type Item = Point3<T>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         self.product_iter.next().map(|(z, y, x)| PointN([x, y, z]))
     }
@@ -48,6 +50,7 @@ where
 impl IntegerExtent<[i32; 3]> for Extent3i {
     type PointIter = Extent3PointIter<i32>;
 
+    #[inline]
     fn num_points(&self) -> usize {
         self.volume() as usize
     }

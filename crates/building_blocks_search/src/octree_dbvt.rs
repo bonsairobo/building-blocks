@@ -50,6 +50,13 @@ where
             .map(|leaf_id| self.dbvt.remove(leaf_id).data)
     }
 
+    /// Get a reference to the `OctreeSet` at `key`.
+    pub fn get(&self, key: &K) -> Option<&OctreeSet> {
+        self.leaf_ids
+            .get(key)
+            .and_then(|leaf_id| self.dbvt.get(*leaf_id).map(|leaf| &leaf.data))
+    }
+
     /// Visit every bounding volume (AABB) in the DBVT. This is a heterogeneous tree, meaning that
     /// not all nodes have the same representation. Upper nodes simply store a bounding volume
     /// (AABB), while octree nodes will provide both a bounding volume and an `Octant`, which is

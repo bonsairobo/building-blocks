@@ -62,7 +62,7 @@ to you `features` list, like so:
 [dependencies.building-blocks]
 version = "0.3"
 no-default-features = true
-features = ["snappy", ...and others...]
+features = ["snappy"]
 ```
 
 ## Learning

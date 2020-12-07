@@ -70,7 +70,7 @@ which brought about the current feature set:
   - When you have large voxel worlds, it's not feasible to store a lot of unique
     data for every voxel. A common strategy is to have each voxel labeled with
     some "type." If you only want to use a single byte for each voxel's type,
-    then you can have up to 255 types of voxels. Then each type can have a large
+    then you can have up to 256 types of voxels. Then each type can have a large
     amount of data associated with it in a "palette" container. But we still
     want to be able to use our common set of access traits to read the voxel
     type data. Thus, we have a type called `TransformMap` which implements those

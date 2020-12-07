@@ -58,7 +58,7 @@ They are enabled with the "lz4" and "snappy" features. "lz4" is the default, but
 it's not compatible with WASM. But Snappy is pure Rust, so it can! Just use `no-default-features` and add "snappy"
 to you `features` list, like so:
 
-```
+```toml
 [dependencies.building-blocks]
 version = "0.3"
 no-default-features = true

@@ -61,7 +61,7 @@ to you `features` list, like so:
 ```toml
 [dependencies.building-blocks]
 version = "0.3"
-no-default-features = true
+default-features = false
 features = ["snappy"]
 ```
 

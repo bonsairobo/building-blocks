@@ -48,6 +48,23 @@ let mut mesh_buffer = SurfaceNetsBuffer::new();
 surface_nets(&samples, samples.extent(), &mut mesh_buffer);
 ```
 
+## Configuration and WASM
+
+Building Blocks is organized into several crates, some of which are hidden behind features, and some have features themselves,
+which get re-exported by the top-level crate.
+
+For example, the `ChunkMap` data structure supports two compression backends out of the box: `Lz4` and `Snappy`.
+They are enabled with the "lz4" and "snappy" features. "lz4" is the default, but it relies on a C++ library, so
+it's not compatible with WASM. But Snappy is pure Rust, so it can! Just use `no-default-features` and add "snappy"
+to you `features` list, like so:
+
+```
+[dependencies.building-blocks]
+version = "0.3"
+no-default-features = true
+features = ["snappy", ...and others...]
+```
+
 ## Learning
 
 The current best way to learn about the library is to read the documentation and

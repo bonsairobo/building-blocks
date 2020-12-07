@@ -14,8 +14,8 @@
 //! written back to the `ChunkMap` using the `flush_chunk_cache` method.
 //!
 //! Two compression backends are usable. The default is LZ4, which has the best tradeoff of
-//! compression rate and speed. The other is Lz4, which has a pure-rust implementation. Lz4
-//! can be used by enabling the "Lz4" feature.
+//! compression rate and speed. The other is snap, which has a pure-rust implementation. Snap
+//! can be used by enabling the "snappy" feature.
 //!
 //! # Example Usage
 //! ```

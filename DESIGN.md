@@ -117,13 +117,13 @@ which brought about the current feature set:
     `DBVT` (dynamic bounding volume tree) structure for doing raycasting.
     Unfortunately, storing an `AABB<f32>` for every voxel cost us 6 `f32`s or 24
     bytes per voxel. That simply doesn't scale. So as a replacement, we
-    implemented the `Octree` and `OctreeDBVT` types. The `Octree` is essentially
+    implemented the `OctreeSet` and `OctreeDBVT` types. The `OctreeSet` is essentially
     a hierarchical bitset, making it very memory efficient; it doesn't contain
     any voxel data, but it can tell you whether a `Point3i` is contained in the
     set. More importantly, it supports a visitor API that can be used for
-    spatial queries like raycasting. Since the `Octree` has a limited size, we
+    spatial queries like raycasting. Since the `OctreeSet` has a limited size, we
     also provide the `OctreeDBVT`, which is essentially a `DBVT` which may
-    contain an arbitrary number of `Octree`s.
+    contain an arbitrary number of `OctreeSet`s.
   - `OctreeDBVT` requires taking on the `ncollide3d` dependency. We decided this
     was acceptable for the time being, since we don't have spare time to
     implement our own efficient `DBVT`.

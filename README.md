@@ -55,7 +55,7 @@ which get re-exported by the top-level crate.
 
 For example, the `ChunkMap` data structure supports two compression backends out of the box: `Lz4` and `Snappy`.
 They are enabled with the "lz4" and "snappy" features. "lz4" is the default, but it relies on a C++ library, so
-it's not compatible with WASM. But Snappy is pure Rust, so it can! Just use `no-default-features` and add "snappy"
+it's not compatible with WASM. But Snappy is pure Rust, so it can! Just use `default-features = false` and add "snappy"
 to you `features` list, like so:
 
 ```toml

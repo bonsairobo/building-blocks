@@ -87,9 +87,7 @@ pub mod height_map;
 pub mod quad;
 pub mod surface_nets;
 
-pub use greedy_quads::{
-    greedy_quads, padded_greedy_quads_chunk_extent, GreedyQuadsBuffer, MaterialVoxel,
-};
+pub use greedy_quads::{greedy_quads, padded_greedy_quads_chunk_extent, GreedyQuadsBuffer};
 pub use height_map::{
     padded_height_map_chunk_extent, triangulate_height_map, Height, HeightMapMeshBuffer,
 };
@@ -141,4 +139,11 @@ impl PosNormTexMesh {
         self.tex_coords.clear();
         self.indices.clear();
     }
+}
+
+pub trait MaterialVoxel {
+    type Material: Eq;
+
+    /// Get the voxel's material.
+    fn material(&self) -> Self::Material;
 }

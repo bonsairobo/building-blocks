@@ -1,15 +1,10 @@
-use super::quad::{OrientedCubeFace, UnorientedQuad};
+use super::{
+    quad::{OrientedCubeFace, UnorientedQuad},
+    MaterialVoxel,
+};
 
 use building_blocks_core::{axis::Axis3Permutation, prelude::*};
 use building_blocks_storage::{access::GetUncheckedRelease, prelude::*, IsEmpty};
-
-pub trait MaterialVoxel {
-    type Material: Eq;
-
-    /// Used for comparing the materials of voxels. A single quad of the greedy mesh will contain
-    /// faces of voxels that all share the same material.
-    fn material(&self) -> Self::Material;
-}
 
 /// Contains the output from the `greedy_quads` algorithm. Can be reused to avoid re-allocations.
 pub struct GreedyQuadsBuffer<M> {
@@ -83,15 +78,15 @@ pub fn padded_greedy_quads_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {
     chunk_extent.padded(1)
 }
 
-/// The "Greedy Meshing" algorithm described by Mikola Lysenko in the
-/// [0fps article](https://0fps.net/2012/06/30/meshing-in-a-minecraft-game/).
+/// The "Greedy Meshing" algorithm described by Mikola Lysenko in the [0fps
+/// article](https://0fps.net/2012/06/30/meshing-in-a-minecraft-game/).
 ///
-/// All visible faces of voxels on the interior of `extent` will be part of some `Quad` returned via
-/// the `output` buffer. A 3x3x3 kernel will be applied to each point on the interior, hence the
-/// extra padding required on the boundary. `voxels` only needs to contain the set of points in
-/// `extent`.
+/// All visible faces of voxels on the interior of `extent` will be part of some `Quad` returned via the `output` buffer. A
+/// 3x3x3 kernel will be applied to each point on the interior, hence the extra padding required on the boundary. `voxels` only
+/// needs to contain the set of points in `extent`.
 ///
-/// The quads can be post-processed into meshes as the user sees fit.
+/// A single quad of the greedy mesh will contain faces of voxels that all share the same material. The quads can be
+/// post-processed into meshes as the user sees fit.
 pub fn greedy_quads<V, T>(
     voxels: &V,
     extent: &Extent3i,

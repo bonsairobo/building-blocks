@@ -68,7 +68,7 @@
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
 //! # use building_blocks_mesh::height_map::*;
-//!
+//! #
 //! struct OtherHeight(f32);
 //!
 //! impl Height for OtherHeight {

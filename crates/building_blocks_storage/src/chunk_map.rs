@@ -420,10 +420,16 @@ where
         self.chunks.into_iter()
     }
 
-    /// Returns the ambient value of the map.
+    /// Return the ambient value of the map.
     #[inline]
     pub fn ambient_value(&self) -> T {
         self.ambient_value
+    }
+
+    /// Return the default metadata for chunks.
+    #[inline]
+    pub fn default_chunk_metadata(&self) -> &M {
+        &self.default_chunk_metadata
     }
 
     /// Returns a serializable version of this map. This will compress every chunk in a portable

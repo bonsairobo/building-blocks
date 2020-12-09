@@ -420,6 +420,12 @@ where
         self.chunks.into_iter()
     }
 
+    /// Returns the ambient value of the map.
+    #[inline]
+    pub fn ambient_value(&self) -> T {
+        self.ambient_value
+    }
+
     /// Returns a serializable version of this map. This will compress every chunk in a portable
     /// way.
     pub async fn to_serializable(

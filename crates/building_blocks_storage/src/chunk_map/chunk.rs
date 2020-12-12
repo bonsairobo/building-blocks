@@ -1,14 +1,11 @@
-use crate::array::{ArrayN, FastArrayCompression};
+use crate::array::ArrayN;
 
 use building_blocks_core::prelude::*;
 
-use compressible_map::{
-    BincodeCompression, BytesCompression, Compressed, Compression, MaybeCompressed,
-};
+use core::ops::{Div, Mul};
 use serde::{Deserialize, Serialize};
 
-/// One piece of the `ChunkMap`. Contains both some generic metadata and the data for each point in
-/// the chunk extent.
+/// One piece of a chunked lattice map. Contains both some generic metadata and the data for each point in the chunk extent.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Chunk<N, T, M> {
     pub metadata: M,
@@ -27,62 +24,6 @@ impl<N, T> Chunk<N, T, ()> {
         }
     }
 }
-
-#[derive(Copy, Clone)]
-pub struct FastChunkCompression<N, T, M, B> {
-    pub array_compression: FastArrayCompression<N, T, B>,
-    marker: std::marker::PhantomData<(N, T, M)>,
-}
-
-impl<N, T, M, B> FastChunkCompression<N, T, M, B> {
-    pub fn new(bytes_compression: B) -> Self {
-        Self {
-            array_compression: FastArrayCompression::new(bytes_compression),
-            marker: Default::default(),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct FastCompressedChunk<N, T, M, B>
-where
-    T: Copy,
-    B: BytesCompression,
-    ExtentN<N>: IntegerExtent<N>,
-{
-    pub metadata: M, // metadata doesn't get compressed, hope it's small!
-    pub compressed_array: Compressed<FastArrayCompression<N, T, B>>,
-}
-
-impl<N, T, M, B> Compression for FastChunkCompression<N, T, M, B>
-where
-    T: Copy,
-    M: Clone,
-    B: BytesCompression,
-    ExtentN<N>: IntegerExtent<N>,
-{
-    type Data = Chunk<N, T, M>;
-    type CompressedData = FastCompressedChunk<N, T, M, B>;
-
-    // PERF: cloning the metadata is unfortunate
-
-    fn compress(&self, chunk: &Self::Data) -> Compressed<Self> {
-        Compressed::new(FastCompressedChunk {
-            metadata: chunk.metadata.clone(),
-            compressed_array: self.array_compression.compress(&chunk.array),
-        })
-    }
-
-    fn decompress(compressed: &Self::CompressedData) -> Self::Data {
-        Chunk {
-            metadata: compressed.metadata.clone(),
-            array: compressed.compressed_array.decompress(),
-        }
-    }
-}
-
-pub type BincodeChunkCompression<N, T, M, B> = BincodeCompression<Chunk<N, T, M>, B>;
-pub type BincodeCompressedChunk<N, T, M, B> = Compressed<BincodeCompression<Chunk<N, T, M>, B>>;
 
 pub trait ChunkShape<N> {
     /// Makes the mask required to convert points to chunk keys.
@@ -118,35 +59,96 @@ macro_rules! impl_chunk_shape {
 impl_chunk_shape!(Point2i, [i32; 2]);
 impl_chunk_shape!(Point3i, [i32; 3]);
 
-pub type MaybeCompressedChunk<N, T, M, B> =
-    MaybeCompressed<Chunk<N, T, M>, Compressed<FastChunkCompression<N, T, M, B>>>;
-
-pub type MaybeCompressedChunkRef<'a, N, T, M, B> =
-    MaybeCompressed<&'a Chunk<N, T, M>, &'a Compressed<FastChunkCompression<N, T, M, B>>>;
-
-// LZ4 and Snappy are not mutually exclusive, but if you only use one, then you want to have these
-// aliases refer to the choice you made.
-#[cfg(all(feature = "lz4", not(feature = "snappy")))]
-pub mod conditional_aliases {
-    use super::*;
-    use compressible_map::Lz4;
-
-    pub type MaybeCompressedChunk2<T, M = (), B = Lz4> = MaybeCompressedChunk<[i32; 2], T, M, B>;
-    pub type MaybeCompressedChunk3<T, M = (), B = Lz4> = MaybeCompressedChunk<[i32; 3], T, M, B>;
-    pub type MaybeCompressedChunkRef2<'a, T, M = (), B = Lz4> =
-        MaybeCompressedChunkRef<'a, [i32; 2], T, M, B>;
-    pub type MaybeCompressedChunkRef3<'a, T, M = (), B = Lz4> =
-        MaybeCompressedChunkRef<'a, [i32; 3], T, M, B>;
+/// Translates from lattice coordinates to chunk key space.
+///
+/// The key for a chunk is the minimum point of that chunk's extent.
+pub struct ChunkIndexer<N> {
+    chunk_shape: PointN<N>,
+    chunk_shape_mask: PointN<N>,
+    chunk_shape_log2: PointN<N>,
 }
-#[cfg(all(not(feature = "lz4"), feature = "snappy"))]
-pub mod conditional_aliases {
-    use super::*;
-    use compressible_map::Snappy;
 
-    pub type MaybeCompressedChunk2<T, M = (), B = Snappy> = MaybeCompressedChunk<[i32; 2], T, M, B>;
-    pub type MaybeCompressedChunk3<T, M = (), B = Snappy> = MaybeCompressedChunk<[i32; 3], T, M, B>;
-    pub type MaybeCompressedChunkRef2<'a, T, M = (), B = Snappy> =
-        MaybeCompressedChunkRef<'a, [i32; 2], T, M, B>;
-    pub type MaybeCompressedChunkRef3<'a, T, M = (), B = Snappy> =
-        MaybeCompressedChunkRef<'a, [i32; 3], T, M, B>;
+impl<N> ChunkIndexer<N>
+where
+    PointN<N>: ChunkShape<N> + IntegerPoint,
+    ExtentN<N>: IntegerExtent<N>,
+{
+    pub fn new(chunk_shape: PointN<N>) -> Self {
+        Self {
+            chunk_shape,
+            chunk_shape_mask: chunk_shape.mask(),
+            chunk_shape_log2: chunk_shape.ilog2(),
+        }
+    }
+
+    /// Determines whether `key` is a valid chunk key. This means it must be a multiple of the chunk shape.
+    pub fn chunk_key_is_valid(&self, key: &PointN<N>) -> bool {
+        self.chunk_shape.mul(key.div(self.chunk_shape)).eq(key)
+    }
+
+    /// The constant shape of a chunk. The same for all chunks.
+    pub fn chunk_shape(&self) -> PointN<N> {
+        self.chunk_shape
+    }
+
+    /// The mask used for calculating the chunk key of a chunk that contains a given point.
+    pub fn chunk_shape_mask(&self) -> PointN<N> {
+        self.chunk_shape_mask
+    }
+
+    /// Returns the key of the chunk that contains `point`.
+    pub fn chunk_key_containing_point(&self, point: &PointN<N>) -> PointN<N> {
+        PointN::chunk_key_containing_point(&self.chunk_shape_mask(), point)
+    }
+
+    /// Returns an iterator over all chunk keys for chunks that overlap the given extent.
+    pub fn chunk_keys_for_extent(&self, extent: &ExtentN<N>) -> impl Iterator<Item = PointN<N>> {
+        let key_min = extent.minimum.vector_right_shift(&self.chunk_shape_log2);
+        let key_max = extent.max().vector_right_shift(&self.chunk_shape_log2);
+        let shape_log2 = self.chunk_shape_log2;
+
+        ExtentN::from_min_and_max(key_min, key_max)
+            .iter_points()
+            .map(move |p| p.vector_left_shift(&shape_log2))
+    }
+
+    /// The extent spanned by the chunk at `key`.
+    pub fn extent_for_chunk_at_key(&self, key: PointN<N>) -> ExtentN<N> {
+        ExtentN::from_min_and_shape(key, self.chunk_shape)
+    }
+}
+
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use building_blocks_core::Extent3i;
+
+    #[test]
+    fn chunk_keys_for_extent_gives_keys_for_chunks_overlapping_extent() {
+        let indexer = ChunkIndexer::new(PointN([16; 3]));
+        let query_extent = Extent3i::from_min_and_shape(PointN([15; 3]), PointN([16; 3]));
+        let chunk_keys: Vec<_> = indexer.chunk_keys_for_extent(&query_extent).collect();
+
+        assert_eq!(
+            chunk_keys,
+            vec![
+                PointN([0, 0, 0]),
+                PointN([16, 0, 0]),
+                PointN([0, 16, 0]),
+                PointN([16, 16, 0]),
+                PointN([0, 0, 16]),
+                PointN([16, 0, 16]),
+                PointN([0, 16, 16]),
+                PointN([16, 16, 16])
+            ]
+        );
+    }
 }

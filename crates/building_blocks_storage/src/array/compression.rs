@@ -1,8 +1,8 @@
 use super::ArrayN;
 
-use building_blocks_core::prelude::*;
+use crate::compression::{BytesCompression, Compressed, Compression};
 
-use compressible_map::{BytesCompression, Compressed, Compression};
+use building_blocks_core::prelude::*;
 
 /// A compression algorithm for arrays that avoid the overhead of serialization but ignores
 /// endianness and therefore isn't portable.
@@ -97,10 +97,10 @@ mod test {
 
     #[cfg(feature = "lz4")]
     use crate::Lz4;
-    #[cfg(feature = "snappy")]
+    #[cfg(feature = "snap")]
     use crate::Snappy;
 
-    #[cfg(feature = "snappy")]
+    #[cfg(feature = "snap")]
     #[test]
     fn sphere_array_compression_rate_snappy() {
         sphere_array_compression_rate(Snappy, 32);
@@ -108,7 +108,7 @@ mod test {
         sphere_array_compression_rate(Snappy, 128);
     }
 
-    #[cfg(feature = "snappy")]
+    #[cfg(feature = "snap")]
     #[test]
     fn homogeneous_array_compression_rate_snappy() {
         homogeneous_array_compression_rate(Snappy, 32);

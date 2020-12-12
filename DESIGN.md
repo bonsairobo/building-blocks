@@ -63,8 +63,8 @@ which brought about the current feature set:
     have benchmarks for them.
   - Obviously we can't store an infinite voxel world, so we partition the
     lattice into chunks, each of which is an `Array3` of the same cubic shape.
-    The container for these chunks is called a `ChunkMap3`.
-  - With both the `Array3` and `ChunkMap3` serving similar purposes, we've made
+    The container for these chunks is called a `ChunkHashMap3`.
+  - With both the `Array3` and `ChunkHashMap3` serving similar purposes, we've made
     them implement a common set of traits for data access. This includes random
     access, iteration, and copying.
   - When you have large voxel worlds, it's not feasible to store a lot of unique
@@ -81,9 +81,9 @@ which brought about the current feature set:
     type provided by the delegate map.
   - Even with only a couple bytes per voxel, we can still use up lots of memory
     on large voxel maps. The simplest way to save memory without changing the
-    underlying array containers was to use compression inside of the `ChunkMap`.
+    underlying array containers was to use compression inside of the `ChunkLruMap`.
     So arrays now support an LZ4 compression scheme. While LZ4 has a very quick
-    decompression rate, the `ChunkMap` still keeps an LRU cache of uncompressed
+    decompression rate, the `ChunkLruMap` still keeps an LRU cache of uncompressed
     chunks for efficiency. Cache eviction and compression is done on-demand, so
     you can choose to ignore this feature if you are not worried about memory
     usage.

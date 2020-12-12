@@ -1,11 +1,10 @@
-//! A lattice map that applies a transformation to another lattice map.
+//! A lattice map that overlays a transformation on top of a delegate lattice map.
 //!
-//! As an example use case, say you have a large lattice map that can store various types of voxels,
-//! and each type of voxel has some associated data. If that data is even moderately sized, it could
-//! take up a lot of space by storing copies at every point of the lattice.
+//! As an example use case, say you have a large lattice map that can store various types of voxels, and each type of voxel has
+//! some associated data. If that data is even moderately sized, it could take up a lot of space by storing copies at every
+//! point of the lattice.
 //!
-//! Instead, you can store that data in a "palette" array, and store indices into that array as your
-//! voxel data.
+//! Instead, you can store that data in a "palette" array, and store indices into that array as your voxel data.
 //!
 //! ```
 //! use building_blocks_core::prelude::*;
@@ -25,15 +24,14 @@
 //! assert_eq!(big_data_map.get(&PointN([0, 0, 1])), palette[1].0[0]);
 //! ```
 //!
-//! `TransformMap` also gives us an efficient way of applying transforms to array data during a
-//! copy:
+//! `TransformMap` also gives us an efficient way of applying transforms to array data during a copy:
 //!
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
 //! # let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
 //! let src = Array3::fill(extent, 0);
-//! let mut dst = ChunkMap::new(PointN([4; 3]), 0, (), Lz4 { level: 10 });
+//! let mut dst = ChunkMap::with_hash_map_storage(PointN([4; 3]), 0, ());
 //! let tfm = TransformMap::new(&src, &|value: i32| value + 1);
 //! copy_extent(&extent, &tfm, &mut dst);
 //! ```
@@ -41,18 +39,17 @@
 use crate::{
     access::GetUnchecked,
     array::{Array, ArrayCopySrc},
-    chunk_map::{AmbientExtent, ArrayChunkCopySrc, ArrayChunkCopySrcIter, ChunkCopySrc},
-    ArrayN, ChunkMapReader, ForEach, Get, ReadExtent,
+    chunk_map::{AmbientExtent, ArrayChunkCopySrc, ArrayChunkCopySrcIter, ChunkCopySrc, ChunkMap},
+    ArrayN, ForEach, Get, ReadExtent,
 };
 
 use building_blocks_core::prelude::*;
-use compressible_map::BytesCompression;
 
 use core::hash::Hash;
 use core::iter::{once, Once};
 
 /// A lattice map that delegates look-ups to a different lattice map, then transforms the result
-/// using some `Fn(T) -> S`.
+/// using some `Fn(Q) -> T`.
 pub struct TransformMap<'a, M, F> {
     delegate: &'a M,
     transform: F,
@@ -83,38 +80,38 @@ impl<'a, M, F> TransformMap<'a, M, F> {
     }
 }
 
-impl<'a, M, F, T, S, Coord> Get<Coord> for TransformMap<'a, M, F>
+impl<'a, M, F, Q, T, Coord> Get<Coord> for TransformMap<'a, M, F>
 where
-    F: Fn(T) -> S,
-    M: Get<Coord, Data = T>,
+    F: Fn(Q) -> T,
+    M: Get<Coord, Data = Q>,
 {
-    type Data = S;
+    type Data = T;
 
     #[inline]
-    fn get(&self, c: Coord) -> S {
+    fn get(&self, c: Coord) -> Self::Data {
         (self.transform)(self.delegate.get(c))
     }
 }
 
-impl<'a, M, F, T, S, Coord> GetUnchecked<Coord> for TransformMap<'a, M, F>
+impl<'a, M, F, Q, T, Coord> GetUnchecked<Coord> for TransformMap<'a, M, F>
 where
-    F: Fn(T) -> S,
-    M: GetUnchecked<Coord, Data = T>,
+    F: Fn(Q) -> T,
+    M: GetUnchecked<Coord, Data = Q>,
 {
-    type Data = S;
+    type Data = T;
 
     #[inline]
-    unsafe fn get_unchecked(&self, c: Coord) -> S {
+    unsafe fn get_unchecked(&self, c: Coord) -> Self::Data {
         (self.transform)(self.delegate.get_unchecked(c))
     }
 }
 
-impl<'a, M, F, N, T, S, Coord> ForEach<N, Coord> for TransformMap<'a, M, F>
+impl<'a, M, F, N, Q, T, Coord> ForEach<N, Coord> for TransformMap<'a, M, F>
 where
-    F: Fn(T) -> S,
-    M: ForEach<N, Coord, Data = T>,
+    F: Fn(Q) -> T,
+    M: ForEach<N, Coord, Data = Q>,
 {
-    type Data = S;
+    type Data = T;
 
     #[inline]
     fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(Coord, Self::Data)) {
@@ -138,10 +135,10 @@ where
 // TODO: try to make a generic ReadExtent impl, it's hard because we need a way to define the src
 // types as a function of the delegate src types (kinda hints at a monad or HKT)
 
-impl<'a, F, S, N, T> ReadExtent<'a, N> for TransformMap<'a, ArrayN<N, S>, F>
+impl<'a, F, Q, N, T> ReadExtent<'a, N> for TransformMap<'a, ArrayN<N, Q>, F>
 where
     Self: Array<N> + Copy,
-    F: 'a + Fn(S) -> T,
+    F: 'a + Fn(Q) -> T,
     PointN<N>: IntegerPoint,
 {
     type Src = ArrayCopySrc<Self>;
@@ -154,24 +151,23 @@ where
     }
 }
 
-impl<'a, F, S, N, T, M, B> ReadExtent<'a, N> for TransformMap<'a, ChunkMapReader<'a, N, S, M, B>, F>
+impl<'a, F, Q, N, T, M, S> ReadExtent<'a, N> for TransformMap<'a, ChunkMap<N, Q, M, S>, F>
 where
-    ChunkMapReader<'a, N, S, M, B>: ReadExtent<
+    ChunkMap<N, Q, M, S>: ReadExtent<
         'a,
         N,
-        Src = ArrayChunkCopySrc<'a, N, S>,
-        SrcIter = ArrayChunkCopySrcIter<'a, N, S>,
+        Src = ArrayChunkCopySrc<'a, N, Q>,
+        SrcIter = ArrayChunkCopySrcIter<'a, N, Q>,
     >,
-    F: 'a + Copy + Fn(S) -> T,
-    S: Copy,
+    F: 'a + Copy + Fn(Q) -> T,
+    Q: Copy,
     T: 'a,
     M: Clone,
-    B: BytesCompression,
     PointN<N>: Point + Eq + Hash,
     ExtentN<N>: IntegerExtent<N>,
 {
-    type Src = TransformChunkCopySrc<'a, F, S, N, T>;
-    type SrcIter = TransformChunkCopySrcIter<'a, F, S, N, T>;
+    type Src = TransformChunkCopySrc<'a, F, Q, N, T>;
+    type SrcIter = TransformChunkCopySrcIter<'a, F, Q, N, T>;
 
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
         TransformChunkCopySrcIter {
@@ -181,22 +177,22 @@ where
     }
 }
 
-pub type TransformChunkCopySrc<'a, F, S, N, T> =
-    ChunkCopySrc<TransformMap<'a, ArrayN<N, S>, F>, N, T>;
+pub type TransformChunkCopySrc<'a, F, Q, N, T> =
+    ChunkCopySrc<TransformMap<'a, ArrayN<N, Q>, F>, N, T>;
 
-pub struct TransformChunkCopySrcIter<'a, F, S, N, T>
+pub struct TransformChunkCopySrcIter<'a, F, Q, N, T>
 where
-    F: Fn(S) -> T,
+    F: Fn(Q) -> T,
 {
-    chunk_iter: ArrayChunkCopySrcIter<'a, N, S>,
+    chunk_iter: ArrayChunkCopySrcIter<'a, N, Q>,
     transform: F,
 }
 
-impl<'a, F, S, N, T> Iterator for TransformChunkCopySrcIter<'a, F, S, N, T>
+impl<'a, F, Q, N, T> Iterator for TransformChunkCopySrcIter<'a, F, Q, N, T>
 where
-    F: Copy + Fn(S) -> T,
+    F: Copy + Fn(Q) -> T,
 {
-    type Item = (ExtentN<N>, TransformChunkCopySrc<'a, F, S, N, T>);
+    type Item = (ExtentN<N>, TransformChunkCopySrc<'a, F, Q, N, T>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.chunk_iter.next().map(|(extent, chunk_src)| {
@@ -222,7 +218,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{prelude::*, ChunkMap};
+    use crate::prelude::*;
 
     #[test]
     fn transform_accessors() {
@@ -253,7 +249,7 @@ mod tests {
     fn copy_from_transformed_array() {
         let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
         let src = Array3::fill(extent, 0);
-        let mut dst = ChunkMap::new(PointN([4; 3]), 0, (), Lz4 { level: 10 });
+        let mut dst = ChunkMap::with_hash_map_storage(PointN([4; 3]), 0, ());
         let tfm = TransformMap::new(&src, |value: i32| value + 1);
         copy_extent(&extent, &tfm, &mut dst);
     }
@@ -263,15 +259,13 @@ mod tests {
     fn copy_from_transformed_chunk_map_reader() {
         let src_extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
         let src_array = Array3::fill(src_extent, 1);
-        let mut src = ChunkMap::new(PointN([4; 3]), 0, (), Lz4 { level: 10 });
+        let mut src = ChunkMap::with_hash_map_storage(PointN([4; 3]), 0, ());
         copy_extent(&src_extent, &src_array, &mut src);
 
-        let local_cache = LocalChunkCache3::new();
-        let src_reader = ChunkMapReader::new(&src, &local_cache);
-        let tfm = TransformMap::new(&src_reader, |value: i32| value + 1);
+        let tfm = TransformMap::new(&src, |value: i32| value + 1);
 
         let dst_extent = Extent3::from_min_and_shape(PointN([-16; 3]), PointN([32; 3]));
-        let mut dst = ChunkMap::new(PointN([2; 3]), 0, (), Lz4 { level: 10 });
+        let mut dst = ChunkMap::with_hash_map_storage(PointN([2; 3]), 0, ());
         copy_extent(&dst_extent, &tfm, &mut dst);
     }
 }

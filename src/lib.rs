@@ -7,7 +7,7 @@
 //! - **mesh**: 3D isosurface generation algorithms, smooth and cubic
 //! - **procgen**: procedural generation of lattice maps, including sampled SDFs and height maps
 //! - **search**: search algorithms on lattice maps
-//! - **storage**: compressed storage for lattice maps, i.e. functions defined on `Z^2` and `Z^3`
+//! - **storage**: storage for lattice maps, i.e. functions defined on `Z^2` and `Z^3`
 //! - **vox**: conversion of 3D lattice maps to/from VOX data format
 //!
 //! To learn the basics about lattice maps, start with these doc pages:

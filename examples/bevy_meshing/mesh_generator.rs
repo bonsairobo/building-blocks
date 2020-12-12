@@ -179,29 +179,22 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
     let ambient_value = std::f32::MAX; // air
     let default_chunk_meta = ();
     // Normally we'd keep this map around in a resource, but we don't need to for this specific
-    // example. We could also use an Array3 here instead of a ChunkMap3, but we use chunks for
+    // example. We could also use an Array3 here instead of a ChunkLruMap3, but we use chunks for
     // educational purposes.
-    let mut map = ChunkMap::new(
-        chunk_shape,
-        ambient_value,
-        default_chunk_meta,
-        Lz4 { level: 10 },
-    );
+    let mut map = ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, default_chunk_meta);
     copy_extent(&sample_extent, &sdf, &mut map);
 
     // Generate the chunk meshes.
     let map_ref = &map;
 
     pool.scope(|s| {
-        for chunk_key in map_ref.chunk_keys() {
+        for chunk_key in map_ref.storage().keys() {
             s.spawn(async move {
-                let local_cache = LocalChunkCache::new();
-                let map_reader = ChunkMapReader::new(map_ref, &local_cache);
-
-                let padded_chunk_extent =
-                    padded_surface_nets_chunk_extent(&map_ref.extent_for_chunk_at_key(chunk_key));
+                let padded_chunk_extent = padded_surface_nets_chunk_extent(
+                    &map_ref.indexer.extent_for_chunk_at_key(*chunk_key),
+                );
                 let mut padded_chunk = Array3::fill(padded_chunk_extent, 0.0);
-                copy_extent(&padded_chunk_extent, &map_reader, &mut padded_chunk);
+                copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
 
                 // TODO bevy: we could avoid re-allocating the buffers on every call if we had
                 // thread-local storage accessible from this task
@@ -232,31 +225,25 @@ fn generate_chunk_meshes_from_height_map(
     let ambient_value = 0.0;
     let default_chunk_meta = ();
     // Normally we'd keep this map around in a resource, but we don't need to for this specific
-    // example. We could also use an Array3 here instead of a ChunkMap3, but we use chunks for
+    // example. We could also use an Array3 here instead of a ChunkLruMap3, but we use chunks for
     // educational purposes.
-    let mut map = ChunkMap::new(
-        chunk_shape,
-        ambient_value,
-        default_chunk_meta,
-        Lz4 { level: 10 },
-    );
+    let mut map = ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, default_chunk_meta);
     copy_extent(&sample_extent, &height_map, &mut map);
 
     // Generate the chunk meshes.
     let map_ref = &map;
 
     pool.scope(|s| {
-        for chunk_key in map_ref.chunk_keys() {
+        for chunk_key in map_ref.storage().keys() {
             s.spawn(async move {
-                let local_cache = LocalChunkCache::new();
-                let map_reader = ChunkMapReader::new(map_ref, &local_cache);
-                let padded_chunk_extent =
-                    padded_height_map_chunk_extent(&map_ref.extent_for_chunk_at_key(chunk_key))
-                        // Ignore the ambient values outside the sample extent.
-                        .intersection(&sample_extent);
+                let padded_chunk_extent = padded_height_map_chunk_extent(
+                    &map_ref.indexer.extent_for_chunk_at_key(*chunk_key),
+                )
+                // Ignore the ambient values outside the sample extent.
+                .intersection(&sample_extent);
 
                 let mut padded_chunk = Array2::fill(padded_chunk_extent, 0.0);
-                copy_extent(&padded_chunk_extent, &map_reader, &mut padded_chunk);
+                copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
 
                 // TODO bevy: we could avoid re-allocating the buffers on every call if we had
                 // thread-local storage accessible from this task
@@ -285,29 +272,23 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
     let ambient_value = CubeVoxel(false);
     let default_chunk_meta = ();
     // Normally we'd keep this map around in a resource, but we don't need to for this specific
-    // example. We could also use an Array3 here instead of a ChunkMap3, but we use chunks for
+    // example. We could also use an Array3 here instead of a ChunkLruMap3, but we use chunks for
     // educational purposes.
-    let mut map = ChunkMap::new(
-        chunk_shape,
-        ambient_value,
-        default_chunk_meta,
-        Lz4 { level: 10 },
-    );
+    let mut map = ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, default_chunk_meta);
     copy_extent(voxels.extent(), &voxels, &mut map);
 
     // Generate the chunk meshes.
     let map_ref = &map;
 
     pool.scope(|s| {
-        for chunk_key in map_ref.chunk_keys() {
+        for chunk_key in map_ref.storage().keys() {
             s.spawn(async move {
-                let local_cache = LocalChunkCache3::new();
-                let map_reader = ChunkMapReader::new(map_ref, &local_cache);
-                let padded_chunk_extent =
-                    padded_greedy_quads_chunk_extent(&map_ref.extent_for_chunk_at_key(chunk_key));
+                let padded_chunk_extent = padded_greedy_quads_chunk_extent(
+                    &map_ref.indexer.extent_for_chunk_at_key(*chunk_key),
+                );
 
                 let mut padded_chunk = Array3::fill(padded_chunk_extent, CubeVoxel(false));
-                copy_extent(&padded_chunk_extent, &map_reader, &mut padded_chunk);
+                copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
 
                 // TODO bevy: we could avoid re-allocating the buffers on every call if we had
                 // thread-local storage accessible from this task

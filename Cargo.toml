@@ -23,7 +23,7 @@ nalgebra = ["building_blocks_core/nalgebra"]
 ncollide = ["building_blocks_search/ncollide"]
 procgen = ["building_blocks_procgen"]
 search = ["building_blocks_search"]
-snappy = ["building_blocks_storage/snappy"]
+snappy = ["building_blocks_storage/snap"]
 vox = ["building_blocks_vox"]
 
 [workspace]

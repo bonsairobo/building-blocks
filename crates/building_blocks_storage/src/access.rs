@@ -1,7 +1,6 @@
 //! Traits defining different ways to access data from generic lattice maps.
 //!
-//! The fastest way to iterate over data in an Array is with a simple for loop over array indices,
-//! we call them "stride"s:
+//! The fastest way to iterate over data in an Array is with a simple for loop over array indices, we call them "stride"s:
 //! ```
 //! use building_blocks_core::prelude::*;
 //! use building_blocks_storage::prelude::*;
@@ -16,8 +15,8 @@
 //! ```
 //! But this may require understanding the array layout.
 //!
-//! Often, you only want to iterate over a sub-extent of the map. This can also be done at similar
-//! speeds using the `ForEach` and `ForEachMut` traits:
+//! Often, you only want to iterate over a sub-extent of the map. This can also be done at similar speeds using the `ForEach`
+//! and `ForEachMut` traits:
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
@@ -27,32 +26,29 @@
 //! // Use the `ForEachMut<[i32; 3], Stride>` trait.
 //! map.for_each_mut(&subextent, |_s: Stride, value: &mut i32| { *value = 2 });
 //! ```
-//! Arrays also implement `ForEach*<PointN<N>>` and `ForEach*<(PointN<N>, Stride)>`. `ChunkMap` and
-//! `ChunkMapReader` only implement `ForEach*<PointN<N>>`, because it's ambiguous which chunk a
-//! `Stride` would apply to.
+//! Arrays also implement `ForEach*<PointN<N>>` and `ForEach*<(PointN<N>, Stride)>`. `ChunkMap` only implements
+//! `ForEach*<PointN<N>>`, because it's ambiguous which chunk a `Stride` would apply to.
 //!
-//! If you need to copy data between lattice maps, you should use the `copy_extent` function. Copies
-//! can be done efficiently because the `ReadExtent` and `WriteExtent` traits allow lattice maps to
-//! define how they would like to be written to or read from.
+//! If you need to copy data between lattice maps, you should use the `copy_extent` function. Copies can be done efficiently
+//! because the `ReadExtent` and `WriteExtent` traits allow lattice maps to define how they would like to be written to or read
+//! from.
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
 //! # let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
 //! # let mut map = Array3::fill(extent, 0);
 //! # let subextent = Extent3i::from_min_and_shape(PointN([1; 3]), PointN([98; 3]));
-//! // Create another map to copy to/from. We use a `ChunkMap`, but any map that implements
+//! // Create another map to copy to/from. We use a `ChunkHashMap`, but any map that implements
 //! // `WriteExtent` can be a copy destination, and any map that implements `ReadExtent` can be a
 //! // copy source.
 //! let chunk_shape = PointN([16; 3]);
 //! let ambient_value = 0;
 //! let default_chunk_metadata = ();
-//! let mut other_map = ChunkMap::new(
-//!     chunk_shape, ambient_value, default_chunk_metadata, Lz4 { level: 10 }
+//! let mut other_map = ChunkMap::with_hash_map_storage(
+//!     chunk_shape, ambient_value, default_chunk_metadata
 //! );
 //! copy_extent(&subextent, &map, &mut other_map);
-//! let local_cache = LocalChunkCache::new();
-//! let reader = ChunkMapReader::new(&other_map, &local_cache);
-//! copy_extent(&subextent, &reader, &mut map);
+//! copy_extent(&subextent, &other_map, &mut map);
 //!```
 
 use building_blocks_core::ExtentN;
@@ -159,7 +155,7 @@ pub trait ForEachMut<N, Coord> {
 
 /// A trait to facilitate the generic implementation of `copy_extent`.
 ///
-/// Some lattice maps, like `ChunkMap`, have nonlinear layouts. This means that, in order for a
+/// Some lattice maps, like `ChunkLruMap`, have nonlinear layouts. This means that, in order for a
 /// writer to receive data efficiently, it must come as an iterator over multiple extents.
 pub trait ReadExtent<'a, N> {
     type Src: 'a;

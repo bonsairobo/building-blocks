@@ -4,7 +4,8 @@ use std::cmp::{max, min};
 
 /// A trait that bundles op traits that all `PointN<N>` (and its components) should have.
 pub trait Point:
-    Abs
+    'static
+    + Abs
     + Add<Output = Self>
     + AddAssign
     + Bounded

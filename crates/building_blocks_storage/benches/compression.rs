@@ -1,12 +1,12 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{compressible_map::BincodeCompression, prelude::*};
+use building_blocks_storage::{prelude::*, BincodeCompression};
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 #[cfg(feature = "lz4")]
-use compressible_map::Lz4;
-#[cfg(feature = "snappy")]
-use compressible_map::Snappy;
+use building_blocks_storage::Lz4;
+#[cfg(feature = "snap")]
+use building_blocks_storage::Snappy;
 
 #[cfg(feature = "lz4")]
 fn decompress_array_with_bincode_lz4(c: &mut Criterion) {
@@ -40,7 +40,7 @@ fn decompress_array_with_fast_lz4(c: &mut Criterion) {
     group.finish();
 }
 
-#[cfg(feature = "snappy")]
+#[cfg(feature = "snap")]
 fn decompress_array_with_bincode_snappy(c: &mut Criterion) {
     let mut group = c.benchmark_group("decompress_array_with_bincode_snappy");
     for size in ARRAY_SIZES.iter() {
@@ -56,7 +56,7 @@ fn decompress_array_with_bincode_snappy(c: &mut Criterion) {
     group.finish();
 }
 
-#[cfg(feature = "snappy")]
+#[cfg(feature = "snap")]
 fn decompress_array_with_fast_snappy(c: &mut Criterion) {
     let mut group = c.benchmark_group("decompress_array_with_fast_snappy");
     for size in ARRAY_SIZES.iter() {
@@ -78,17 +78,17 @@ criterion_group!(
     decompress_array_with_bincode_lz4,
     decompress_array_with_fast_lz4,
 );
-#[cfg(feature = "snappy")]
+#[cfg(feature = "snap")]
 criterion_group!(
     snappy_benches,
     decompress_array_with_bincode_snappy,
     decompress_array_with_fast_snappy,
 );
-#[cfg(all(not(feature = "lz4"), feature = "snappy"))]
+#[cfg(all(not(feature = "lz4"), feature = "snap"))]
 criterion_main!(snappy_benches);
-#[cfg(all(feature = "lz4", not(feature = "snappy")))]
+#[cfg(all(feature = "lz4", not(feature = "snap")))]
 criterion_main!(lz4_benches);
-#[cfg(all(feature = "lz4", feature = "snappy"))]
+#[cfg(all(feature = "lz4", feature = "snap"))]
 criterion_main!(lz4_benches, snappy_benches);
 
 const ARRAY_SIZES: [i32; 3] = [16, 32, 64];

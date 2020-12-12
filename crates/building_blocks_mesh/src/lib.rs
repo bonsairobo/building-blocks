@@ -9,12 +9,12 @@
 //!   - signed distance fields
 //!   - voxel occupancy grids
 //!
-//! All of the algorithms are designed to be used with a `ChunkMap`, such that each chunk will have
-//! its own mesh. In order to update the mesh for a chunk, you must copy not only the chunk, but
-//! also some adjacent points, into an array before running the meshing algorithm.
+//! All of the algorithms are designed to be used with a `ChunkMap`, such that each chunk will have its own mesh. In order to
+//! update the mesh for a chunk, you must copy not only the chunk, but also some adjacent points, into an array before running
+//! the meshing algorithm.
 //!
-//! An example of updating chunk meshes for a height map is shown below. The same general pattern
-//! applies to all meshing algorithms, where you:
+//! An example of updating chunk meshes for a height map is shown below. The same general pattern applies to all meshing
+//! algorithms, where you:
 //!
 //!   1. get the desired chunk extent
 //!   2. pad the extent for a particular meshing algorithm
@@ -29,9 +29,10 @@
 //! use std::collections::HashSet;
 //!
 //! let chunk_shape = PointN([16; 2]);
-//! let mut map = ChunkMap::new(chunk_shape, 0.0, (), Lz4 { level: 10 });
+//! let mut map = ChunkMap::with_hash_map_storage(chunk_shape, 0.0, ());
 //!
-//! // Mutate one or more of the chunks...
+//! // ...mutate one or more of the chunks...
+//!
 //! let mutated_chunk_keys = [PointN([0; 2]), PointN([16; 2])];
 //!
 //! // For each mutated chunk, and any adjacent chunk, the mesh will need to be updated.
@@ -45,15 +46,13 @@
 //! }
 //!
 //! // Now we generate mesh vertices for each chunk.
-//! let local_cache = LocalChunkCache::new();
-//! let reader = ChunkMapReader::new(&map, &local_cache);
 //! for chunk_key in chunk_keys_to_update.into_iter() {
 //!     // It's crucial that we pad the chunk so we have access to adjacent points during meshing.
 //!     let padded_chunk_extent = padded_height_map_chunk_extent(
-//!         &map.extent_for_chunk_at_key(&chunk_key)
+//!         &map.indexer.extent_for_chunk_at_key(chunk_key)
 //!     );
 //!     let mut padded_chunk = Array2::fill(padded_chunk_extent, 0.0);
-//!     copy_extent(&padded_chunk_extent, &reader, &mut padded_chunk);
+//!     copy_extent(&padded_chunk_extent, &map, &mut padded_chunk);
 //!
 //!     let mut hm_buffer = HeightMapMeshBuffer::default();
 //!     triangulate_height_map(&padded_chunk, &padded_chunk_extent, &mut hm_buffer);
@@ -61,8 +60,7 @@
 //! }
 //! ```
 //!
-//! All of the meshing algorithms are generic enough to work with an array wrapped in a
-//! `TransformMap`.
+//! All of the meshing algorithms are generic enough to work with an array wrapped in a `TransformMap`.
 //!
 //! ```
 //! # use building_blocks_core::prelude::*;

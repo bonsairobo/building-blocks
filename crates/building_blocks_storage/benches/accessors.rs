@@ -54,17 +54,14 @@ fn array_for_each_point_and_stride(c: &mut Criterion) {
     group.finish();
 }
 
-fn chunk_map_for_each_point(c: &mut Criterion) {
-    let mut group = c.benchmark_group("chunk_map_for_each_point");
+fn chunk_hash_map_for_each_point(c: &mut Criterion) {
+    let mut group = c.benchmark_group("chunk_hash_map_for_each_point");
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
                 || set_up_chunk_map(size),
                 |(chunk_map, iter_extent)| {
-                    let local_cache = LocalChunkCache3::new();
-                    let reader = ChunkMapReader3::new(&chunk_map, &local_cache);
-
-                    reader.for_each(&iter_extent, |p: Point3i, value| {
+                    chunk_map.for_each(&iter_extent, |p: Point3i, value| {
                         black_box((p, value));
                     });
                 },
@@ -91,18 +88,15 @@ fn array_point_indexing(c: &mut Criterion) {
     group.finish();
 }
 
-fn chunk_map_point_indexing(c: &mut Criterion) {
-    let mut group = c.benchmark_group("chunk_map_point_indexing");
+fn chunk_hash_map_point_indexing(c: &mut Criterion) {
+    let mut group = c.benchmark_group("chunk_hash_map_point_indexing");
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
                 || set_up_chunk_map(size),
                 |(chunk_map, iter_extent)| {
-                    let local_cache = LocalChunkCache3::new();
-                    let reader = ChunkMapReader3::new(&chunk_map, &local_cache);
-
                     for p in iter_extent.iter_points() {
-                        black_box(reader.get(&p));
+                        black_box(chunk_map.get(&p));
                     }
                 },
             );
@@ -135,8 +129,8 @@ fn array_copy(c: &mut Criterion) {
     group.finish();
 }
 
-fn chunk_map_copy(c: &mut Criterion) {
-    let mut group = c.benchmark_group("chunk_map_copy");
+fn chunk_hash_map_copy(c: &mut Criterion) {
+    let mut group = c.benchmark_group("chunk_hash_map_copy");
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
@@ -150,9 +144,7 @@ fn chunk_map_copy(c: &mut Criterion) {
                     (src, dst, cp_extent)
                 },
                 |(src, mut dst, cp_extent)| {
-                    let local_cache = LocalChunkCache3::new();
-                    let src_reader = ChunkMapReader3::new(&src, &local_cache);
-                    copy_extent(&cp_extent, &src_reader, &mut dst);
+                    copy_extent(&cp_extent, &src, &mut dst);
                 },
             );
         });
@@ -167,9 +159,9 @@ criterion_group!(
     array_for_each_point_and_stride,
     array_point_indexing,
     array_copy,
-    chunk_map_for_each_point,
-    chunk_map_point_indexing,
-    chunk_map_copy
+    chunk_hash_map_for_each_point,
+    chunk_hash_map_point_indexing,
+    chunk_hash_map_copy
 );
 criterion_main!(benches);
 
@@ -184,7 +176,7 @@ fn set_up_array(size: i32) -> (Array3<i32>, Extent3i) {
     (array, iter_extent)
 }
 
-fn set_up_chunk_map(size: i32) -> (ChunkMap3<i32, ()>, Extent3i) {
+fn set_up_chunk_map(size: i32) -> (ChunkHashMap3<i32>, Extent3i) {
     let mut map = default_chunk_map();
     let iter_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
     map.fill_extent(&iter_extent, 1);
@@ -192,9 +184,9 @@ fn set_up_chunk_map(size: i32) -> (ChunkMap3<i32, ()>, Extent3i) {
     (map, iter_extent)
 }
 
-fn default_chunk_map() -> ChunkMap3<i32, ()> {
+fn default_chunk_map() -> ChunkHashMap3<i32> {
     let chunk_shape = PointN([16; 3]);
     let ambient_value = 0;
 
-    ChunkMap3::new(chunk_shape, ambient_value, (), Lz4 { level: 10 })
+    ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, ())
 }

@@ -1,7 +1,7 @@
 //! The analog of `ncollide3d::DBVT` for voxel octrees.
 //!
-//! This structure works well in tandem with a `ChunkLruMap3`, where an `Octree` can be generated from
-//! a chunk and subsequently placed into the `OctreeDBVT`.
+//! This structure works well in tandem with a `ChunkMap3`, where an `Octree` can be generated from a chunk and subsequently
+//! placed into the `OctreeDBVT`.
 
 use building_blocks_core::prelude::*;
 use building_blocks_storage::octree::{Octant, OctreeSet, OctreeVisitor, VisitStatus};

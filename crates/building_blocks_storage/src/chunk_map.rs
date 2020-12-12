@@ -49,7 +49,7 @@
 //! assert_eq!(map.get(&PointN([1, 1, 1])), 0);
 //!
 //! // Sometimes you need to implement very fast algorithms (like kernel-based methods) that do a
-//! // lot of random access. In this case it's most efficient to use `Stride`s, but `ChunkLruMap`
+//! // lot of random access. In this case it's most efficient to use `Stride`s, but `ChunkMap`
 //! // doesn't support random indexing by `Stride`. Instead, assuming that your query spans multiple
 //! // chunks, you should copy the extent into a dense map first. (The copy is fast).
 //! let query_extent = Extent3i::from_min_and_shape(PointN([10; 3]), PointN([32; 3]));
@@ -443,7 +443,7 @@ where
     }
 }
 
-// If ArrayN supports writing from type Src, then so does ChunkLruMap.
+// If ArrayN supports writing from type Src, then so does ChunkMap.
 impl<'a, N, T, M, S, Src> WriteExtent<N, Src> for ChunkMap<N, T, M, S>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,

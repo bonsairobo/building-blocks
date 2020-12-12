@@ -178,9 +178,8 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
     let chunk_shape = PointN([CHUNK_SIZE; 3]);
     let ambient_value = std::f32::MAX; // air
     let default_chunk_meta = ();
-    // Normally we'd keep this map around in a resource, but we don't need to for this specific
-    // example. We could also use an Array3 here instead of a ChunkLruMap3, but we use chunks for
-    // educational purposes.
+    // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
+    // Array3 here instead of a ChunkMap3, but we use chunks for educational purposes.
     let mut map = ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, default_chunk_meta);
     copy_extent(&sample_extent, &sdf, &mut map);
 
@@ -224,9 +223,8 @@ fn generate_chunk_meshes_from_height_map(
     let chunk_shape = PointN([CHUNK_SIZE; 2]);
     let ambient_value = 0.0;
     let default_chunk_meta = ();
-    // Normally we'd keep this map around in a resource, but we don't need to for this specific
-    // example. We could also use an Array3 here instead of a ChunkLruMap3, but we use chunks for
-    // educational purposes.
+    // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
+    // Array3 here instead of a ChunkMap3, but we use chunks for educational purposes.
     let mut map = ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, default_chunk_meta);
     copy_extent(&sample_extent, &height_map, &mut map);
 
@@ -271,9 +269,8 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
     let chunk_shape = PointN([CHUNK_SIZE; 3]);
     let ambient_value = CubeVoxel(false);
     let default_chunk_meta = ();
-    // Normally we'd keep this map around in a resource, but we don't need to for this specific
-    // example. We could also use an Array3 here instead of a ChunkLruMap3, but we use chunks for
-    // educational purposes.
+    // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
+    // Array3 here instead of a ChunkMap3, but we use chunks for educational purposes.
     let mut map = ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, default_chunk_meta);
     copy_extent(voxels.extent(), &voxels, &mut map);
 

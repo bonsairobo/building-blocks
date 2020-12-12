@@ -9,7 +9,6 @@
 //! The core storage types are:
 //!   - `ArrayN`: N-dimensional, dense array
 //!   - `ChunkHashMap`: N-dimensional, sparse array
-//!   - `ChunkLruMap`: N-dimensional, sparse array with built-in LRU caching
 //!
 //! Then there are "meta" lattice maps that provide some extra utility:
 //!   - `TransformMap`: a wrapper of any kind of lattice map that performs an arbitrary transformation

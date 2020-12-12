@@ -155,8 +155,8 @@ pub trait ForEachMut<N, Coord> {
 
 /// A trait to facilitate the generic implementation of `copy_extent`.
 ///
-/// Some lattice maps, like `ChunkLruMap`, have nonlinear layouts. This means that, in order for a
-/// writer to receive data efficiently, it must come as an iterator over multiple extents.
+/// Some lattice maps, like `ChunkMap`, have nonlinear layouts. This means that, in order for a writer to receive data
+/// efficiently, it must come as an iterator over multiple extents.
 pub trait ReadExtent<'a, N> {
     type Src: 'a;
     type SrcIter: Iterator<Item = (ExtentN<N>, Self::Src)>;

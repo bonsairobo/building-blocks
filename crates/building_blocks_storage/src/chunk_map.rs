@@ -264,6 +264,19 @@ where
     ExtentN<N>: IntegerExtent<N>,
     S: ChunkWriteStorage<N, T, M>,
 {
+    /// Get the `ChunkMapBuilder` used to build this map.
+    pub fn builder(&self) -> ChunkMapBuilder<N, T, M>
+    where
+        T: Copy,
+        M: Clone,
+    {
+        ChunkMapBuilder {
+            chunk_shape: self.indexer.chunk_shape(),
+            ambient_value: self.ambient_value,
+            default_chunk_metadata: self.default_chunk_metadata.clone(),
+        }
+    }
+
     /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
     ///
     /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.

@@ -122,10 +122,8 @@ use fnv::FnvHashMap;
 /// A lattice map made up of same-shaped `ArrayN` chunks. It takes a value at every possible `PointN`, because accesses made
 /// outside of the stored chunks will return some ambient value specified on creation.
 ///
-/// Implemented with a hash map from "chunk key" to chunk, where the key is defined by `ChunkIndexer`.
-///
-/// When used as a cache, it's possible for a chunk to be `CacheEntry::Evicted`. This implies that the chunk must be fetched
-/// from somewhere else.
+/// `ChunkMap` is generic over the type used to actually store the `Chunk`s. You can use any storage that implements
+/// `ChunkReadStorage` or `ChunkWriteStorage`.
 pub struct ChunkMap<N, T, M, S> {
     /// Translates from lattice coordinates to chunk key space.
     pub indexer: ChunkIndexer<N>,

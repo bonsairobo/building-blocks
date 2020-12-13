@@ -2,6 +2,7 @@ use building_blocks_core::prelude::*;
 use building_blocks_storage::prelude::*;
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use fnv::FnvHashMap;
 
 fn array_for_each_stride(c: &mut Criterion) {
     let mut group = c.benchmark_group("array_for_each_stride");
@@ -59,7 +60,7 @@ fn chunk_hash_map_for_each_point(c: &mut Criterion) {
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
-                || set_up_chunk_map(size),
+                || set_up_chunk_map(FnvHashMap::default(), size),
                 |(chunk_map, iter_extent)| {
                     chunk_map.for_each(&iter_extent, |p: Point3i, value| {
                         black_box((p, value));
@@ -93,10 +94,34 @@ fn chunk_hash_map_point_indexing(c: &mut Criterion) {
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
-                || set_up_chunk_map(size),
+                || set_up_chunk_map(FnvHashMap::default(), size),
                 |(chunk_map, iter_extent)| {
                     for p in iter_extent.iter_points() {
                         black_box(chunk_map.get(&p));
+                    }
+                },
+            );
+        });
+    }
+    group.finish();
+}
+
+fn compressible_chunk_map_point_indexing(c: &mut Criterion) {
+    let mut group = c.benchmark_group("compressible_chunk_map_point_indexing");
+    for size in ARRAY_SIZES.iter() {
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
+            b.iter_with_setup(
+                || {
+                    let storage = CompressibleChunkStorage::new(Lz4 { level: 10 });
+
+                    set_up_chunk_map(storage, size)
+                },
+                |(chunk_map, iter_extent)| {
+                    let local_cache = LocalChunkCache::new();
+                    let reader = chunk_map.storage().reader(&local_cache);
+                    let reader_map = default_chunk_map(reader);
+                    for p in iter_extent.iter_points() {
+                        black_box(reader_map.get(&p));
                     }
                 },
             );
@@ -136,10 +161,10 @@ fn chunk_hash_map_copy(c: &mut Criterion) {
             b.iter_with_setup(
                 || {
                     let cp_extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
-                    let mut src = default_chunk_map();
+                    let mut src = default_chunk_map(FnvHashMap::default());
                     src.fill_extent(&cp_extent, 1);
 
-                    let dst = default_chunk_map();
+                    let dst = default_chunk_map(FnvHashMap::default());
 
                     (src, dst, cp_extent)
                 },
@@ -161,7 +186,8 @@ criterion_group!(
     array_copy,
     chunk_hash_map_for_each_point,
     chunk_hash_map_point_indexing,
-    chunk_hash_map_copy
+    chunk_hash_map_copy,
+    compressible_chunk_map_point_indexing
 );
 criterion_main!(benches);
 
@@ -176,17 +202,20 @@ fn set_up_array(size: i32) -> (Array3<i32>, Extent3i) {
     (array, iter_extent)
 }
 
-fn set_up_chunk_map(size: i32) -> (ChunkHashMap3<i32>, Extent3i) {
-    let mut map = default_chunk_map();
+fn set_up_chunk_map<S>(storage: S, size: i32) -> (ChunkMap3<i32, (), S>, Extent3i)
+where
+    S: ChunkWriteStorage<[i32; 3], i32, ()>,
+{
+    let mut map = default_chunk_map(storage);
     let iter_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
     map.fill_extent(&iter_extent, 1);
 
     (map, iter_extent)
 }
 
-fn default_chunk_map() -> ChunkHashMap3<i32> {
+fn default_chunk_map<S>(storage: S) -> ChunkMap<[i32; 3], i32, (), S> {
     let chunk_shape = PointN([16; 3]);
     let ambient_value = 0;
 
-    ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, ())
+    ChunkMap::new(chunk_shape, ambient_value, (), storage)
 }

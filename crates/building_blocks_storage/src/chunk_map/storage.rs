@@ -12,18 +12,20 @@ pub use compression::*;
 pub use hash_map::*;
 pub use serialization::*;
 
-#[cfg(all(feature = "lz4", not(feature = "snap")))]
-pub use compressible::conditional_aliases::*;
-#[cfg(all(not(feature = "lz4"), feature = "snap"))]
-pub use compressible::conditional_aliases::*;
-#[cfg(all(feature = "lz4", not(feature = "snap")))]
-pub use compressible_reader::conditional_aliases::*;
-#[cfg(all(not(feature = "lz4"), feature = "snap"))]
-pub use compressible_reader::conditional_aliases::*;
-#[cfg(all(feature = "lz4", not(feature = "snap")))]
-pub use compression::conditional_aliases::*;
-#[cfg(all(not(feature = "lz4"), feature = "snap"))]
-pub use compression::conditional_aliases::*;
+pub mod conditional_aliases {
+    #[cfg(all(feature = "lz4", not(feature = "snap")))]
+    pub use super::compressible::conditional_aliases::*;
+    #[cfg(all(not(feature = "lz4"), feature = "snap"))]
+    pub use super::compressible::conditional_aliases::*;
+    #[cfg(all(feature = "lz4", not(feature = "snap")))]
+    pub use super::compressible_reader::conditional_aliases::*;
+    #[cfg(all(not(feature = "lz4"), feature = "snap"))]
+    pub use super::compressible_reader::conditional_aliases::*;
+    #[cfg(all(feature = "lz4", not(feature = "snap")))]
+    pub use super::compression::conditional_aliases::*;
+    #[cfg(all(not(feature = "lz4"), feature = "snap"))]
+    pub use super::compression::conditional_aliases::*;
+}
 
 use super::Chunk;
 

@@ -32,7 +32,7 @@ where
     M: Clone,
     B: BytesCompression,
 {
-    fn new(params: B) -> Self {
+    pub fn new(params: B) -> Self {
         Self {
             cache: FnvLruCache::default(),
             params: FastChunkCompression::new(params),
@@ -43,7 +43,6 @@ where
 
 impl<N, T, M, B> CompressibleChunkStorage<N, T, M, B>
 where
-    Self: ChunkWriteStorage<N, T, M>,
     PointN<N>: Clone + Hash + Eq,
     ExtentN<N>: IntegerExtent<N>,
     T: Copy,
@@ -132,7 +131,15 @@ where
     /// it will help with caching efficiency.
     pub fn flush_local_cache(&mut self, local_cache: LocalChunkCache<N, T, M>) {
         for (key, chunk) in local_cache.into_iter() {
-            self.write(key, chunk);
+            self.write_chunk(key, chunk);
+        }
+    }
+
+    pub fn write_chunk(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) {
+        if let Some(old_entry) = self.cache.insert(key, chunk) {
+            if let CacheEntry::Evicted(location) = old_entry {
+                self.compressed.remove(location.0);
+            }
         }
     }
 }
@@ -182,11 +189,7 @@ where
 
     #[inline]
     fn write(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) {
-        self.cache.insert(key, chunk).map(|old_entry| {
-            if let CacheEntry::Evicted(location) = old_entry {
-                self.compressed.remove(location.0);
-            }
-        });
+        self.write_chunk(key, chunk);
     }
 }
 

@@ -276,21 +276,29 @@ where
 
     /// Iterate over the keys of all entries, cached or evicted.
     #[inline]
-    pub fn keys<'a>(&'a self) -> LruCacheKeys<'a, K, V, E> {
+    pub fn keys(&self) -> LruCacheKeys<K, V, E> {
         self.store.keys()
     }
 
     /// Iterate over all `(key, entry)` pairs.
     #[inline]
-    pub fn entries<'a>(&'a self) -> LruCacheEntries<'a, K, V, E> {
+    pub fn entries(&self) -> LruCacheEntries<K, V, E> {
         LruCacheEntries {
             inner: self.store.iter(),
         }
     }
+}
+
+impl<K, V, E, H> IntoIterator for LruCache<K, V, E, H>
+where
+    E: Copy,
+{
+    type IntoIter = LruCacheIntoIter<K, V, E>;
+    type Item = (K, CacheEntry<V, E>);
 
     /// Consume `self` and iterate over all entries.
     #[inline]
-    pub fn into_iter(self) -> LruCacheIntoIter<K, V, E> {
+    fn into_iter(self) -> LruCacheIntoIter<K, V, E> {
         LruCacheIntoIter {
             inner: self.store.into_iter(),
         }
@@ -345,7 +353,7 @@ where
     E: Copy,
 {
     #[inline]
-    pub fn as_ref<'a>(&'a self) -> CacheEntry<&'a C, E> {
+    pub fn as_ref(&self) -> CacheEntry<&C, E> {
         match self {
             Self::Cached(c) => CacheEntry::Cached(c),
             Self::Evicted(e) => CacheEntry::Evicted(*e),
@@ -353,7 +361,7 @@ where
     }
 
     #[inline]
-    pub fn as_mut<'a>(&'a mut self) -> CacheEntry<&'a mut C, E> {
+    pub fn as_mut(&mut self) -> CacheEntry<&mut C, E> {
         match self {
             Self::Cached(c) => CacheEntry::Cached(c),
             Self::Evicted(e) => CacheEntry::Evicted(*e),

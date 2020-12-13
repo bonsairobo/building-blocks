@@ -37,10 +37,15 @@ pub trait IsEmpty {
 pub mod prelude {
     pub use super::{
         copy_extent, Array, Array2, Array3, ArrayN, Chunk, Chunk2, Chunk3, ChunkHashMap2,
-        ChunkHashMap3, ChunkIndexer, ChunkMap, Compressed, Compression, FastArrayCompression,
-        FastChunkCompression, ForEach, ForEachMut, Get, GetMut, IsEmpty, Local, OctreeSet,
-        ReadExtent, SerializableChunkMap, Stride, TransformMap, WriteExtent,
+        ChunkHashMap3, ChunkIndexer, ChunkMap, ChunkMap2, ChunkMap3, ChunkReadStorage,
+        ChunkWriteStorage, Compressed, CompressibleChunkMap, CompressibleChunkStorage,
+        CompressibleChunkStorageReader, Compression, FastArrayCompression, FastChunkCompression,
+        ForEach, ForEachMut, Get, GetMut, IsEmpty, IterChunkKeys, Local, LocalChunkCache,
+        LocalChunkCache2, LocalChunkCache3, OctreeSet, ReadExtent, SerializableChunkMap, Stride,
+        TransformMap, WriteExtent,
     };
+
+    pub use super::chunk_map::conditional_aliases::*;
 
     #[cfg(feature = "lz4")]
     pub use super::Lz4;

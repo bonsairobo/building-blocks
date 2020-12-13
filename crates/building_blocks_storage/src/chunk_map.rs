@@ -6,10 +6,10 @@
 //! calculating a chunk key from any point in the chunk.
 //!
 //! `ChunkMap<N, T, M, S>` depends on a backing `S: ChunkStorage`. This can be as simple as a `HashMap`, which provides good
-//! performance for both iteration and random access. It could also be something more memory efficient like `LruCacheStorage`,
-//! which also performs well for iteration, but the caching overhead has an impact on random access performance.
+//! performance for both iteration and random access. It could also be something more memory efficient like
+//! `CompressibleChunkStorage`, which performs nearly as well but involves some extra management of the cache.
 //!
-//! # Example Usage
+//! # Example `ChunkHashMap` Usage
 //! ```
 //! use building_blocks_core::prelude::*;
 //! use building_blocks_storage::prelude::*;
@@ -56,6 +56,33 @@
 //! let mut dense_map = Array3::fill(query_extent, ambient_value);
 //! copy_extent(&query_extent, &map, &mut dense_map);
 //! ```
+//!
+//! # Example `CompressibleChunkMap` Usage
+//!
+//! ```
+//! # use building_blocks_core::prelude::*;
+//! # use building_blocks_storage::prelude::*;
+//! #
+//! # let chunk_shape = PointN([16; 3]); // components must be powers of 2
+//! # let ambient_value = 0;
+//! # let default_chunk_meta = (); // chunk metadata is optional
+//! let mut map = ChunkMap::with_compressible_storage(chunk_shape, ambient_value, default_chunk_meta, Lz4 { level: 10 });
+//!
+//! // You can write voxels the same as any other `ChunkMap`.
+//! let write_points = [PointN([-100; 3]), PointN([0; 3]), PointN([100; 3])];
+//! for p in write_points.iter() {
+//!     *map.get_mut(&p) = 1;
+//! }
+//!
+//! // Save some space by compressing the least recently used chunks. On further access to the compressed chunks, they will get
+//! // decompressed and cached.
+//! map.storage_mut().compress_lru();
+//!
+//! // In order to use the read-only access traits, you need to construct a `CompressibleChunkStorageReader`.
+//! let local_cache = LocalChunkCache::new();
+//! let reader = map.storage().reader(&local_cache);
+//! let reader_map = ChunkMap::new(PointN([16; 3]), 0, (), reader);
+//! ```
 
 mod ambient;
 mod chunk;
@@ -64,6 +91,10 @@ mod storage;
 pub use ambient::*;
 pub use chunk::*;
 pub use storage::*;
+
+pub mod conditional_aliases {
+    pub use super::storage::conditional_aliases::*;
+}
 
 use crate::{
     access::{
@@ -95,6 +126,9 @@ pub struct ChunkMap<N, T, M, S> {
 
     storage: S,
 }
+
+pub type ChunkMap2<T, M, S> = ChunkMap<[i32; 3], T, M, S>;
+pub type ChunkMap3<T, M, S> = ChunkMap<[i32; 3], T, M, S>;
 
 impl<'a, N, T, M, S> ChunkMap<N, T, M, S> {
     /// Consumes `self` and returns the backing `ChunkStorage`.

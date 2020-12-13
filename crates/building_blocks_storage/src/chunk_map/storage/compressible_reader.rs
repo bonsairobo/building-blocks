@@ -132,13 +132,26 @@ pub type LocalChunkCache2<T, M = ()> = LocalChunkCache<[i32; 2], T, M>;
 pub type LocalChunkCache3<T, M = ()> = LocalChunkCache<[i32; 3], T, M>;
 
 macro_rules! define_conditional_aliases {
-    ($backend:ty) => {
+    ($backend:ident) => {
+        use super::*;
+        use crate::{$backend, ChunkMap};
+
         /// 2-dimensional `CompressibleChunkStorageReader`.
         pub type CompressibleChunkStorageReader2<'a, T, M = (), B = $backend> =
             CompressibleChunkStorageReader<'a, [i32; 2], T, M, B>;
         /// 3-dimensional `CompressibleChunkStorageReader`.
         pub type CompressibleChunkStorageReader3<'a, T, M = (), B = $backend> =
             CompressibleChunkStorageReader<'a, [i32; 3], T, M, B>;
+
+        // A `ChunkMap` backed by a `CompressibleChunkStorageReader`.
+        pub type CompressibleChunkMapReader<'a, N, T, M, B> =
+            ChunkMap<N, T, M, CompressibleChunkStorageReader<'a, N, T, M, B>>;
+        /// 2-dimensional `CompressibleChunkMapReader`.
+        pub type CompressibleChunkMapReader2<'a, T, M = (), B = $backend> =
+            CompressibleChunkMapReader<'a, [i32; 2], T, M, B>;
+        /// 3-dimensional `CompressibleChunkMapReader`.
+        pub type CompressibleChunkMapReader3<'a, T, M = (), B = $backend> =
+            CompressibleChunkMapReader<'a, [i32; 3], T, M, B>;
     };
 }
 
@@ -146,13 +159,9 @@ macro_rules! define_conditional_aliases {
 // you made.
 #[cfg(all(feature = "lz4", not(feature = "snap")))]
 pub mod conditional_aliases {
-    use super::*;
-    use crate::Lz4;
     define_conditional_aliases!(Lz4);
 }
 #[cfg(all(not(feature = "lz4"), feature = "snap"))]
 pub mod conditional_aliases {
-    use super::*;
-    use crate::Snappy;
     define_conditional_aliases!(Snappy);
 }

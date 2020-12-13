@@ -240,7 +240,7 @@ where
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    fn get_chunk(&self, key: &PointN<N>) -> Option<&Chunk<N, T, M>> {
+    pub fn get_chunk(&self, key: &PointN<N>) -> Option<&Chunk<N, T, M>> {
         debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.get(key)

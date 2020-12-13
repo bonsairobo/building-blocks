@@ -1,4 +1,4 @@
-use crate::{Chunk, ChunkMap, ChunkShape};
+use crate::{Chunk, ChunkMap};
 
 use super::{ChunkReadStorage, ChunkWriteStorage, IterChunkKeys};
 
@@ -65,22 +65,3 @@ pub type ChunkHashMap<N, T, M = ()> = ChunkMap<N, T, M, FnvHashMap<PointN<N>, Ch
 pub type ChunkHashMap2<T, M = ()> = ChunkHashMap<[i32; 2], T, M>;
 /// A 3-dimensional `ChunkHashMap`.
 pub type ChunkHashMap3<T, M = ()> = ChunkHashMap<[i32; 3], T, M>;
-
-impl<'a, N, T, M> ChunkHashMap<N, T, M>
-where
-    PointN<N>: IntegerPoint + ChunkShape<N>,
-    ExtentN<N>: IntegerExtent<N>,
-{
-    pub fn with_hash_map_storage(
-        chunk_shape: PointN<N>,
-        ambient_value: T,
-        default_chunk_metadata: M,
-    ) -> Self {
-        Self::new(
-            chunk_shape,
-            ambient_value,
-            default_chunk_metadata,
-            FnvHashMap::default(),
-        )
-    }
-}

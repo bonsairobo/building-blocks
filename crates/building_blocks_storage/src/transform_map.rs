@@ -31,7 +31,8 @@
 //! # use building_blocks_storage::prelude::*;
 //! # let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
 //! let src = Array3::fill(extent, 0);
-//! let mut dst = ChunkMap::with_hash_map_storage(PointN([4; 3]), 0, ());
+//! let builder = ChunkMapBuilder { chunk_shape: PointN([4; 3]), ambient_value: 0, default_chunk_metadata: () };
+//! let mut dst = builder.build_with_hash_map_storage();
 //! let tfm = TransformMap::new(&src, &|value: i32| value + 1);
 //! copy_extent(&extent, &tfm, &mut dst);
 //! ```
@@ -220,6 +221,12 @@ mod tests {
     use super::*;
     use crate::prelude::*;
 
+    const BUILDER: ChunkMapBuilder<[i32; 3], i32, ()> = ChunkMapBuilder {
+        chunk_shape: PointN([4; 3]),
+        ambient_value: 0,
+        default_chunk_metadata: (),
+    };
+
     #[test]
     fn transform_accessors() {
         let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
@@ -249,7 +256,7 @@ mod tests {
     fn copy_from_transformed_array() {
         let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
         let src = Array3::fill(extent, 0);
-        let mut dst = ChunkMap::with_hash_map_storage(PointN([4; 3]), 0, ());
+        let mut dst = BUILDER.build_with_hash_map_storage();
         let tfm = TransformMap::new(&src, |value: i32| value + 1);
         copy_extent(&extent, &tfm, &mut dst);
     }
@@ -259,13 +266,13 @@ mod tests {
     fn copy_from_transformed_chunk_map_reader() {
         let src_extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
         let src_array = Array3::fill(src_extent, 1);
-        let mut src = ChunkMap::with_hash_map_storage(PointN([4; 3]), 0, ());
+        let mut src = BUILDER.build_with_hash_map_storage();
         copy_extent(&src_extent, &src_array, &mut src);
 
         let tfm = TransformMap::new(&src, |value: i32| value + 1);
 
         let dst_extent = Extent3::from_min_and_shape(PointN([-16; 3]), PointN([32; 3]));
-        let mut dst = ChunkMap::with_hash_map_storage(PointN([2; 3]), 0, ());
+        let mut dst = BUILDER.build_with_hash_map_storage();
         copy_extent(&dst_extent, &tfm, &mut dst);
     }
 }

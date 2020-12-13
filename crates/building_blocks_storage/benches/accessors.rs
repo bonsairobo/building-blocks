@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::prelude::*;
+use building_blocks_storage::{prelude::*, ChunkMapBuilder};
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use fnv::FnvHashMap;
@@ -119,7 +119,7 @@ fn compressible_chunk_map_point_indexing(c: &mut Criterion) {
                 |(chunk_map, iter_extent)| {
                     let local_cache = LocalChunkCache::new();
                     let reader = chunk_map.storage().reader(&local_cache);
-                    let reader_map = default_chunk_map(reader);
+                    let reader_map = DEFAULT_BUILDER.build(reader);
                     for p in iter_extent.iter_points() {
                         black_box(reader_map.get(&p));
                     }
@@ -161,10 +161,10 @@ fn chunk_hash_map_copy(c: &mut Criterion) {
             b.iter_with_setup(
                 || {
                     let cp_extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
-                    let mut src = default_chunk_map(FnvHashMap::default());
+                    let mut src = DEFAULT_BUILDER.build(FnvHashMap::default());
                     src.fill_extent(&cp_extent, 1);
 
-                    let dst = default_chunk_map(FnvHashMap::default());
+                    let dst = DEFAULT_BUILDER.build(FnvHashMap::default());
 
                     (src, dst, cp_extent)
                 },
@@ -206,16 +206,15 @@ fn set_up_chunk_map<S>(storage: S, size: i32) -> (ChunkMap3<i32, (), S>, Extent3
 where
     S: ChunkWriteStorage<[i32; 3], i32, ()>,
 {
-    let mut map = default_chunk_map(storage);
+    let mut map = DEFAULT_BUILDER.build(storage);
     let iter_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
     map.fill_extent(&iter_extent, 1);
 
     (map, iter_extent)
 }
 
-fn default_chunk_map<S>(storage: S) -> ChunkMap<[i32; 3], i32, (), S> {
-    let chunk_shape = PointN([16; 3]);
-    let ambient_value = 0;
-
-    ChunkMap::new(chunk_shape, ambient_value, (), storage)
-}
+const DEFAULT_BUILDER: ChunkMapBuilder<[i32; 3], i32, ()> = ChunkMapBuilder {
+    chunk_shape: PointN([16; 3]),
+    ambient_value: 0,
+    default_chunk_metadata: (),
+};

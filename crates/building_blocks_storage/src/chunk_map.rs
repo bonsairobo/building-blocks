@@ -14,10 +14,13 @@
 //! use building_blocks_core::prelude::*;
 //! use building_blocks_storage::prelude::*;
 //!
-//! let chunk_shape = PointN([16; 3]); // components must be powers of 2
 //! let ambient_value = 0;
-//! let default_chunk_meta = (); // chunk metadata is optional
-//! let mut map = ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, default_chunk_meta);
+//! let builder = ChunkMapBuilder {
+//!    chunk_shape: PointN([16; 3]), // components must be powers of 2
+//!    ambient_value,
+//!    default_chunk_metadata: (), // chunk metadata is optional
+//! };
+//! let mut map = builder.build_with_hash_map_storage();
 //!
 //! // Although we only write 3 points, 3 whole dense chunks will be inserted and cached.
 //! let write_points = [PointN([-100; 3]), PointN([0; 3]), PointN([100; 3])];
@@ -63,12 +66,15 @@
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
 //! #
-//! # let chunk_shape = PointN([16; 3]); // components must be powers of 2
-//! # let ambient_value = 0;
-//! # let default_chunk_meta = (); // chunk metadata is optional
-//! let mut map = ChunkMap::with_compressible_storage(chunk_shape, ambient_value, default_chunk_meta, Lz4 { level: 10 });
+//! # let builder = ChunkMapBuilder {
+//! #    chunk_shape: PointN([16; 3]), // components must be powers of 2
+//! #    ambient_value: 0,
+//! #    default_chunk_metadata: (), // chunk metadata is optional
+//! # };
+//! #
+//! let mut map = builder.build(CompressibleChunkStorage::new(Lz4 { level: 10 }));
 //!
-//! // You can write voxels the same as any other `ChunkMap`.
+//! // You can write voxels the same as any other `ChunkMap`. As chunks are created, they will be placed in an LRU cache.
 //! let write_points = [PointN([-100; 3]), PointN([0; 3]), PointN([100; 3])];
 //! for p in write_points.iter() {
 //!     *map.get_mut(&p) = 1;
@@ -107,6 +113,7 @@ use crate::{
 use building_blocks_core::{bounding_extent, ExtentN, IntegerExtent, IntegerPoint, PointN};
 
 use either::Either;
+use fnv::FnvHashMap;
 
 /// A lattice map made up of same-shaped `ArrayN` chunks. It takes a value at every possible `PointN`, because accesses made
 /// outside of the stored chunks will return some ambient value specified on creation.
@@ -119,16 +126,46 @@ pub struct ChunkMap<N, T, M, S> {
     /// Translates from lattice coordinates to chunk key space.
     pub indexer: ChunkIndexer<N>,
 
-    // The value to use when none is specified, i.e. when filling new chunks or erasing points.
     ambient_value: T,
-
     default_chunk_metadata: M,
-
     storage: S,
 }
 
 pub type ChunkMap2<T, M, S> = ChunkMap<[i32; 3], T, M, S>;
 pub type ChunkMap3<T, M, S> = ChunkMap<[i32; 3], T, M, S>;
+
+/// A few pieces of info used within the `ChunkMap`. You will probably keep one of these around to create new `ChunkMap`s from
+/// a chunk storage.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ChunkMapBuilder<N, T, M> {
+    /// The shape of each chunk.
+    pub chunk_shape: PointN<N>,
+    /// The value to use when none is specified, i.e. when creating new chunks or accessing vacant chunks.
+    pub ambient_value: T,
+    /// The metadata value used to initialize new chunks.
+    pub default_chunk_metadata: M,
+}
+
+impl<N, T, M> ChunkMapBuilder<N, T, M>
+where
+    PointN<N>: IntegerPoint + ChunkShape<N>,
+    ExtentN<N>: IntegerExtent<N>,
+{
+    /// Create a new `ChunkMap` with the given `storage`.
+    pub fn build<S>(self, storage: S) -> ChunkMap<N, T, M, S> {
+        ChunkMap::new(
+            self.chunk_shape,
+            self.ambient_value,
+            self.default_chunk_metadata,
+            storage,
+        )
+    }
+
+    /// Create a new `ChunkMap` using a `FnvHashMap` as the chunk storage.
+    pub fn build_with_hash_map_storage(self) -> ChunkHashMap<N, T, M> {
+        self.build(FnvHashMap::default())
+    }
+}
 
 impl<'a, N, T, M, S> ChunkMap<N, T, M, S> {
     /// Consumes `self` and returns the backing `ChunkStorage`.
@@ -555,11 +592,15 @@ mod tests {
 
     use building_blocks_core::Extent3i;
 
+    const BUILDER: ChunkMapBuilder<[i32; 3], i32, ()> = ChunkMapBuilder {
+        chunk_shape: PointN([16; 3]),
+        ambient_value: 0,
+        default_chunk_metadata: (),
+    };
+
     #[test]
     fn write_and_read_points() {
-        let chunk_shape = PointN([16; 3]);
-        let ambient_value = 0;
-        let mut map = ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, ());
+        let mut map = BUILDER.build_with_hash_map_storage();
 
         let points = [
             [0, 0, 0],
@@ -580,9 +621,7 @@ mod tests {
 
     #[test]
     fn write_extent_with_for_each_then_read() {
-        let chunk_shape = PointN([16; 3]);
-        let ambient_value = 0;
-        let mut map = ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, ());
+        let mut map = BUILDER.build_with_hash_map_storage();
 
         let write_extent = Extent3i::from_min_and_shape(PointN([10; 3]), PointN([80; 3]));
         map.for_each_mut(&write_extent, |_p, value| *value = 1);
@@ -602,9 +641,7 @@ mod tests {
         let extent_to_copy = Extent3i::from_min_and_shape(PointN([10; 3]), PointN([80; 3]));
         let array = Array3::fill(extent_to_copy, 1);
 
-        let chunk_shape = PointN([16; 3]);
-        let ambient_value = 0;
-        let mut map = ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, ());
+        let mut map = BUILDER.build_with_hash_map_storage();
 
         copy_extent(&extent_to_copy, &array, &mut map);
 

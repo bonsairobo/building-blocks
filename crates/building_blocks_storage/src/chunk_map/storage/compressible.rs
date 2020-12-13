@@ -1,5 +1,5 @@
 use crate::{
-    BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkShape, ChunkWriteStorage, Compressed,
+    BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkWriteStorage, Compressed,
     CompressibleChunkStorageReader, Compression, FastChunkCompression, FnvLruCache, IterChunkKeys,
     LocalChunkCache, LruCacheEntries, LruCacheIntoIter, LruCacheKeys, MaybeCompressedChunk,
 };
@@ -237,29 +237,6 @@ where
 /// A `ChunkMap` using `CompressibleChunkStorage` as `ChunkStorage`.
 pub type CompressibleChunkMap<N, T, M, B> = ChunkMap<N, T, M, CompressibleChunkStorage<N, T, M, B>>;
 
-impl<'a, N, T, M, B> CompressibleChunkMap<N, T, M, B>
-where
-    PointN<N>: IntegerPoint + ChunkShape<N> + Hash + Eq,
-    ExtentN<N>: IntegerExtent<N>,
-    T: Copy,
-    M: Clone,
-    B: BytesCompression,
-{
-    /// Creates a `ChunkMap` using the `CompressibleChunkStorage`.
-    pub fn with_compressible_storage(
-        chunk_shape: PointN<N>,
-        ambient_value: T,
-        default_chunk_metadata: M,
-        params: B,
-    ) -> Self {
-        Self::new(
-            chunk_shape,
-            ambient_value,
-            default_chunk_metadata,
-            CompressibleChunkStorage::new(params),
-        )
-    }
-}
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CompressedLocation(pub usize);
 

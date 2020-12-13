@@ -175,12 +175,15 @@ const CHUNK_SIZE: i32 = 16;
 fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNormMesh>> {
     let sdf = sdf.get_sdf();
     let sample_extent = Extent3i::from_min_and_shape(PointN([-20; 3]), PointN([40; 3])).padded(1);
-    let chunk_shape = PointN([CHUNK_SIZE; 3]);
-    let ambient_value = std::f32::MAX; // air
-    let default_chunk_meta = ();
+
+    let builder = ChunkMapBuilder {
+        chunk_shape: PointN([CHUNK_SIZE; 3]),
+        ambient_value: std::f32::MAX, // air
+        default_chunk_metadata: (),
+    };
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
     // Array3 here instead of a ChunkMap3, but we use chunks for educational purposes.
-    let mut map = ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, default_chunk_meta);
+    let mut map = builder.build_with_hash_map_storage();
     copy_extent(&sample_extent, &sdf, &mut map);
 
     // Generate the chunk meshes.
@@ -220,12 +223,15 @@ fn generate_chunk_meshes_from_height_map(
 ) -> Vec<Option<PosNormMesh>> {
     let height_map = hm.get_height_map();
     let sample_extent = Extent2i::from_min_and_shape(PointN([-20; 2]), PointN([40; 2])).padded(1);
-    let chunk_shape = PointN([CHUNK_SIZE; 2]);
-    let ambient_value = 0.0;
-    let default_chunk_meta = ();
+
+    let builder = ChunkMapBuilder {
+        chunk_shape: PointN([CHUNK_SIZE; 2]),
+        ambient_value: 0.0, // air
+        default_chunk_metadata: (),
+    };
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
     // Array3 here instead of a ChunkMap3, but we use chunks for educational purposes.
-    let mut map = ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, default_chunk_meta);
+    let mut map = builder.build_with_hash_map_storage();
     copy_extent(&sample_extent, &height_map, &mut map);
 
     // Generate the chunk meshes.
@@ -266,12 +272,14 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
     let voxels = cubic.get_voxels();
 
     // Chunk up the voxels just to show that meshing across chunks is consistent.
-    let chunk_shape = PointN([CHUNK_SIZE; 3]);
-    let ambient_value = CubeVoxel(false);
-    let default_chunk_meta = ();
+    let builder = ChunkMapBuilder {
+        chunk_shape: PointN([CHUNK_SIZE; 3]),
+        ambient_value: CubeVoxel(false),
+        default_chunk_metadata: (),
+    };
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
     // Array3 here instead of a ChunkMap3, but we use chunks for educational purposes.
-    let mut map = ChunkMap::with_hash_map_storage(chunk_shape, ambient_value, default_chunk_meta);
+    let mut map = builder.build_with_hash_map_storage();
     copy_extent(voxels.extent(), &voxels, &mut map);
 
     // Generate the chunk meshes.

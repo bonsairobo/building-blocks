@@ -116,12 +116,20 @@ where
 mod test {
     use super::*;
 
+    use crate::prelude::*;
+
+    const BUILDER: ChunkMapBuilder<[i32; 3], i32, ()> = ChunkMapBuilder {
+        chunk_shape: PointN([16; 3]),
+        ambient_value: 0,
+        default_chunk_metadata: (),
+    };
+
     #[cfg(feature = "lz4")]
     #[test]
     fn hash_map_serialize_and_deserialize_round_trip_lz4() {
         use crate::Lz4;
 
-        let map = ChunkMap::with_hash_map_storage(PointN([16; 3]), 0, ());
+        let map = BUILDER.build_with_hash_map_storage();
         let serializable = futures::executor::block_on(SerializableChunkMap::from_chunk_map(
             BincodeCompression::new(Lz4 { level: 10 }),
             map,
@@ -136,7 +144,7 @@ mod test {
     fn hash_map_serialize_and_deserialize_round_trip_snappy() {
         use crate::Snappy;
 
-        let map = ChunkMap::with_hash_map_storage(PointN([16; 3]), 0, ());
+        let map = BUILDER.build_with_hash_map_storage();
         let serializable = futures::executor::block_on(SerializableChunkMap::from_chunk_map(
             BincodeCompression::new(Snappy),
             map,
@@ -151,7 +159,7 @@ mod test {
     fn compressible_map_serialize_and_deserialize_round_trip_lz4() {
         use crate::Lz4;
 
-        let map = ChunkMap::with_compressible_storage(PointN([16; 3]), 0, (), Lz4 { level: 10 });
+        let map = BUILDER.build(CompressibleChunkStorage::new(Lz4 { level: 10 }));
         let serializable = futures::executor::block_on(SerializableChunkMap::from_chunk_map(
             BincodeCompression::new(Lz4 { level: 10 }),
             map,
@@ -166,7 +174,7 @@ mod test {
     fn compressible_map_serialize_and_deserialize_round_trip_snappy() {
         use crate::Snappy;
 
-        let map = ChunkMap::with_compressible_storage(PointN([16; 3]), 0, (), Snappy);
+        let map = BUILDER.build(CompressibleChunkStorage::new(Snappy));
         let serializable = futures::executor::block_on(SerializableChunkMap::from_chunk_map(
             BincodeCompression::new(Snappy),
             map,

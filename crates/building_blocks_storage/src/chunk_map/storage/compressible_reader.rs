@@ -1,5 +1,5 @@
 use crate::{
-    BytesCompression, CacheEntry, Chunk, ChunkReadStorage, CompressedChunks,
+    BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkReadStorage, CompressedChunks,
     CompressibleChunkStorage, IterChunkKeys, LocalCache, LruChunkCacheEntries, LruChunkCacheKeys,
 };
 
@@ -131,10 +131,14 @@ pub type LocalChunkCache2<T, M = ()> = LocalChunkCache<[i32; 2], T, M>;
 /// A `LocalCache` of `Chunk3`s.
 pub type LocalChunkCache3<T, M = ()> = LocalChunkCache<[i32; 3], T, M>;
 
+// A `ChunkMap` backed by a `CompressibleChunkStorageReader`.
+pub type CompressibleChunkMapReader<'a, N, T, M, B> =
+    ChunkMap<N, T, M, CompressibleChunkStorageReader<'a, N, T, M, B>>;
+
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
         use super::*;
-        use crate::{$backend, ChunkMap};
+        use crate::$backend;
 
         /// 2-dimensional `CompressibleChunkStorageReader`.
         pub type CompressibleChunkStorageReader2<'a, T, M = (), B = $backend> =
@@ -143,9 +147,6 @@ macro_rules! define_conditional_aliases {
         pub type CompressibleChunkStorageReader3<'a, T, M = (), B = $backend> =
             CompressibleChunkStorageReader<'a, [i32; 3], T, M, B>;
 
-        // A `ChunkMap` backed by a `CompressibleChunkStorageReader`.
-        pub type CompressibleChunkMapReader<'a, N, T, M, B> =
-            ChunkMap<N, T, M, CompressibleChunkStorageReader<'a, N, T, M, B>>;
         /// 2-dimensional `CompressibleChunkMapReader`.
         pub type CompressibleChunkMapReader2<'a, T, M = (), B = $backend> =
             CompressibleChunkMapReader<'a, [i32; 2], T, M, B>;

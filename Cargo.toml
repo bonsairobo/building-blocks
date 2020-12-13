@@ -14,17 +14,24 @@ features = ["glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "pro
 [features]
 default = ["lz4", "mesh", "procgen", "search"]
 
-glam = ["building_blocks_core/glam"]
+# Optional crates.
 image = ["building_blocks_image"]
-lz4 = ["building_blocks_storage/lz4"]
 mesh = ["building_blocks_mesh"]
-mint = ["building_blocks_core/mint"]
-nalgebra = ["building_blocks_core/nalgebra"]
-ncollide = ["building_blocks_search/ncollide"]
 procgen = ["building_blocks_procgen"]
 search = ["building_blocks_search"]
-snappy = ["building_blocks_storage/snap"]
 vox = ["building_blocks_vox"]
+
+# Math type conversions.
+glam = ["building_blocks_core/glam"]
+mint = ["building_blocks_core/mint"]
+nalgebra = ["building_blocks_core/nalgebra"]
+
+# Compression backends.
+lz4 = ["building_blocks_storage/lz4"]
+snappy = ["building_blocks_storage/snap"]
+
+# Collisions with `OctreeSet` and `OctreeDBVT`.
+ncollide = ["building_blocks_search/ncollide"]
 
 [workspace]
 members = ["crates/*"]

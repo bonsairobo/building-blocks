@@ -82,7 +82,7 @@ use either::Either;
 ///
 /// Implemented with a hash map from "chunk key" to chunk, where the key is defined by `ChunkIndexer`.
 ///
-/// When used as a cache, it's possible for a chunk to be `CacheState::Evicted`. This implies that the chunk must be fetched
+/// When used as a cache, it's possible for a chunk to be `CacheEntry::Evicted`. This implies that the chunk must be fetched
 /// from somewhere else.
 pub struct ChunkMap<N, T, M, S> {
     /// Translates from lattice coordinates to chunk key space.
@@ -135,8 +135,6 @@ impl<'a, N, T, M, S> ChunkMap<N, T, M, S>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
     ExtentN<N>: IntegerExtent<N>,
-    Chunk<N, T, M>: 'a,
-    S: ChunkStorage<'a, N, T, M>,
 {
     /// Creates a map using the given `storage`.
     ///
@@ -154,7 +152,14 @@ where
             storage,
         }
     }
+}
 
+impl<N, T, M, S> ChunkMap<N, T, M, S>
+where
+    PointN<N>: IntegerPoint + ChunkShape<N>,
+    ExtentN<N>: IntegerExtent<N>,
+    S: ChunkReadStorage<N, T, M>,
+{
     /// Borrow the chunk at `key`.
     ///
     /// In debug mode only, asserts that `key` is valid.
@@ -163,6 +168,50 @@ where
         debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.get(key)
+    }
+
+    /// Returns the chunk containing `point` if it exists.
+    #[inline]
+    pub fn get_chunk_containing_point(
+        &self,
+        point: &PointN<N>,
+    ) -> Option<(PointN<N>, &Chunk<N, T, M>)> {
+        let chunk_key = self.indexer.chunk_key_containing_point(point);
+
+        self.get_chunk(&chunk_key).map(|c| (chunk_key, c))
+    }
+}
+
+impl<N, T, M, S> ChunkMap<N, T, M, S>
+where
+    PointN<N>: IntegerPoint + ChunkShape<N>,
+    ExtentN<N>: IntegerExtent<N>,
+    S: ChunkWriteStorage<N, T, M>,
+{
+    /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
+    ///
+    /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
+    #[inline]
+    pub fn write_chunk(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) {
+        debug_assert!(chunk.array.extent().shape.eq(&self.indexer.chunk_shape()));
+        debug_assert!(self.indexer.chunk_key_is_valid(&key));
+
+        self.storage.write(key, chunk);
+    }
+
+    /// Replace the `Chunk` at `key` with `chunk`, returning the old value.
+    ///
+    /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
+    #[inline]
+    pub fn replace_chunk(
+        &mut self,
+        key: PointN<N>,
+        chunk: Chunk<N, T, M>,
+    ) -> Option<Chunk<N, T, M>> {
+        debug_assert!(chunk.array.extent().shape.eq(&self.indexer.chunk_shape()));
+        debug_assert!(self.indexer.chunk_key_is_valid(&key));
+
+        self.storage.replace(key, chunk)
     }
 
     /// Mutably borrow the chunk at `key`.
@@ -189,30 +238,6 @@ where
         self.storage.get_mut_or_insert_with(key, create_chunk)
     }
 
-    /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
-    #[inline]
-    pub fn insert_chunk(
-        &mut self,
-        key: PointN<N>,
-        chunk: Chunk<N, T, M>,
-    ) -> Option<Chunk<N, T, M>> {
-        debug_assert!(chunk.array.extent().shape.eq(&self.indexer.chunk_shape()));
-        debug_assert!(self.indexer.chunk_key_is_valid(&key));
-
-        self.storage.insert(key, chunk)
-    }
-
-    /// Returns the chunk containing `point` if it exists.
-    #[inline]
-    pub fn get_chunk_containing_point(
-        &self,
-        point: &PointN<N>,
-    ) -> Option<(PointN<N>, &Chunk<N, T, M>)> {
-        let chunk_key = self.indexer.chunk_key_containing_point(point);
-
-        self.get_chunk(&chunk_key).map(|c| (chunk_key, c))
-    }
-
     /// Returns the mutable chunk containing `point` if it exists.
     #[inline]
     pub fn get_mut_chunk_containing_point(
@@ -222,15 +247,6 @@ where
         let chunk_key = self.indexer.chunk_key_containing_point(point);
 
         self.get_mut_chunk(&chunk_key).map(|c| (chunk_key, c))
-    }
-
-    /// The smallest extent that bounds all chunks.
-    pub fn bounding_extent(&'a self) -> ExtentN<N> {
-        bounding_extent(self.storage.iter_keys().flat_map(|key| {
-            let chunk_extent = self.indexer.extent_for_chunk_at_key(*key);
-
-            vec![chunk_extent.minimum, chunk_extent.max()].into_iter()
-        }))
     }
 
     /// Get mutable data for point `p` along with the chunk key. If `p` does not exist, calls `create_chunk` to fill that entry
@@ -293,6 +309,22 @@ where
     }
 }
 
+impl<'a, N, T, M, S> ChunkMap<N, T, M, S>
+where
+    PointN<N>: IntegerPoint + ChunkShape<N>,
+    ExtentN<N>: IntegerExtent<N>,
+    S: IterChunkKeys<'a, N>,
+{
+    /// The smallest extent that bounds all chunks.
+    pub fn bounding_extent(&'a self) -> ExtentN<N> {
+        bounding_extent(self.storage.chunk_keys().flat_map(|key| {
+            let chunk_extent = self.indexer.extent_for_chunk_at_key(*key);
+
+            vec![chunk_extent.minimum, chunk_extent.max()].into_iter()
+        }))
+    }
+}
+
 //  ██████╗ ███████╗████████╗████████╗███████╗██████╗ ███████╗
 // ██╔════╝ ██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗██╔════╝
 // ██║  ███╗█████╗     ██║      ██║   █████╗  ██████╔╝███████╗
@@ -300,14 +332,13 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<'a, N, T, M, S> Get<&PointN<N>> for ChunkMap<N, T, M, S>
+impl<N, T, M, S> Get<&PointN<N>> for ChunkMap<N, T, M, S>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: Array<N>,
     T: Copy,
-    Chunk<N, T, M>: 'a,
-    S: ChunkStorage<'a, N, T, M>,
+    S: ChunkReadStorage<N, T, M>,
 {
     type Data = T;
 
@@ -326,8 +357,7 @@ where
     ArrayN<N, T>: Array<N>,
     T: Copy,
     M: Clone,
-    Chunk<N, T, M>: 'a,
-    S: ChunkStorage<'a, N, T, M>,
+    S: ChunkWriteStorage<N, T, M>,
 {
     type Data = T;
 
@@ -346,14 +376,13 @@ where
 // ██║     ╚██████╔╝██║  ██║    ███████╗██║  ██║╚██████╗██║  ██║
 // ╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
-impl<'a, N, T, M, S> ForEach<N, PointN<N>> for ChunkMap<N, T, M, S>
+impl<N, T, M, S> ForEach<N, PointN<N>> for ChunkMap<N, T, M, S>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: Array<N> + ForEach<N, PointN<N>, Data = T>,
     T: Copy,
-    Chunk<N, T, M>: 'a,
-    S: ChunkStorage<'a, N, T, M>,
+    S: ChunkReadStorage<N, T, M>,
 {
     type Data = T;
 
@@ -378,8 +407,7 @@ where
     ArrayN<N, T>: ForEachMut<N, PointN<N>, Data = T>,
     T: Copy,
     M: Clone,
-    Chunk<N, T, M>: 'a,
-    S: ChunkStorage<'a, N, T, M>,
+    S: ChunkWriteStorage<N, T, M>,
 {
     type Data = T;
 
@@ -416,8 +444,7 @@ where
     PointN<N>: 'a + IntegerPoint + ChunkShape<N>,
     ExtentN<N>: IntegerExtent<N>,
     T: 'a + Copy,
-    Chunk<N, T, M>: 'a,
-    S: ChunkStorage<'a, N, T, M>,
+    S: ChunkReadStorage<N, T, M>,
 {
     type Src = ArrayChunkCopySrc<'a, N, T>;
     type SrcIter = ArrayChunkCopySrcIter<'a, N, T>;
@@ -449,11 +476,9 @@ where
     PointN<N>: IntegerPoint + ChunkShape<N>,
     ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: WriteExtent<N, Src>,
-    Chunk<N, T, M>: 'a,
     T: Copy,
     M: Clone,
-    Chunk<N, T, M>: 'a,
-    S: ChunkStorage<'a, N, T, M>,
+    S: ChunkWriteStorage<N, T, M>,
     Src: Copy,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src) {

@@ -69,29 +69,30 @@ pub type MaybeCompressedChunk<N, T, M, B> =
 pub type MaybeCompressedChunkRef<'a, N, T, M, B> =
     MaybeCompressed<&'a Chunk<N, T, M>, &'a Compressed<FastChunkCompression<N, T, M, B>>>;
 
+macro_rules! define_conditional_aliases {
+    ($backend:ty) => {
+        pub type MaybeCompressedChunk2<T, M = (), B = $backend> =
+            MaybeCompressedChunk<[i32; 2], T, M, B>;
+        pub type MaybeCompressedChunk3<T, M = (), B = $backend> =
+            MaybeCompressedChunk<[i32; 3], T, M, B>;
+        pub type MaybeCompressedChunkRef2<'a, T, M = (), B = $backend> =
+            MaybeCompressedChunkRef<'a, [i32; 2], T, M, B>;
+        pub type MaybeCompressedChunkRef3<'a, T, M = (), B = $backend> =
+            MaybeCompressedChunkRef<'a, [i32; 3], T, M, B>;
+    };
+}
+
 // LZ4 and Snappy are not mutually exclusive, but if we only use one, then we want to have these aliases refer to the choice we
 // made.
 #[cfg(all(feature = "lz4", not(feature = "snap")))]
 pub mod conditional_aliases {
     use super::*;
     use crate::Lz4;
-
-    pub type MaybeCompressedChunk2<T, M = (), B = Lz4> = MaybeCompressedChunk<[i32; 2], T, M, B>;
-    pub type MaybeCompressedChunk3<T, M = (), B = Lz4> = MaybeCompressedChunk<[i32; 3], T, M, B>;
-    pub type MaybeCompressedChunkRef2<'a, T, M = (), B = Lz4> =
-        MaybeCompressedChunkRef<'a, [i32; 2], T, M, B>;
-    pub type MaybeCompressedChunkRef3<'a, T, M = (), B = Lz4> =
-        MaybeCompressedChunkRef<'a, [i32; 3], T, M, B>;
+    define_conditional_aliases!(Lz4);
 }
 #[cfg(all(not(feature = "lz4"), feature = "snap"))]
 pub mod conditional_aliases {
     use super::*;
     use crate::Snappy;
-
-    pub type MaybeCompressedChunk2<T, M = (), B = Snappy> = MaybeCompressedChunk<[i32; 2], T, M, B>;
-    pub type MaybeCompressedChunk3<T, M = (), B = Snappy> = MaybeCompressedChunk<[i32; 3], T, M, B>;
-    pub type MaybeCompressedChunkRef2<'a, T, M = (), B = Snappy> =
-        MaybeCompressedChunkRef<'a, [i32; 2], T, M, B>;
-    pub type MaybeCompressedChunkRef3<'a, T, M = (), B = Snappy> =
-        MaybeCompressedChunkRef<'a, [i32; 3], T, M, B>;
+    define_conditional_aliases!(Snappy);
 }

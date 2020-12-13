@@ -1,6 +1,6 @@
 use crate::{
     BincodeCompressedChunk, BincodeCompression, BytesCompression, Chunk, ChunkMap, ChunkShape,
-    ChunkStorage, Compression,
+    ChunkWriteStorage, Compression,
 };
 
 use building_blocks_core::prelude::*;
@@ -46,7 +46,7 @@ where
     ) -> Self
     where
         BincodeCompression<Chunk<N, T, M>, B>: Copy, // TODO: this should be inferred
-        S: for<'r> ChunkStorage<'r, N, T, M>,
+        S: IntoIterator<Item = (PointN<N>, Chunk<N, T, M>)>,
     {
         let chunk_shape = map.indexer.chunk_shape();
         let ambient_value = map.ambient_value();
@@ -56,7 +56,7 @@ where
         // Only do one parallel batch at a time to avoid decompressing the entire map at once (assuming the underlying storage
         // does compression).
         let mut compressed_chunks = FnvHashMap::default();
-        for batch_of_chunks in &storage.into_iter_chunks().chunks(16) {
+        for batch_of_chunks in &storage.into_iter().chunks(16) {
             for (key, compressed_chunk) in join_all(
                 batch_of_chunks
                     .into_iter()
@@ -79,10 +79,9 @@ where
 
     /// Returns a new map from the serialized, compressed version. This will decompress each chunk and insert it into the given
     /// `storage`.
-    pub async fn into_chunk_map<'a, S>(self, mut storage: S) -> ChunkMap<N, T, M, S>
+    pub async fn into_chunk_map<S>(self, mut storage: S) -> ChunkMap<N, T, M, S>
     where
-        Chunk<N, T, M>: 'a,
-        S: ChunkStorage<'a, N, T, M>,
+        S: ChunkWriteStorage<N, T, M>,
     {
         // Only do one parallel batch at a time to avoid decompressing the entire map at once.
         for batch_of_compressed_chunks in &self.compressed_chunks.into_iter().chunks(16) {
@@ -93,7 +92,7 @@ where
                 .await
                 .into_iter()
             {
-                storage.insert(key, chunk);
+                storage.write(key, chunk);
             }
         }
 
@@ -119,7 +118,7 @@ mod test {
 
     #[cfg(feature = "lz4")]
     #[test]
-    fn serialize_and_deserialize_round_trip_lz4() {
+    fn hash_map_serialize_and_deserialize_round_trip_lz4() {
         use crate::Lz4;
 
         let map = ChunkMap::with_hash_map_storage(PointN([16; 3]), 0, ());
@@ -134,10 +133,40 @@ mod test {
 
     #[cfg(feature = "snap")]
     #[test]
-    fn serialize_and_deserialize_round_trip_snappy() {
+    fn hash_map_serialize_and_deserialize_round_trip_snappy() {
         use crate::Snappy;
 
         let map = ChunkMap::with_hash_map_storage(PointN([16; 3]), 0, ());
+        let serializable = futures::executor::block_on(SerializableChunkMap::from_chunk_map(
+            BincodeCompression::new(Snappy),
+            map,
+        ));
+        let serialized: Vec<u8> = bincode::serialize(&serializable).unwrap();
+        let _deserialized: SerializableChunkMap<[i32; 3], u8, (), Snappy> =
+            bincode::deserialize(&serialized).unwrap();
+    }
+
+    #[cfg(feature = "lz4")]
+    #[test]
+    fn compressible_map_serialize_and_deserialize_round_trip_lz4() {
+        use crate::Lz4;
+
+        let map = ChunkMap::with_compressible_storage(PointN([16; 3]), 0, (), Lz4 { level: 10 });
+        let serializable = futures::executor::block_on(SerializableChunkMap::from_chunk_map(
+            BincodeCompression::new(Lz4 { level: 10 }),
+            map,
+        ));
+        let serialized: Vec<u8> = bincode::serialize(&serializable).unwrap();
+        let _deserialized: SerializableChunkMap<[i32; 3], u8, (), Lz4> =
+            bincode::deserialize(&serialized).unwrap();
+    }
+
+    #[cfg(feature = "snap")]
+    #[test]
+    fn compressible_map_serialize_and_deserialize_round_trip_snappy() {
+        use crate::Snappy;
+
+        let map = ChunkMap::with_compressible_storage(PointN([16; 3]), 0, (), Lz4 { level: 10 });
         let serializable = futures::executor::block_on(SerializableChunkMap::from_chunk_map(
             BincodeCompression::new(Snappy),
             map,

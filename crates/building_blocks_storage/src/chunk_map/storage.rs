@@ -1,22 +1,42 @@
+mod caching;
+mod compressible;
+mod compressible_reader;
 mod compression;
 mod hash_map;
 mod serialization;
 
+pub use caching::*;
+pub use compressible::*;
+pub use compressible_reader::*;
 pub use compression::*;
 pub use hash_map::*;
 pub use serialization::*;
+
+#[cfg(all(feature = "lz4", not(feature = "snap")))]
+pub use compressible::conditional_aliases::*;
+#[cfg(all(not(feature = "lz4"), feature = "snap"))]
+pub use compressible::conditional_aliases::*;
+#[cfg(all(feature = "lz4", not(feature = "snap")))]
+pub use compressible_reader::conditional_aliases::*;
+#[cfg(all(not(feature = "lz4"), feature = "snap"))]
+pub use compressible_reader::conditional_aliases::*;
+#[cfg(all(feature = "lz4", not(feature = "snap")))]
+pub use compression::conditional_aliases::*;
+#[cfg(all(not(feature = "lz4"), feature = "snap"))]
+pub use compression::conditional_aliases::*;
 
 use super::Chunk;
 
 use building_blocks_core::prelude::*;
 
-pub trait ChunkStorage<'a, N, T, M>
-where
-    Chunk<N, T, M>: 'a,
-{
+/// Methods for reading `Chunk`s from storage.
+pub trait ChunkReadStorage<N, T, M> {
     /// Borrow the `Chunk` at `key`.
     fn get(&self, key: &PointN<N>) -> Option<&Chunk<N, T, M>>;
+}
 
+/// Methods for writing `Chunk`s from storage.
+pub trait ChunkWriteStorage<N, T, M> {
     /// Mutably borrow the `Chunk` at `key`.
     fn get_mut(&mut self, key: &PointN<N>) -> Option<&mut Chunk<N, T, M>>;
 
@@ -27,21 +47,18 @@ where
         create_chunk: impl FnOnce() -> Chunk<N, T, M>,
     ) -> &mut Chunk<N, T, M>;
 
-    /// Insert `chunk` at `key`.
-    fn insert(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) -> Option<Chunk<N, T, M>>;
+    /// Replace the `Chunk` at `key` with `chunk`, returning the old value.
+    fn replace(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) -> Option<Chunk<N, T, M>>;
 
-    type KeyIter: Iterator<Item = &'a PointN<N>>;
+    /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
+    fn write(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>);
+}
 
-    /// Iterate over all occupied chunk keys.
-    fn iter_keys(&'a self) -> Self::KeyIter;
+pub trait IterChunkKeys<'a, N>
+where
+    PointN<N>: 'a,
+{
+    type Iter: Iterator<Item = &'a PointN<N>>;
 
-    type ChunkIter: Iterator<Item = (&'a PointN<N>, &'a Chunk<N, T, M>)>;
-
-    /// Iterate over all occupied chunks and their keys.
-    fn iter_chunks(&'a self) -> Self::ChunkIter;
-
-    type IntoChunkIter: Iterator<Item = (PointN<N>, Chunk<N, T, M>)>;
-
-    /// Consume self and iterate over all occupied chunks and their keys.
-    fn into_iter_chunks(self) -> Self::IntoChunkIter;
+    fn chunk_keys(&'a self) -> Self::Iter;
 }

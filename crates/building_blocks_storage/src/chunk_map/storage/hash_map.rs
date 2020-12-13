@@ -1,6 +1,6 @@
 use crate::{Chunk, ChunkMap, ChunkShape};
 
-use super::ChunkStorage;
+use super::{ChunkReadStorage, ChunkWriteStorage, IterChunkKeys};
 
 use building_blocks_core::prelude::*;
 
@@ -8,16 +8,20 @@ use core::hash::Hash;
 use fnv::FnvHashMap;
 use std::collections::hash_map;
 
-impl<'a, N, T, M> ChunkStorage<'a, N, T, M> for FnvHashMap<PointN<N>, Chunk<N, T, M>>
+impl<N, T, M> ChunkReadStorage<N, T, M> for FnvHashMap<PointN<N>, Chunk<N, T, M>>
 where
     PointN<N>: Hash + Eq,
-    Chunk<N, T, M>: 'a,
 {
     #[inline]
     fn get(&self, key: &PointN<N>) -> Option<&Chunk<N, T, M>> {
         self.get(key)
     }
+}
 
+impl<N, T, M> ChunkWriteStorage<N, T, M> for FnvHashMap<PointN<N>, Chunk<N, T, M>>
+where
+    PointN<N>: Hash + Eq,
+{
     #[inline]
     fn get_mut(&mut self, key: &PointN<N>) -> Option<&mut Chunk<N, T, M>> {
         self.get_mut(key)
@@ -33,45 +37,39 @@ where
     }
 
     #[inline]
-    fn insert(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) -> Option<Chunk<N, T, M>> {
+    fn replace(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) -> Option<Chunk<N, T, M>> {
         self.insert(key, chunk)
     }
 
-    type KeyIter = hash_map::Keys<'a, PointN<N>, Chunk<N, T, M>>;
-
     #[inline]
-    fn iter_keys(&'a self) -> Self::KeyIter {
+    fn write(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) {
+        self.insert(key, chunk);
+    }
+}
+
+impl<'a, N, T, M> IterChunkKeys<'a, N> for FnvHashMap<PointN<N>, Chunk<N, T, M>>
+where
+    PointN<N>: 'a,
+    Chunk<N, T, M>: 'a,
+{
+    type Iter = hash_map::Keys<'a, PointN<N>, Chunk<N, T, M>>;
+
+    fn chunk_keys(&'a self) -> Self::Iter {
         self.keys()
-    }
-
-    type ChunkIter = hash_map::Iter<'a, PointN<N>, Chunk<N, T, M>>;
-
-    #[inline]
-    fn iter_chunks(&'a self) -> Self::ChunkIter {
-        self.iter()
-    }
-
-    type IntoChunkIter = hash_map::IntoIter<PointN<N>, Chunk<N, T, M>>;
-
-    #[inline]
-    fn into_iter_chunks(self) -> Self::IntoChunkIter {
-        self.into_iter()
     }
 }
 
 /// A `ChunkMap` using `HashMap` as `ChunkStorage`.
-pub type ChunkHashMap<N, T> = ChunkMap<N, T, (), FnvHashMap<PointN<N>, Chunk<N, T, ()>>>;
+pub type ChunkHashMap<N, T, M = ()> = ChunkMap<N, T, M, FnvHashMap<PointN<N>, Chunk<N, T, M>>>;
 /// A 2-dimensional `ChunkHashMap`.
-pub type ChunkHashMap2<T> = ChunkHashMap<[i32; 2], T>;
+pub type ChunkHashMap2<T, M = ()> = ChunkHashMap<[i32; 2], T, M>;
 /// A 3-dimensional `ChunkHashMap`.
-pub type ChunkHashMap3<T> = ChunkHashMap<[i32; 3], T>;
+pub type ChunkHashMap3<T, M = ()> = ChunkHashMap<[i32; 3], T, M>;
 
-impl<'a, N, T, M> ChunkMap<N, T, M, FnvHashMap<PointN<N>, Chunk<N, T, M>>>
+impl<'a, N, T, M> ChunkHashMap<N, T, M>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
     ExtentN<N>: IntegerExtent<N>,
-    Chunk<N, T, M>: 'a,
-    FnvHashMap<PointN<N>, Chunk<N, T, M>>: ChunkStorage<'a, N, T, M>,
 {
     pub fn with_hash_map_storage(
         chunk_shape: PointN<N>,

@@ -8,8 +8,8 @@ use building_blocks_core::prelude::*;
 use core::hash::Hash;
 use slab::Slab;
 
-/// A two-tiered `ChunkStorage`. The first tier is an LRU cache of uncompressed `Chunk`s. The second tier is a `Slab` of
-/// compressed `Chunk`s.
+/// A two-tier chunk storage. The first tier is an LRU cache of uncompressed `Chunk`s. The second tier is a `Slab` of compressed
+/// `Chunk`s.
 pub struct CompressibleChunkStorage<N, T, M, B>
 where
     ExtentN<N>: IntegerExtent<N>,
@@ -234,7 +234,7 @@ where
     }
 }
 
-/// A `ChunkMap` using `CompressibleChunkStorage` as `ChunkStorage`.
+/// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
 pub type CompressibleChunkMap<N, T, M, B> = ChunkMap<N, T, M, CompressibleChunkStorage<N, T, M, B>>;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

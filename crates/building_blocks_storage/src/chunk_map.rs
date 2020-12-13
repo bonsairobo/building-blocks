@@ -172,7 +172,7 @@ where
 }
 
 impl<'a, N, T, M, S> ChunkMap<N, T, M, S> {
-    /// Consumes `self` and returns the backing `ChunkStorage`.
+    /// Consumes `self` and returns the backing chunk storage.
     #[inline]
     pub fn take_storage(self) -> S {
         self.storage

@@ -10,10 +10,9 @@ use core::ops::{Add, AddAssign, Sub, SubAssign};
 use num::Zero;
 use serde::{Deserialize, Serialize};
 
-/// An N-dimensional extent. This is mathematically the Cartesian product of a half-closed interval
-/// `[a, b)` in each dimension. You can also just think of it as an axis-aligned box with some shape
-/// and a minimum point. When doing queries against lattice maps, this is the primary structure used
-/// to determine the bounds of your query.
+/// An N-dimensional extent. This is mathematically the Cartesian product of a half-closed interval `[a, b)` in each dimension.
+/// You can also just think of it as an axis-aligned box with some shape and a minimum point. When doing queries against lattice
+/// maps, this is the primary structure used to determine the bounds of your query.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ExtentN<N> {
     /// The least point contained in the extent.
@@ -54,11 +53,13 @@ where
         self.minimum <= *p && *p < lub
     }
 
+    /// Resize the extent by mutating its `shape` by `delta`.
     #[inline]
     pub fn add_to_shape(&self, delta: PointN<N>) -> Self {
         Self::from_min_and_shape(self.minimum, self.shape + delta)
     }
 
+    /// Returns a new extent that's been padded on all borders by `pad_amount`.
     #[inline]
     pub fn padded(&self, pad_amount: <PointN<N> as Point>::Scalar) -> Self
     where
@@ -95,6 +96,7 @@ where
         Self::from_min_and_lub(minimum, lub)
     }
 
+    /// Returns `true` iff the intersection of `self` and `other` is equal to `self`.
     #[inline]
     pub fn is_subset_of(&self, other: &Self) -> bool
     where
@@ -110,8 +112,8 @@ where
     PointN<N>: IntegerPoint + Ones,
     ExtentN<N>: IntegerExtent<N>,
 {
-    /// An alternative representation of an integer extent as the minimum point and maximum point.
-    /// This only works for integer extents, where there is a unique maximum point.
+    /// An alternative representation of an integer extent as the minimum point and maximum point. This only works for integer
+    /// extents, where there is a unique maximum point.
     #[inline]
     pub fn from_min_and_max(minimum: PointN<N>, max: PointN<N>) -> Self {
         Self::from_min_and_lub(minimum, max + PointN::ONES)
@@ -125,6 +127,7 @@ where
         lub - PointN::ONES
     }
 
+    /// Constructs the unique extent with both `p1` and `p2` as corners.
     #[inline]
     pub fn from_corners(p1: PointN<N>, p2: PointN<N>) -> Self {
         let min = p1.meet(&p2);
@@ -134,8 +137,8 @@ where
     }
 }
 
-/// A trait for methods that all `ExtentN<N>` should have, but only those which are implemented
-/// specially for each `ExtentN<N>`. The goal is only to generalize over the number of dimensions.
+/// A trait for methods that all `ExtentN<N>` should have, but only those which are implemented specially for each `ExtentN<N>`.
+/// The goal is only to generalize over the number of dimensions.
 pub trait Extent<N> {
     type VolumeType;
 
@@ -143,9 +146,8 @@ pub trait Extent<N> {
     fn volume(&self) -> Self::VolumeType;
 }
 
-/// The methods that all `ExtentN<N>` should have when the scalar type is an integer, but only those
-/// which are implemented specially for each `ExtentN<N>`. This enables us to assume that any finite
-/// extent contains only a finite number of points.
+/// The methods that all `ExtentN<N>` should have when the scalar type is an integer, but only those which are implemented
+/// specially for each `ExtentN<N>`. This enables us to assume that any finite extent contains only a finite number of points.
 pub trait IntegerExtent<N>: Extent<N> + Copy {
     type PointIter: Iterator<Item = PointN<N>>;
 
@@ -164,6 +166,7 @@ pub trait IntegerExtent<N>: Extent<N> + Copy {
     /// ```
     fn iter_points(&self) -> Self::PointIter;
 
+    /// Returns `true` iff the number of points in the extent is 0.
     #[inline]
     fn is_empty(&self) -> bool {
         self.num_points() == 0

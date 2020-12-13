@@ -13,8 +13,8 @@ use ncollide3d::{
     partitioning::{self as nc_part, DBVTLeaf, DBVTLeafId, BVH, DBVT},
 };
 
-/// An ncollide `DBVT` containing `Octree`s. This turns the bounded `Octree` into an unbounded
-/// acceleration structure. You may use whatever key type `K` to uniquely identify the octrees.
+/// An ncollide `DBVT` containing `OctreeSet`s. This turns the bounded `Octree` into an unbounded acceleration structure. You
+/// may use whatever key type `K` to uniquely identify the octrees.
 pub struct OctreeDBVT<K> {
     dbvt: DBVT<f32, OctreeSet, AABB<f32>>,
     leaf_ids: FnvHashMap<K, DBVTLeafId>,
@@ -57,10 +57,9 @@ where
             .and_then(|leaf_id| self.dbvt.get(*leaf_id).map(|leaf| &leaf.data))
     }
 
-    /// Visit every bounding volume (AABB) in the DBVT. This is a heterogeneous tree, meaning that
-    /// not all nodes have the same representation. Upper nodes simply store a bounding volume
-    /// (AABB), while octree nodes will provide both a bounding volume and an `Octant`, which is
-    /// completely full for leaf nodes.
+    /// Visit every bounding volume (AABB) in the DBVT. This is a heterogeneous tree, meaning that not all nodes have the same
+    /// representation. Upper nodes simply store a bounding volume (AABB), while octree nodes will provide both a bounding
+    /// volume and an `Octant`, which is completely full for leaf nodes.
     pub fn visit(&self, visitor: &mut impl OctreeDBVTVisitor) {
         self.dbvt.visit(&mut DBVTVisitorImpl(visitor));
     }
@@ -99,8 +98,7 @@ where
 }
 
 pub trait OctreeDBVTVisitor {
-    /// `octant` is only `Some` when traversing an `Octree`. Otherwise, you are traversing an
-    /// upper-level internal node.
+    /// `octant` is only `Some` when traversing an `Octree`. Otherwise, you are traversing an upper-level internal node.
     fn visit(&mut self, aabb: &AABB<f32>, octant: Option<&Octant>, is_leaf: bool) -> VisitStatus;
 }
 

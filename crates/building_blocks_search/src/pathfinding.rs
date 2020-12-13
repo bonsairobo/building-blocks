@@ -6,9 +6,9 @@ use indexmap::map::Entry::{Occupied, Vacant};
 use indexmap::IndexMap;
 use std::collections::BinaryHeap;
 
-/// Uses the given heuristic to do greedy best-first search from `start` to `finish`. All points on
-/// the path must satisfy `predicate`. Returns `true` iff the path reaches `finish`. Otherwise,
-/// the path that got closest to `finish` is returned after `max_iterations`.
+/// Uses the given heuristic to do greedy best-first search from `start` to `finish`. All points on the path must satisfy
+/// `predicate`. Returns `true` iff the path reaches `finish`. Otherwise, the path that got closest to `finish` is returned
+/// after `max_iterations`.
 pub fn greedy_path<N, C>(
     start: &PointN<N>,
     finish: &PointN<N>,
@@ -43,8 +43,8 @@ where
     (reached_finish, path)
 }
 
-/// Uses L1 distance as a heuristic to do greedy best-first search from `start` to `finish`. All
-/// points on the path must satisfy `predicate`.
+/// Uses L1 distance as a heuristic to do greedy best-first search from `start` to `finish`. All points on the path must satisfy
+/// `predicate`.
 pub fn greedy_path_with_l1_heuristic<N>(
     start: &PointN<N>,
     finish: &PointN<N>,
@@ -60,9 +60,11 @@ where
     greedy_path(start, finish, predicate, heuristic, max_iterations)
 }
 
-// Some of the "greedy_best_first" code is copied from the "pathfinding" crate and modified to
-// support a specific use case. Licensed under dual MIT / Apache 2.0 at the time of copying.
+// Some of the "greedy_best_first" code is copied from the "pathfinding" crate and modified to support a specific use case.
+// Licensed under dual MIT / Apache 2.0 at the time of copying.
 
+/// A generic greedy best first search. You define the graph structure using a `successors` function. If you decide to stop
+/// after `max_iterations`, then the node with the least heuristic will be returned.
 pub fn greedy_best_first<N, C, FN, IN, FH, FS>(
     start: &N,
     mut successors: FN,

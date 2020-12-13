@@ -11,6 +11,7 @@ use ncollide3d::{
     shape::{Ball, Cuboid},
 };
 
+/// The result of a collision query against an `OctreeDBVT`.
 #[derive(Clone, Debug)]
 pub struct VoxelImpact<I> {
     /// The voxel point.
@@ -19,7 +20,9 @@ pub struct VoxelImpact<I> {
     pub impact: I,
 }
 
+/// The impact of a ray with an `OctreeDBVT`.
 pub type VoxelRayImpact = VoxelImpact<RayIntersection<f32>>;
+/// The impact of a sphere with an `OctreeDBVT`.
 pub type VoxelSphereImpact = VoxelImpact<TOI<f32>>;
 
 // ██████╗  █████╗ ██╗   ██╗

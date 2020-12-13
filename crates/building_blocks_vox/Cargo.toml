@@ -1,6 +1,6 @@
 [package]
 name = "building_blocks_vox"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2018"
 authors = ["Duncan <bonsairobo@gmail.com>"]
 license = "MIT"
@@ -12,5 +12,5 @@ description = "Functions for converting to/from building-blocks arrays from/to V
 [dependencies]
 dot_vox = "4.1"
 
-building_blocks_core = { path = "../building_blocks_core", version = "0.3" }
-building_blocks_storage = { path = "../building_blocks_storage", version = "0.3" }
+building_blocks_core = { path = "../building_blocks_core", version = "0.4" }
+building_blocks_storage = { path = "../building_blocks_storage", version = "0.4" }

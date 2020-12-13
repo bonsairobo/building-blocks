@@ -82,8 +82,9 @@ which brought about the current feature set:
   - Even with only a couple bytes per voxel, we can still use up lots of memory
     on large voxel maps. The simplest way to save memory without changing the
     underlying array containers was to use compression inside of the `ChunkMap`.
-    To make this optional, we made `ChunkMap` take a new `ChunkStorage` type
-    parameter. This makes it so `ChunkMap`s can work with any kind of backing
+    To make this optional, we made `ChunkMap` take a new chunk storage type
+    parameter that can implement `ChunkReadStorage` or `ChunkWriteStorage`.
+    This makes it so `ChunkMap`s can work with any kind of backing
     storage, be it a simple hash map or an LRU-cache of chunks that can be
     compressed.
 - **Meshing**

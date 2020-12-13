@@ -18,7 +18,7 @@ where
     B: BytesCompression,
 {
     pub cache: FnvLruCache<PointN<N>, Chunk<N, T, M>, CompressedLocation>,
-    pub params: FastChunkCompression<N, T, M, B>,
+    pub compression: FastChunkCompression<N, T, M, B>,
     pub compressed: CompressedChunks<N, T, M, B>,
 }
 
@@ -32,10 +32,10 @@ where
     M: Clone,
     B: BytesCompression,
 {
-    pub fn new(params: B) -> Self {
+    pub fn new(compression: B) -> Self {
         Self {
             cache: FnvLruCache::default(),
-            params: FastChunkCompression::new(params),
+            compression: FastChunkCompression::new(compression),
             compressed: Slab::new(),
         }
     }
@@ -95,7 +95,7 @@ where
             .cache
             .evict_lru(CompressedLocation(compressed_entry.key()))
         {
-            compressed_entry.insert(self.params.compress(&lru_chunk));
+            compressed_entry.insert(self.compression.compress(&lru_chunk));
         }
     }
 

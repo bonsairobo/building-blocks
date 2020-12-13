@@ -42,7 +42,7 @@ where
     /// Returns a serializable version of this map. All chunks are serialized with `bincode`, then compressed using some
     /// `BytesCompression`. This can be used to serialize any kind of `ChunkMap`, regardless of chunk storage.
     pub async fn from_chunk_map<S>(
-        params: BincodeCompression<Chunk<N, T, M>, B>,
+        compression: BincodeCompression<Chunk<N, T, M>, B>,
         map: ChunkMap<N, T, M, S>,
     ) -> Self
     where
@@ -61,7 +61,7 @@ where
             for (key, compressed_chunk) in join_all(
                 batch_of_chunks
                     .into_iter()
-                    .map(|(key, chunk)| async move { (key, params.compress(&chunk)) }),
+                    .map(|(key, chunk)| async move { (key, compression.compress(&chunk)) }),
             )
             .await
             .into_iter()

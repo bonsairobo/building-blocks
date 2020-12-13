@@ -139,7 +139,7 @@ pub type ChunkMap3<T, M, S> = ChunkMap<[i32; 3], T, M, S>;
 /// A few pieces of info used within the `ChunkMap`. You will probably keep one of these around to create new `ChunkMap`s from
 /// a chunk storage.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ChunkMapBuilder<N, T, M> {
+pub struct ChunkMapBuilder<N, T, M = ()> {
     /// The shape of each chunk.
     pub chunk_shape: PointN<N>,
     /// The value to use when none is specified, i.e. when creating new chunks or accessing vacant chunks.
@@ -147,6 +147,9 @@ pub struct ChunkMapBuilder<N, T, M> {
     /// The metadata value used to initialize new chunks.
     pub default_chunk_metadata: M,
 }
+
+pub type ChunkMapBuilder2<T, M = ()> = ChunkMapBuilder<[i32; 2], T, M>;
+pub type ChunkMapBuilder3<T, M = ()> = ChunkMapBuilder<[i32; 3], T, M>;
 
 impl<N, T, M> ChunkMapBuilder<N, T, M>
 where

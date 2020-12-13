@@ -199,16 +199,21 @@ where
     /// evicted, this has no effect and just returns the current entry.
     #[inline]
     pub fn evict(&mut self, key: K, new_location: E) -> Option<CacheEntry<V, E>> {
+        self.num_evicted += 1;
         self.store
             .insert(key, CacheEntry::Evicted(new_location))
             .map(|entry| match entry {
                 CacheEntry::Cached((val, i)) => {
-                    self.num_evicted += 1;
                     self.order.remove(i);
 
                     CacheEntry::Cached(val)
                 }
-                CacheEntry::Evicted(location) => CacheEntry::Evicted(location),
+                CacheEntry::Evicted(location) => {
+                    // This is the only case where # evicted should not increase.
+                    self.num_evicted -= 1;
+
+                    CacheEntry::Evicted(location)
+                }
             })
     }
 
@@ -609,5 +614,16 @@ mod tests {
 
         assert_eq!(cache.evict_lru(()), Some((1, 2)));
         assert_eq!(cache.evict_lru(()), Some((2, 3)));
+    }
+
+    #[test]
+    fn evict_empty_entry_increases_num_evicted() {
+        let mut cache = FnvLruCache::default();
+
+        cache.insert(1, 2);
+        cache.remove(&1);
+        cache.evict(1, ());
+
+        assert_eq!(cache.len_evicted(), 1);
     }
 }

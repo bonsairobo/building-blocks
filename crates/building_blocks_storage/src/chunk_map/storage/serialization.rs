@@ -166,7 +166,7 @@ mod test {
     fn compressible_map_serialize_and_deserialize_round_trip_snappy() {
         use crate::Snappy;
 
-        let map = ChunkMap::with_compressible_storage(PointN([16; 3]), 0, (), Lz4 { level: 10 });
+        let map = ChunkMap::with_compressible_storage(PointN([16; 3]), 0, (), Snappy);
         let serializable = futures::executor::block_on(SerializableChunkMap::from_chunk_map(
             BincodeCompression::new(Snappy),
             map,

@@ -19,8 +19,10 @@ where
 {
     pub cache: FnvLruCache<PointN<N>, Chunk<N, T, M>, CompressedLocation>,
     pub params: FastChunkCompression<N, T, M, B>,
-    pub compressed: Slab<Compressed<FastChunkCompression<N, T, M, B>>>,
+    pub compressed: CompressedChunks<N, T, M, B>,
 }
+
+pub type CompressedChunks<N, T, M, B> = Slab<Compressed<FastChunkCompression<N, T, M, B>>>;
 
 impl<N, T, M, B> CompressibleChunkStorage<N, T, M, B>
 where

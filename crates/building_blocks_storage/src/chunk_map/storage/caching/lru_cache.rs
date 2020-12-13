@@ -96,7 +96,7 @@ where
         }
     }
 
-    /// Marks `key` as most recently used if the entry is cached. Returns `true` iff the entry is evicted.
+    /// Marks `key` as most recently used if the entry is cached. Returns `false` iff the entry is evicted.
     ///
     /// This is useful to do before prefetching many values, since it tells you which values need to be fetched and otherwise
     /// updates the LRU order for the values that didn't need fetching (but were nonetheless desired).
@@ -109,12 +109,12 @@ where
                 CacheEntry::Cached((_, i)) => {
                     order.move_to_front(*i);
 
-                    false
+                    true
                 }
-                CacheEntry::Evicted(_) => true,
+                CacheEntry::Evicted(_) => false,
             }
         } else {
-            false
+            true
         }
     }
 

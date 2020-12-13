@@ -131,16 +131,24 @@ where
     /// it will help with caching efficiency.
     pub fn flush_local_cache(&mut self, local_cache: LocalChunkCache<N, T, M>) {
         for (key, chunk) in local_cache.into_iter() {
-            self.write_chunk(key, chunk);
+            self.insert_chunk(key, chunk);
         }
     }
 
-    pub fn write_chunk(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) {
-        if let Some(old_entry) = self.cache.insert(key, chunk) {
-            if let CacheEntry::Evicted(location) = old_entry {
-                self.compressed.remove(location.0);
-            }
-        }
+    /// Inserts `chunk` at `key` and returns the old chunk.
+    pub fn insert_chunk(
+        &mut self,
+        key: PointN<N>,
+        chunk: Chunk<N, T, M>,
+    ) -> Option<MaybeCompressedChunk<N, T, M, B>> {
+        self.cache
+            .insert(key, chunk)
+            .map(|old_entry| match old_entry {
+                CacheEntry::Cached(old_chunk) => MaybeCompressedChunk::Decompressed(old_chunk),
+                CacheEntry::Evicted(location) => {
+                    MaybeCompressedChunk::Compressed(self.compressed.remove(location.0))
+                }
+            })
     }
 }
 
@@ -179,17 +187,16 @@ where
 
     #[inline]
     fn replace(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) -> Option<Chunk<N, T, M>> {
-        self.cache
-            .insert(key, chunk)
-            .map(|old_entry| match old_entry {
-                CacheEntry::Cached(old_chunk) => old_chunk,
-                CacheEntry::Evicted(location) => self.compressed.remove(location.0).decompress(),
+        self.insert_chunk(key, chunk)
+            .map(|old_chunk| match old_chunk {
+                MaybeCompressedChunk::Decompressed(old_chunk) => old_chunk,
+                MaybeCompressedChunk::Compressed(old_chunk) => old_chunk.decompress(),
             })
     }
 
     #[inline]
     fn write(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) {
-        self.write_chunk(key, chunk);
+        self.insert_chunk(key, chunk);
     }
 }
 

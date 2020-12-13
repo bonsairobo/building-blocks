@@ -5,9 +5,10 @@
 //! is always a multiple of the chunk shape. Chunk shape dimensions must be powers of 2, which allows for efficiently
 //! calculating a chunk key from any point in the chunk.
 //!
-//! `ChunkMap<N, T, M, S>` depends on a backing `S: ChunkStorage`. This can be as simple as a `HashMap`, which provides good
-//! performance for both iteration and random access. It could also be something more memory efficient like
-//! `CompressibleChunkStorage`, which performs nearly as well but involves some extra management of the cache.
+//! `ChunkMap<N, T, M, S>` depends on a backing chunk storage, which can implement some of `ChunkReadStorage` or
+//! `ChunkWriteStorage`. A storage can be as simple as a `HashMap`, which provides good performance for both iteration and
+//! random access. It could also be something more memory efficient like `CompressibleChunkStorage` or
+//! `CompressibleChunkStorageReader`, which perform nearly as well but involve some extra management of the cache.
 //!
 //! # Example `ChunkHashMap` Usage
 //! ```
@@ -22,7 +23,7 @@
 //! };
 //! let mut map = builder.build_with_hash_map_storage();
 //!
-//! // Although we only write 3 points, 3 whole dense chunks will be inserted and cached.
+//! // Although we only write 3 points, 3 whole dense chunks will be inserted.
 //! let write_points = [PointN([-100; 3]), PointN([0; 3]), PointN([100; 3])];
 //! for p in write_points.iter() {
 //!     *map.get_mut(&p) = 1;
@@ -88,6 +89,9 @@
 //! let local_cache = LocalChunkCache::new();
 //! let reader = map.storage().reader(&local_cache);
 //! let reader_map = ChunkMap::new(PointN([16; 3]), 0, (), reader);
+//!
+//! // For efficient caching, you should flush your local cache back into the main storage when you are done with it.
+//! map.storage_mut().flush_local_cache(local_cache);
 //! ```
 
 mod ambient;

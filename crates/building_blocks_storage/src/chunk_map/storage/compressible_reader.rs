@@ -1,6 +1,6 @@
 use crate::{
-    BytesCompression, CacheEntry, Chunk, ChunkReadStorage, CompressibleChunkStorage, IterChunkKeys,
-    LocalCache, LruChunkCacheKeys,
+    BytesCompression, CacheEntry, Chunk, ChunkReadStorage, CompressedChunks,
+    CompressibleChunkStorage, IterChunkKeys, LocalCache, LruChunkCacheEntries, LruChunkCacheKeys,
 };
 
 use building_blocks_core::prelude::*;
@@ -58,6 +58,68 @@ where
 
     fn chunk_keys(&'a self) -> Self::Iter {
         self.storage.cache.keys()
+    }
+}
+
+impl<'a, N, T, M, B> IntoIterator for &'a CompressibleChunkStorageReader<'a, N, T, M, B>
+where
+    PointN<N>: Copy + Hash + Eq,
+    ExtentN<N>: IntegerExtent<N>,
+    T: Copy,
+    M: Clone,
+    B: BytesCompression,
+{
+    type IntoIter = CompressibleChunkStorageReaderIntoIter<'a, N, T, M, B>;
+    type Item = (&'a PointN<N>, &'a Chunk<N, T, M>);
+
+    fn into_iter(self) -> Self::IntoIter {
+        let &CompressibleChunkStorageReader {
+            storage,
+            local_cache,
+        } = self;
+
+        CompressibleChunkStorageReaderIntoIter {
+            cache_entries: storage.cache.entries(),
+            local_cache,
+            compressed: &storage.compressed,
+        }
+    }
+}
+
+pub struct CompressibleChunkStorageReaderIntoIter<'a, N, T, M, B>
+where
+    ExtentN<N>: IntegerExtent<N>,
+    T: Copy,
+    M: Clone,
+    B: BytesCompression,
+{
+    cache_entries: LruChunkCacheEntries<'a, N, T, M>,
+    local_cache: &'a LocalChunkCache<N, T, M>,
+    compressed: &'a CompressedChunks<N, T, M, B>,
+}
+
+impl<'a, N, T, M, B> Iterator for CompressibleChunkStorageReaderIntoIter<'a, N, T, M, B>
+where
+    PointN<N>: Copy + Hash + Eq,
+    ExtentN<N>: IntegerExtent<N>,
+    T: Copy,
+    M: Clone,
+    B: BytesCompression,
+{
+    type Item = (&'a PointN<N>, &'a Chunk<N, T, M>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.cache_entries
+            .next()
+            .map(move |(key, entry)| match entry {
+                CacheEntry::Cached(chunk) => (key, chunk),
+                CacheEntry::Evicted(location) => (
+                    key,
+                    self.local_cache.get_or_insert_with(*key, || {
+                        self.compressed.get(location.0).unwrap().decompress()
+                    }),
+                ),
+            })
     }
 }
 

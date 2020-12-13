@@ -63,7 +63,7 @@ log = "0.4"
 
 [[bin]]
 name = "measure_compression_rate"
-required-features = ["lz4", "snappy"]
+required-features = ["lz4", "snappy", "vox"]
 
 [[example]]
 name = "bevy_meshing"

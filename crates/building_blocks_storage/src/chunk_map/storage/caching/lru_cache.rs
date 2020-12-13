@@ -13,9 +13,6 @@ use std::collections::{hash_map, HashMap};
 /// removed. This is useful when users need to store evicted data in a separate structure, since if they look up a key and get
 /// `Some(CacheEntry::Evicted)`, they know that the data exists somewhere else. If they get `None`, then they don't have to look
 /// elsewhere; the data simply doesn't exist anywhere.
-///
-/// Because accessing a value, even just to read it, will update the cache's LRU order, most methods require `&mut self`.
-/// However, the exception is `get_const`, which doesn't not update the LRU order.
 #[derive(Clone, Debug)]
 pub struct LruCache<K, V, E, H> {
     store: HashMap<K, CacheEntry<(V, usize), E>, H>,

@@ -237,6 +237,7 @@ where
 /// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
 pub type CompressibleChunkMap<N, T, M, B> = ChunkMap<N, T, M, CompressibleChunkStorage<N, T, M, B>>;
 
+/// An index into a compressed chunk slab.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CompressedLocation(pub usize);
 

@@ -7,7 +7,8 @@ use building_blocks_core::prelude::*;
 use core::hash::Hash;
 use fnv::FnvBuildHasher;
 
-/// An object for reading from `CompressibleChunkStorage` with only `&self`.
+/// An object for reading from `CompressibleChunkStorage` with only `&self`. Easily construct one of these using
+/// the `CompressibleChunkStorage::reader` method.
 ///
 /// This works by using a `LocalChunkCache` for storing decompressed `Chunk`s from cache misses.
 pub struct CompressibleChunkStorageReader<'a, N, T, M, B>

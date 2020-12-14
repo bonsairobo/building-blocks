@@ -13,7 +13,7 @@ features = ["glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "pro
 
 [features]
 # All features (except "snappy") are default because we want them to be easily discoverable on docs.rs. You can define your own
-# list of features by disabling the defaults with "no-default-features".
+# list of features by disabling the defaults with "default-features = false".
 #
 # "snappy" is excluded because there are useful type aliases that rely on the compression backends being mutually exclusive.
 default = ["glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "procgen", "search", "vox"]

@@ -20,7 +20,7 @@ indexmap = "1.5"
 itertools = "0.9"
 
 # Optional, feature-gated
-nalgebra = { version = "0.23", optional = true, features = ["mint"] }
+nalgebra = { version = "0.23", optional = true }
 ncollide3d = { version = "0.26", optional = true }
 
 building_blocks_core = { path = "../building_blocks_core", version = "0.4.1" }

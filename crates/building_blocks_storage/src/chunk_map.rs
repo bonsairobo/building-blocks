@@ -9,7 +9,7 @@
 //!
 //! # Chunk Storage
 //!
-//! `ChunkMap<N, T, M, S>` depends on a backing chunk storage, which can implement some of `ChunkReadStorage` or
+//! `ChunkMap<N, T, M, S>` depends on a backing chunk storage `S`, which can implement some of `ChunkReadStorage` or
 //! `ChunkWriteStorage`. A storage can be as simple as a `HashMap`, which provides good performance for both iteration and
 //! random access. It could also be something more memory efficient like `CompressibleChunkStorage` or
 //! `CompressibleChunkStorageReader`, which perform nearly as well but involve some extra management of the cache.

@@ -10,8 +10,8 @@ keywords = ["voxel"]
 description = "Fast meshing algorithms for voxel data structures."
 
 [dependencies]
-building_blocks_core = { path = "../building_blocks_core", version = "0.4" }
-building_blocks_storage = { path = "../building_blocks_storage", version = "0.4" }
+building_blocks_core = { path = "../building_blocks_core", version = "0.4", default-features = false }
+building_blocks_storage = { path = "../building_blocks_storage", version = "0.4", default-features = false }
 
 fnv = "1.0"
 

@@ -10,4 +10,4 @@ keywords = ["voxel"]
 description = "Algorithms for procedural generation of voxel data."
 
 [dependencies]
-building_blocks_core = { path = "../building_blocks_core", version = "0.4" }
+building_blocks_core = { path = "../building_blocks_core", version = "0.4", default-features = false }

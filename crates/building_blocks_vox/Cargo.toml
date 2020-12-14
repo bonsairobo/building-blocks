@@ -12,5 +12,5 @@ description = "Functions for converting to/from building-blocks arrays from/to V
 [dependencies]
 dot_vox = "4.1"
 
-building_blocks_core = { path = "../building_blocks_core", version = "0.4" }
-building_blocks_storage = { path = "../building_blocks_storage", version = "0.4" }
+building_blocks_core = { path = "../building_blocks_core", version = "0.4", default-features = false }
+building_blocks_storage = { path = "../building_blocks_storage", version = "0.4", default-features = false }

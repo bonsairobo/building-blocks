@@ -131,7 +131,7 @@ pub type LocalChunkCache2<T, M = ()> = LocalChunkCache<[i32; 2], T, M>;
 /// A `LocalCache` of `Chunk3`s.
 pub type LocalChunkCache3<T, M = ()> = LocalChunkCache<[i32; 3], T, M>;
 
-// A `ChunkMap` backed by a `CompressibleChunkStorageReader`.
+/// A `ChunkMap` backed by a `CompressibleChunkStorageReader`.
 pub type CompressibleChunkMapReader<'a, N, T, M, B> =
     ChunkMap<N, T, M, CompressibleChunkStorageReader<'a, N, T, M, B>>;
 

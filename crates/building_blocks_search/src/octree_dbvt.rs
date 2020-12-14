@@ -102,6 +102,7 @@ pub trait OctreeDBVTVisitor {
     fn visit(&mut self, aabb: &AABB<f32>, octant: Option<&Octant>, is_leaf: bool) -> VisitStatus;
 }
 
+/// Returns the axis-aligned bounding box that bounds `octant`.
 pub fn octant_aabb(octant: &Octant) -> AABB<f32> {
     let aabb_min = Point3f::from(octant.minimum()).into();
     let aabb_max = Point3f::from(octant.minimum() + PointN([octant.edge_length(); 3])).into();

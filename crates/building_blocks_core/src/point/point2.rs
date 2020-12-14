@@ -284,6 +284,7 @@ where
 impl IterExtent<[i32; 2]> for Point2i {
     type PointIter = Extent2PointIter<i32>;
 
+    #[inline]
     fn iter_extent(min: &Point2i, lub: &Point2i) -> Self::PointIter {
         Extent2PointIter {
             // iproduct is opposite of row-major order.

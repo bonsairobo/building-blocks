@@ -33,6 +33,7 @@ impl<N> Clone for ExtentN<N>
 where
     PointN<N>: Clone,
 {
+    #[inline]
     fn clone(&self) -> Self {
         Self {
             minimum: self.minimum.clone(),
@@ -187,6 +188,7 @@ where
 {
     type VolumeType = <PointN<N> as Point>::Scalar;
 
+    #[inline]
     fn volume(&self) -> Self::VolumeType {
         self.shape.volume()
     }
@@ -209,6 +211,7 @@ impl<N> IntegerExtent<N> for ExtentN<N>
 where
     PointN<N>: IntegerPoint<N>,
 {
+    #[inline]
     fn num_points(&self) -> usize {
         self.volume() as usize
     }

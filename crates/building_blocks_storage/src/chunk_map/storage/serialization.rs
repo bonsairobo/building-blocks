@@ -12,8 +12,9 @@ use itertools::Itertools;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 /// A simple chunk map format for serialization. All chunks are serialized with `bincode`, then compressed using some
-/// `BytesCompression`. This can be used to serialize any kind of `ChunkMap` whose storage implements `IntoIterator<Item =
-/// (PointN<N>, Chunk<N, T, M>)>` and `ChunkWriteStorage`.
+/// `BytesCompression`. This can be used to:
+///   - serialize any `ChunkMap` whose storage implements `IntoIterator<Item = (PointN<N>, Chunk<N, T, M>)>`
+///   - deserialize any `ChunkMap` whose storage implements `ChunkWriteStorage`
 ///
 /// This type is provided mostly for convenience. It won't work if your entire `ChunkMap` doesn't fit in memory. That would
 /// require a streaming solution.

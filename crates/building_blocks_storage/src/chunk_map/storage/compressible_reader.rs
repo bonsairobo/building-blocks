@@ -24,7 +24,7 @@ where
 
 impl<'a, N, T, M, B> ChunkReadStorage<N, T, M> for CompressibleChunkStorageReader<'a, N, T, M, B>
 where
-    PointN<N>: IntegerPoint<N> + Copy + Hash + Eq,
+    PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
     M: Clone,
     B: BytesCompression,
@@ -48,7 +48,7 @@ where
 
 impl<'a, N, T, M, B> IterChunkKeys<'a, N> for CompressibleChunkStorageReader<'a, N, T, M, B>
 where
-    PointN<N>: IntegerPoint<N> + Clone + Hash + Eq,
+    PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
     M: Clone,
     B: BytesCompression,
@@ -62,7 +62,7 @@ where
 
 impl<'a, N, T, M, B> IntoIterator for &'a CompressibleChunkStorageReader<'a, N, T, M, B>
 where
-    PointN<N>: IntegerPoint<N> + Copy + Hash + Eq,
+    PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
     M: Clone,
     B: BytesCompression,
@@ -98,7 +98,7 @@ where
 
 impl<'a, N, T, M, B> Iterator for CompressibleChunkStorageReaderIntoIter<'a, N, T, M, B>
 where
-    PointN<N>: IntegerPoint<N> + Copy + Hash + Eq,
+    PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
     M: Clone,
     B: BytesCompression,

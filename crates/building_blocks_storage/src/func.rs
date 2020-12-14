@@ -32,8 +32,7 @@ where
 impl<'a, F, N, T> ForEach<N, PointN<N>> for F
 where
     F: Fn(&PointN<N>) -> T,
-    PointN<N>: Copy,
-    ExtentN<N>: IterExtent<N>,
+    PointN<N>: IntegerPoint<N>,
 {
     type Data = T;
 
@@ -47,8 +46,7 @@ where
 impl<'a, F, N, T> ReadExtent<'a, N> for F
 where
     F: 'a + Fn(&PointN<N>) -> T,
-    ExtentN<N>: Copy,
-    PointN<N>: Point,
+    PointN<N>: IntegerPoint<N>,
 {
     type Src = &'a Self;
     type SrcIter = Once<(ExtentN<N>, Self::Src)>;

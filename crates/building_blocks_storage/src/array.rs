@@ -204,7 +204,7 @@ where
 
 impl<N, T> ArrayN<N, T>
 where
-    PointN<N>: IntegerPoint,
+    PointN<N>: IntegerPoint<N>,
 {
     /// Create a new `ArrayN` directly from the extent and values. This asserts that the
     /// number of points in the extent matches the length of the values `Vec`.
@@ -253,8 +253,7 @@ where
 
 impl<N, T> ArrayN<N, T>
 where
-    PointN<N>: IntegerPoint,
-    ExtentN<N>: IterExtent<N>,
+    PointN<N>: IntegerPoint<N>,
 {
     /// Create a new array for `extent` where each point's value is determined by the `filler`
     /// function.
@@ -283,7 +282,7 @@ where
 impl<N, T> ArrayN<N, T>
 where
     Self: ForEachMut<N, Stride, Data = T>,
-    PointN<N>: IntegerPoint,
+    PointN<N>: IntegerPoint<N>,
     ExtentN<N>: PartialEq,
 {
     /// Fill the entire `extent` with the same `value`.
@@ -301,7 +300,7 @@ where
 
 impl<N, T> ArrayN<N, MaybeUninit<T>>
 where
-    PointN<N>: IntegerPoint,
+    PointN<N>: IntegerPoint<N>,
 {
     /// Transmutes the map values from `MaybeUninit<T>` to `T` after manual initialization. The
     /// implementation just reconstructs the internal `Vec` after transmuting the data pointer, so
@@ -583,7 +582,8 @@ macro_rules! impl_array_for_each {
     (coords: $coords:ty; forwarder = |$p:ident, $stride:ident| $forward_coords:expr;) => {
         impl<N, T> ForEach<N, $coords> for ArrayN<N, T>
         where
-            Self: Sized + Array<N> + Get<Stride, Data = T> + GetUnchecked<Stride, Data = T>,
+            Self: Sized + Get<Stride, Data = T> + GetUnchecked<Stride, Data = T>,
+            N: ArrayIndexer<N>,
         {
             type Data = T;
 
@@ -599,7 +599,8 @@ macro_rules! impl_array_for_each {
 
         impl<N, T> ForEachMut<N, $coords> for ArrayN<N, T>
         where
-            Self: Sized + Array<N> + GetMut<Stride, Data = T> + GetUncheckedMut<Stride, Data = T>,
+            Self: Sized + GetMut<Stride, Data = T> + GetUncheckedMut<Stride, Data = T>,
+            N: ArrayIndexer<N>,
             ExtentN<N>: Copy,
         {
             type Data = T;
@@ -643,7 +644,7 @@ pub struct ArrayCopySrc<M>(pub M);
 
 impl<'a, N: 'a, T: 'a> ReadExtent<'a, N> for ArrayN<N, T>
 where
-    PointN<N>: IntegerPoint,
+    PointN<N>: IntegerPoint<N>,
 {
     type Src = ArrayCopySrc<&'a ArrayN<N, T>>;
     type SrcIter = Once<(ExtentN<N>, Self::Src)>;
@@ -657,9 +658,10 @@ where
 
 impl<'a, N, T> WriteExtent<N, ArrayCopySrc<&'a Self>> for ArrayN<N, T>
 where
-    Self: Array<N> + GetUncheckedRelease<Stride, T>,
+    Self: GetUncheckedRelease<Stride, T>,
+    N: ArrayIndexer<N>,
     T: Clone,
-    PointN<N>: IntegerPoint,
+    PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src_array: ArrayCopySrc<&'a Self>) {
@@ -684,7 +686,7 @@ where
     Self: Array<N>,
     T: Clone,
     TransformMap<'a, M, F>: Array<N> + GetUncheckedRelease<Stride, T>,
-    PointN<N>: IntegerPoint,
+    PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
 {
     fn write_extent(
@@ -721,9 +723,10 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
 
 impl<M, N, T> WriteExtent<N, ChunkCopySrc<M, N, T>> for ArrayN<N, T>
 where
+    Self: WriteExtent<N, ArrayCopySrc<M>>,
+    N: ArrayIndexer<N>,
     T: Clone,
-    Self: Array<N> + WriteExtent<N, ArrayCopySrc<M>>,
-    PointN<N>: IntegerPoint,
+    PointN<N>: IntegerPoint<N>,
     ExtentN<N>: PartialEq,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<M, N, T>) {
@@ -737,7 +740,7 @@ where
 impl<'a, N, F, T: 'a + Clone> WriteExtent<N, F> for ArrayN<N, T>
 where
     F: Fn(&PointN<N>) -> T,
-    PointN<N>: IntegerPoint,
+    PointN<N>: IntegerPoint<N>,
     ArrayN<N, T>: ForEachMut<N, PointN<N>, Data = T>,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: F) {

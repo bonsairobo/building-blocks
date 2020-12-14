@@ -1,14 +1,21 @@
-mod extent2;
-mod extent3;
-
-pub use extent2::*;
-pub use extent3::*;
-
 use crate::{point::point_traits::*, PointN};
 
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 use num::Zero;
 use serde::{Deserialize, Serialize};
+
+/// A 2-dimensional extent with scalar type `T`.
+pub type Extent2<T> = ExtentN<[T; 2]>;
+/// A 2-dimensional extent with scalar type `i32`.
+pub type Extent2i = ExtentN<[i32; 2]>;
+/// A 2-dimensional extent with scalar type `f32`.
+pub type Extent2f = ExtentN<[f32; 2]>;
+/// A 3-dimensional extent with scalar type `T`.
+pub type Extent3<T> = ExtentN<[T; 3]>;
+/// A 3-dimensional extent with scalar type `i32`.
+pub type Extent3i = ExtentN<[i32; 3]>;
+/// A 3-dimensional extent with scalar type `f32`.
+pub type Extent3f = ExtentN<[f32; 3]>;
 
 /// An N-dimensional extent. This is mathematically the Cartesian product of a half-closed interval `[a, b)` in each dimension.
 /// You can also just think of it as an axis-aligned box with some shape and a minimum point. When doing queries against lattice
@@ -89,7 +96,7 @@ where
 
 impl<N> ExtentN<N>
 where
-    PointN<N>: IntegerPoint,
+    PointN<N>: IntegerPoint<N>,
 {
     /// An alternative representation of an extent as the minimum point and least upper bound.
     #[inline]
@@ -123,7 +130,7 @@ where
 
 impl<N> ExtentN<N>
 where
-    PointN<N>: IntegerPoint + Ones,
+    PointN<N>: IntegerPoint<N> + Ones,
 {
     /// An alternative representation of an integer extent as the minimum point and maximum point. This only works for integer
     /// extents, where there is a unique maximum point.
@@ -147,6 +154,21 @@ where
         let max = p1.join(&p2);
 
         Self::from_min_and_max(min, max)
+    }
+
+    /// Iterate over all points in the extent.
+    /// ```
+    /// # use building_blocks_core::prelude::*;
+    /// #
+    /// let extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([2, 2, 1]));
+    /// let points = extent.iter_points().collect::<Vec<_>>();
+    /// assert_eq!(points, vec![
+    ///     PointN([0, 0, 0]), PointN([1, 0, 0]), PointN([0, 1, 0]), PointN([1, 1, 0])
+    /// ]);
+    /// ```
+    #[inline]
+    pub fn iter_points(&self) -> <PointN<N> as IterExtent<N>>::PointIter {
+        PointN::iter_extent(&self.minimum, &self.least_upper_bound())
     }
 }
 
@@ -185,27 +207,11 @@ pub trait IntegerExtent<N>: Extent<N> {
 
 impl<N> IntegerExtent<N> for ExtentN<N>
 where
-    PointN<N>: IntegerPoint,
+    PointN<N>: IntegerPoint<N>,
 {
     fn num_points(&self) -> usize {
         self.volume() as usize
     }
-}
-
-pub trait IterExtent<N> {
-    type PointIter: Iterator<Item = PointN<N>>;
-
-    /// Iterate over all points in the extent.
-    /// ```
-    /// # use building_blocks_core::prelude::*;
-    /// #
-    /// let extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([2, 2, 1]));
-    /// let points = extent.iter_points().collect::<Vec<_>>();
-    /// assert_eq!(points, vec![
-    ///     PointN([0, 0, 0]), PointN([1, 0, 0]), PointN([0, 1, 0]), PointN([1, 1, 0])
-    /// ]);
-    /// ```
-    fn iter_points(&self) -> Self::PointIter;
 }
 
 impl<T> Add<PointN<T>> for ExtentN<T>
@@ -263,7 +269,7 @@ where
 pub fn bounding_extent<N, I>(points: I) -> ExtentN<N>
 where
     I: Iterator<Item = PointN<N>>,
-    PointN<N>: IntegerPoint,
+    PointN<N>: IntegerPoint<N>,
 {
     let mut min_point = PointN::MAX;
     let mut max_point = PointN::MIN;
@@ -273,4 +279,64 @@ where
     }
 
     ExtentN::from_min_and_max(min_point, max_point)
+}
+
+// ████████╗███████╗███████╗████████╗███████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝██╔════╝
+//    ██║   █████╗  ███████╗   ██║   ███████╗
+//    ██║   ██╔══╝  ╚════██║   ██║   ╚════██║
+//    ██║   ███████╗███████║   ██║   ███████║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝   ╚══════╝
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn row_major_extent_iter2() {
+        let extent = Extent2i::from_min_and_shape(PointN([0, 0]), PointN([2, 2]));
+
+        let points: Vec<_> = extent.iter_points().collect();
+
+        assert_eq!(
+            points,
+            vec![
+                PointN([0, 0]),
+                PointN([1, 0]),
+                PointN([0, 1]),
+                PointN([1, 1]),
+            ]
+        );
+    }
+
+    #[test]
+    fn row_major_extent_iter3() {
+        let extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([2, 2, 2]));
+
+        let points: Vec<_> = extent.iter_points().collect();
+
+        assert_eq!(
+            points,
+            vec![
+                PointN([0, 0, 0]),
+                PointN([1, 0, 0]),
+                PointN([0, 1, 0]),
+                PointN([1, 1, 0]),
+                PointN([0, 0, 1]),
+                PointN([1, 0, 1]),
+                PointN([0, 1, 1]),
+                PointN([1, 1, 1]),
+            ]
+        );
+    }
+
+    #[test]
+    fn empty_intersection_is_empty() {
+        let e1 = Extent2i::from_min_and_max(PointN([0; 2]), PointN([1; 2]));
+        let e2 = Extent2i::from_min_and_max(PointN([3; 2]), PointN([4; 2]));
+
+        // A naive implementation might say the shape is [-1, -1].
+        assert_eq!(e1.intersection(&e2).shape, PointN([0; 2]));
+        assert!(e1.intersection(&e2).is_empty());
+    }
 }

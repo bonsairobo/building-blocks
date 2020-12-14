@@ -73,7 +73,7 @@ pub struct ChunkIndexer<N> {
 
 impl<N> ChunkIndexer<N>
 where
-    PointN<N>: ChunkShape<N> + IntegerPoint,
+    PointN<N>: ChunkShape<N> + IntegerPoint<N>,
 {
     pub fn new(chunk_shape: PointN<N>) -> Self {
         Self {
@@ -104,10 +104,7 @@ where
     }
 
     /// Returns an iterator over all chunk keys for chunks that overlap the given extent.
-    pub fn chunk_keys_for_extent(&self, extent: &ExtentN<N>) -> impl Iterator<Item = PointN<N>>
-    where
-        ExtentN<N>: Copy + IterExtent<N>,
-    {
+    pub fn chunk_keys_for_extent(&self, extent: &ExtentN<N>) -> impl Iterator<Item = PointN<N>> {
         let key_min = extent.minimum.vector_right_shift(&self.chunk_shape_log2);
         let key_max = extent.max().vector_right_shift(&self.chunk_shape_log2);
         let shape_log2 = self.chunk_shape_log2;

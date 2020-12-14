@@ -46,7 +46,6 @@ use crate::{
 
 use building_blocks_core::prelude::*;
 
-use core::hash::Hash;
 use core::iter::{once, Once};
 
 /// A lattice map that delegates look-ups to a different lattice map, then transforms the result
@@ -140,7 +139,7 @@ impl<'a, F, Q, N, T> ReadExtent<'a, N> for TransformMap<'a, ArrayN<N, Q>, F>
 where
     Self: Array<N> + Copy,
     F: 'a + Fn(Q) -> T,
-    PointN<N>: IntegerPoint,
+    PointN<N>: IntegerPoint<N>,
 {
     type Src = ArrayCopySrc<Self>;
     type SrcIter = Once<(ExtentN<N>, Self::Src)>;
@@ -164,7 +163,6 @@ where
     Q: Copy,
     T: 'a,
     M: Clone,
-    PointN<N>: Point + Eq + Hash,
 {
     type Src = TransformChunkCopySrc<'a, F, Q, N, T>;
     type SrcIter = TransformChunkCopySrcIter<'a, F, Q, N, T>;

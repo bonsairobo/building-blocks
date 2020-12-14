@@ -1,8 +1,9 @@
-use crate::Axis2;
+use crate::{Axis2, IterExtent};
 
 use super::{point_traits::*, PointN};
 
-use core::ops::{Add, Div, Mul};
+use core::ops::{Add, Div, Mul, Range};
+use itertools::{iproduct, Product};
 use num::{traits::Pow, Integer, Signed};
 use std::cmp::Ordering;
 
@@ -208,7 +209,7 @@ where
     }
 }
 
-impl IntegerPoint for Point2i {
+impl IntegerPoint<[i32; 2]> for Point2i {
     #[inline]
     fn dimensions_are_powers_of_2(&self) -> bool {
         self.x().is_positive()
@@ -256,6 +257,38 @@ impl Neighborhoods for Point2i {
             PointN([0, 1]),
             PointN([1, 1]),
         ]
+    }
+}
+
+/// An iterator over all points in an `Extent2<T>`.
+pub struct Extent2PointIter<T>
+where
+    Range<T>: Iterator<Item = T>,
+{
+    product_iter: Product<Range<T>, Range<T>>,
+}
+
+impl<T> Iterator for Extent2PointIter<T>
+where
+    T: Clone,
+    Range<T>: Iterator<Item = T>,
+{
+    type Item = Point2<T>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.product_iter.next().map(|(y, x)| PointN([x, y]))
+    }
+}
+
+impl IterExtent<[i32; 2]> for Point2i {
+    type PointIter = Extent2PointIter<i32>;
+
+    fn iter_extent(min: &Point2i, lub: &Point2i) -> Self::PointIter {
+        Extent2PointIter {
+            // iproduct is opposite of row-major order.
+            product_iter: iproduct!(min.y()..lub.y(), min.x()..lub.x()),
+        }
     }
 }
 

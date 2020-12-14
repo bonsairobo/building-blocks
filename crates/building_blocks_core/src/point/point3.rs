@@ -2,7 +2,8 @@ use crate::Axis3;
 
 use super::{point_traits::*, Point2, PointN};
 
-use core::ops::{Add, Div, Mul, Sub};
+use core::ops::{Add, Div, Mul, Range, Sub};
+use itertools::{iproduct, ConsTuples, Product};
 use num::{traits::Pow, Integer, Signed};
 use std::cmp::Ordering;
 
@@ -280,7 +281,7 @@ where
     }
 }
 
-impl IntegerPoint for Point3i {
+impl IntegerPoint<[i32; 3]> for Point3i {
     #[inline]
     fn dimensions_are_powers_of_2(&self) -> bool {
         self.x().is_positive()
@@ -355,6 +356,43 @@ impl Neighborhoods for Point3i {
             PointN([0, 1, 1]),
             PointN([1, 1, 1]),
         ]
+    }
+}
+
+/// An iterator over all points in an `Extent3<T>`.
+pub struct Extent3PointIter<T>
+where
+    T: Clone,
+    Range<T>: Iterator<Item = T>,
+{
+    product_iter: ConsTuples<RangeProduct3<T>, ((T, T), T)>,
+}
+
+type RangeProduct2<T> = Product<Range<T>, Range<T>>;
+type RangeProduct3<T> = Product<RangeProduct2<T>, Range<T>>;
+
+impl<T> Iterator for Extent3PointIter<T>
+where
+    T: Clone,
+    Range<T>: Iterator<Item = T>,
+{
+    type Item = Point3<T>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.product_iter.next().map(|(z, y, x)| PointN([x, y, z]))
+    }
+}
+
+impl IterExtent<[i32; 3]> for Point3i {
+    type PointIter = Extent3PointIter<i32>;
+
+    #[inline(always)]
+    fn iter_extent(min: &Point3i, lub: &Point3i) -> Self::PointIter {
+        Extent3PointIter {
+            // iproduct is opposite of row-major order.
+            product_iter: iproduct!(min.z()..lub.z(), min.y()..lub.y(), min.x()..lub.x()),
+        }
     }
 }
 

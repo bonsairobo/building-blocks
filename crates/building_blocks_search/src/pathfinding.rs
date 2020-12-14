@@ -18,7 +18,7 @@ pub fn greedy_path<N, C>(
 ) -> (bool, Vec<PointN<N>>)
 where
     C: Copy + Ord,
-    PointN<N>: core::hash::Hash + Eq + IntegerPoint,
+    PointN<N>: core::hash::Hash + Eq + IntegerPoint<N>,
 {
     if !predicate(start) {
         return (false, vec![]);
@@ -52,7 +52,7 @@ pub fn greedy_path_with_l1_heuristic<N>(
     max_iterations: usize,
 ) -> (bool, Vec<PointN<N>>)
 where
-    PointN<N>: core::hash::Hash + Eq + Distance + IntegerPoint,
+    PointN<N>: core::hash::Hash + Eq + Distance + IntegerPoint<N>,
     <PointN<N> as Point>::Scalar: Ord,
 {
     let heuristic = |p: &PointN<N>| finish.l1_distance(p);

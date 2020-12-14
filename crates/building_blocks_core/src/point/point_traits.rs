@@ -1,3 +1,5 @@
+use crate::PointN;
+
 use core::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 use num::Zero;
 use std::cmp::{max, min};
@@ -94,7 +96,9 @@ pub trait DotProduct {
     fn dot(&self, other: &Self) -> Self::Scalar;
 }
 
-pub trait IntegerPoint: ComponentwiseIntegerOps + Neighborhoods + Point<Scalar = i32> {
+pub trait IntegerPoint<N>:
+    ComponentwiseIntegerOps + IterExtent<N> + Neighborhoods + Point<Scalar = i32>
+{
     /// Returns `true` iff all dimensions are powers of 2.
     fn dimensions_are_powers_of_2(&self) -> bool;
 
@@ -166,6 +170,12 @@ pub trait Neighborhoods: Sized {
 
     /// [Moore Neighborhood](https://en.wikipedia.org/wiki/Moore_neighborhood)
     fn moore_offsets() -> Vec<Self>;
+}
+
+pub trait IterExtent<N> {
+    type PointIter: Iterator<Item = PointN<N>>;
+
+    fn iter_extent(min: &PointN<N>, max: &PointN<N>) -> Self::PointIter;
 }
 
 // `Zero` trait doesn't allow associated constants for zero because of bignums.

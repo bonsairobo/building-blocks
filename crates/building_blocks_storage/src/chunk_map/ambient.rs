@@ -28,7 +28,7 @@ impl<N, T> AmbientExtent<N, T> {
 impl<N, T> ForEach<N, PointN<N>> for AmbientExtent<N, T>
 where
     T: Clone,
-    ExtentN<N>: IntegerExtent<N>,
+    ExtentN<N>: IterExtent<N>,
 {
     type Data = T;
 

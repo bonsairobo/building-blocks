@@ -9,7 +9,6 @@ where
     M: Array<N> + ForEach<N, (PointN<N>, Stride), Data = T> + GetUncheckedRelease<Stride, T>,
     T: IsEmpty,
     PointN<N>: IntegerPoint,
-    ExtentN<N>: IntegerExtent<N>,
 {
     // Precompute the strides for adjacency checks.
     let vn_offsets = Local::localize_points(&PointN::von_neumann_offsets());

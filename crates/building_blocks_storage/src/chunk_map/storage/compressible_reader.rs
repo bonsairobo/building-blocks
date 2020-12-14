@@ -13,7 +13,7 @@ use fnv::FnvBuildHasher;
 /// This works by using a `LocalChunkCache` for storing decompressed `Chunk`s from cache misses.
 pub struct CompressibleChunkStorageReader<'a, N, T, M, B>
 where
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint,
     T: Copy,
     M: Clone,
     B: BytesCompression,
@@ -25,7 +25,6 @@ where
 impl<'a, N, T, M, B> ChunkReadStorage<N, T, M> for CompressibleChunkStorageReader<'a, N, T, M, B>
 where
     PointN<N>: IntegerPoint + Copy + Hash + Eq,
-    ExtentN<N>: IntegerExtent<N>,
     T: Copy,
     M: Clone,
     B: BytesCompression,
@@ -49,8 +48,7 @@ where
 
 impl<'a, N, T, M, B> IterChunkKeys<'a, N> for CompressibleChunkStorageReader<'a, N, T, M, B>
 where
-    PointN<N>: Clone + Hash + Eq,
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint + Clone + Hash + Eq,
     T: Copy,
     M: Clone,
     B: BytesCompression,
@@ -64,8 +62,7 @@ where
 
 impl<'a, N, T, M, B> IntoIterator for &'a CompressibleChunkStorageReader<'a, N, T, M, B>
 where
-    PointN<N>: Copy + Hash + Eq,
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint + Copy + Hash + Eq,
     T: Copy,
     M: Clone,
     B: BytesCompression,
@@ -89,7 +86,7 @@ where
 
 pub struct CompressibleChunkStorageReaderIntoIter<'a, N, T, M, B>
 where
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint,
     T: Copy,
     M: Clone,
     B: BytesCompression,
@@ -101,8 +98,7 @@ where
 
 impl<'a, N, T, M, B> Iterator for CompressibleChunkStorageReaderIntoIter<'a, N, T, M, B>
 where
-    PointN<N>: Copy + Hash + Eq,
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint + Copy + Hash + Eq,
     T: Copy,
     M: Clone,
     B: BytesCompression,

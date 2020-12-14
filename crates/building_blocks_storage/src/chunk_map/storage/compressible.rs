@@ -12,7 +12,7 @@ use slab::Slab;
 /// `Chunk`s.
 pub struct CompressibleChunkStorage<N, T, M, B>
 where
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint,
     T: Copy,
     M: Clone,
     B: BytesCompression,
@@ -26,8 +26,7 @@ pub type CompressedChunks<N, T, M, B> = Slab<Compressed<FastChunkCompression<N, 
 
 impl<N, T, M, B> CompressibleChunkStorage<N, T, M, B>
 where
-    PointN<N>: Hash + Eq,
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint + Hash + Eq,
     T: Copy,
     M: Clone,
     B: BytesCompression,
@@ -43,8 +42,7 @@ where
 
 impl<N, T, M, B> CompressibleChunkStorage<N, T, M, B>
 where
-    PointN<N>: Clone + Hash + Eq,
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint + Clone + Hash + Eq,
     T: Copy,
     M: Clone,
     B: BytesCompression,
@@ -154,8 +152,7 @@ where
 
 impl<N, T, M, B> ChunkWriteStorage<N, T, M> for CompressibleChunkStorage<N, T, M, B>
 where
-    PointN<N>: Copy + Hash + Eq,
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint + Copy + Hash + Eq,
     T: Copy,
     M: Clone,
     B: BytesCompression,
@@ -202,8 +199,7 @@ where
 
 impl<'a, N, T, M, B> IterChunkKeys<'a, N> for CompressibleChunkStorage<N, T, M, B>
 where
-    PointN<N>: Clone + Hash + Eq,
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint + Clone + Hash + Eq,
     T: Copy,
     M: Clone,
     Chunk<N, T, M>: 'a,
@@ -218,8 +214,7 @@ where
 
 impl<N, T, M, B> IntoIterator for CompressibleChunkStorage<N, T, M, B>
 where
-    PointN<N>: 'static + Clone + Hash + Eq,
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: 'static + IntegerPoint + Clone + Hash + Eq,
     T: 'static + Copy,
     M: 'static + Clone,
     B: 'static + BytesCompression,

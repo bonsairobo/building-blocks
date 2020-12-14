@@ -1,6 +1,6 @@
-use crate::{extent::IntegerExtent, Extent, ExtentN, Point3, PointN};
+use crate::{extent::IterExtent, ExtentN, Point3, PointN};
 
-use core::ops::{Mul, Range};
+use core::ops::Range;
 use itertools::{iproduct, ConsTuples, Product};
 
 /// A 3-dimensional extent with scalar type `T`.
@@ -9,18 +9,6 @@ pub type Extent3<T> = ExtentN<[T; 3]>;
 pub type Extent3i = ExtentN<[i32; 3]>;
 /// A 3-dimensional extent with scalar type `f32`.
 pub type Extent3f = ExtentN<[f32; 3]>;
-
-impl<T> Extent<[T; 3]> for Extent3<T>
-where
-    T: Copy + Mul<Output = T>,
-{
-    type VolumeType = T;
-
-    #[inline]
-    fn volume(&self) -> T {
-        self.shape.x() * self.shape.y() * self.shape.z()
-    }
-}
 
 /// An iterator over all points in an `Extent3<T>`.
 pub struct Extent3PointIter<T>
@@ -47,13 +35,8 @@ where
     }
 }
 
-impl IntegerExtent<[i32; 3]> for Extent3i {
+impl IterExtent<[i32; 3]> for Extent3i {
     type PointIter = Extent3PointIter<i32>;
-
-    #[inline]
-    fn num_points(&self) -> usize {
-        self.volume() as usize
-    }
 
     #[inline(always)]
     fn iter_points(&self) -> Self::PointIter {

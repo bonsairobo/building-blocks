@@ -27,6 +27,8 @@ pub trait Point:
     type Scalar: Copy;
 
     fn basis() -> Vec<Self>;
+
+    fn volume(&self) -> <Self as Point>::Scalar;
 }
 
 pub trait Abs {
@@ -92,7 +94,7 @@ pub trait DotProduct {
     fn dot(&self, other: &Self) -> Self::Scalar;
 }
 
-pub trait IntegerPoint: ComponentwiseIntegerOps + Neighborhoods + Point {
+pub trait IntegerPoint: ComponentwiseIntegerOps + Neighborhoods + Point<Scalar = i32> {
     /// Returns `true` iff all dimensions are powers of 2.
     fn dimensions_are_powers_of_2(&self) -> bool;
 

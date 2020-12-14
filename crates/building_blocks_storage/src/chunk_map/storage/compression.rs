@@ -29,7 +29,7 @@ pub struct FastCompressedChunk<N, T, M, B>
 where
     T: Copy,
     B: BytesCompression,
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint,
 {
     pub metadata: M, // metadata doesn't get compressed, hope it's small!
     pub compressed_array: Compressed<FastArrayCompression<N, T, B>>,
@@ -40,7 +40,7 @@ where
     T: Copy,
     M: Clone,
     B: BytesCompression,
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint,
 {
     type Data = Chunk<N, T, M>;
     type CompressedData = FastCompressedChunk<N, T, M, B>;

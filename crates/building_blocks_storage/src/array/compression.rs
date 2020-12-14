@@ -44,7 +44,7 @@ impl<N, T, B> Compression for FastArrayCompression<N, T, B>
 where
     B: BytesCompression,
     T: Copy, // Copy is important so we don't serialize a vector of non-POD type
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint,
 {
     type Data = ArrayN<N, T>;
     type CompressedData = FastCompressedArray<N, T, B>;

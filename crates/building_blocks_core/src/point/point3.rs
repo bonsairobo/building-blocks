@@ -195,6 +195,11 @@ impl Point for Point3i {
     fn basis() -> Vec<Self> {
         vec![PointN([1, 0, 0]), PointN([0, 1, 0]), PointN([0, 0, 1])]
     }
+
+    #[inline]
+    fn volume(&self) -> <Self as Point>::Scalar {
+        self.x() * self.y()
+    }
 }
 
 impl Point for Point3f {
@@ -207,6 +212,11 @@ impl Point for Point3f {
             PointN([0.0, 1.0, 0.0]),
             PointN([0.0, 0.0, 1.0]),
         ]
+    }
+
+    #[inline]
+    fn volume(&self) -> <Self as Point>::Scalar {
+        self.x() * self.y()
     }
 }
 

@@ -32,7 +32,6 @@ where
 impl<N, T, M, B> SerializableChunkMap<N, T, M, B>
 where
     PointN<N>: IntegerPoint + Hash + Eq + ChunkShape<N>,
-    ExtentN<N>: IntegerExtent<N>,
     Chunk<N, T, M>: DeserializeOwned + Serialize,
     T: Copy,
     M: Clone,

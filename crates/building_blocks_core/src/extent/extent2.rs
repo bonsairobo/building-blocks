@@ -1,6 +1,6 @@
-use crate::{extent::IntegerExtent, Extent, ExtentN, Point2, PointN};
+use crate::{extent::IterExtent, ExtentN, Point2, PointN};
 
-use core::ops::{Mul, Range};
+use core::ops::Range;
 use itertools::{iproduct, Product};
 
 /// A 2-dimensional extent with scalar type `T`.
@@ -9,18 +9,6 @@ pub type Extent2<T> = ExtentN<[T; 2]>;
 pub type Extent2i = ExtentN<[i32; 2]>;
 /// A 2-dimensional extent with scalar type `f32`.
 pub type Extent2f = ExtentN<[f32; 2]>;
-
-impl<T> Extent<[T; 2]> for Extent2<T>
-where
-    T: Copy + Mul<Output = T>,
-{
-    type VolumeType = T;
-
-    #[inline]
-    fn volume(&self) -> T {
-        self.shape.x() * self.shape.y()
-    }
-}
 
 /// An iterator over all points in an `Extent2<T>`.
 pub struct Extent2PointIter<T>
@@ -43,13 +31,8 @@ where
     }
 }
 
-impl IntegerExtent<[i32; 2]> for Extent2i {
+impl IterExtent<[i32; 2]> for Extent2i {
     type PointIter = Extent2PointIter<i32>;
-
-    #[inline]
-    fn num_points(&self) -> usize {
-        self.volume() as usize
-    }
 
     #[inline]
     fn iter_points(&self) -> Self::PointIter {

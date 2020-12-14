@@ -204,7 +204,7 @@ where
 
 impl<N, T> ArrayN<N, T>
 where
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint,
 {
     /// Create a new `ArrayN` directly from the extent and values. This asserts that the
     /// number of points in the extent matches the length of the values `Vec`.
@@ -253,8 +253,8 @@ where
 
 impl<N, T> ArrayN<N, T>
 where
-    PointN<N>: Point,
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint,
+    ExtentN<N>: IterExtent<N>,
 {
     /// Create a new array for `extent` where each point's value is determined by the `filler`
     /// function.
@@ -283,7 +283,8 @@ where
 impl<N, T> ArrayN<N, T>
 where
     Self: ForEachMut<N, Stride, Data = T>,
-    ExtentN<N>: IntegerExtent<N> + PartialEq,
+    PointN<N>: IntegerPoint,
+    ExtentN<N>: PartialEq,
 {
     /// Fill the entire `extent` with the same `value`.
     pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: T)
@@ -300,8 +301,7 @@ where
 
 impl<N, T> ArrayN<N, MaybeUninit<T>>
 where
-    PointN<N>: Point,
-    ExtentN<N>: IntegerExtent<N>,
+    PointN<N>: IntegerPoint,
 {
     /// Transmutes the map values from `MaybeUninit<T>` to `T` after manual initialization. The
     /// implementation just reconstructs the internal `Vec` after transmuting the data pointer, so
@@ -723,7 +723,8 @@ impl<M, N, T> WriteExtent<N, ChunkCopySrc<M, N, T>> for ArrayN<N, T>
 where
     T: Clone,
     Self: Array<N> + WriteExtent<N, ArrayCopySrc<M>>,
-    ExtentN<N>: Copy + IntegerExtent<N> + PartialEq,
+    PointN<N>: IntegerPoint,
+    ExtentN<N>: PartialEq,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<M, N, T>) {
         match src {
@@ -737,7 +738,6 @@ impl<'a, N, F, T: 'a + Clone> WriteExtent<N, F> for ArrayN<N, T>
 where
     F: Fn(&PointN<N>) -> T,
     PointN<N>: IntegerPoint,
-    ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: ForEachMut<N, PointN<N>, Data = T>,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: F) {

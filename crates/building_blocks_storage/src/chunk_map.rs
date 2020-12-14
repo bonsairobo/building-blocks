@@ -135,7 +135,7 @@ use crate::{
     Get, GetMut,
 };
 
-use building_blocks_core::{bounding_extent, ExtentN, IntegerExtent, IntegerPoint, PointN};
+use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, IterExtent, PointN};
 
 use either::Either;
 use fnv::FnvHashMap;
@@ -180,7 +180,6 @@ pub type ChunkMapBuilder3<T, M = ()> = ChunkMapBuilder<[i32; 3], T, M>;
 impl<N, T, M> ChunkMapBuilder<N, T, M>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
-    ExtentN<N>: IntegerExtent<N>,
 {
     /// Create a new `ChunkMap` with the given `storage`.
     pub fn build<S>(self, storage: S) -> ChunkMap<N, T, M, S> {
@@ -236,7 +235,6 @@ impl<'a, N, T, M, S> ChunkMap<N, T, M, S> {
 impl<'a, N, T, M, S> ChunkMap<N, T, M, S>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
-    ExtentN<N>: IntegerExtent<N>,
 {
     /// Creates a map using the given `storage`.
     ///
@@ -272,7 +270,6 @@ where
 impl<N, T, M, S> ChunkMap<N, T, M, S>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
-    ExtentN<N>: IntegerExtent<N>,
     S: ChunkReadStorage<N, T, M>,
 {
     /// Borrow the chunk at `key`.
@@ -300,7 +297,6 @@ where
 impl<N, T, M, S> ChunkMap<N, T, M, S>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
-    ExtentN<N>: IntegerExtent<N>,
     S: ChunkWriteStorage<N, T, M>,
 {
     /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
@@ -427,7 +423,6 @@ where
 impl<'a, N, T, M, S> ChunkMap<N, T, M, S>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
-    ExtentN<N>: IntegerExtent<N>,
     S: IterChunkKeys<'a, N>,
 {
     /// The smallest extent that bounds all chunks.
@@ -450,7 +445,6 @@ where
 impl<N, T, M, S> Get<&PointN<N>> for ChunkMap<N, T, M, S>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
-    ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: Array<N>,
     T: Copy,
     S: ChunkReadStorage<N, T, M>,
@@ -468,7 +462,6 @@ where
 impl<'a, N, T, M, S> GetMut<&PointN<N>> for ChunkMap<N, T, M, S>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
-    ExtentN<N>: IntegerExtent<N>,
     ArrayN<N, T>: Array<N>,
     T: Copy,
     M: Clone,
@@ -494,7 +487,7 @@ where
 impl<N, T, M, S> ForEach<N, PointN<N>> for ChunkMap<N, T, M, S>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
-    ExtentN<N>: IntegerExtent<N>,
+    ExtentN<N>: IterExtent<N>,
     ArrayN<N, T>: Array<N> + ForEach<N, PointN<N>, Data = T>,
     T: Copy,
     S: ChunkReadStorage<N, T, M>,
@@ -518,7 +511,7 @@ where
 impl<'a, N, T, M, S> ForEachMut<N, PointN<N>> for ChunkMap<N, T, M, S>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
-    ExtentN<N>: IntegerExtent<N>,
+    ExtentN<N>: IterExtent<N>,
     ArrayN<N, T>: ForEachMut<N, PointN<N>, Data = T>,
     T: Copy,
     M: Clone,
@@ -557,7 +550,7 @@ impl<'a, N, T, M, S> ReadExtent<'a, N> for ChunkMap<N, T, M, S>
 where
     ArrayN<N, T>: Array<N>,
     PointN<N>: 'a + IntegerPoint + ChunkShape<N>,
-    ExtentN<N>: IntegerExtent<N>,
+    ExtentN<N>: IterExtent<N>,
     T: 'a + Copy,
     S: ChunkReadStorage<N, T, M>,
 {
@@ -589,7 +582,7 @@ where
 impl<'a, N, T, M, S, Src> WriteExtent<N, Src> for ChunkMap<N, T, M, S>
 where
     PointN<N>: IntegerPoint + ChunkShape<N>,
-    ExtentN<N>: IntegerExtent<N>,
+    ExtentN<N>: IterExtent<N>,
     ArrayN<N, T>: WriteExtent<N, Src>,
     T: Copy,
     M: Clone,

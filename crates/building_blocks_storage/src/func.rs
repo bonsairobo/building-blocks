@@ -33,7 +33,7 @@ impl<'a, F, N, T> ForEach<N, PointN<N>> for F
 where
     F: Fn(&PointN<N>) -> T,
     PointN<N>: Copy,
-    ExtentN<N>: IntegerExtent<N>,
+    ExtentN<N>: IterExtent<N>,
 {
     type Data = T;
 

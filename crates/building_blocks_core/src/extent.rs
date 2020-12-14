@@ -13,13 +13,27 @@ use serde::{Deserialize, Serialize};
 /// An N-dimensional extent. This is mathematically the Cartesian product of a half-closed interval `[a, b)` in each dimension.
 /// You can also just think of it as an axis-aligned box with some shape and a minimum point. When doing queries against lattice
 /// maps, this is the primary structure used to determine the bounds of your query.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ExtentN<N> {
     /// The least point contained in the extent.
     pub minimum: PointN<N>,
     /// The length of each dimension.
     pub shape: PointN<N>,
 }
+
+// With derive, PointN: Clone did not imply that ExtentN: Clone in trait bounds.
+impl<N> Clone for ExtentN<N>
+where
+    PointN<N>: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            minimum: self.minimum.clone(),
+            shape: self.shape.clone(),
+        }
+    }
+}
+impl<N> Copy for ExtentN<N> where PointN<N>: Copy {}
 
 impl<N> ExtentN<N> {
     /// The default representation of an extent as the minimum point and shape.
@@ -110,7 +124,6 @@ where
 impl<N> ExtentN<N>
 where
     PointN<N>: IntegerPoint + Ones,
-    ExtentN<N>: IntegerExtent<N>,
 {
     /// An alternative representation of an integer extent as the minimum point and maximum point. This only works for integer
     /// extents, where there is a unique maximum point.
@@ -146,13 +159,41 @@ pub trait Extent<N> {
     fn volume(&self) -> Self::VolumeType;
 }
 
+impl<N> Extent<N> for ExtentN<N>
+where
+    PointN<N>: Point,
+{
+    type VolumeType = <PointN<N> as Point>::Scalar;
+
+    fn volume(&self) -> Self::VolumeType {
+        self.shape.volume()
+    }
+}
+
 /// The methods that all `ExtentN<N>` should have when the scalar type is an integer, but only those which are implemented
 /// specially for each `ExtentN<N>`. This enables us to assume that any finite extent contains only a finite number of points.
-pub trait IntegerExtent<N>: Extent<N> + Copy {
-    type PointIter: Iterator<Item = PointN<N>>;
-
+pub trait IntegerExtent<N>: Extent<N> {
     /// The number of points contained in the extent.
     fn num_points(&self) -> usize;
+
+    /// Returns `true` iff the number of points in the extent is 0.
+    #[inline]
+    fn is_empty(&self) -> bool {
+        self.num_points() == 0
+    }
+}
+
+impl<N> IntegerExtent<N> for ExtentN<N>
+where
+    PointN<N>: IntegerPoint,
+{
+    fn num_points(&self) -> usize {
+        self.volume() as usize
+    }
+}
+
+pub trait IterExtent<N> {
+    type PointIter: Iterator<Item = PointN<N>>;
 
     /// Iterate over all points in the extent.
     /// ```
@@ -165,12 +206,6 @@ pub trait IntegerExtent<N>: Extent<N> + Copy {
     /// ]);
     /// ```
     fn iter_points(&self) -> Self::PointIter;
-
-    /// Returns `true` iff the number of points in the extent is 0.
-    #[inline]
-    fn is_empty(&self) -> bool {
-        self.num_points() == 0
-    }
 }
 
 impl<T> Add<PointN<T>> for ExtentN<T>
@@ -229,7 +264,6 @@ pub fn bounding_extent<N, I>(points: I) -> ExtentN<N>
 where
     I: Iterator<Item = PointN<N>>,
     PointN<N>: IntegerPoint,
-    ExtentN<N>: IntegerExtent<N>,
 {
     let mut min_point = PointN::MAX;
     let mut max_point = PointN::MIN;

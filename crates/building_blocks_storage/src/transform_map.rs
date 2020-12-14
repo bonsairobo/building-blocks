@@ -165,7 +165,6 @@ where
     T: 'a,
     M: Clone,
     PointN<N>: Point + Eq + Hash,
-    ExtentN<N>: IntegerExtent<N>,
 {
     type Src = TransformChunkCopySrc<'a, F, Q, N, T>;
     type SrcIter = TransformChunkCopySrcIter<'a, F, Q, N, T>;

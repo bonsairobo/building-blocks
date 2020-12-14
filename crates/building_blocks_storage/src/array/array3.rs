@@ -5,6 +5,7 @@ use building_blocks_core::prelude::*;
 /// Map-local coordinates, wrapping a `Point3i`.
 pub type Local3i = Local<[i32; 3]>;
 
+/// A 3-dimensional `Array`.
 pub type Array3<T> = ArrayN<[i32; 3], T>;
 
 impl ArrayIndexer<[i32; 3]> for [i32; 3] {

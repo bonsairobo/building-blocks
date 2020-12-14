@@ -23,6 +23,7 @@ pub trait Compression: Sized {
     fn decompress(compressed: &Self::CompressedData) -> Self::Data;
 }
 
+/// A value compressed with compression algorithm `A`.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Compressed<A>
 where
@@ -58,6 +59,7 @@ pub trait BytesCompression {
     fn decompress_bytes(compressed_bytes: &[u8], bytes: &mut impl std::io::Write);
 }
 
+/// A value that is either compressed or decompressed.
 pub enum MaybeCompressed<D, C> {
     Decompressed(D),
     Compressed(C),

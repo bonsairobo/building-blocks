@@ -5,6 +5,7 @@ use building_blocks_core::prelude::*;
 /// Map-local coordinates, wrapping a `Point2i`.
 pub type Local2i = Local<[i32; 2]>;
 
+/// A 2-dimensional `Array`.
 pub type Array2<T> = ArrayN<[i32; 2], T>;
 
 impl ArrayIndexer<[i32; 2]> for [i32; 2] {

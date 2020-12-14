@@ -199,7 +199,7 @@ impl Point for Point3i {
 
     #[inline]
     fn volume(&self) -> <Self as Point>::Scalar {
-        self.x() * self.y()
+        self.x() * self.y() * self.z()
     }
 }
 

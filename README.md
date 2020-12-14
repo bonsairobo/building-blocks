@@ -48,7 +48,9 @@ let mut mesh_buffer = SurfaceNetsBuffer::new();
 surface_nets(&samples, samples.extent(), &mut mesh_buffer);
 ```
 
-## Configuration and WASM
+## Configuration
+
+### Features and WASM
 
 Building Blocks is organized into several crates, some of which are hidden behind features, and some have features themselves,
 which get re-exported by the top-level crate.
@@ -63,6 +65,16 @@ to you `features` list, like so:
 version = "0.3"
 default-features = false
 features = ["snappy"]
+```
+
+### LTO
+
+It is highly recommended that you enable link-time optimization when using building-blocks. It will improve the performance
+of critical algorithms like meshing by up to 2x. Just add this to your Cargo.toml:
+
+```toml
+[profile.release]
+lto = true
 ```
 
 ## Learning

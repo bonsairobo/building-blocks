@@ -88,7 +88,19 @@
 //! // In order to use the read-only access traits, you need to construct a `CompressibleChunkStorageReader`.
 //! let local_cache = LocalChunkCache::new();
 //! let reader = map.storage().reader(&local_cache);
-//! let reader_map = ChunkMap::new(PointN([16; 3]), 0, (), reader);
+//! let reader_map = builder.build(reader);
+//!
+//! let bounding_extent = reader_map.bounding_extent();
+//! reader_map.for_each(&bounding_extent, |p, value| {
+//!     if write_points.iter().position(|pw| p == *pw) != None {
+//!         assert_eq!(value, 1);
+//!     } else {
+//!         // The points that we didn't write explicitly got an ambient value when the chunk was
+//!         // inserted. Also any points in `bounding_extent` that don't have a chunk will also take
+//!         // the ambient value.
+//!         assert_eq!(value, 0);
+//!     }
+//! });
 //!
 //! // For efficient caching, you should flush your local cache back into the main storage when you are done with it.
 //! map.storage_mut().flush_local_cache(local_cache);
@@ -118,6 +130,7 @@ use building_blocks_core::{bounding_extent, ExtentN, IntegerExtent, IntegerPoint
 
 use either::Either;
 use fnv::FnvHashMap;
+use serde::{Deserialize, Serialize};
 
 /// A lattice map made up of same-shaped `ArrayN` chunks. It takes a value at every possible `PointN`, because accesses made
 /// outside of the stored chunks will return some ambient value specified on creation.
@@ -138,7 +151,7 @@ pub type ChunkMap3<T, M, S> = ChunkMap<[i32; 3], T, M, S>;
 
 /// A few pieces of info used within the `ChunkMap`. You will probably keep one of these around to create new `ChunkMap`s from
 /// a chunk storage.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ChunkMapBuilder<N, T, M = ()> {
     /// The shape of each chunk.
     pub chunk_shape: PointN<N>,
@@ -228,6 +241,19 @@ where
             storage,
         }
     }
+
+    /// Get the `ChunkMapBuilder` used to build this map.
+    pub fn builder(&self) -> ChunkMapBuilder<N, T, M>
+    where
+        T: Copy,
+        M: Clone,
+    {
+        ChunkMapBuilder {
+            chunk_shape: self.indexer.chunk_shape(),
+            ambient_value: self.ambient_value,
+            default_chunk_metadata: self.default_chunk_metadata.clone(),
+        }
+    }
 }
 
 impl<N, T, M, S> ChunkMap<N, T, M, S>
@@ -264,19 +290,6 @@ where
     ExtentN<N>: IntegerExtent<N>,
     S: ChunkWriteStorage<N, T, M>,
 {
-    /// Get the `ChunkMapBuilder` used to build this map.
-    pub fn builder(&self) -> ChunkMapBuilder<N, T, M>
-    where
-        T: Copy,
-        M: Clone,
-    {
-        ChunkMapBuilder {
-            chunk_shape: self.indexer.chunk_shape(),
-            ambient_value: self.ambient_value,
-            default_chunk_metadata: self.default_chunk_metadata.clone(),
-        }
-    }
-
     /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
     ///
     /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.

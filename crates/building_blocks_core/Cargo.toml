@@ -1,6 +1,6 @@
 [package]
 name = "building_blocks_core"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2018"
 authors = ["Duncan <bonsairobo@gmail.com>"]
 license = "MIT"
@@ -10,7 +10,7 @@ keywords = ["voxel"]
 description = "The core data types for defining 2D and 3D integer lattices."
 
 [features]
-default = []
+default = ["glam", "mint", "nalgebra"]
 
 [dependencies]
 itertools = "0.9"

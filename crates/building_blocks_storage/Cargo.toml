@@ -1,6 +1,6 @@
 [package]
 name = "building_blocks_storage"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2018"
 authors = ["Duncan <bonsairobo@gmail.com>"]
 license = "MIT"
@@ -8,6 +8,9 @@ repository = "https://github.com/bonsairobo/building-blocks"
 keywords = ["voxel", "mesh"]
 
 description = "Efficient storage for maps on sparse or dense, 2D and 3D integer lattices."
+
+[features]
+default = ["lz4"]
 
 [dependencies]
 bincode = "1.3"

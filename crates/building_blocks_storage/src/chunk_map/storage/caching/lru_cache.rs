@@ -52,7 +52,7 @@ where
     E: Copy,
     H: BuildHasher,
 {
-    /// Borrow the entry for `key`. WARNING: This will not update the LRU order!
+    /// Borrow the entry for `key`. This will not update the LRU order.
     #[inline]
     pub fn get(&self, key: &K) -> Option<CacheEntry<&V, E>> {
         self.store
@@ -60,7 +60,7 @@ where
             .map(|entry| entry.as_ref().map_cached(|(val, _)| val))
     }
 
-    /// Mutably borrow the entry for `key`. WARNING: This will not update the LRU order!
+    /// Mutably borrow the entry for `key`. This will not update the LRU order.
     #[inline]
     pub fn get_mut(&mut self, key: &K) -> Option<CacheEntry<&mut V, E>> {
         self.store
@@ -68,7 +68,7 @@ where
             .map(|entry| entry.as_mut().map_cached(|(val, _)| val))
     }
 
-    /// Inserts a `new_val` for `key`, returning the old entry if it exists.
+    /// Inserts a `new_val` for `key`, returning the old entry if it exists. `key` becomes the most recently used.
     #[inline]
     pub fn insert(&mut self, key: K, new_val: V) -> Option<CacheEntry<V, E>> {
         let Self { store, order, .. } = self;
@@ -119,7 +119,7 @@ where
     }
 
     /// Tries to get the value for `key`, returning it if it exists. If the entry state is evicted, calls `on_evicted` to
-    /// repopulate the entry. Otherwise, returns `None`.
+    /// repopulate the entry and marks it as most recently used. Otherwise, returns `None`.
     #[inline]
     pub fn get_mut_or_repopulate_with(
         &mut self,
@@ -144,7 +144,8 @@ where
     }
 
     /// Tries to get the value for `key`, returning it if it exists. If the entry state is evicted, calls `on_evicted` to
-    /// repopulate the entry. If there is no entry, calls `on_missing` to populate the entry.
+    /// repopulate the entry. If there is no entry, calls `on_missing` to populate the entry. In either case, if a new entry is
+    /// created, it is marked as most recently used.
     #[inline]
     pub fn get_mut_or_insert_with(
         &mut self,

@@ -12,7 +12,9 @@ pub struct Chunk<N, T, M> {
     pub array: ArrayN<N, T>,
 }
 
+/// A 2-dimensional `Chunk`.
 pub type Chunk2<T, M> = Chunk<[i32; 2], T, M>;
+/// A 3-dimensional `Chunk`.
 pub type Chunk3<T, M> = Chunk<[i32; 3], T, M>;
 
 impl<N, T> Chunk<N, T, ()> {

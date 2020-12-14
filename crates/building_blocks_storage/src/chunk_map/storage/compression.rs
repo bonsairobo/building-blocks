@@ -7,6 +7,7 @@ use crate::{
 
 use building_blocks_core::prelude::*;
 
+/// A `Compression` used for compressing `Chunk`s. It just uses the internal `FastArrayCompression` and clones the metadata.
 #[derive(Copy, Clone)]
 pub struct FastChunkCompression<N, T, M, B> {
     pub array_compression: FastArrayCompression<N, T, B>,
@@ -22,6 +23,7 @@ impl<N, T, M, B> FastChunkCompression<N, T, M, B> {
     }
 }
 
+/// The target of `FastChunkCompression`. You probably want to use `Compressed<FastChunkCompression>` instead.
 #[derive(Clone)]
 pub struct FastCompressedChunk<N, T, M, B>
 where

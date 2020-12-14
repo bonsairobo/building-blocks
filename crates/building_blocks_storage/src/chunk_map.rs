@@ -155,7 +155,9 @@ pub struct ChunkMap<N, T, M, S> {
     storage: S,
 }
 
-pub type ChunkMap2<T, M, S> = ChunkMap<[i32; 3], T, M, S>;
+/// A 2-dimensional `ChunkMap`.
+pub type ChunkMap2<T, M, S> = ChunkMap<[i32; 2], T, M, S>;
+/// A 3-dimensional `ChunkMap`.
 pub type ChunkMap3<T, M, S> = ChunkMap<[i32; 3], T, M, S>;
 
 /// A few pieces of info used within the `ChunkMap`. You will probably keep one of these around to create new `ChunkMap`s from
@@ -170,7 +172,9 @@ pub struct ChunkMapBuilder<N, T, M = ()> {
     pub default_chunk_metadata: M,
 }
 
+/// A 2-dimensional `ChunkMapBuilder`.
 pub type ChunkMapBuilder2<T, M = ()> = ChunkMapBuilder<[i32; 2], T, M>;
+/// A 3-dimensional `ChunkMapBuilder`.
 pub type ChunkMapBuilder3<T, M = ()> = ChunkMapBuilder<[i32; 3], T, M>;
 
 impl<N, T, M> ChunkMapBuilder<N, T, M>

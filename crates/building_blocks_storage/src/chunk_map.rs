@@ -1,14 +1,23 @@
 //! A sparse lattice map made of up array chunks.
 //!
+//! # Addressing
+//!
 //! The data can either be addressed by chunk key with the `get_chunk*` methods or by individual points using the `Get*` and
 //! `ForEach*` trait impls. The map of chunks uses `Point3i` keys. The key for a chunk is the minimum point in that chunk, which
 //! is always a multiple of the chunk shape. Chunk shape dimensions must be powers of 2, which allows for efficiently
 //! calculating a chunk key from any point in the chunk.
 //!
+//! # Chunk Storage
+//!
 //! `ChunkMap<N, T, M, S>` depends on a backing chunk storage, which can implement some of `ChunkReadStorage` or
 //! `ChunkWriteStorage`. A storage can be as simple as a `HashMap`, which provides good performance for both iteration and
 //! random access. It could also be something more memory efficient like `CompressibleChunkStorage` or
 //! `CompressibleChunkStorageReader`, which perform nearly as well but involve some extra management of the cache.
+//!
+//! # Serialization
+//!
+//! In order to efficiently serialize a `ChunkMap`, you can first use `SerializableChunkMap::from_chunk_map` to create a compact
+//! serializable representation. It will compress the bincode representation of the chunks.
 //!
 //! # Example `ChunkHashMap` Usage
 //! ```
@@ -464,7 +473,7 @@ where
     type Data = T;
 
     #[inline]
-    fn get_mut(&mut self, p: &PointN<N>) -> &mut T {
+    fn get_mut(&mut self, p: &PointN<N>) -> &mut Self::Data {
         let (_chunk_key, value_mut) = self.get_mut_point_and_chunk_key(p);
 
         value_mut

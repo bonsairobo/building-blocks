@@ -13,39 +13,39 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 /// A simple chunk map format for serialization. All chunks are serialized with `bincode`, then compressed using some
 /// `BytesCompression`. This can be used to:
-///   - serialize any `ChunkMap` whose storage implements `IntoIterator<Item = (PointN<N>, Chunk<N, T, M>)>`
+///   - serialize any `ChunkMap` whose storage implements `IntoIterator<Item = (PointN<N>, Chunk<N, T, Meta>)>`
 ///   - deserialize any `ChunkMap` whose storage implements `ChunkWriteStorage`
 ///
 /// This type is provided mostly for convenience. It won't work if your entire `ChunkMap` doesn't fit in memory. That would
 /// require a streaming solution.
 #[derive(Deserialize, Serialize)]
-pub struct SerializableChunkMap<N, T, M, B>
+pub struct SerializableChunkMap<N, T, Meta, B>
 where
     PointN<N>: Hash + Eq,
-    Chunk<N, T, M>: DeserializeOwned + Serialize,
+    Chunk<N, T, Meta>: DeserializeOwned + Serialize,
     B: BytesCompression,
 {
-    pub builder: ChunkMapBuilder<N, T, M>,
-    pub compressed_chunks: FnvHashMap<PointN<N>, BincodeCompressedChunk<N, T, M, B>>,
+    pub builder: ChunkMapBuilder<N, T, Meta>,
+    pub compressed_chunks: FnvHashMap<PointN<N>, BincodeCompressedChunk<N, T, Meta, B>>,
 }
 
-impl<N, T, M, B> SerializableChunkMap<N, T, M, B>
+impl<N, T, Meta, B> SerializableChunkMap<N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq + ChunkShape<N>,
-    Chunk<N, T, M>: DeserializeOwned + Serialize,
+    Chunk<N, T, Meta>: DeserializeOwned + Serialize,
     T: Copy,
-    M: Clone,
+    Meta: Clone,
     B: BytesCompression,
 {
     /// Returns a serializable version of this map. All chunks are serialized with `bincode`, then compressed using some
     /// `BytesCompression`. This can be used to serialize any kind of `ChunkMap`, regardless of chunk storage.
-    pub async fn from_chunk_map<S>(
-        compression: BincodeCompression<Chunk<N, T, M>, B>,
-        map: ChunkMap<N, T, M, S>,
+    pub async fn from_chunk_map<Store>(
+        compression: BincodeCompression<Chunk<N, T, Meta>, B>,
+        map: ChunkMap<N, T, Meta, Store>,
     ) -> Self
     where
-        BincodeCompression<Chunk<N, T, M>, B>: Copy, // TODO: this should be inferred
-        S: IntoIterator<Item = (PointN<N>, Chunk<N, T, M>)>,
+        BincodeCompression<Chunk<N, T, Meta>, B>: Copy, // TODO: this should be inferred
+        Store: IntoIterator<Item = (PointN<N>, Chunk<N, T, Meta>)>,
     {
         let builder = map.builder();
         let storage = map.take_storage();
@@ -74,9 +74,9 @@ where
 
     /// Returns a new map from the serialized, compressed version. This will decompress each chunk and insert it into the given
     /// `storage`.
-    pub async fn into_chunk_map<S>(self, mut storage: S) -> ChunkMap<N, T, M, S>
+    pub async fn into_chunk_map<Store>(self, mut storage: Store) -> ChunkMap<N, T, Meta, Store>
     where
-        S: ChunkWriteStorage<N, T, M>,
+        Store: ChunkWriteStorage<N, T, Meta>,
     {
         // Only do one parallel batch at a time to avoid decompressing the entire map at once.
         for batch_of_compressed_chunks in &self.compressed_chunks.into_iter().chunks(16) {
@@ -156,9 +156,10 @@ mod test {
         );
     }
 
-    fn do_serialize_and_deserialize_round_trip_test<B, S>(storage: S, compression: B)
+    fn do_serialize_and_deserialize_round_trip_test<B, Store>(storage: Store, compression: B)
     where
-        S: ChunkWriteStorage<[i32; 3], i32, ()> + IntoIterator<Item = (Point3i, Chunk3<i32, ()>)>,
+        Store:
+            ChunkWriteStorage<[i32; 3], i32, ()> + IntoIterator<Item = (Point3i, Chunk3<i32, ()>)>,
         B: BytesCompression + Copy + DeserializeOwned + Serialize,
     {
         let mut map = BUILDER.build(storage);

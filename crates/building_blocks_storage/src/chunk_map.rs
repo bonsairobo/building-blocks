@@ -9,7 +9,7 @@
 //!
 //! # Chunk Storage
 //!
-//! `ChunkMap<N, T, M, S>` depends on a backing chunk storage `S`, which can implement some of `ChunkReadStorage` or
+//! `ChunkMap<N, T, Meta, Store>` depends on a backing chunk storage `Store`, which can implement some of `ChunkReadStorage` or
 //! `ChunkWriteStorage`. A storage can be as simple as a `HashMap`, which provides good performance for both iteration and
 //! random access. It could also be something more memory efficient like `CompressibleChunkStorage` or
 //! `CompressibleChunkStorageReader`, which perform nearly as well but involve some extra management of the cache.
@@ -146,43 +146,43 @@ use serde::{Deserialize, Serialize};
 ///
 /// `ChunkMap` is generic over the type used to actually store the `Chunk`s. You can use any storage that implements
 /// `ChunkReadStorage` or `ChunkWriteStorage`.
-pub struct ChunkMap<N, T, M, S> {
+pub struct ChunkMap<N, T, Meta, Store> {
     /// Translates from lattice coordinates to chunk key space.
     pub indexer: ChunkIndexer<N>,
 
     ambient_value: T,
-    default_chunk_metadata: M,
-    storage: S,
+    default_chunk_metadata: Meta,
+    storage: Store,
 }
 
 /// A 2-dimensional `ChunkMap`.
-pub type ChunkMap2<T, M, S> = ChunkMap<[i32; 2], T, M, S>;
+pub type ChunkMap2<T, Meta, Store> = ChunkMap<[i32; 2], T, Meta, Store>;
 /// A 3-dimensional `ChunkMap`.
-pub type ChunkMap3<T, M, S> = ChunkMap<[i32; 3], T, M, S>;
+pub type ChunkMap3<T, Meta, Store> = ChunkMap<[i32; 3], T, Meta, Store>;
 
 /// A few pieces of info used within the `ChunkMap`. You will probably keep one of these around to create new `ChunkMap`s from
 /// a chunk storage.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct ChunkMapBuilder<N, T, M = ()> {
+pub struct ChunkMapBuilder<N, T, Meta = ()> {
     /// The shape of each chunk.
     pub chunk_shape: PointN<N>,
     /// The value to use when none is specified, i.e. when creating new chunks or accessing vacant chunks.
     pub ambient_value: T,
     /// The metadata value used to initialize new chunks.
-    pub default_chunk_metadata: M,
+    pub default_chunk_metadata: Meta,
 }
 
 /// A 2-dimensional `ChunkMapBuilder`.
-pub type ChunkMapBuilder2<T, M = ()> = ChunkMapBuilder<[i32; 2], T, M>;
+pub type ChunkMapBuilder2<T, Meta = ()> = ChunkMapBuilder<[i32; 2], T, Meta>;
 /// A 3-dimensional `ChunkMapBuilder`.
-pub type ChunkMapBuilder3<T, M = ()> = ChunkMapBuilder<[i32; 3], T, M>;
+pub type ChunkMapBuilder3<T, Meta = ()> = ChunkMapBuilder<[i32; 3], T, Meta>;
 
-impl<N, T, M> ChunkMapBuilder<N, T, M>
+impl<N, T, Meta> ChunkMapBuilder<N, T, Meta>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
 {
     /// Create a new `ChunkMap` with the given `storage`.
-    pub fn build<S>(self, storage: S) -> ChunkMap<N, T, M, S> {
+    pub fn build<Store>(self, storage: Store) -> ChunkMap<N, T, Meta, Store> {
         ChunkMap::new(
             self.chunk_shape,
             self.ambient_value,
@@ -192,27 +192,27 @@ where
     }
 
     /// Create a new `ChunkMap` using a `FnvHashMap` as the chunk storage.
-    pub fn build_with_hash_map_storage(self) -> ChunkHashMap<N, T, M> {
+    pub fn build_with_hash_map_storage(self) -> ChunkHashMap<N, T, Meta> {
         self.build(FnvHashMap::default())
     }
 }
 
-impl<'a, N, T, M, S> ChunkMap<N, T, M, S> {
+impl<'a, N, T, Meta, Store> ChunkMap<N, T, Meta, Store> {
     /// Consumes `self` and returns the backing chunk storage.
     #[inline]
-    pub fn take_storage(self) -> S {
+    pub fn take_storage(self) -> Store {
         self.storage
     }
 
     /// Borrows the internal chunk storage.
     #[inline]
-    pub fn storage(&self) -> &S {
+    pub fn storage(&self) -> &Store {
         &self.storage
     }
 
     /// Borrows the internal chunk storage.
     #[inline]
-    pub fn storage_mut(&mut self) -> &mut S {
+    pub fn storage_mut(&mut self) -> &mut Store {
         &mut self.storage
     }
 
@@ -227,12 +227,12 @@ impl<'a, N, T, M, S> ChunkMap<N, T, M, S> {
 
     /// Return the default metadata for chunks.
     #[inline]
-    pub fn default_chunk_metadata(&self) -> &M {
+    pub fn default_chunk_metadata(&self) -> &Meta {
         &self.default_chunk_metadata
     }
 }
 
-impl<'a, N, T, M, S> ChunkMap<N, T, M, S>
+impl<'a, N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
 {
@@ -242,8 +242,8 @@ where
     pub fn new(
         chunk_shape: PointN<N>,
         ambient_value: T,
-        default_chunk_metadata: M,
-        storage: S,
+        default_chunk_metadata: Meta,
+        storage: Store,
     ) -> Self {
         Self {
             indexer: ChunkIndexer::new(chunk_shape),
@@ -254,10 +254,10 @@ where
     }
 
     /// Get the `ChunkMapBuilder` used to build this map.
-    pub fn builder(&self) -> ChunkMapBuilder<N, T, M>
+    pub fn builder(&self) -> ChunkMapBuilder<N, T, Meta>
     where
         T: Copy,
-        M: Clone,
+        Meta: Clone,
     {
         ChunkMapBuilder {
             chunk_shape: self.indexer.chunk_shape(),
@@ -267,16 +267,16 @@ where
     }
 }
 
-impl<N, T, M, S> ChunkMap<N, T, M, S>
+impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
-    S: ChunkReadStorage<N, T, M>,
+    Store: ChunkReadStorage<N, T, Meta>,
 {
     /// Borrow the chunk at `key`.
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    pub fn get_chunk(&self, key: &PointN<N>) -> Option<&Chunk<N, T, M>> {
+    pub fn get_chunk(&self, key: &PointN<N>) -> Option<&Chunk<N, T, Meta>> {
         debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.get(key)
@@ -287,23 +287,23 @@ where
     pub fn get_chunk_containing_point(
         &self,
         point: &PointN<N>,
-    ) -> Option<(PointN<N>, &Chunk<N, T, M>)> {
+    ) -> Option<(PointN<N>, &Chunk<N, T, Meta>)> {
         let chunk_key = self.indexer.chunk_key_containing_point(point);
 
         self.get_chunk(&chunk_key).map(|c| (chunk_key, c))
     }
 }
 
-impl<N, T, M, S> ChunkMap<N, T, M, S>
+impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
-    S: ChunkWriteStorage<N, T, M>,
+    Store: ChunkWriteStorage<N, T, Meta>,
 {
     /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
     ///
     /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
     #[inline]
-    pub fn write_chunk(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) {
+    pub fn write_chunk(&mut self, key: PointN<N>, chunk: Chunk<N, T, Meta>) {
         debug_assert!(chunk.array.extent().shape.eq(&self.indexer.chunk_shape()));
         debug_assert!(self.indexer.chunk_key_is_valid(&key));
 
@@ -317,8 +317,8 @@ where
     pub fn replace_chunk(
         &mut self,
         key: PointN<N>,
-        chunk: Chunk<N, T, M>,
-    ) -> Option<Chunk<N, T, M>> {
+        chunk: Chunk<N, T, Meta>,
+    ) -> Option<Chunk<N, T, Meta>> {
         debug_assert!(chunk.array.extent().shape.eq(&self.indexer.chunk_shape()));
         debug_assert!(self.indexer.chunk_key_is_valid(&key));
 
@@ -329,7 +329,7 @@ where
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    fn get_mut_chunk(&mut self, key: &PointN<N>) -> Option<&mut Chunk<N, T, M>> {
+    fn get_mut_chunk(&mut self, key: &PointN<N>) -> Option<&mut Chunk<N, T, Meta>> {
         debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.get_mut(key)
@@ -342,8 +342,8 @@ where
     pub fn get_mut_chunk_or_insert_with(
         &mut self,
         key: PointN<N>,
-        create_chunk: impl FnOnce() -> Chunk<N, T, M>,
-    ) -> &mut Chunk<N, T, M> {
+        create_chunk: impl FnOnce() -> Chunk<N, T, Meta>,
+    ) -> &mut Chunk<N, T, Meta> {
         debug_assert!(self.indexer.chunk_key_is_valid(&key));
 
         self.storage.get_mut_or_insert_with(key, create_chunk)
@@ -354,7 +354,7 @@ where
     pub fn get_mut_chunk_containing_point(
         &mut self,
         point: &PointN<N>,
-    ) -> Option<(PointN<N>, &mut Chunk<N, T, M>)> {
+    ) -> Option<(PointN<N>, &mut Chunk<N, T, Meta>)> {
         let chunk_key = self.indexer.chunk_key_containing_point(point);
 
         self.get_mut_chunk(&chunk_key).map(|c| (chunk_key, c))
@@ -366,7 +366,7 @@ where
     pub fn get_mut_point_or_insert_chunk_with(
         &mut self,
         p: &PointN<N>,
-        create_chunk: impl FnOnce(PointN<N>, ExtentN<N>) -> Chunk<N, T, M>,
+        create_chunk: impl FnOnce(PointN<N>, ExtentN<N>) -> Chunk<N, T, Meta>,
     ) -> (PointN<N>, &mut T)
     where
         ArrayN<N, T>: Array<N>,
@@ -389,7 +389,7 @@ where
     where
         ArrayN<N, T>: Array<N>,
         T: Copy,
-        M: Clone,
+        Meta: Clone,
     {
         let key = self.indexer.chunk_key_containing_point(p);
         let Self {
@@ -420,10 +420,10 @@ where
     }
 }
 
-impl<'a, N, T, M, S> ChunkMap<N, T, M, S>
+impl<'a, N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
-    S: IterChunkKeys<'a, N>,
+    Store: IterChunkKeys<'a, N>,
 {
     /// The smallest extent that bounds all chunks.
     pub fn bounding_extent(&'a self) -> ExtentN<N> {
@@ -442,12 +442,12 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<N, T, M, S> Get<&PointN<N>> for ChunkMap<N, T, M, S>
+impl<N, T, Meta, Store> Get<&PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
     N: ArrayIndexer<N>,
     T: Copy,
-    S: ChunkReadStorage<N, T, M>,
+    Store: ChunkReadStorage<N, T, Meta>,
 {
     type Data = T;
 
@@ -459,13 +459,13 @@ where
     }
 }
 
-impl<'a, N, T, M, S> GetMut<&PointN<N>> for ChunkMap<N, T, M, S>
+impl<'a, N, T, Meta, Store> GetMut<&PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
     N: ArrayIndexer<N>,
     T: Copy,
-    M: Clone,
-    S: ChunkWriteStorage<N, T, M>,
+    Meta: Clone,
+    Store: ChunkWriteStorage<N, T, Meta>,
 {
     type Data = T;
 
@@ -484,12 +484,12 @@ where
 // ██║     ╚██████╔╝██║  ██║    ███████╗██║  ██║╚██████╗██║  ██║
 // ╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
-impl<N, T, M, S> ForEach<N, PointN<N>> for ChunkMap<N, T, M, S>
+impl<N, T, Meta, Store> ForEach<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
     ArrayN<N, T>: ForEach<N, PointN<N>, Data = T>,
     T: Copy,
-    S: ChunkReadStorage<N, T, M>,
+    Store: ChunkReadStorage<N, T, Meta>,
 {
     type Data = T;
 
@@ -507,13 +507,13 @@ where
     }
 }
 
-impl<'a, N, T, M, S> ForEachMut<N, PointN<N>> for ChunkMap<N, T, M, S>
+impl<'a, N, T, Meta, Store> ForEachMut<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
     ArrayN<N, T>: ForEachMut<N, PointN<N>, Data = T>,
     T: Copy,
-    M: Clone,
-    S: ChunkWriteStorage<N, T, M>,
+    Meta: Clone,
+    Store: ChunkWriteStorage<N, T, Meta>,
 {
     type Data = T;
 
@@ -544,12 +544,12 @@ where
 // ╚██████╗╚██████╔╝██║        ██║
 //  ╚═════╝ ╚═════╝ ╚═╝        ╚═╝
 
-impl<'a, N, T, M, S> ReadExtent<'a, N> for ChunkMap<N, T, M, S>
+impl<'a, N, T, Meta, Store> ReadExtent<'a, N> for ChunkMap<N, T, Meta, Store>
 where
     N: ArrayIndexer<N>,
     PointN<N>: 'a + IntegerPoint<N> + ChunkShape<N>,
     T: 'a + Copy,
-    S: ChunkReadStorage<N, T, M>,
+    Store: ChunkReadStorage<N, T, Meta>,
 {
     type Src = ArrayChunkCopySrc<'a, N, T>;
     type SrcIter = ArrayChunkCopySrcIter<'a, N, T>;
@@ -576,13 +576,13 @@ where
 }
 
 // If ArrayN supports writing from type Src, then so does ChunkMap.
-impl<'a, N, T, M, S, Src> WriteExtent<N, Src> for ChunkMap<N, T, M, S>
+impl<'a, N, T, Meta, Store, Src> WriteExtent<N, Src> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
     ArrayN<N, T>: WriteExtent<N, Src>,
     T: Copy,
-    M: Clone,
-    S: ChunkWriteStorage<N, T, M>,
+    Meta: Clone,
+    Store: ChunkWriteStorage<N, T, Meta>,
     Src: Copy,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src) {
@@ -604,7 +604,7 @@ where
     }
 }
 
-pub type ChunkCopySrc<M, N, T> = Either<ArrayCopySrc<M>, AmbientExtent<N, T>>;
+pub type ChunkCopySrc<Meta, N, T> = Either<ArrayCopySrc<Meta>, AmbientExtent<N, T>>;
 
 pub type ArrayChunkCopySrcIter<'a, N, T> =
     std::vec::IntoIter<(ExtentN<N>, ArrayChunkCopySrc<'a, N, T>)>;

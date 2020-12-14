@@ -10,25 +10,25 @@ use slab::Slab;
 
 /// A two-tier chunk storage. The first tier is an LRU cache of uncompressed `Chunk`s. The second tier is a `Slab` of compressed
 /// `Chunk`s.
-pub struct CompressibleChunkStorage<N, T, M, B>
+pub struct CompressibleChunkStorage<N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N>,
     T: Copy,
-    M: Clone,
+    Meta: Clone,
     B: BytesCompression,
 {
-    pub cache: FnvLruCache<PointN<N>, Chunk<N, T, M>, CompressedLocation>,
-    pub compression: FastChunkCompression<N, T, M, B>,
-    pub compressed: CompressedChunks<N, T, M, B>,
+    pub cache: FnvLruCache<PointN<N>, Chunk<N, T, Meta>, CompressedLocation>,
+    pub compression: FastChunkCompression<N, T, Meta, B>,
+    pub compressed: CompressedChunks<N, T, Meta, B>,
 }
 
-pub type CompressedChunks<N, T, M, B> = Slab<Compressed<FastChunkCompression<N, T, M, B>>>;
+pub type CompressedChunks<N, T, Meta, B> = Slab<Compressed<FastChunkCompression<N, T, Meta, B>>>;
 
-impl<N, T, M, B> CompressibleChunkStorage<N, T, M, B>
+impl<N, T, Meta, B> CompressibleChunkStorage<N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
-    M: Clone,
+    Meta: Clone,
     B: BytesCompression,
 {
     pub fn new(compression: B) -> Self {
@@ -40,18 +40,18 @@ where
     }
 }
 
-impl<N, T, M, B> CompressibleChunkStorage<N, T, M, B>
+impl<N, T, Meta, B> CompressibleChunkStorage<N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
-    M: Clone,
+    Meta: Clone,
     B: BytesCompression,
 {
     /// Returns a reader that implements `ChunkReadStorage`.
     pub fn reader<'a>(
         &'a self,
-        local_cache: &'a LocalChunkCache<N, T, M>,
-    ) -> CompressibleChunkStorageReader<'a, N, T, M, B> {
+        local_cache: &'a LocalChunkCache<N, T, Meta>,
+    ) -> CompressibleChunkStorageReader<'a, N, T, Meta, B> {
         CompressibleChunkStorageReader {
             storage: self,
             local_cache,
@@ -62,10 +62,10 @@ where
     ///
     /// WARNING: the cache will not be updated. This method should be used for a read-modify-write workflow where it would be
     /// inefficient to cache the chunk only for it to be overwritten by the modified version.
-    pub fn copy_without_caching(&self, key: &PointN<N>) -> Option<MaybeCompressedChunk<N, T, M, B>>
+    pub fn copy_without_caching(&self, key: &PointN<N>) -> Option<MaybeCompressedChunk<N, T, Meta, B>>
     where
-        Chunk<N, T, M>: Clone,
-        Compressed<FastChunkCompression<N, T, M, B>>: Clone,
+        Chunk<N, T, Meta>: Clone,
+        Compressed<FastChunkCompression<N, T, Meta, B>>: Clone,
     {
         self.cache.get(key).map(|entry| match entry {
             CacheEntry::Cached(chunk) => MaybeCompressedChunk::Decompressed(chunk.clone()),
@@ -76,7 +76,7 @@ where
     }
 
     /// Remove the `Chunk` at `key`.
-    pub fn remove(&mut self, key: &PointN<N>) -> Option<MaybeCompressedChunk<N, T, M, B>> {
+    pub fn remove(&mut self, key: &PointN<N>) -> Option<MaybeCompressedChunk<N, T, Meta, B>> {
         self.cache.remove(key).map(|entry| match entry {
             CacheEntry::Cached(chunk) => MaybeCompressedChunk::Decompressed(chunk),
             CacheEntry::Evicted(location) => {
@@ -101,7 +101,7 @@ where
     ///
     /// This is useful for removing a batch of chunks at a time before compressing them in parallel. Then call
     /// `insert_compressed`.
-    pub fn remove_lru(&mut self) -> Option<(PointN<N>, Chunk<N, T, M>)> {
+    pub fn remove_lru(&mut self) -> Option<(PointN<N>, Chunk<N, T, Meta>)> {
         self.cache.remove_lru()
     }
 
@@ -109,8 +109,8 @@ where
     pub fn insert_compressed(
         &mut self,
         key: PointN<N>,
-        compressed_chunk: Compressed<FastChunkCompression<N, T, M, B>>,
-    ) -> Option<MaybeCompressedChunk<N, T, M, B>> {
+        compressed_chunk: Compressed<FastChunkCompression<N, T, Meta, B>>,
+    ) -> Option<MaybeCompressedChunk<N, T, Meta, B>> {
         let compressed_entry = self.compressed.vacant_entry();
         let old_entry = self
             .cache
@@ -127,7 +127,7 @@ where
 
     /// Consumes and flushes the chunk cache into the chunk map. This is not strictly necessary, but
     /// it will help with caching efficiency.
-    pub fn flush_local_cache(&mut self, local_cache: LocalChunkCache<N, T, M>) {
+    pub fn flush_local_cache(&mut self, local_cache: LocalChunkCache<N, T, Meta>) {
         for (key, chunk) in local_cache.into_iter() {
             self.insert_chunk(key, chunk);
         }
@@ -137,8 +137,8 @@ where
     pub fn insert_chunk(
         &mut self,
         key: PointN<N>,
-        chunk: Chunk<N, T, M>,
-    ) -> Option<MaybeCompressedChunk<N, T, M, B>> {
+        chunk: Chunk<N, T, Meta>,
+    ) -> Option<MaybeCompressedChunk<N, T, Meta, B>> {
         self.cache
             .insert(key, chunk)
             .map(|old_entry| match old_entry {
@@ -150,15 +150,15 @@ where
     }
 }
 
-impl<N, T, M, B> ChunkWriteStorage<N, T, M> for CompressibleChunkStorage<N, T, M, B>
+impl<N, T, Meta, B> ChunkWriteStorage<N, T, Meta> for CompressibleChunkStorage<N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
-    M: Clone,
+    Meta: Clone,
     B: BytesCompression,
 {
     #[inline]
-    fn get_mut(&mut self, key: &PointN<N>) -> Option<&mut Chunk<N, T, M>> {
+    fn get_mut(&mut self, key: &PointN<N>) -> Option<&mut Chunk<N, T, Meta>> {
         let Self {
             cache, compressed, ..
         } = self;
@@ -170,8 +170,8 @@ where
     fn get_mut_or_insert_with(
         &mut self,
         key: PointN<N>,
-        create_chunk: impl FnOnce() -> Chunk<N, T, M>,
-    ) -> &mut Chunk<N, T, M> {
+        create_chunk: impl FnOnce() -> Chunk<N, T, Meta>,
+    ) -> &mut Chunk<N, T, Meta> {
         let Self {
             cache, compressed, ..
         } = self;
@@ -183,7 +183,7 @@ where
     }
 
     #[inline]
-    fn replace(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) -> Option<Chunk<N, T, M>> {
+    fn replace(&mut self, key: PointN<N>, chunk: Chunk<N, T, Meta>) -> Option<Chunk<N, T, Meta>> {
         self.insert_chunk(key, chunk)
             .map(|old_chunk| match old_chunk {
                 MaybeCompressedChunk::Decompressed(old_chunk) => old_chunk,
@@ -192,35 +192,35 @@ where
     }
 
     #[inline]
-    fn write(&mut self, key: PointN<N>, chunk: Chunk<N, T, M>) {
+    fn write(&mut self, key: PointN<N>, chunk: Chunk<N, T, Meta>) {
         self.insert_chunk(key, chunk);
     }
 }
 
-impl<'a, N, T, M, B> IterChunkKeys<'a, N> for CompressibleChunkStorage<N, T, M, B>
+impl<'a, N, T, Meta, B> IterChunkKeys<'a, N> for CompressibleChunkStorage<N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
-    M: Clone,
-    Chunk<N, T, M>: 'a,
+    Meta: Clone,
+    Chunk<N, T, Meta>: 'a,
     B: BytesCompression,
 {
-    type Iter = LruChunkCacheKeys<'a, N, T, M>;
+    type Iter = LruChunkCacheKeys<'a, N, T, Meta>;
 
     fn chunk_keys(&'a self) -> Self::Iter {
         self.cache.keys()
     }
 }
 
-impl<N, T, M, B> IntoIterator for CompressibleChunkStorage<N, T, M, B>
+impl<N, T, Meta, B> IntoIterator for CompressibleChunkStorage<N, T, Meta, B>
 where
     PointN<N>: 'static + IntegerPoint<N> + Hash + Eq,
     T: 'static + Copy,
-    M: 'static + Clone,
+    Meta: 'static + Clone,
     B: 'static + BytesCompression,
 {
     type IntoIter = Box<dyn Iterator<Item = Self::Item>>;
-    type Item = (PointN<N>, Chunk<N, T, M>);
+    type Item = (PointN<N>, Chunk<N, T, Meta>);
 
     fn into_iter(self) -> Self::IntoIter {
         let Self {
@@ -237,18 +237,18 @@ where
 }
 
 /// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
-pub type CompressibleChunkMap<N, T, M, B> = ChunkMap<N, T, M, CompressibleChunkStorage<N, T, M, B>>;
+pub type CompressibleChunkMap<N, T, Meta, B> = ChunkMap<N, T, Meta, CompressibleChunkStorage<N, T, Meta, B>>;
 
 /// An index into a compressed chunk slab.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CompressedLocation(pub usize);
 
-pub type LruChunkCacheKeys<'a, N, T, M> =
-    LruCacheKeys<'a, PointN<N>, Chunk<N, T, M>, CompressedLocation>;
-pub type LruChunkCacheEntries<'a, N, T, M> =
-    LruCacheEntries<'a, PointN<N>, Chunk<N, T, M>, CompressedLocation>;
-pub type LruChunkCacheIntoIter<N, T, M> =
-    LruCacheIntoIter<PointN<N>, Chunk<N, T, M>, CompressedLocation>;
+pub type LruChunkCacheKeys<'a, N, T, Meta> =
+    LruCacheKeys<'a, PointN<N>, Chunk<N, T, Meta>, CompressedLocation>;
+pub type LruChunkCacheEntries<'a, N, T, Meta> =
+    LruCacheEntries<'a, PointN<N>, Chunk<N, T, Meta>, CompressedLocation>;
+pub type LruChunkCacheIntoIter<N, T, Meta> =
+    LruCacheIntoIter<PointN<N>, Chunk<N, T, Meta>, CompressedLocation>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
@@ -256,18 +256,18 @@ macro_rules! define_conditional_aliases {
         use crate::$backend;
 
         /// 2-dimensional `CompressibleChunkStorage`.
-        pub type CompressibleChunkStorage2<T, M = (), B = $backend> =
-            CompressibleChunkStorage<[i32; 2], T, M, B>;
+        pub type CompressibleChunkStorage2<T, Meta = (), B = $backend> =
+            CompressibleChunkStorage<[i32; 2], T, Meta, B>;
         /// 3-dimensional `CompressibleChunkStorage`.
-        pub type CompressibleChunkStorage3<T, M = (), B = $backend> =
-            CompressibleChunkStorage<[i32; 3], T, M, B>;
+        pub type CompressibleChunkStorage3<T, Meta = (), B = $backend> =
+            CompressibleChunkStorage<[i32; 3], T, Meta, B>;
 
         /// A 2-dimensional `CompressibleChunkMap`.
-        pub type CompressibleChunkMap2<T, M = (), B = $backend> =
-            CompressibleChunkMap<[i32; 2], T, M, B>;
+        pub type CompressibleChunkMap2<T, Meta = (), B = $backend> =
+            CompressibleChunkMap<[i32; 2], T, Meta, B>;
         /// A 3-dimensional `CompressibleChunkMap`.
-        pub type CompressibleChunkMap3<T, M = (), B = $backend> =
-            CompressibleChunkMap<[i32; 3], T, M, B>;
+        pub type CompressibleChunkMap3<T, Meta = (), B = $backend> =
+            CompressibleChunkMap<[i32; 3], T, Meta, B>;
     };
 }
 

@@ -640,7 +640,7 @@ impl_array_for_each!(
 
 // Newtype avoids potential conflicting impls downstream.
 #[derive(Copy, Clone)]
-pub struct ArrayCopySrc<M>(pub M);
+pub struct ArrayCopySrc<Meta>(pub Meta);
 
 impl<'a, N: 'a, T: 'a> ReadExtent<'a, N> for ArrayN<N, T>
 where
@@ -681,18 +681,18 @@ where
     }
 }
 
-impl<'a, N, T, M, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, M, F>>> for ArrayN<N, T>
+impl<'a, N, T, Meta, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Meta, F>>> for ArrayN<N, T>
 where
     Self: Array<N>,
     T: Clone,
-    TransformMap<'a, M, F>: Array<N> + GetUncheckedRelease<Stride, T>,
+    TransformMap<'a, Meta, F>: Array<N> + GetUncheckedRelease<Stride, T>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
 {
     fn write_extent(
         &mut self,
         extent: &ExtentN<N>,
-        src_array: ArrayCopySrc<TransformMap<'a, M, F>>,
+        src_array: ArrayCopySrc<TransformMap<'a, Meta, F>>,
     ) {
         // It is assumed by the interface that extent is a subset of the src array, so we only need
         // to intersect with the destination.
@@ -721,15 +721,15 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
     });
 }
 
-impl<M, N, T> WriteExtent<N, ChunkCopySrc<M, N, T>> for ArrayN<N, T>
+impl<Meta, N, T> WriteExtent<N, ChunkCopySrc<Meta, N, T>> for ArrayN<N, T>
 where
-    Self: WriteExtent<N, ArrayCopySrc<M>>,
+    Self: WriteExtent<N, ArrayCopySrc<Meta>>,
     N: ArrayIndexer<N>,
     T: Clone,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: PartialEq,
 {
-    fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<M, N, T>) {
+    fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<Meta, N, T>) {
         match src {
             Either::Left(array) => self.write_extent(extent, array),
             Either::Right(ambient) => self.fill_extent(extent, ambient.get()),

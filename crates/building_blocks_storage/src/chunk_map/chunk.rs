@@ -7,15 +7,15 @@ use serde::{Deserialize, Serialize};
 
 /// One piece of a chunked lattice map. Contains both some generic metadata and the data for each point in the chunk extent.
 #[derive(Clone, Deserialize, Serialize)]
-pub struct Chunk<N, T, M> {
-    pub metadata: M,
+pub struct Chunk<N, T, Meta> {
+    pub metadata: Meta,
     pub array: ArrayN<N, T>,
 }
 
 /// A 2-dimensional `Chunk`.
-pub type Chunk2<T, M> = Chunk<[i32; 2], T, M>;
+pub type Chunk2<T, Meta> = Chunk<[i32; 2], T, Meta>;
 /// A 3-dimensional `Chunk`.
-pub type Chunk3<T, M> = Chunk<[i32; 3], T, M>;
+pub type Chunk3<T, Meta> = Chunk<[i32; 3], T, Meta>;
 
 impl<N, T> Chunk<N, T, ()> {
     /// Constructs a chunk without metadata.
@@ -31,8 +31,8 @@ pub trait ChunkShape<N> {
     /// Makes the mask required to convert points to chunk keys.
     fn mask(&self) -> PointN<N>;
 
-    /// A chunk key is just the leading m bits of each component of a point, where m depends on the
-    /// size of the chunk. It can also be interpreted as the minimum point of a chunk extent.
+    /// A chunk key is just the leading m bits of each component of a point, where m depends on the size of the chunk. It can
+    /// also be interpreted as the minimum point of a chunk extent.
     fn chunk_key_containing_point(mask: &PointN<N>, p: &PointN<N>) -> PointN<N>;
 
     fn ilog2(&self) -> PointN<N>;

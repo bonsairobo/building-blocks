@@ -9,12 +9,12 @@ use building_blocks_core::prelude::*;
 
 /// A `Compression` used for compressing `Chunk`s. It just uses the internal `FastArrayCompression` and clones the metadata.
 #[derive(Copy, Clone)]
-pub struct FastChunkCompression<N, T, M, B> {
+pub struct FastChunkCompression<N, T, Meta, B> {
     pub array_compression: FastArrayCompression<N, T, B>,
-    marker: std::marker::PhantomData<M>,
+    marker: std::marker::PhantomData<Meta>,
 }
 
-impl<N, T, M, B> FastChunkCompression<N, T, M, B> {
+impl<N, T, Meta, B> FastChunkCompression<N, T, Meta, B> {
     pub fn new(bytes_compression: B) -> Self {
         Self {
             array_compression: FastArrayCompression::new(bytes_compression),
@@ -25,25 +25,25 @@ impl<N, T, M, B> FastChunkCompression<N, T, M, B> {
 
 /// The target of `FastChunkCompression`. You probably want to use `Compressed<FastChunkCompression>` instead.
 #[derive(Clone)]
-pub struct FastCompressedChunk<N, T, M, B>
+pub struct FastCompressedChunk<N, T, Meta, B>
 where
     T: Copy,
     B: BytesCompression,
     PointN<N>: IntegerPoint<N>,
 {
-    pub metadata: M, // metadata doesn't get compressed, hope it's small!
+    pub metadata: Meta, // metadata doesn't get compressed, hope it's small!
     pub compressed_array: Compressed<FastArrayCompression<N, T, B>>,
 }
 
-impl<N, T, M, B> Compression for FastChunkCompression<N, T, M, B>
+impl<N, T, Meta, B> Compression for FastChunkCompression<N, T, Meta, B>
 where
     T: Copy,
-    M: Clone,
+    Meta: Clone,
     B: BytesCompression,
     PointN<N>: IntegerPoint<N>,
 {
-    type Data = Chunk<N, T, M>;
-    type CompressedData = FastCompressedChunk<N, T, M, B>;
+    type Data = Chunk<N, T, Meta>;
+    type CompressedData = FastCompressedChunk<N, T, Meta, B>;
 
     // PERF: cloning the metadata is unfortunate
 
@@ -62,28 +62,28 @@ where
     }
 }
 
-pub type BincodeChunkCompression<N, T, M, B> = BincodeCompression<Chunk<N, T, M>, B>;
-pub type BincodeCompressedChunk<N, T, M, B> = Compressed<BincodeCompression<Chunk<N, T, M>, B>>;
+pub type BincodeChunkCompression<N, T, Meta, B> = BincodeCompression<Chunk<N, T, Meta>, B>;
+pub type BincodeCompressedChunk<N, T, Meta, B> = Compressed<BincodeCompression<Chunk<N, T, Meta>, B>>;
 
-pub type MaybeCompressedChunk<N, T, M, B> =
-    MaybeCompressed<Chunk<N, T, M>, Compressed<FastChunkCompression<N, T, M, B>>>;
+pub type MaybeCompressedChunk<N, T, Meta, B> =
+    MaybeCompressed<Chunk<N, T, Meta>, Compressed<FastChunkCompression<N, T, Meta, B>>>;
 
-pub type MaybeCompressedChunkRef<'a, N, T, M, B> =
-    MaybeCompressed<&'a Chunk<N, T, M>, &'a Compressed<FastChunkCompression<N, T, M, B>>>;
+pub type MaybeCompressedChunkRef<'a, N, T, Meta, B> =
+    MaybeCompressed<&'a Chunk<N, T, Meta>, &'a Compressed<FastChunkCompression<N, T, Meta, B>>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
         use super::*;
         use crate::$backend;
 
-        pub type MaybeCompressedChunk2<T, M = (), B = $backend> =
-            MaybeCompressedChunk<[i32; 2], T, M, B>;
-        pub type MaybeCompressedChunk3<T, M = (), B = $backend> =
-            MaybeCompressedChunk<[i32; 3], T, M, B>;
-        pub type MaybeCompressedChunkRef2<'a, T, M = (), B = $backend> =
-            MaybeCompressedChunkRef<'a, [i32; 2], T, M, B>;
-        pub type MaybeCompressedChunkRef3<'a, T, M = (), B = $backend> =
-            MaybeCompressedChunkRef<'a, [i32; 3], T, M, B>;
+        pub type MaybeCompressedChunk2<T, Meta = (), B = $backend> =
+            MaybeCompressedChunk<[i32; 2], T, Meta, B>;
+        pub type MaybeCompressedChunk3<T, Meta = (), B = $backend> =
+            MaybeCompressedChunk<[i32; 3], T, Meta, B>;
+        pub type MaybeCompressedChunkRef2<'a, T, Meta = (), B = $backend> =
+            MaybeCompressedChunkRef<'a, [i32; 2], T, Meta, B>;
+        pub type MaybeCompressedChunkRef3<'a, T, Meta = (), B = $backend> =
+            MaybeCompressedChunkRef<'a, [i32; 3], T, Meta, B>;
     };
 }
 

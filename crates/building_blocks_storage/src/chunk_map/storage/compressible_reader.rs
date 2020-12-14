@@ -11,26 +11,26 @@ use fnv::FnvBuildHasher;
 /// `CompressibleChunkStorage::reader` method.
 ///
 /// This works by using a `LocalChunkCache` for storing decompressed `Chunk`s from cache misses.
-pub struct CompressibleChunkStorageReader<'a, N, T, M, B>
+pub struct CompressibleChunkStorageReader<'a, N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N>,
     T: Copy,
-    M: Clone,
+    Meta: Clone,
     B: BytesCompression,
 {
-    pub storage: &'a CompressibleChunkStorage<N, T, M, B>,
-    pub local_cache: &'a LocalChunkCache<N, T, M>,
+    pub storage: &'a CompressibleChunkStorage<N, T, Meta, B>,
+    pub local_cache: &'a LocalChunkCache<N, T, Meta>,
 }
 
-impl<'a, N, T, M, B> ChunkReadStorage<N, T, M> for CompressibleChunkStorageReader<'a, N, T, M, B>
+impl<'a, N, T, Meta, B> ChunkReadStorage<N, T, Meta> for CompressibleChunkStorageReader<'a, N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
-    M: Clone,
+    Meta: Clone,
     B: BytesCompression,
 {
     #[inline]
-    fn get(&self, key: &PointN<N>) -> Option<&Chunk<N, T, M>> {
+    fn get(&self, key: &PointN<N>) -> Option<&Chunk<N, T, Meta>> {
         let Self {
             storage: CompressibleChunkStorage {
                 cache, compressed, ..
@@ -46,29 +46,29 @@ where
     }
 }
 
-impl<'a, N, T, M, B> IterChunkKeys<'a, N> for CompressibleChunkStorageReader<'a, N, T, M, B>
+impl<'a, N, T, Meta, B> IterChunkKeys<'a, N> for CompressibleChunkStorageReader<'a, N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
-    M: Clone,
+    Meta: Clone,
     B: BytesCompression,
 {
-    type Iter = LruChunkCacheKeys<'a, N, T, M>;
+    type Iter = LruChunkCacheKeys<'a, N, T, Meta>;
 
     fn chunk_keys(&'a self) -> Self::Iter {
         self.storage.cache.keys()
     }
 }
 
-impl<'a, N, T, M, B> IntoIterator for &'a CompressibleChunkStorageReader<'a, N, T, M, B>
+impl<'a, N, T, Meta, B> IntoIterator for &'a CompressibleChunkStorageReader<'a, N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
-    M: Clone,
+    Meta: Clone,
     B: BytesCompression,
 {
-    type IntoIter = CompressibleChunkStorageReaderIntoIter<'a, N, T, M, B>;
-    type Item = (&'a PointN<N>, &'a Chunk<N, T, M>);
+    type IntoIter = CompressibleChunkStorageReaderIntoIter<'a, N, T, Meta, B>;
+    type Item = (&'a PointN<N>, &'a Chunk<N, T, Meta>);
 
     fn into_iter(self) -> Self::IntoIter {
         let &CompressibleChunkStorageReader {
@@ -84,26 +84,26 @@ where
     }
 }
 
-pub struct CompressibleChunkStorageReaderIntoIter<'a, N, T, M, B>
+pub struct CompressibleChunkStorageReaderIntoIter<'a, N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N>,
     T: Copy,
-    M: Clone,
+    Meta: Clone,
     B: BytesCompression,
 {
-    cache_entries: LruChunkCacheEntries<'a, N, T, M>,
-    local_cache: &'a LocalChunkCache<N, T, M>,
-    compressed: &'a CompressedChunks<N, T, M, B>,
+    cache_entries: LruChunkCacheEntries<'a, N, T, Meta>,
+    local_cache: &'a LocalChunkCache<N, T, Meta>,
+    compressed: &'a CompressedChunks<N, T, Meta, B>,
 }
 
-impl<'a, N, T, M, B> Iterator for CompressibleChunkStorageReaderIntoIter<'a, N, T, M, B>
+impl<'a, N, T, Meta, B> Iterator for CompressibleChunkStorageReaderIntoIter<'a, N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
-    M: Clone,
+    Meta: Clone,
     B: BytesCompression,
 {
-    type Item = (&'a PointN<N>, &'a Chunk<N, T, M>);
+    type Item = (&'a PointN<N>, &'a Chunk<N, T, Meta>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.cache_entries
@@ -121,15 +121,15 @@ where
 }
 
 /// A `LocalCache` of `Chunk`s.
-pub type LocalChunkCache<N, T, M = ()> = LocalCache<PointN<N>, Chunk<N, T, M>, FnvBuildHasher>;
+pub type LocalChunkCache<N, T, Meta = ()> = LocalCache<PointN<N>, Chunk<N, T, Meta>, FnvBuildHasher>;
 /// A `LocalCache` of `Chunk2`s.
-pub type LocalChunkCache2<T, M = ()> = LocalChunkCache<[i32; 2], T, M>;
+pub type LocalChunkCache2<T, Meta = ()> = LocalChunkCache<[i32; 2], T, Meta>;
 /// A `LocalCache` of `Chunk3`s.
-pub type LocalChunkCache3<T, M = ()> = LocalChunkCache<[i32; 3], T, M>;
+pub type LocalChunkCache3<T, Meta = ()> = LocalChunkCache<[i32; 3], T, Meta>;
 
 /// A `ChunkMap` backed by a `CompressibleChunkStorageReader`.
-pub type CompressibleChunkMapReader<'a, N, T, M, B> =
-    ChunkMap<N, T, M, CompressibleChunkStorageReader<'a, N, T, M, B>>;
+pub type CompressibleChunkMapReader<'a, N, T, Meta, B> =
+    ChunkMap<N, T, Meta, CompressibleChunkStorageReader<'a, N, T, Meta, B>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
@@ -137,18 +137,18 @@ macro_rules! define_conditional_aliases {
         use crate::$backend;
 
         /// 2-dimensional `CompressibleChunkStorageReader`.
-        pub type CompressibleChunkStorageReader2<'a, T, M = (), B = $backend> =
-            CompressibleChunkStorageReader<'a, [i32; 2], T, M, B>;
+        pub type CompressibleChunkStorageReader2<'a, T, Meta = (), B = $backend> =
+            CompressibleChunkStorageReader<'a, [i32; 2], T, Meta, B>;
         /// 3-dimensional `CompressibleChunkStorageReader`.
-        pub type CompressibleChunkStorageReader3<'a, T, M = (), B = $backend> =
-            CompressibleChunkStorageReader<'a, [i32; 3], T, M, B>;
+        pub type CompressibleChunkStorageReader3<'a, T, Meta = (), B = $backend> =
+            CompressibleChunkStorageReader<'a, [i32; 3], T, Meta, B>;
 
         /// 2-dimensional `CompressibleChunkMapReader`.
-        pub type CompressibleChunkMapReader2<'a, T, M = (), B = $backend> =
-            CompressibleChunkMapReader<'a, [i32; 2], T, M, B>;
+        pub type CompressibleChunkMapReader2<'a, T, Meta = (), B = $backend> =
+            CompressibleChunkMapReader<'a, [i32; 2], T, Meta, B>;
         /// 3-dimensional `CompressibleChunkMapReader`.
-        pub type CompressibleChunkMapReader3<'a, T, M = (), B = $backend> =
-            CompressibleChunkMapReader<'a, [i32; 3], T, M, B>;
+        pub type CompressibleChunkMapReader3<'a, T, Meta = (), B = $backend> =
+            CompressibleChunkMapReader<'a, [i32; 3], T, Meta, B>;
     };
 }
 

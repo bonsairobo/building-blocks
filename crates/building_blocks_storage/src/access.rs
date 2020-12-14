@@ -102,7 +102,10 @@ pub trait GetUncheckedRelease<L, T>: Get<L, Data = T> + GetUnchecked<L, Data = T
     }
 }
 
-impl<M, L, T> GetUncheckedRelease<L, T> for M where M: Get<L, Data = T> + GetUnchecked<L, Data = T> {}
+impl<Meta, L, T> GetUncheckedRelease<L, T> for Meta where
+    Meta: Get<L, Data = T> + GetUnchecked<L, Data = T>
+{
+}
 
 pub trait GetUncheckedMutRelease<L, T>: GetMut<L, Data = T> + GetUncheckedMut<L, Data = T> {
     /// Get mutable reference to the value at location. Skips bounds checking in release mode.
@@ -118,8 +121,8 @@ pub trait GetUncheckedMutRelease<L, T>: GetMut<L, Data = T> + GetUncheckedMut<L,
     }
 }
 
-impl<M, L, T> GetUncheckedMutRelease<L, T> for M where
-    M: GetMut<L, Data = T> + GetUncheckedMut<L, Data = T>
+impl<Meta, L, T> GetUncheckedMutRelease<L, T> for Meta where
+    Meta: GetMut<L, Data = T> + GetUncheckedMut<L, Data = T>
 {
 }
 

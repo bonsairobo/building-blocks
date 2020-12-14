@@ -202,9 +202,9 @@ fn set_up_array(size: i32) -> (Array3<i32>, Extent3i) {
     (array, iter_extent)
 }
 
-fn set_up_chunk_map<S>(storage: S, size: i32) -> (ChunkMap3<i32, (), S>, Extent3i)
+fn set_up_chunk_map<Store>(storage: Store, size: i32) -> (ChunkMap3<i32, (), Store>, Extent3i)
 where
-    S: ChunkWriteStorage<[i32; 3], i32, ()>,
+    Store: ChunkWriteStorage<[i32; 3], i32, ()>,
 {
     let mut map = DEFAULT_BUILDER.build(storage);
     let iter_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));

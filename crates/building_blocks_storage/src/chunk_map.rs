@@ -131,7 +131,7 @@ use crate::{
     access::{
         ForEach, ForEachMut, GetUncheckedMutRelease, GetUncheckedRelease, ReadExtent, WriteExtent,
     },
-    array::{Array, ArrayCopySrc, ArrayIndexer, ArrayN},
+    array::{ArrayCopySrc, ArrayIndexer, ArrayN},
     Get, GetMut,
 };
 
@@ -369,7 +369,7 @@ where
         create_chunk: impl FnOnce(PointN<N>, ExtentN<N>) -> Chunk<N, T, Meta>,
     ) -> (PointN<N>, &mut T)
     where
-        ArrayN<N, T>: Array<N>,
+        N: ArrayIndexer<N>,
     {
         let key = self.indexer.chunk_key_containing_point(p);
         let Self {
@@ -387,7 +387,7 @@ where
     #[inline]
     pub fn get_mut_point_and_chunk_key(&mut self, p: &PointN<N>) -> (PointN<N>, &mut T)
     where
-        ArrayN<N, T>: Array<N>,
+        N: ArrayIndexer<N>,
         T: Copy,
         Meta: Clone,
     {

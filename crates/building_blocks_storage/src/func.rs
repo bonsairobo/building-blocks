@@ -12,19 +12,19 @@
 //! copy_extent(&sample_extent, &|p: &Point3i| (p.dot(p) - 10) as f32, &mut sampled_sphere);
 //!```
 
-use crate::{ForEach, Get, ReadExtent};
+use crate::{ForEach, GetOwned, ReadExtent};
 
 use building_blocks_core::prelude::*;
 
 use core::iter::{once, Once};
 
-impl<F, T, Coord> Get<Coord> for F
+impl<F, T, Coord> GetOwned<Coord> for F
 where
     F: Fn(Coord) -> T,
 {
     type Data = T;
 
-    fn get(&self, c: Coord) -> T {
+    fn get_owned(&self, c: Coord) -> T {
         (self)(c)
     }
 }

@@ -32,9 +32,9 @@ where
 {
     type Data = T;
 
-    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
+    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &Self::Data)) {
         for p in extent.iter_points() {
-            f(p, self.value.clone());
+            f(p, &self.value);
         }
     }
 }

@@ -56,11 +56,27 @@ use building_blocks_core::ExtentN;
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-pub trait Get<L> {
+pub trait GetOwned<L> {
     type Data;
 
     /// Get an owned value at `location`.
-    fn get(&self, location: L) -> Self::Data;
+    fn get_owned(&self, location: L) -> Self::Data;
+}
+
+pub trait Get<L> {
+    type Data;
+
+    /// Get an immutable reference to the value at `location`.
+    fn get(&self, location: L) -> &Self::Data;
+}
+
+impl<L: Clone, X> GetOwned<L> for X where X: Get<L> {
+    type Data = <Self as Get<L>>::Data;
+
+    #[inline]
+    fn get_owned(&self, location: L) -> Self::Data {
+        todo!()
+    }
 }
 
 pub trait GetMut<L> {
@@ -70,30 +86,67 @@ pub trait GetMut<L> {
     fn get_mut(&mut self, location: L) -> &mut Self::Data;
 }
 
+pub trait GetUncheckedOwned<L> {
+    type Data;
+
+    /// Get the value at `location` without doing bounds checking.
+    /// # Safety
+    /// Don't access out of bounds.
+    unsafe fn get_unchecked_owned(&self, location: L) -> Self::Data;
+}
+
 pub trait GetUnchecked<L> {
     type Data;
 
-    /// Get the value at location without doing bounds checking.
+    /// Get an immutable reference to the value at `location` without doing bounds checking.
     /// # Safety
     /// Don't access out of bounds.
-    unsafe fn get_unchecked(&self, location: L) -> Self::Data;
+    unsafe fn get_unchecked(&self, location: L) -> &Self::Data;
+}
+
+impl<L: Clone, X> GetUncheckedOwned<L> for X where X: GetUnchecked<L> {
+    type Data = <Self as GetUnchecked<L>>::Data;
+
+    #[inline]
+    unsafe fn get_unchecked_owned(&self, location: L) -> Self::Data {
+        todo!()
+    }
 }
 
 pub trait GetUncheckedMut<L> {
     type Data;
 
-    /// Get a mutable reference to the value at location without doing bounds checking.
+    /// Get a mutable reference to the value at `location` without doing bounds checking.
     /// # Safety
     /// Don't access out of bounds.
     unsafe fn get_unchecked_mut(&mut self, location: L) -> &mut Self::Data;
 }
 
-pub trait GetUncheckedRelease<L, T>: Get<L, Data = T> + GetUnchecked<L, Data = T> {
-    /// Get the value at location. Skips bounds checking in release mode.
+pub trait GetUncheckedOwnedRelease<L, T>: GetOwned<L, Data = T> + GetUncheckedOwned<L, Data = T> {
+    /// Get the value at `location`. Skips bounds checking in release mode.
     /// # Safety
     /// Don't access out of bounds.
     #[inline]
-    fn get_unchecked_release(&self, location: L) -> T {
+    fn get_unchecked_owned_release(&self, location: L) -> T {
+        if cfg!(debug_assertions) {
+            self.get_owned(location)
+        } else {
+            unsafe { self.get_unchecked_owned(location) }
+        }
+    }
+}
+
+impl<Meta, L, T> GetUncheckedOwnedRelease<L, T> for Meta where
+    Meta: GetOwned<L, Data = T> + GetUncheckedOwned<L, Data = T>
+{
+}
+
+pub trait GetUncheckedRelease<L, T>: Get<L, Data = T> + GetUnchecked<L, Data = T> {
+    /// Get an immutable reference to the value at `location`. Skips bounds checking in release mode.
+    /// # Safety
+    /// Don't access out of bounds.
+    #[inline]
+    fn get_unchecked_release(&self, location: L) -> &T {
         if cfg!(debug_assertions) {
             self.get(location)
         } else {
@@ -108,7 +161,7 @@ impl<Meta, L, T> GetUncheckedRelease<L, T> for Meta where
 }
 
 pub trait GetUncheckedMutRelease<L, T>: GetMut<L, Data = T> + GetUncheckedMut<L, Data = T> {
-    /// Get mutable reference to the value at location. Skips bounds checking in release mode.
+    /// Get a mutable reference to the value at location. Skips bounds checking in release mode.
     /// # Safety
     /// Don't access out of bounds.
     #[inline]
@@ -133,10 +186,16 @@ impl<Meta, L, T> GetUncheckedMutRelease<L, T> for Meta where
 // ██║     ╚██████╔╝██║  ██║    ███████╗██║  ██║╚██████╗██║  ██║
 // ╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
+pub trait ForEachOwned<N, Coord> {
+    type Data;
+
+    fn for_each_owned(&self, extent: &ExtentN<N>, f: impl FnMut(Coord, Self::Data));
+}
+
 pub trait ForEach<N, Coord> {
     type Data;
 
-    fn for_each(&self, extent: &ExtentN<N>, f: impl FnMut(Coord, Self::Data));
+    fn for_each(&self, extent: &ExtentN<N>, f: impl FnMut(Coord, &Self::Data));
 }
 
 pub trait ForEachMut<N, Coord> {

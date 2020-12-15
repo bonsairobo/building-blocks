@@ -452,10 +452,10 @@ where
     type Data = T;
 
     #[inline]
-    fn get(&self, p: &PointN<N>) -> Self::Data {
+    fn get(&self, p: &PointN<N>) -> &Self::Data {
         self.get_chunk_containing_point(p)
             .map(|(_key, chunk)| chunk.array.get_unchecked_release(p))
-            .unwrap_or(self.ambient_value)
+            .unwrap_or(&self.ambient_value)
     }
 }
 
@@ -494,7 +494,7 @@ where
     type Data = T;
 
     #[inline]
-    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
+    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &Self::Data)) {
         for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
             if let Some(chunk) = self.get_chunk(&chunk_key) {
                 chunk.array.for_each(extent, |p, value| f(p, value));

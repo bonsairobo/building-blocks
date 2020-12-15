@@ -78,9 +78,11 @@ pub use array3::Array3;
 pub use compression::{FastArrayCompression, FastCompressedArray};
 
 use crate::{
-    access::{GetUnchecked, GetUncheckedMut, GetUncheckedMutRelease, GetUncheckedRelease},
     chunk_map::ChunkCopySrc,
-    ForEach, ForEachMut, Get, GetMut, ReadExtent, TransformMap, WriteExtent,
+    GetOwned, Get, GetMut,
+    GetUncheckedOwned, GetUnchecked, GetUncheckedMut,
+    GetUncheckedOwnedRelease, GetUncheckedRelease, GetUncheckedMutRelease,
+    ForEach, ForEachMut, ReadExtent, TransformMap, WriteExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -424,8 +426,8 @@ where
     type Data = T;
 
     #[inline]
-    fn get(&self, stride: Stride) -> Self::Data {
-        self.values[stride.0].clone()
+    fn get(&self, stride: Stride) -> &Self::Data {
+        &self.values[stride.0]
     }
 }
 
@@ -436,8 +438,8 @@ where
     type Data = T;
 
     #[inline]
-    unsafe fn get_unchecked(&self, stride: Stride) -> Self::Data {
-        self.values.get_unchecked(stride.0).clone()
+    unsafe fn get_unchecked(&self, stride: Stride) -> &Self::Data {
+        &self.values.get_unchecked(stride.0)
     }
 }
 
@@ -467,7 +469,7 @@ where
     type Data = T;
 
     #[inline]
-    fn get(&self, p: &Local<N>) -> Self::Data {
+    fn get(&self, p: &Local<N>) -> &Self::Data {
         self.get(self.stride_from_local_point(p))
     }
 }
@@ -493,7 +495,7 @@ where
     type Data = T;
 
     #[inline]
-    fn get(&self, p: &PointN<N>) -> Self::Data {
+    fn get(&self, p: &PointN<N>) -> &Self::Data {
         let local_p = *p - self.extent().minimum;
 
         self.get(&Local(local_p))
@@ -523,7 +525,7 @@ where
     type Data = T;
 
     #[inline]
-    unsafe fn get_unchecked(&self, p: &Local<N>) -> Self::Data {
+    unsafe fn get_unchecked(&self, p: &Local<N>) -> &Self::Data {
         self.get_unchecked(self.stride_from_local_point(p))
     }
 }
@@ -549,7 +551,7 @@ where
     type Data = T;
 
     #[inline]
-    unsafe fn get_unchecked(&self, p: &PointN<N>) -> Self::Data {
+    unsafe fn get_unchecked(&self, p: &PointN<N>) -> &Self::Data {
         let local_p = *p - self.extent().minimum;
 
         self.get_unchecked(&Local(local_p))
@@ -588,7 +590,7 @@ macro_rules! impl_array_for_each {
             type Data = T;
 
             #[inline]
-            fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut($coords, T)) {
+            fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut($coords, &T)) {
                 <Self as Array<N>>::Indexer::for_each_point_and_stride(
                     self.extent(),
                     &extent,
@@ -709,7 +711,7 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
     extent: &ExtentN<N>,
 ) where
     Dst: Array<N> + GetUncheckedMutRelease<Stride, T>,
-    Src: Array<N> + GetUncheckedRelease<Stride, T>,
+    Src: Array<N> + GetUncheckedOwnedRelease<Stride, T>,
     ExtentN<N>: Copy,
 {
     let dst_extent = *dst.extent();
@@ -717,7 +719,7 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
     Dst::Indexer::for_each_stride_parallel(&extent, &dst_extent, src.extent(), |s_dst, s_src| {
         // The actual copy.
         // PERF: could be faster with SIMD copy
-        *dst.get_unchecked_mut_release(s_dst) = src.get_unchecked_release(s_src);
+        *dst.get_unchecked_mut_release(s_dst) = src.get_unchecked_owned_release(s_src);
     });
 }
 
@@ -758,7 +760,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{access::GetUnchecked, copy_extent, Array2, Array3, Get};
+    use crate::{copy_extent, Array2, Array3};
 
     use building_blocks_core::{Extent2, Extent3};
 
@@ -769,22 +771,22 @@ mod tests {
         assert_eq!(array.extent.num_points(), 100);
         *array.get_mut(Stride(0)) = 1;
 
-        assert_eq!(array.get(Stride(0)), 1);
+        assert_eq!(array.get_owned(Stride(0)), 1);
         assert_eq!(array.get_mut(Stride(0)), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(Stride(0)) }, 1);
+        assert_eq!(unsafe { array.get_unchecked_owned(Stride(0)) }, 1);
         assert_eq!(unsafe { array.get_unchecked_mut(Stride(0)) }, &mut 1);
 
-        assert_eq!(array.get(&Local(PointN([0, 0]))), 1);
+        assert_eq!(array.get_owned(&Local(PointN([0, 0]))), 1);
         assert_eq!(array.get_mut(&Local(PointN([0, 0]))), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(&Local(PointN([0, 0]))) }, 1);
+        assert_eq!(unsafe { array.get_unchecked_owned(&Local(PointN([0, 0]))) }, 1);
         assert_eq!(
             unsafe { array.get_unchecked_mut(&Local(PointN([0, 0]))) },
             &mut 1
         );
 
-        assert_eq!(array.get(&PointN([1, 1])), 1);
+        assert_eq!(array.get_owned(&PointN([1, 1])), 1);
         assert_eq!(array.get_mut(&PointN([1, 1])), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(&PointN([1, 1])) }, 1);
+        assert_eq!(unsafe { array.get_unchecked_owned(&PointN([1, 1])) }, 1);
         assert_eq!(unsafe { array.get_unchecked_mut(&PointN([1, 1])) }, &mut 1);
     }
 
@@ -795,22 +797,22 @@ mod tests {
         assert_eq!(array.extent.num_points(), 1000);
         *array.get_mut(Stride(0)) = 1;
 
-        assert_eq!(array.get(Stride(0)), 1);
+        assert_eq!(array.get_owned(Stride(0)), 1);
         assert_eq!(array.get_mut(Stride(0)), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(Stride(0)) }, 1);
+        assert_eq!(unsafe { array.get_unchecked_owned(Stride(0)) }, 1);
         assert_eq!(unsafe { array.get_unchecked_mut(Stride(0)) }, &mut 1);
 
-        assert_eq!(array.get(&Local(PointN([0, 0, 0]))), 1);
+        assert_eq!(array.get_owned(&Local(PointN([0, 0, 0]))), 1);
         assert_eq!(array.get_mut(&Local(PointN([0, 0, 0]))), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(&Local(PointN([0, 0, 0]))) }, 1);
+        assert_eq!(unsafe { array.get_unchecked_owned(&Local(PointN([0, 0, 0]))) }, 1);
         assert_eq!(
             unsafe { array.get_unchecked_mut(&Local(PointN([0, 0, 0]))) },
             &mut 1
         );
 
-        assert_eq!(array.get(&PointN([1, 1, 1])), 1);
+        assert_eq!(array.get_owned(&PointN([1, 1, 1])), 1);
         assert_eq!(array.get_mut(&PointN([1, 1, 1])), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(&PointN([1, 1, 1])) }, 1);
+        assert_eq!(unsafe { array.get_unchecked_owned(&PointN([1, 1, 1])) }, 1);
         assert_eq!(
             unsafe { array.get_unchecked_mut(&PointN([1, 1, 1])) },
             &mut 1
@@ -831,7 +833,7 @@ mod tests {
         let array = unsafe { array.assume_init() };
 
         for p in extent.iter_points() {
-            assert_eq!(array.get(&p), 1i32);
+            assert_eq!(array.get_owned(&p), 1i32);
         }
     }
 

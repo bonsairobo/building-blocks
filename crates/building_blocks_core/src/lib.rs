@@ -10,8 +10,7 @@ pub mod point;
 
 pub use axis::{Axis2, Axis3, Axis3Permutation, SignedAxis2, SignedAxis3};
 pub use extent::{
-    bounding_extent, Extent, Extent2, Extent2f, Extent2i, Extent3, Extent3f, Extent3i, ExtentN,
-    IntegerExtent,
+    bounding_extent, Extent2, Extent2f, Extent2i, Extent3, Extent3f, Extent3i, ExtentN,
 };
 pub use point::{point_traits::*, Point2, Point2f, Point2i, Point3, Point3f, Point3i, PointN};
 
@@ -20,9 +19,9 @@ pub use num;
 pub mod prelude {
     pub use super::{
         point::point_traits::*, Axis2, Axis3, Bounded, ComponentwiseIntegerOps, Distance,
-        DotProduct, Extent, Extent2, Extent2f, Extent2i, Extent3, Extent3f, Extent3i, ExtentN,
-        GetComponent, IntegerExtent, IntegerPoint, MapComponents, Neighborhoods, Norm, NormSquared,
-        Ones, Point, Point2, Point2f, Point2i, Point3, Point3f, Point3i, PointN, SmallZero,
+        DotProduct, Extent2, Extent2f, Extent2i, Extent3, Extent3f, Extent3i, ExtentN,
+        GetComponent, IntegerPoint, MapComponents, Neighborhoods, Norm, NormSquared, Ones, Point,
+        Point2, Point2f, Point2i, Point3, Point3f, Point3i, PointN, SmallZero,
     };
 }
 

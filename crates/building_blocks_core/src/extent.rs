@@ -20,7 +20,7 @@ pub type Extent3f = ExtentN<[f32; 3]>;
 /// An N-dimensional extent. This is mathematically the Cartesian product of a half-closed interval `[a, b)` in each dimension.
 /// You can also just think of it as an axis-aligned box with some shape and a minimum point. When doing queries against lattice
 /// maps, this is the primary structure used to determine the bounds of your query.
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Eq, Serialize)]
 pub struct ExtentN<N> {
     /// The least point contained in the extent.
     pub minimum: PointN<N>,
@@ -28,7 +28,8 @@ pub struct ExtentN<N> {
     pub shape: PointN<N>,
 }
 
-// With derive, PointN: Clone did not imply that ExtentN: Clone in trait bounds.
+// A few of these traits could be derived. But it seems that derive will not help the compiler infer trait bounds as well.
+
 impl<N> Clone for ExtentN<N>
 where
     PointN<N>: Clone,
@@ -43,6 +44,15 @@ where
 }
 impl<N> Copy for ExtentN<N> where PointN<N>: Copy {}
 
+impl<N> PartialEq for ExtentN<N>
+where
+    PointN<N>: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.minimum.eq(&other.minimum) && self.shape.eq(&other.shape)
+    }
+}
+
 impl<N> ExtentN<N> {
     /// The default representation of an extent as the minimum point and shape.
     #[inline]
@@ -55,6 +65,11 @@ impl<N> ExtentN<N>
 where
     PointN<N>: Point,
 {
+    #[inline]
+    fn volume(&self) -> <PointN<N> as Point>::Scalar {
+        self.shape.volume()
+    }
+
     /// Translate the extent such that it has `new_min` as it's new minimum.
     #[inline]
     pub fn with_minimum(&self, new_min: PointN<N>) -> Self {
@@ -99,6 +114,18 @@ impl<N> ExtentN<N>
 where
     PointN<N>: IntegerPoint<N>,
 {
+    /// The number of points contained in the extent.
+    #[inline]
+    pub fn num_points(&self) -> usize {
+        self.volume() as usize
+    }
+
+    /// Returns `true` iff the number of points in the extent is 0.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.num_points() == 0
+    }
+
     /// An alternative representation of an extent as the minimum point and least upper bound.
     #[inline]
     pub fn from_min_and_lub(minimum: PointN<N>, least_upper_bound: PointN<N>) -> Self {
@@ -120,19 +147,10 @@ where
 
     /// Returns `true` iff the intersection of `self` and `other` is equal to `self`.
     #[inline]
-    pub fn is_subset_of(&self, other: &Self) -> bool
-    where
-        // TODO: seems like the compiler ought to infer this is true when PointN<N>: PartialEq
-        Self: PartialEq,
-    {
+    pub fn is_subset_of(&self, other: &Self) -> bool {
         self.intersection(other).eq(self)
     }
-}
 
-impl<N> ExtentN<N>
-where
-    PointN<N>: IntegerPoint<N> + Ones,
-{
     /// An alternative representation of an integer extent as the minimum point and maximum point. This only works for integer
     /// extents, where there is a unique maximum point.
     #[inline]
@@ -170,50 +188,6 @@ where
     #[inline]
     pub fn iter_points(&self) -> <PointN<N> as IterExtent<N>>::PointIter {
         PointN::iter_extent(&self.minimum, &self.least_upper_bound())
-    }
-}
-
-/// A trait for methods that all `ExtentN<N>` should have, but only those which are implemented specially for each `ExtentN<N>`.
-/// The goal is only to generalize over the number of dimensions.
-pub trait Extent<N> {
-    type VolumeType;
-
-    /// For integer extents, the number of points in the extent.
-    fn volume(&self) -> Self::VolumeType;
-}
-
-impl<N> Extent<N> for ExtentN<N>
-where
-    PointN<N>: Point,
-{
-    type VolumeType = <PointN<N> as Point>::Scalar;
-
-    #[inline]
-    fn volume(&self) -> Self::VolumeType {
-        self.shape.volume()
-    }
-}
-
-/// The methods that all `ExtentN<N>` should have when the scalar type is an integer, but only those which are implemented
-/// specially for each `ExtentN<N>`. This enables us to assume that any finite extent contains only a finite number of points.
-pub trait IntegerExtent<N>: Extent<N> {
-    /// The number of points contained in the extent.
-    fn num_points(&self) -> usize;
-
-    /// Returns `true` iff the number of points in the extent is 0.
-    #[inline]
-    fn is_empty(&self) -> bool {
-        self.num_points() == 0
-    }
-}
-
-impl<N> IntegerExtent<N> for ExtentN<N>
-where
-    PointN<N>: IntegerPoint<N>,
-{
-    #[inline]
-    fn num_points(&self) -> usize {
-        self.volume() as usize
     }
 }
 

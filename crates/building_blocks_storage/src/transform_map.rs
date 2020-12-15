@@ -50,12 +50,12 @@ use core::iter::{once, Once};
 
 /// A lattice map that delegates look-ups to a different lattice map, then transforms the result
 /// using some `Fn(In) -> Out`.
-pub struct TransformMap<'a, Meta, F> {
-    delegate: &'a Meta,
+pub struct TransformMap<'a, Delegate, F> {
+    delegate: &'a Delegate,
     transform: F,
 }
 
-impl<'a, Meta, F> Clone for TransformMap<'a, Meta, F>
+impl<'a, Delegate, F> Clone for TransformMap<'a, Delegate, F>
 where
     F: Clone,
 {
@@ -68,11 +68,11 @@ where
     }
 }
 
-impl<'a, Meta, F> Copy for TransformMap<'a, Meta, F> where F: Copy {}
+impl<'a, Delegate, F> Copy for TransformMap<'a, Delegate, F> where F: Copy {}
 
-impl<'a, Meta, F> TransformMap<'a, Meta, F> {
+impl<'a, Delegate, F> TransformMap<'a, Delegate, F> {
     #[inline]
-    pub fn new(delegate: &'a Meta, transform: F) -> Self {
+    pub fn new(delegate: &'a Delegate, transform: F) -> Self {
         Self {
             delegate,
             transform,
@@ -80,10 +80,10 @@ impl<'a, Meta, F> TransformMap<'a, Meta, F> {
     }
 }
 
-impl<'a, Meta, F, In, Out, Coord> Get<Coord> for TransformMap<'a, Meta, F>
+impl<'a, Delegate, F, In, Out, Coord> Get<Coord> for TransformMap<'a, Delegate, F>
 where
     F: Fn(In) -> Out,
-    Meta: Get<Coord, Data = In>,
+    Delegate: Get<Coord, Data = In>,
 {
     type Data = Out;
 
@@ -93,10 +93,10 @@ where
     }
 }
 
-impl<'a, Meta, F, In, Out, Coord> GetUnchecked<Coord> for TransformMap<'a, Meta, F>
+impl<'a, Delegate, F, In, Out, Coord> GetUnchecked<Coord> for TransformMap<'a, Delegate, F>
 where
     F: Fn(In) -> Out,
-    Meta: GetUnchecked<Coord, Data = In>,
+    Delegate: GetUnchecked<Coord, Data = In>,
 {
     type Data = Out;
 
@@ -120,11 +120,11 @@ where
     }
 }
 
-impl<'a, Meta, F, N> Array<N> for TransformMap<'a, Meta, F>
+impl<'a, Delegate, F, N> Array<N> for TransformMap<'a, Delegate, F>
 where
-    Meta: Array<N>,
+    Delegate: Array<N>,
 {
-    type Indexer = Meta::Indexer;
+    type Indexer = Delegate::Indexer;
 
     #[inline]
     fn extent(&self) -> &ExtentN<N> {

@@ -48,6 +48,7 @@ impl<N> PartialEq for ExtentN<N>
 where
     PointN<N>: PartialEq,
 {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.minimum.eq(&other.minimum) && self.shape.eq(&other.shape)
     }

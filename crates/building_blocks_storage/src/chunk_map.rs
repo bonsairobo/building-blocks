@@ -104,9 +104,6 @@
 //!     if write_points.iter().position(|pw| p == *pw) != None {
 //!         assert_eq!(value, 1);
 //!     } else {
-//!         // The points that we didn't write explicitly got an ambient value when the chunk was
-//!         // inserted. Also any points in `bounding_extent` that don't have a chunk will also take
-//!         // the ambient value.
 //!         assert_eq!(value, 0);
 //!     }
 //! });

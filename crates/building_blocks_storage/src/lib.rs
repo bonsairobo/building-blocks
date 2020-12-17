@@ -47,10 +47,19 @@ pub mod prelude {
         SerializableChunkMap, Stride, TransformMap, WriteExtent,
     };
 
-    pub use super::chunk_map::conditional_aliases::*;
-
     #[cfg(feature = "lz4")]
     pub use super::Lz4;
     #[cfg(feature = "snap")]
     pub use super::Snappy;
+
+    #[cfg(any(
+        all(feature = "lz4", not(feature = "snap")),
+        all(not(feature = "lz4"), feature = "snap"),
+    ))]
+    pub use super::{
+        CompressibleChunkMap2, CompressibleChunkMap3, CompressibleChunkMapReader2,
+        CompressibleChunkMapReader3, CompressibleChunkStorage2, CompressibleChunkStorage3,
+        CompressibleChunkStorageReader2, CompressibleChunkStorageReader3, MaybeCompressedChunk2,
+        MaybeCompressedChunk3, MaybeCompressedChunkRef2, MaybeCompressedChunkRef3,
+    };
 }

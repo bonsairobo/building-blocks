@@ -12,12 +12,6 @@ pub use compression::*;
 pub use hash_map::*;
 pub use serialization::*;
 
-pub mod conditional_aliases {
-    pub use super::compressible::conditional_aliases::*;
-    pub use super::compressible_reader::conditional_aliases::*;
-    pub use super::compression::conditional_aliases::*;
-}
-
 use super::Chunk;
 
 use building_blocks_core::prelude::*;

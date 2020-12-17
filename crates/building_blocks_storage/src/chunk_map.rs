@@ -104,9 +104,6 @@
 //!     if write_points.iter().position(|pw| p == *pw) != None {
 //!         assert_eq!(value, 1);
 //!     } else {
-//!         // The points that we didn't write explicitly got an ambient value when the chunk was
-//!         // inserted. Also any points in `bounding_extent` that don't have a chunk will also take
-//!         // the ambient value.
 //!         assert_eq!(value, 0);
 //!     }
 //! });
@@ -123,12 +120,8 @@ pub use ambient::*;
 pub use chunk::*;
 pub use storage::*;
 
-pub mod conditional_aliases {
-    pub use super::storage::conditional_aliases::*;
-}
-
 use crate::{
-    array::{Array, ArrayCopySrc, ArrayIndexer, ArrayN},
+    array::{ArrayCopySrc, ArrayIndexer, ArrayN},
     GetOwned, Get, GetMut,
     ForEachOwned, ForEach, ForEachMut,
     GetUncheckedMutRelease, GetUncheckedRelease,
@@ -145,7 +138,18 @@ use serde::{Deserialize, Serialize};
 /// outside of the stored chunks will return some ambient value specified on creation.
 ///
 /// `ChunkMap` is generic over the type used to actually store the `Chunk`s. You can use any storage that implements
-/// `ChunkReadStorage` or `ChunkWriteStorage`.
+/// `ChunkReadStorage` or `ChunkWriteStorage`. Being a lattice map, `ChunkMap` will implement various access traits, depending
+/// on the capabilities of the chunk storage.
+///
+/// If the chunk storage implements `ChunkReadStorage`, then `ChunkMap` will implement:
+/// - `Get`
+/// - `ForEach`
+/// - `ReadExtent`
+///
+/// If the chunk storage implements `ChunkWriteStorage`, then `ChunkMap` will implement:
+/// - `GetMut`
+/// - `ForEachMut`
+/// - `WriteExtent`
 pub struct ChunkMap<N, T, Meta, Store> {
     /// Translates from lattice coordinates to chunk key space.
     pub indexer: ChunkIndexer<N>,
@@ -369,7 +373,7 @@ where
         create_chunk: impl FnOnce(PointN<N>, ExtentN<N>) -> Chunk<N, T, Meta>,
     ) -> (PointN<N>, &mut T)
     where
-        ArrayN<N, T>: Array<N>,
+        N: ArrayIndexer<N>,
     {
         let key = self.indexer.chunk_key_containing_point(p);
         let Self {
@@ -387,7 +391,7 @@ where
     #[inline]
     pub fn get_mut_point_and_chunk_key(&mut self, p: &PointN<N>) -> (PointN<N>, &mut T)
     where
-        ArrayN<N, T>: Array<N>,
+        N: ArrayIndexer<N>,
         T: Copy,
         Meta: Clone,
     {
@@ -634,7 +638,7 @@ where
     }
 }
 
-pub type ChunkCopySrc<Meta, N, T> = Either<ArrayCopySrc<Meta>, AmbientExtent<N, T>>;
+pub type ChunkCopySrc<Map, N, T> = Either<ArrayCopySrc<Map>, AmbientExtent<N, T>>;
 
 pub type ArrayChunkCopySrcIter<'a, N, T> =
     std::vec::IntoIter<(ExtentN<N>, ArrayChunkCopySrc<'a, N, T>)>;

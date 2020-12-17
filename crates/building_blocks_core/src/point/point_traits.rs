@@ -19,6 +19,7 @@ pub trait Point:
     + Mul<<Self as Point>::Scalar, Output = Self>
     + Mul<Self, Output = Self>
     + Ones
+    + PartialEq
     + PartialOrd
     + Sized
     + Sub<Output = Self>
@@ -97,7 +98,7 @@ pub trait DotProduct {
 }
 
 pub trait IntegerPoint<N>:
-    ComponentwiseIntegerOps + IterExtent<N> + Neighborhoods + Point<Scalar = i32>
+    ComponentwiseIntegerOps + Eq + IterExtent<N> + Neighborhoods + Point<Scalar = i32>
 {
     /// Returns `true` iff all dimensions are powers of 2.
     fn dimensions_are_powers_of_2(&self) -> bool;

@@ -157,8 +157,8 @@ pub trait GetUncheckedRelease<L, T>: Get<L, Data = T> + GetUnchecked<L, Data = T
     }
 }
 
-impl<Meta, L, T> GetUncheckedRelease<L, T> for Meta where
-    Meta: Get<L, Data = T> + GetUnchecked<L, Data = T>
+impl<Map, L, T> GetUncheckedRelease<L, T> for Map where
+    Map: Get<L, Data = T> + GetUnchecked<L, Data = T>
 {
 }
 
@@ -176,8 +176,8 @@ pub trait GetUncheckedMutRelease<L, T>: GetMut<L, Data = T> + GetUncheckedMut<L,
     }
 }
 
-impl<Meta, L, T> GetUncheckedMutRelease<L, T> for Meta where
-    Meta: GetMut<L, Data = T> + GetUncheckedMut<L, Data = T>
+impl<Map, L, T> GetUncheckedMutRelease<L, T> for Map where
+    Map: GetMut<L, Data = T> + GetUncheckedMut<L, Data = T>
 {
 }
 

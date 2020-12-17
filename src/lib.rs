@@ -1,13 +1,15 @@
 //! Data types, collections, and algorithms for working with maps on 2D and 3D integer lattices.
 //! Commonly known as pixel or voxel data.
 //!
-//! This library is organized into several crates:
+//! This library is organized into several crates. The most fundamental are:
 //! - **core**: lattice point and extent data types
+//! - **storage**: storage for lattice maps, i.e. functions defined on `Z^2` and `Z^3`
+//!
+//! Then you get extra bits of functionality from the others:
 //! - **image**: conversion of 2D lattice maps to/from images
 //! - **mesh**: 3D isosurface generation algorithms, smooth and cubic
 //! - **procgen**: procedural generation of lattice maps, including sampled SDFs and height maps
 //! - **search**: search algorithms on lattice maps
-//! - **storage**: storage for lattice maps, i.e. functions defined on `Z^2` and `Z^3`
 //! - **vox**: conversion of 3D lattice maps to/from VOX data format
 //!
 //! To learn the basics about lattice maps, start with these doc pages:

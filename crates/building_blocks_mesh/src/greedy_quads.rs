@@ -7,24 +7,24 @@ use building_blocks_core::{axis::Axis3Permutation, prelude::*};
 use building_blocks_storage::{GetUncheckedOwnedRelease, prelude::*, IsEmpty};
 
 /// Contains the output from the `greedy_quads` algorithm. Can be reused to avoid re-allocations.
-pub struct GreedyQuadsBuffer<Meta> {
+pub struct GreedyQuadsBuffer<Material> {
     /// One group of quads per cube face.
-    pub quad_groups: [QuadGroup<Meta>; 6],
+    pub quad_groups: [QuadGroup<Material>; 6],
 
     // A single array is used for the visited mask because it allows us to index by the same strides
     // as the voxels array. It also only requires a single allocation.
     visited: Array3<bool>,
 }
 
-/// A set of `Quad`s that share an orientation. Each quad may specify a material of type `Meta`.
-pub struct QuadGroup<Meta> {
+/// A set of `Quad`s that share an orientation. Each quad may specify a material of type `Material`.
+pub struct QuadGroup<Material> {
     /// The quads themselves. We rely on the cube face metadata to interpret them.
-    pub quads: Vec<(UnorientedQuad, Meta)>,
+    pub quads: Vec<(UnorientedQuad, Material)>,
     /// One of 6 cube faces. All quads in this struct are comprised of only this face.
     pub face: OrientedCubeFace,
 }
 
-impl<Meta> QuadGroup<Meta> {
+impl<Material> QuadGroup<Material> {
     pub fn new(face: OrientedCubeFace) -> Self {
         Self {
             quads: Vec::new(),
@@ -33,7 +33,7 @@ impl<Meta> QuadGroup<Meta> {
     }
 }
 
-impl<Meta> GreedyQuadsBuffer<Meta> {
+impl<Material> GreedyQuadsBuffer<Material> {
     pub fn new(extent: Extent3i) -> Self {
         let quad_groups = [
             QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::XZY)),

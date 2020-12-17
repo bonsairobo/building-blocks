@@ -40,14 +40,16 @@ pub mod prelude {
         copy_extent, Array, Array2, Array3, ArrayN, Chunk, Chunk2, Chunk3, ChunkHashMap2,
         ChunkHashMap3, ChunkIndexer, ChunkMap, ChunkMap2, ChunkMap3, ChunkMapBuilder,
         ChunkMapBuilder2, ChunkMapBuilder3, ChunkReadStorage, ChunkWriteStorage, Compressed,
-        CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
-        CompressibleChunkStorageReader, Compression, FastArrayCompression, FastChunkCompression,
+        CompressibleChunkMap, CompressibleChunkMap2, CompressibleChunkMap3,
+        CompressibleChunkMapReader, CompressibleChunkMapReader2, CompressibleChunkMapReader3,
+        CompressibleChunkStorage, CompressibleChunkStorage2, CompressibleChunkStorage3,
+        CompressibleChunkStorageReader, CompressibleChunkStorageReader2,
+        CompressibleChunkStorageReader3, Compression, FastArrayCompression, FastChunkCompression,
         ForEach, ForEachMut, Get, GetMut, IsEmpty, IterChunkKeys, Local, LocalChunkCache,
-        LocalChunkCache2, LocalChunkCache3, OctreeSet, ReadExtent, SerializableChunkMap, Stride,
-        TransformMap, WriteExtent,
+        LocalChunkCache2, LocalChunkCache3, MaybeCompressedChunk2, MaybeCompressedChunk3,
+        MaybeCompressedChunkRef2, MaybeCompressedChunkRef3, OctreeSet, ReadExtent,
+        SerializableChunkMap, Stride, TransformMap, WriteExtent,
     };
-
-    pub use super::chunk_map::conditional_aliases::*;
 
     #[cfg(feature = "lz4")]
     pub use super::Lz4;

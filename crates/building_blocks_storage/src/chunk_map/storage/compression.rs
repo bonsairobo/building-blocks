@@ -63,7 +63,8 @@ where
 }
 
 pub type BincodeChunkCompression<N, T, Meta, B> = BincodeCompression<Chunk<N, T, Meta>, B>;
-pub type BincodeCompressedChunk<N, T, Meta, B> = Compressed<BincodeCompression<Chunk<N, T, Meta>, B>>;
+pub type BincodeCompressedChunk<N, T, Meta, B> =
+    Compressed<BincodeCompression<Chunk<N, T, Meta>, B>>;
 
 pub type MaybeCompressedChunk<N, T, Meta, B> =
     MaybeCompressed<Chunk<N, T, Meta>, Compressed<FastChunkCompression<N, T, Meta, B>>>;
@@ -73,7 +74,6 @@ pub type MaybeCompressedChunkRef<'a, N, T, Meta, B> =
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
-        use super::*;
         use crate::$backend;
 
         pub type MaybeCompressedChunk2<T, Meta = (), B = $backend> =
@@ -89,9 +89,7 @@ macro_rules! define_conditional_aliases {
 
 // LZ4 and Snappy are not mutually exclusive, but if we only use one, then we want to have these aliases refer to the choice we
 // made.
-pub mod conditional_aliases {
-    #[cfg(all(feature = "lz4", not(feature = "snap")))]
-    define_conditional_aliases!(Lz4);
-    #[cfg(all(not(feature = "lz4"), feature = "snap"))]
-    define_conditional_aliases!(Snappy);
-}
+#[cfg(all(feature = "lz4", not(feature = "snap")))]
+define_conditional_aliases!(Lz4);
+#[cfg(all(not(feature = "lz4"), feature = "snap"))]
+define_conditional_aliases!(Snappy);

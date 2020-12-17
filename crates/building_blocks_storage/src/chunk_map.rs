@@ -120,10 +120,6 @@ pub use ambient::*;
 pub use chunk::*;
 pub use storage::*;
 
-pub mod conditional_aliases {
-    pub use super::storage::conditional_aliases::*;
-}
-
 use crate::{
     access::{
         ForEach, ForEachMut, GetUncheckedMutRelease, GetUncheckedRelease, ReadExtent, WriteExtent,

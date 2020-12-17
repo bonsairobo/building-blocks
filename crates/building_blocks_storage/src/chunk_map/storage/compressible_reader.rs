@@ -22,7 +22,8 @@ where
     pub local_cache: &'a LocalChunkCache<N, T, Meta>,
 }
 
-impl<'a, N, T, Meta, B> ChunkReadStorage<N, T, Meta> for CompressibleChunkStorageReader<'a, N, T, Meta, B>
+impl<'a, N, T, Meta, B> ChunkReadStorage<N, T, Meta>
+    for CompressibleChunkStorageReader<'a, N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
@@ -121,7 +122,8 @@ where
 }
 
 /// A `LocalCache` of `Chunk`s.
-pub type LocalChunkCache<N, T, Meta = ()> = LocalCache<PointN<N>, Chunk<N, T, Meta>, FnvBuildHasher>;
+pub type LocalChunkCache<N, T, Meta = ()> =
+    LocalCache<PointN<N>, Chunk<N, T, Meta>, FnvBuildHasher>;
 /// A `LocalCache` of `Chunk2`s.
 pub type LocalChunkCache2<T, Meta = ()> = LocalChunkCache<[i32; 2], T, Meta>;
 /// A `LocalCache` of `Chunk3`s.
@@ -133,7 +135,6 @@ pub type CompressibleChunkMapReader<'a, N, T, Meta, B> =
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
-        use super::*;
         use crate::$backend;
 
         /// 2-dimensional `CompressibleChunkStorageReader`.
@@ -154,9 +155,7 @@ macro_rules! define_conditional_aliases {
 
 // LZ4 and Snappy are not mutually exclusive, but if you only use one, then you want to have these aliases refer to the choice
 // you made.
-pub mod conditional_aliases {
-    #[cfg(all(feature = "lz4", not(feature = "snap")))]
-    define_conditional_aliases!(Lz4);
-    #[cfg(all(not(feature = "lz4"), feature = "snap"))]
-    define_conditional_aliases!(Snappy);
-}
+#[cfg(all(feature = "lz4", not(feature = "snap")))]
+define_conditional_aliases!(Lz4);
+#[cfg(all(not(feature = "lz4"), feature = "snap"))]
+define_conditional_aliases!(Snappy);

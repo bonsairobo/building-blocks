@@ -12,7 +12,7 @@
 //! copy_extent(&sample_extent, &|p: &Point3i| (p.dot(p) - 10) as f32, &mut sampled_sphere);
 //!```
 
-use crate::{ForEach, GetOwned, ReadExtent};
+use crate::{ForEachOwned, GetOwned, ReadExtent};
 
 use building_blocks_core::prelude::*;
 
@@ -29,14 +29,14 @@ where
     }
 }
 
-impl<'a, F, N, T> ForEach<N, PointN<N>> for F
+impl<'a, F, N, T> ForEachOwned<N, PointN<N>> for F
 where
     F: Fn(&PointN<N>) -> T,
     PointN<N>: IntegerPoint<N>,
 {
     type Data = T;
 
-    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
+    fn for_each_owned(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
         for p in extent.iter_points() {
             f(p, (self)(&p))
         }

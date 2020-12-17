@@ -510,7 +510,7 @@ mod tests {
 
         let mut non_empty_voxels = HashSet::new();
 
-        voxels.for_each(voxels.extent(), |p: Point3i, v: Voxel| {
+        voxels.for_each_owned(voxels.extent(), |p: Point3i, v: Voxel| {
             if !v.is_empty() {
                 non_empty_voxels.insert(p);
             }

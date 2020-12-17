@@ -27,7 +27,7 @@
 //! array.for_each_mut(&write_extent, |_stride: Stride, value| *value = 1);
 //!
 //! // Only the points in the extent should have been written.
-//! array.for_each(array.extent(), |p: Point3i, value|
+//! array.for_each_owned(array.extent(), |p: Point3i, value|
 //!     if write_extent.contains(&p) {
 //!         assert_eq!(value, 1);
 //!     } else {
@@ -57,10 +57,10 @@
 //!
 //! // Sum up the values in the Von Neumann neighborhood of each point, acting as a sort of blur
 //! // filter.
-//! array.for_each(&subextent, |stride: Stride, value| {
+//! array.for_each_owned(&subextent, |stride: Stride, value| {
 //!     let mut neighborhood_sum = value;
 //!     for offset in neighbor_strides.iter() {
-//!         let adjacent_value = array.get(stride + *offset);
+//!         let adjacent_value = array.get_owned(stride + *offset);
 //!         neighborhood_sum += adjacent_value;
 //!     }
 //! });
@@ -78,11 +78,9 @@ pub use array3::Array3;
 pub use compression::{FastArrayCompression, FastCompressedArray};
 
 use crate::{
-    chunk_map::ChunkCopySrc,
-    GetOwned, Get, GetMut,
-    GetUncheckedOwned, GetUnchecked, GetUncheckedMut,
-    GetUncheckedOwnedRelease, GetUncheckedRelease, GetUncheckedMutRelease,
-    ForEach, ForEachMut, ReadExtent, TransformMap, WriteExtent,
+    chunk_map::ChunkCopySrc, ForEach, ForEachMut, ForEachOwned, Get, GetMut, GetOwned,
+    GetUnchecked, GetUncheckedMut, GetUncheckedMutRelease, GetUncheckedOwned,
+    GetUncheckedOwnedRelease, GetUncheckedRelease, ReadExtent, TransformMap, WriteExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -633,6 +631,48 @@ impl_array_for_each!(
     forwarder = |p, _stride| p;
 );
 
+// ========================================================================== //
+// ========================================================================== //
+// ================================ OWNED =================================== //
+// ========================================================================== //
+// ========================================================================== //
+
+impl<N, T, L> GetOwned<L> for ArrayN<N, T>
+where
+    Self: Get<L>,
+    <Self as Get<L>>::Data: Clone,
+{
+    type Data = <Self as Get<L>>::Data;
+    #[inline]
+    fn get_owned(&self, location: L) -> Self::Data {
+        self.get(location).clone()
+    }
+}
+
+impl<N, T, L> GetUncheckedOwned<L> for ArrayN<N, T>
+where
+    Self: GetUnchecked<L>,
+    <Self as GetUnchecked<L>>::Data: Clone,
+{
+    type Data = <Self as GetUnchecked<L>>::Data;
+    #[inline]
+    unsafe fn get_unchecked_owned(&self, location: L) -> Self::Data {
+        self.get_unchecked(location).clone()
+    }
+}
+
+impl<N, T, Coord> ForEachOwned<N, Coord> for ArrayN<N, T>
+where
+    Self: ForEach<N, Coord>,
+    <Self as ForEach<N, Coord>>::Data: Clone,
+{
+    type Data = <Self as ForEach<N, Coord>>::Data;
+    #[inline]
+    fn for_each_owned(&self, extent: &ExtentN<N>, mut f: impl FnMut(Coord, Self::Data)) {
+        self.for_each(extent, |a, b| f(a, b.clone()));
+    }
+}
+
 //  ██████╗ ██████╗ ██████╗ ██╗   ██╗
 // ██╔════╝██╔═══██╗██╔══██╗╚██╗ ██╔╝
 // ██║     ██║   ██║██████╔╝ ╚████╔╝
@@ -687,7 +727,7 @@ impl<'a, N, T, Meta, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Meta, F>>> 
 where
     Self: Array<N>,
     T: Clone,
-    TransformMap<'a, Meta, F>: Array<N> + GetUncheckedRelease<Stride, T>,
+    TransformMap<'a, Meta, F>: Array<N> + GetUncheckedOwnedRelease<Stride, T>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
 {
@@ -778,7 +818,10 @@ mod tests {
 
         assert_eq!(array.get_owned(&Local(PointN([0, 0]))), 1);
         assert_eq!(array.get_mut(&Local(PointN([0, 0]))), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked_owned(&Local(PointN([0, 0]))) }, 1);
+        assert_eq!(
+            unsafe { array.get_unchecked_owned(&Local(PointN([0, 0]))) },
+            1
+        );
         assert_eq!(
             unsafe { array.get_unchecked_mut(&Local(PointN([0, 0]))) },
             &mut 1
@@ -804,7 +847,10 @@ mod tests {
 
         assert_eq!(array.get_owned(&Local(PointN([0, 0, 0]))), 1);
         assert_eq!(array.get_mut(&Local(PointN([0, 0, 0]))), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked_owned(&Local(PointN([0, 0, 0]))) }, 1);
+        assert_eq!(
+            unsafe { array.get_unchecked_owned(&Local(PointN([0, 0, 0]))) },
+            1
+        );
         assert_eq!(
             unsafe { array.get_unchecked_mut(&Local(PointN([0, 0, 0]))) },
             &mut 1

@@ -62,7 +62,10 @@ where
     ///
     /// WARNING: the cache will not be updated. This method should be used for a read-modify-write workflow where it would be
     /// inefficient to cache the chunk only for it to be overwritten by the modified version.
-    pub fn copy_without_caching(&self, key: &PointN<N>) -> Option<MaybeCompressedChunk<N, T, Meta, B>>
+    pub fn copy_without_caching(
+        &self,
+        key: &PointN<N>,
+    ) -> Option<MaybeCompressedChunk<N, T, Meta, B>>
     where
         Chunk<N, T, Meta>: Clone,
         Compressed<FastChunkCompression<N, T, Meta, B>>: Clone,
@@ -237,7 +240,8 @@ where
 }
 
 /// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
-pub type CompressibleChunkMap<N, T, Meta, B> = ChunkMap<N, T, Meta, CompressibleChunkStorage<N, T, Meta, B>>;
+pub type CompressibleChunkMap<N, T, Meta, B> =
+    ChunkMap<N, T, Meta, CompressibleChunkStorage<N, T, Meta, B>>;
 
 /// An index into a compressed chunk slab.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

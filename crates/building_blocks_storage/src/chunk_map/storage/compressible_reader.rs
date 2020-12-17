@@ -22,7 +22,8 @@ where
     pub local_cache: &'a LocalChunkCache<N, T, Meta>,
 }
 
-impl<'a, N, T, Meta, B> ChunkReadStorage<N, T, Meta> for CompressibleChunkStorageReader<'a, N, T, Meta, B>
+impl<'a, N, T, Meta, B> ChunkReadStorage<N, T, Meta>
+    for CompressibleChunkStorageReader<'a, N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
     T: Copy,
@@ -121,7 +122,8 @@ where
 }
 
 /// A `LocalCache` of `Chunk`s.
-pub type LocalChunkCache<N, T, Meta = ()> = LocalCache<PointN<N>, Chunk<N, T, Meta>, FnvBuildHasher>;
+pub type LocalChunkCache<N, T, Meta = ()> =
+    LocalCache<PointN<N>, Chunk<N, T, Meta>, FnvBuildHasher>;
 /// A `LocalCache` of `Chunk2`s.
 pub type LocalChunkCache2<T, Meta = ()> = LocalChunkCache<[i32; 2], T, Meta>;
 /// A `LocalCache` of `Chunk3`s.

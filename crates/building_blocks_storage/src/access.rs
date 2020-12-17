@@ -69,7 +69,7 @@ pub trait Get<L> {
     /// Get an immutable reference to the value at `location`.
     fn get(&self, location: L) -> &Self::Data;
 }
-
+/*
 impl<L: Clone, X> GetOwned<L> for X where X: Get<L> {
     type Data = <Self as Get<L>>::Data;
 
@@ -78,7 +78,7 @@ impl<L: Clone, X> GetOwned<L> for X where X: Get<L> {
         todo!()
     }
 }
-
+*/
 pub trait GetMut<L> {
     type Data;
 
@@ -103,7 +103,7 @@ pub trait GetUnchecked<L> {
     /// Don't access out of bounds.
     unsafe fn get_unchecked(&self, location: L) -> &Self::Data;
 }
-
+/*
 impl<L: Clone, X> GetUncheckedOwned<L> for X where X: GetUnchecked<L> {
     type Data = <Self as GetUnchecked<L>>::Data;
 
@@ -112,7 +112,7 @@ impl<L: Clone, X> GetUncheckedOwned<L> for X where X: GetUnchecked<L> {
         todo!()
     }
 }
-
+*/
 pub trait GetUncheckedMut<L> {
     type Data;
 
@@ -122,7 +122,9 @@ pub trait GetUncheckedMut<L> {
     unsafe fn get_unchecked_mut(&mut self, location: L) -> &mut Self::Data;
 }
 
-pub trait GetUncheckedOwnedRelease<L, T>: GetOwned<L, Data = T> + GetUncheckedOwned<L, Data = T> {
+pub trait GetUncheckedOwnedRelease<L, T>:
+    GetOwned<L, Data = T> + GetUncheckedOwned<L, Data = T>
+{
     /// Get the value at `location`. Skips bounds checking in release mode.
     /// # Safety
     /// Don't access out of bounds.

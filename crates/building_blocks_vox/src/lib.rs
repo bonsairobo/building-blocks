@@ -28,7 +28,7 @@ pub fn encode_vox(map: &Array3<VoxColor>) -> DotVoxData {
 
     let mut voxels = Vec::new();
     for p in local_extent.iter_points() {
-        if let VoxColor::Color(i) = map.get(&Local(p)) {
+        if let VoxColor::Color(i) = map.get_owned(&Local(p)) {
             voxels.push(dot_vox::Voxel {
                 x: p.x() as u8,
                 y: p.y() as u8,

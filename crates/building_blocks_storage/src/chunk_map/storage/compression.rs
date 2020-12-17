@@ -63,7 +63,8 @@ where
 }
 
 pub type BincodeChunkCompression<N, T, Meta, B> = BincodeCompression<Chunk<N, T, Meta>, B>;
-pub type BincodeCompressedChunk<N, T, Meta, B> = Compressed<BincodeCompression<Chunk<N, T, Meta>, B>>;
+pub type BincodeCompressedChunk<N, T, Meta, B> =
+    Compressed<BincodeCompression<Chunk<N, T, Meta>, B>>;
 
 pub type MaybeCompressedChunk<N, T, Meta, B> =
     MaybeCompressed<Chunk<N, T, Meta>, Compressed<FastChunkCompression<N, T, Meta, B>>>;

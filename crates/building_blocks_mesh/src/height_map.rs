@@ -1,7 +1,7 @@
 use super::PosNormMesh;
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{access::GetUncheckedRelease, prelude::*};
+use building_blocks_storage::{GetUncheckedOwnedRelease, prelude::*};
 
 pub trait Height {
     fn height(&self) -> f32;
@@ -64,8 +64,8 @@ pub fn triangulate_height_map<V, H>(
     output: &mut HeightMapMeshBuffer,
 ) where
     V: Array<[i32; 2]>
-        + GetUncheckedRelease<Stride, H>
-        + ForEach<[i32; 2], (Point2i, Stride), Data = H>,
+        + GetUncheckedOwnedRelease<Stride, H>
+        + ForEachOwned<[i32; 2], (Point2i, Stride), Data = H>,
     H: Height,
 {
     output.reset(height_map.extent().num_points());
@@ -77,7 +77,7 @@ pub fn triangulate_height_map<V, H>(
     let mut delta_strides = [Stride(0); 2];
     height_map.strides_from_local_points(&deltas, &mut delta_strides);
 
-    height_map.for_each(
+    height_map.for_each_owned(
         &interior_extent,
         |(p, stride): (Point2i, Stride), height| {
             // Note: Although we use (x, y) for the coordinates of the height map, these should be
@@ -103,10 +103,10 @@ pub fn triangulate_height_map<V, H>(
             let r_stride = stride + delta_strides[0];
             let b_stride = stride - delta_strides[1];
             let t_stride = stride + delta_strides[1];
-            let l_y = height_map.get_unchecked_release(l_stride).height();
-            let r_y = height_map.get_unchecked_release(r_stride).height();
-            let b_y = height_map.get_unchecked_release(b_stride).height();
-            let t_y = height_map.get_unchecked_release(t_stride).height();
+            let l_y = height_map.get_unchecked_owned_release(l_stride).height();
+            let r_y = height_map.get_unchecked_owned_release(r_stride).height();
+            let b_y = height_map.get_unchecked_owned_release(b_stride).height();
+            let t_y = height_map.get_unchecked_owned_release(t_stride).height();
             let dy_dx = (r_y - l_y) / 2.0;
             let dy_dz = (t_y - b_y) / 2.0;
             // Not normalized, because that's done more efficiently on the GPU.

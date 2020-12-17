@@ -28,7 +28,7 @@ pub fn encode_image<T, P, Meta>(
 ) -> ImageBuffer<P, Vec<<P as Pixel>::Subpixel>>
 where
     T: Into<P>,
-    Meta: for<'a> Get<&'a Point2i, Data = T>,
+    Meta: for<'a> GetOwned<&'a Point2i, Data = T>,
     P: Pixel + 'static,
 {
     let img_extent = *map_extent - map_extent.minimum;
@@ -40,7 +40,7 @@ where
     let mut img = ImageBuffer::new(width, height);
     for (map_p, img_p) in map_extent.iter_points().zip(img_extent.iter_points()) {
         let map_p_ref = &map_p;
-        let pixel = map.get(map_p_ref).into();
+        let pixel = map.get_owned(map_p_ref).into();
         *img.get_pixel_mut(img_p.x() as u32, img_p.y() as u32) = pixel;
     }
 

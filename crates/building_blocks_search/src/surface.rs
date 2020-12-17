@@ -4,7 +4,10 @@ use building_blocks_storage::{access::GetUncheckedRelease, prelude::*, IsEmpty};
 /// Returns the "surface points" i.e. those points that are non-empty and Von-Neumann-adjacent to an
 /// empty point. Since this algorithm does adjacency checks for all points in `extent`, you must
 /// ensure that those points are within the bounds of `map`.
-pub fn find_surface_points<Meta, N, T>(map: &Meta, extent: &ExtentN<N>) -> (Vec<PointN<N>>, Vec<Stride>)
+pub fn find_surface_points<Meta, N, T>(
+    map: &Meta,
+    extent: &ExtentN<N>,
+) -> (Vec<PointN<N>>, Vec<Stride>)
 where
     Meta: Array<N> + ForEach<N, (PointN<N>, Stride), Data = T> + GetUncheckedRelease<Stride, T>,
     T: IsEmpty,

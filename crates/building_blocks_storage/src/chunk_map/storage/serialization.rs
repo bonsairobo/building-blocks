@@ -174,6 +174,6 @@ mod test {
             bincode::deserialize(&serialized).unwrap();
 
         let map = futures::executor::block_on(deserialized.into_chunk_map(FnvHashMap::default()));
-        map.for_each(&filled_extent, |_p, val| assert_eq!(val, 1));
+        map.for_each_owned(&filled_extent, |_p, val| assert_eq!(val, 1));
     }
 }

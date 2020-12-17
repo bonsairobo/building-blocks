@@ -20,8 +20,8 @@
 //! let lookup = |i: u8| palette[i as usize].0[0];
 //! let big_data_map = TransformMap::new(&index_map, &lookup);
 //!
-//! assert_eq!(big_data_map.get(&PointN([0, 0, 0])), palette[0].0[0]);
-//! assert_eq!(big_data_map.get(&PointN([0, 0, 1])), palette[1].0[0]);
+//! assert_eq!(big_data_map.get_owned(&PointN([0, 0, 0])), palette[0].0[0]);
+//! assert_eq!(big_data_map.get_owned(&PointN([0, 0, 1])), palette[1].0[0]);
 //! ```
 //!
 //! `TransformMap` also gives us an efficient way of applying transforms to array data during a copy:
@@ -38,10 +38,9 @@
 //! ```
 
 use crate::{
-    access::GetUnchecked,
     array::{Array, ArrayCopySrc},
     chunk_map::{AmbientExtent, ArrayChunkCopySrc, ArrayChunkCopySrcIter, ChunkCopySrc, ChunkMap},
-    ArrayN, ForEach, Get, ReadExtent,
+    ArrayN, ForEachOwned, GetOwned, GetUncheckedOwned, ReadExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -80,43 +79,43 @@ impl<'a, Delegate, F> TransformMap<'a, Delegate, F> {
     }
 }
 
-impl<'a, Delegate, F, In, Out, Coord> Get<Coord> for TransformMap<'a, Delegate, F>
+impl<'a, Delegate, F, In, Out, Coord> GetOwned<Coord> for TransformMap<'a, Delegate, F>
 where
     F: Fn(In) -> Out,
-    Delegate: Get<Coord, Data = In>,
+    Delegate: GetOwned<Coord, Data = In>,
 {
     type Data = Out;
 
     #[inline]
-    fn get(&self, c: Coord) -> Self::Data {
-        (self.transform)(self.delegate.get(c))
+    fn get_owned(&self, c: Coord) -> Self::Data {
+        (self.transform)(self.delegate.get_owned(c))
     }
 }
 
-impl<'a, Delegate, F, In, Out, Coord> GetUnchecked<Coord> for TransformMap<'a, Delegate, F>
+impl<'a, Delegate, F, In, Out, Coord> GetUncheckedOwned<Coord> for TransformMap<'a, Delegate, F>
 where
     F: Fn(In) -> Out,
-    Delegate: GetUnchecked<Coord, Data = In>,
+    Delegate: GetUncheckedOwned<Coord, Data = In>,
 {
     type Data = Out;
 
     #[inline]
-    unsafe fn get_unchecked(&self, c: Coord) -> Self::Data {
-        (self.transform)(self.delegate.get_unchecked(c))
+    unsafe fn get_unchecked_owned(&self, c: Coord) -> Self::Data {
+        (self.transform)(self.delegate.get_unchecked_owned(c))
     }
 }
 
-impl<'a, Meta, F, In, Out, N, Coord> ForEach<N, Coord> for TransformMap<'a, Meta, F>
+impl<'a, Meta, F, In, Out, N, Coord> ForEachOwned<N, Coord> for TransformMap<'a, Meta, F>
 where
     F: Fn(In) -> Out,
-    Meta: ForEach<N, Coord, Data = In>,
+    Meta: ForEachOwned<N, Coord, Data = In>,
 {
     type Data = Out;
 
     #[inline]
-    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(Coord, Self::Data)) {
+    fn for_each_owned(&self, extent: &ExtentN<N>, mut f: impl FnMut(Coord, Self::Data)) {
         self.delegate
-            .for_each(extent, |c, t| f(c, (self.transform)(t)))
+            .for_each_owned(extent, |c, t| f(c, (self.transform)(t)))
     }
 }
 
@@ -234,20 +233,20 @@ mod tests {
         let palette = vec![1, 2, 3];
         let outer_map = TransformMap::new(&inner_map, |i: usize| palette[i]);
 
-        assert_eq!(outer_map.get(&PointN([0; 3])), 1);
+        assert_eq!(outer_map.get_owned(&PointN([0; 3])), 1);
 
-        outer_map.for_each(&extent, |_s: Stride, value| {
+        outer_map.for_each_owned(&extent, |_s: Stride, value| {
             assert_eq!(value, 1);
         });
-        outer_map.for_each(&extent, |_p: Point3i, value| {
+        outer_map.for_each_owned(&extent, |_p: Point3i, value| {
             assert_eq!(value, 1);
         });
-        outer_map.for_each(&extent, |_ps: (Point3i, Stride), value| {
+        outer_map.for_each_owned(&extent, |_ps: (Point3i, Stride), value| {
             assert_eq!(value, 1);
         });
 
         let outer_map = TransformMap::new(&inner_map, |i: usize| palette[i]);
-        assert_eq!(outer_map.get(&PointN([0; 3])), 1);
+        assert_eq!(outer_map.get_owned(&PointN([0; 3])), 1);
     }
 
     #[cfg(feature = "lz4")]

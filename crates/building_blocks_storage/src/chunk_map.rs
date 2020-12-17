@@ -43,7 +43,7 @@
 //! let bounding_extent = map.bounding_extent();
 //!
 //! // Now we can read back the values.
-//! map.for_each(&bounding_extent, |p, value| {
+//! map.for_each_owned(&bounding_extent, |p, value| {
 //!     if write_points.iter().position(|pw| p == *pw) != None {
 //!         assert_eq!(value, 1);
 //!     } else {
@@ -57,9 +57,9 @@
 //! // You can also access individual points like you can with a `ArrayN`. This is
 //! // slower than iterating, because it hashes the chunk coordinates for every access.
 //! for p in write_points.iter() {
-//!     assert_eq!(map.get(p), 1);
+//!     assert_eq!(map.get_owned(p), 1);
 //! }
-//! assert_eq!(map.get(&PointN([1, 1, 1])), 0);
+//! assert_eq!(map.get_owned(&PointN([1, 1, 1])), 0);
 //!
 //! // Sometimes you need to implement very fast algorithms (like kernel-based methods) that do a
 //! // lot of random access. In this case it's most efficient to use `Stride`s, but `ChunkMap`
@@ -100,7 +100,7 @@
 //! let reader_map = builder.build(reader);
 //!
 //! let bounding_extent = reader_map.bounding_extent();
-//! reader_map.for_each(&bounding_extent, |p, value| {
+//! reader_map.for_each_owned(&bounding_extent, |p, value| {
 //!     if write_points.iter().position(|pw| p == *pw) != None {
 //!         assert_eq!(value, 1);
 //!     } else {
@@ -128,11 +128,11 @@ pub mod conditional_aliases {
 }
 
 use crate::{
-    access::{
-        ForEach, ForEachMut, GetUncheckedMutRelease, GetUncheckedRelease, ReadExtent, WriteExtent,
-    },
     array::{Array, ArrayCopySrc, ArrayIndexer, ArrayN},
-    Get, GetMut,
+    GetOwned, Get, GetMut,
+    ForEachOwned, ForEach, ForEachMut,
+    GetUncheckedMutRelease, GetUncheckedRelease,
+    ReadExtent, WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
@@ -537,6 +537,36 @@ where
     }
 }
 
+// ========================================================================== //
+// ========================================================================== //
+// ================================ OWNED =================================== //
+// ========================================================================== //
+// ========================================================================== //
+
+impl<N, T, L, Meta, Store> GetOwned<L> for ChunkMap<N, T, Meta, Store>
+where
+    Self: Get<L>,
+    <Self as Get<L>>::Data: Clone,
+{
+    type Data = <Self as Get<L>>::Data;
+    #[inline]
+    fn get_owned(&self, location: L) -> Self::Data {
+        self.get(location).clone()
+    }
+}
+
+impl<N, T, Coord, Meta, Store> ForEachOwned<N, Coord> for ChunkMap<N, T, Meta, Store>
+where
+    Self: ForEach<N, Coord>,
+    <Self as ForEach<N, Coord>>::Data: Clone,
+{
+    type Data = <Self as ForEach<N, Coord>>::Data;
+    #[inline]
+    fn for_each_owned(&self, extent: &ExtentN<N>, mut f: impl FnMut(Coord, Self::Data)) {
+        self.for_each(extent, |a, b| f(a, b.clone()));
+    }
+}
+
 //  ██████╗ ██████╗ ██████╗ ██╗   ██╗
 // ██╔════╝██╔═══██╗██╔══██╗╚██╗ ██╔╝
 // ██║     ██║   ██║██████╔╝ ╚████╔╝
@@ -621,7 +651,7 @@ pub type ArrayChunkCopySrc<'a, N, T> = Either<ArrayCopySrc<&'a ArrayN<N, T>>, Am
 mod tests {
     use super::*;
 
-    use crate::{access::Get, copy_extent, Array3};
+    use crate::{copy_extent, Array3};
 
     use building_blocks_core::Extent3i;
 
@@ -662,9 +692,9 @@ mod tests {
         let read_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
         for p in read_extent.iter_points() {
             if write_extent.contains(&p) {
-                assert_eq!(map.get(&p), 1);
+                assert_eq!(map.get_owned(&p), 1);
             } else {
-                assert_eq!(map.get(&p), 0);
+                assert_eq!(map.get_owned(&p), 0);
             }
         }
     }
@@ -681,9 +711,9 @@ mod tests {
         let read_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
         for p in read_extent.iter_points() {
             if extent_to_copy.contains(&p) {
-                assert_eq!(map.get(&p), 1);
+                assert_eq!(map.get_owned(&p), 1);
             } else {
-                assert_eq!(map.get(&p), 0);
+                assert_eq!(map.get_owned(&p), 0);
             }
         }
     }

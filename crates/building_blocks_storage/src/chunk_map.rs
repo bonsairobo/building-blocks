@@ -138,7 +138,18 @@ use serde::{Deserialize, Serialize};
 /// outside of the stored chunks will return some ambient value specified on creation.
 ///
 /// `ChunkMap` is generic over the type used to actually store the `Chunk`s. You can use any storage that implements
-/// `ChunkReadStorage` or `ChunkWriteStorage`.
+/// `ChunkReadStorage` or `ChunkWriteStorage`. Being a lattice map, `ChunkMap` will implement various access traits, depending
+/// on the capabilities of the chunk storage.
+///
+/// If the chunk storage implements `ChunkReadStorage`, then `ChunkMap` will implement:
+/// - `Get`
+/// - `ForEach`
+/// - `ReadExtent`
+///
+/// If the chunk storage implements `ChunkWriteStorage`, then `ChunkMap` will implement:
+/// - `GetMut`
+/// - `ForEachMut`
+/// - `WriteExtent`
 pub struct ChunkMap<N, T, Meta, Store> {
     /// Translates from lattice coordinates to chunk key space.
     pub indexer: ChunkIndexer<N>,

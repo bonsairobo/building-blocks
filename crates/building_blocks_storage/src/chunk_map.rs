@@ -608,7 +608,7 @@ where
     }
 }
 
-pub type ChunkCopySrc<Meta, N, T> = Either<ArrayCopySrc<Meta>, AmbientExtent<N, T>>;
+pub type ChunkCopySrc<Map, N, T> = Either<ArrayCopySrc<Map>, AmbientExtent<N, T>>;
 
 pub type ArrayChunkCopySrcIter<'a, N, T> =
     std::vec::IntoIter<(ExtentN<N>, ArrayChunkCopySrc<'a, N, T>)>;

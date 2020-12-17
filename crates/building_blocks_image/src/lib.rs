@@ -22,13 +22,13 @@ where
     unsafe { map.assume_init() }
 }
 
-pub fn encode_image<T, P, Meta>(
-    map: &Meta,
+pub fn encode_image<T, P, Map>(
+    map: &Map,
     map_extent: &Extent2i,
 ) -> ImageBuffer<P, Vec<<P as Pixel>::Subpixel>>
 where
     T: Into<P>,
-    Meta: for<'a> Get<&'a Point2i, Data = T>,
+    Map: for<'a> Get<&'a Point2i, Data = T>,
     P: Pixel + 'static,
 {
     let img_extent = *map_extent - map_extent.minimum;

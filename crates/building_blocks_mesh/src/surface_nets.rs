@@ -69,9 +69,9 @@ impl SurfaceNetsBuffer {
 ///
 /// The set of corners sampled is exactly the set of points in `extent`. `sdf` must contain all of
 /// those points.
-pub fn surface_nets<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
+pub fn surface_nets<A, T>(sdf: &A, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    V: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+    A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     output.reset(sdf.extent().num_points());
@@ -82,9 +82,9 @@ where
 
 // Find all vertex positions and normals. Also generate a map from grid position to vertex index
 // to be used to look up vertices when generating quads.
-fn estimate_surface<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
+fn estimate_surface<A, T>(sdf: &A, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    V: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+    A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     // Precalculate these offsets to do faster linear indexing.
@@ -132,13 +132,13 @@ const CUBE_EDGES: [(usize, usize); 12] = [
 //
 // This is done by estimating, for each cube edge, where the isosurface crosses the edge (if it
 // does at all). Then the estimated surface point is the average of these edge crossings.
-fn estimate_surface_in_voxel<V, T>(
-    sdf: &V,
+fn estimate_surface_in_voxel<A, T>(
+    sdf: &A,
     point: &Point3i,
     corner_strides: &[Stride],
 ) -> Option<([f32; 3], [f32; 3])>
 where
-    V: GetUncheckedRelease<Stride, T>,
+    A: GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     // Get the signed distance values at each corner of this cube.
@@ -216,9 +216,9 @@ fn estimate_surface_edge_intersection(
 // touching that surface. The "centers" are actually the vertex positions found earlier. Also,
 // make sure the triangles are facing the right way. See the comments on `maybe_make_quad` to help
 // with understanding the indexing.
-fn make_all_quads<V, T>(sdf: &V, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
+fn make_all_quads<A, T>(sdf: &A, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    V: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+    A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     let mut xyz_strides = [Stride(0); 3];
@@ -310,8 +310,8 @@ where
 //
 // then we must find the other 3 quad corners by moving along the other two axes (those orthogonal
 // to A) in the negative directions; these are axis B and axis C.
-fn maybe_make_quad<V, T>(
-    sdf: &V,
+fn maybe_make_quad<A, T>(
+    sdf: &A,
     stride_to_index: &[u32],
     positions: &[[f32; 3]],
     p1: Stride,
@@ -320,7 +320,7 @@ fn maybe_make_quad<V, T>(
     axis_c_stride: Stride,
     indices: &mut Vec<u32>,
 ) where
-    V: GetUncheckedRelease<Stride, T>,
+    A: GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     let voxel1 = sdf.get_unchecked_release(p1);

@@ -7,8 +7,8 @@
 //!
 //! Then you get extra bits of functionality from the others:
 //! - **image**: conversion of 2D lattice maps to/from images
-//! - **mesh**: 3D isosurface generation algorithms, smooth and cubic
-//! - **procgen**: procedural generation of lattice maps, including sampled SDFs and height maps
+//! - **mesh**: 3D mesh generation algorithms
+//! - **procgen**: procedural generation of lattice maps
 //! - **search**: search algorithms on lattice maps
 //! - **vox**: conversion of 3D lattice maps to/from VOX data format
 //!

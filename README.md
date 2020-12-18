@@ -90,7 +90,7 @@ For the latest stable docs, look [here](https://docs.rs/building_blocks/latest/b
 For the latest unstable docs, clone the repo and run
 
 ```sh
-cargo doc --open --all-features
+cargo doc --open
 ```
 
 There is plentiful documentation with examples.

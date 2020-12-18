@@ -201,7 +201,7 @@ where
     }
 }
 
-impl<'a, N, T, Meta, Store> ChunkMap<N, T, Meta, Store> {
+impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store> {
     /// Consumes `self` and returns the backing chunk storage.
     #[inline]
     pub fn take_storage(self) -> Store {
@@ -236,7 +236,7 @@ impl<'a, N, T, Meta, Store> ChunkMap<N, T, Meta, Store> {
     }
 }
 
-impl<'a, N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
+impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
 {
@@ -463,7 +463,7 @@ where
     }
 }
 
-impl<'a, N, T, Meta, Store> GetMut<&PointN<N>> for ChunkMap<N, T, Meta, Store>
+impl<N, T, Meta, Store> GetMut<&PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
     N: ArrayIndexer<N>,
@@ -511,7 +511,7 @@ where
     }
 }
 
-impl<'a, N, T, Meta, Store> ForEachMut<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
+impl<N, T, Meta, Store> ForEachMut<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
     ArrayN<N, T>: ForEachMut<N, PointN<N>, Data = T>,
@@ -580,7 +580,7 @@ where
 }
 
 // If ArrayN supports writing from type Src, then so does ChunkMap.
-impl<'a, N, T, Meta, Store, Src> WriteExtent<N, Src> for ChunkMap<N, T, Meta, Store>
+impl<N, T, Meta, Store, Src> WriteExtent<N, Src> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
     ArrayN<N, T>: WriteExtent<N, Src>,

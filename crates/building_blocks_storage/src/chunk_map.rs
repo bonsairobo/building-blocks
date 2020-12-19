@@ -96,11 +96,10 @@
 //!
 //! // In order to use the read-only access traits, you need to construct a `CompressibleChunkStorageReader`.
 //! let local_cache = LocalChunkCache::new();
-//! let reader = map.storage().reader(&local_cache);
-//! let reader_map = builder.build_with_read_storage(reader);
+//! let reader = map.reader(&local_cache);
 //!
-//! let bounding_extent = reader_map.bounding_extent();
-//! reader_map.for_each(&bounding_extent, |p, value| {
+//! let bounding_extent = reader.bounding_extent();
+//! reader.for_each(&bounding_extent, |p, value| {
 //!     if write_points.iter().position(|pw| p == *pw) != None {
 //!         assert_eq!(value, 1);
 //!     } else {

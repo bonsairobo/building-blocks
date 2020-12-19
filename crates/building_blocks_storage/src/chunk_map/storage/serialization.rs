@@ -108,7 +108,7 @@ mod test {
 
     use crate::prelude::*;
 
-    const BUILDER: ChunkMapBuilder<[i32; 3], i32, ()> = ChunkMapBuilder {
+    const BUILDER: ChunkMapBuilder3<i32> = ChunkMapBuilder {
         chunk_shape: PointN([16; 3]),
         ambient_value: 0,
         default_chunk_metadata: (),

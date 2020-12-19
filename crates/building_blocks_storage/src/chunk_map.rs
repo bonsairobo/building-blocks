@@ -635,10 +635,12 @@ where
     }
 }
 
+#[doc(hidden)]
 pub type ChunkCopySrc<Map, N, T> = Either<ArrayCopySrc<Map>, AmbientExtent<N, T>>;
-
+#[doc(hidden)]
 pub type ArrayChunkCopySrcIter<'a, N, T> =
     std::vec::IntoIter<(ExtentN<N>, ArrayChunkCopySrc<'a, N, T>)>;
+#[doc(hidden)]
 pub type ArrayChunkCopySrc<'a, N, T> = Either<ArrayCopySrc<&'a ArrayN<N, T>>, AmbientExtent<N, T>>;
 
 // ████████╗███████╗███████╗████████╗

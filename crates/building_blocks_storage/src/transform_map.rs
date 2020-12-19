@@ -177,9 +177,11 @@ where
     }
 }
 
+#[doc(hidden)]
 pub type TransformChunkCopySrc<'a, F, In, Out, N> =
     ChunkCopySrc<TransformMap<'a, ArrayN<N, In>, F>, N, Out>;
 
+#[doc(hidden)]
 pub struct TransformChunkCopySrcIter<'a, F, In, Out, N>
 where
     F: Fn(In) -> Out,

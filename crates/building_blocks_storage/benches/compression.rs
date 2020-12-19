@@ -101,5 +101,3 @@ fn set_up_array(size: i32) -> Array3<i32> {
         p.x() % 3 + p.y() % 3 + p.z() % 3
     })
 }
-
-// TODO: report the compression efficiency for some typical data set, like a sphere

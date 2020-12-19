@@ -1,7 +1,8 @@
 use crate::{
-    BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkWriteStorage, Compressed,
-    CompressibleChunkStorageReader, Compression, FastChunkCompression, FnvLruCache, IterChunkKeys,
-    LocalChunkCache, LruCacheEntries, LruCacheIntoIter, LruCacheKeys, MaybeCompressedChunk,
+    BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkShape, ChunkWriteStorage, Compressed,
+    CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression, FastChunkCompression,
+    FnvLruCache, IterChunkKeys, LocalChunkCache, LruCacheEntries, LruCacheIntoIter, LruCacheKeys,
+    MaybeCompressedChunk,
 };
 
 use building_blocks_core::prelude::*;
@@ -242,6 +243,23 @@ where
 /// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
 pub type CompressibleChunkMap<N, T, Meta, B> =
     ChunkMap<N, T, Meta, CompressibleChunkStorage<N, T, Meta, B>>;
+
+impl<N, T, Meta, B> CompressibleChunkMap<N, T, Meta, B>
+where
+    PointN<N>: IntegerPoint<N> + ChunkShape<N> + Hash,
+    T: Copy,
+    Meta: Clone,
+    B: BytesCompression,
+{
+    /// Construct a reader for this map.
+    pub fn reader<'a>(
+        &'a self,
+        local_cache: &'a LocalChunkCache<N, T, Meta>,
+    ) -> CompressibleChunkMapReader<N, T, Meta, B> {
+        self.builder()
+            .build_with_read_storage(self.storage().reader(local_cache))
+    }
+}
 
 /// An index into a compressed chunk slab.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

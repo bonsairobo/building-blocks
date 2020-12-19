@@ -176,9 +176,11 @@ where
     }
 }
 
+#[doc(hidden)]
 pub type TransformChunkCopySrc<'a, F, In, Out, N> =
     ChunkCopySrc<TransformMap<'a, ArrayN<N, In>, F>, N, Out>;
 
+#[doc(hidden)]
 pub struct TransformChunkCopySrcIter<'a, F, In, Out, N>
 where
     F: Fn(In) -> Out,
@@ -219,7 +221,7 @@ mod tests {
     use super::*;
     use crate::prelude::*;
 
-    const BUILDER: ChunkMapBuilder<[i32; 3], i32, ()> = ChunkMapBuilder {
+    const BUILDER: ChunkMapBuilder3<i32> = ChunkMapBuilder {
         chunk_shape: PointN([4; 3]),
         ambient_value: 0,
         default_chunk_metadata: (),

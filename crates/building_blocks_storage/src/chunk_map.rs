@@ -82,7 +82,7 @@
 //! #    default_chunk_metadata: (), // chunk metadata is optional
 //! # };
 //! #
-//! let mut map = builder.build(CompressibleChunkStorage::new(Lz4 { level: 10 }));
+//! let mut map = builder.build_with_write_storage(CompressibleChunkStorage::new(Lz4 { level: 10 }));
 //!
 //! // You can write voxels the same as any other `ChunkMap`. As chunks are created, they will be placed in an LRU cache.
 //! let write_points = [PointN([-100; 3]), PointN([0; 3]), PointN([100; 3])];
@@ -96,10 +96,9 @@
 //!
 //! // In order to use the read-only access traits, you need to construct a `CompressibleChunkStorageReader`.
 //! let local_cache = LocalChunkCache::new();
-//! let reader = map.storage().reader(&local_cache);
-//! let reader_map = builder.build(reader);
+//! let reader = map.reader(&local_cache);
 //!
-//! let bounding_extent = reader_map.bounding_extent();
+//! let bounding_extent = reader.bounding_extent();
 //! reader_map.for_each_owned(&bounding_extent, |p, value| {
 //!     if write_points.iter().position(|pw| p == *pw) != None {
 //!         assert_eq!(value, 1);
@@ -130,6 +129,7 @@ use crate::{
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
 
+use core::hash::Hash;
 use either::Either;
 use fnv::FnvHashMap;
 use serde::{Deserialize, Serialize};
@@ -168,7 +168,7 @@ pub type ChunkMap3<T, Meta, Store> = ChunkMap<[i32; 3], T, Meta, Store>;
 /// a chunk storage.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ChunkMapBuilder<N, T, Meta = ()> {
-    /// The shape of each chunk.
+    /// The shape of each chunk. All dimensions must be powers of 2.
     pub chunk_shape: PointN<N>,
     /// The value to use when none is specified, i.e. when creating new chunks or accessing vacant chunks.
     pub ambient_value: T,
@@ -185,8 +185,39 @@ impl<N, T, Meta> ChunkMapBuilder<N, T, Meta>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
 {
-    /// Create a new `ChunkMap` with the given `storage`.
-    pub fn build<Store>(self, storage: Store) -> ChunkMap<N, T, Meta, Store> {
+    /// Create a new `ChunkMap` with the given `storage` which must implement both `ChunkReadStorage` and `ChunkWriteStorage`.
+    pub fn build_with_rw_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Meta, Store>
+    where
+        Store: ChunkReadStorage<N, T, Meta> + ChunkWriteStorage<N, T, Meta>,
+    {
+        self.build_with_storage(storage)
+    }
+
+    /// Create a new `ChunkMap` with the given `storage` which must implement `ChunkReadStorage`.
+    pub fn build_with_read_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Meta, Store>
+    where
+        Store: ChunkReadStorage<N, T, Meta>,
+    {
+        self.build_with_storage(storage)
+    }
+
+    /// Create a new `ChunkMap` with the given `storage` which must implement `ChunkWriteStorage`.
+    pub fn build_with_write_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Meta, Store>
+    where
+        Store: ChunkWriteStorage<N, T, Meta>,
+    {
+        self.build_with_storage(storage)
+    }
+
+    /// Create a new `ChunkMap` using a `FnvHashMap` as the chunk storage.
+    pub fn build_with_hash_map_storage(self) -> ChunkHashMap<N, T, Meta>
+    where
+        PointN<N>: Hash,
+    {
+        self.build_with_rw_storage(FnvHashMap::default())
+    }
+
+    fn build_with_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Meta, Store> {
         ChunkMap::new(
             self.chunk_shape,
             self.ambient_value,
@@ -194,14 +225,9 @@ where
             storage,
         )
     }
-
-    /// Create a new `ChunkMap` using a `FnvHashMap` as the chunk storage.
-    pub fn build_with_hash_map_storage(self) -> ChunkHashMap<N, T, Meta> {
-        self.build(FnvHashMap::default())
-    }
 }
 
-impl<'a, N, T, Meta, Store> ChunkMap<N, T, Meta, Store> {
+impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store> {
     /// Consumes `self` and returns the backing chunk storage.
     #[inline]
     pub fn take_storage(self) -> Store {
@@ -236,14 +262,14 @@ impl<'a, N, T, Meta, Store> ChunkMap<N, T, Meta, Store> {
     }
 }
 
-impl<'a, N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
+impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
 {
     /// Creates a map using the given `storage`.
     ///
     /// All dimensions of `chunk_shape` must be powers of 2.
-    pub fn new(
+    fn new(
         chunk_shape: PointN<N>,
         ambient_value: T,
         default_chunk_metadata: Meta,
@@ -463,7 +489,7 @@ where
     }
 }
 
-impl<'a, N, T, Meta, Store> GetMut<&PointN<N>> for ChunkMap<N, T, Meta, Store>
+impl<N, T, Meta, Store> GetMut<&PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
     N: ArrayIndexer<N>,
@@ -511,7 +537,7 @@ where
     }
 }
 
-impl<'a, N, T, Meta, Store> ForEachMut<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
+impl<N, T, Meta, Store> ForEachMut<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
     ArrayN<N, T>: ForEachMut<N, PointN<N>, Data = T>,
@@ -610,7 +636,7 @@ where
 }
 
 // If ArrayN supports writing from type Src, then so does ChunkMap.
-impl<'a, N, T, Meta, Store, Src> WriteExtent<N, Src> for ChunkMap<N, T, Meta, Store>
+impl<N, T, Meta, Store, Src> WriteExtent<N, Src> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
     ArrayN<N, T>: WriteExtent<N, Src>,
@@ -638,10 +664,12 @@ where
     }
 }
 
+#[doc(hidden)]
 pub type ChunkCopySrc<Map, N, T> = Either<ArrayCopySrc<Map>, AmbientExtent<N, T>>;
-
+#[doc(hidden)]
 pub type ArrayChunkCopySrcIter<'a, N, T> =
     std::vec::IntoIter<(ExtentN<N>, ArrayChunkCopySrc<'a, N, T>)>;
+#[doc(hidden)]
 pub type ArrayChunkCopySrc<'a, N, T> = Either<ArrayCopySrc<&'a ArrayN<N, T>>, AmbientExtent<N, T>>;
 
 // ████████╗███████╗███████╗████████╗
@@ -659,7 +687,7 @@ mod tests {
 
     use building_blocks_core::Extent3i;
 
-    const BUILDER: ChunkMapBuilder<[i32; 3], i32, ()> = ChunkMapBuilder {
+    const BUILDER: ChunkMapBuilder3<i32> = ChunkMapBuilder {
         chunk_shape: PointN([16; 3]),
         ambient_value: 0,
         default_chunk_metadata: (),

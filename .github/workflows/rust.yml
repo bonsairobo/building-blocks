@@ -25,6 +25,6 @@ jobs:
     - name: Lint
       run: cargo clippy --all --all-features
     - name: Build
-      run: cargo build --verbose --all --all-features
+      run: cargo build --verbose --all --all-features && cargo bench --all --no-run
     - name: Run tests
       run: cargo test --verbose --all --all-features

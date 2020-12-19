@@ -10,21 +10,24 @@ Building Blocks is a voxel library for real-time applications.
 
 ![Meshing](https://i.imgur.com/IZwfRHc.gif)
 
-Supported use cases include:
+Features include:
 
 - memory-efficient storage of voxel maps
-- voxel map serialization
-- generating meshes
+  - a `ChunkMap` with generic chunk storage
+  - LRU-cached storage of compressed chunks
+  - compressed serialization format
+  - `OctreeSet` bitset structure
+- mesh generation
   - isosurface
   - cubic / blocky
-  - height maps
+  - height map
 - accelerated spatial queries
-  - ray casting
+  - ray casting and sphere casting
   - range queries
 - procedural generation
   - sampling signed distance fields
-  - generating height maps from fractal noise (TODO)
-- pathfinding
+  - constructive solid geometry (TODO)
+- pathfinding on voxel maps
 
 ## Short Code Example
 
@@ -87,7 +90,7 @@ For the latest stable docs, look [here](https://docs.rs/building_blocks/latest/b
 For the latest unstable docs, clone the repo and run
 
 ```sh
-cargo doc --open --all-features
+cargo doc --open
 ```
 
 There is plentiful documentation with examples.

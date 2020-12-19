@@ -119,7 +119,7 @@ fn compressible_chunk_map_point_indexing(c: &mut Criterion) {
                 |(chunk_map, iter_extent)| {
                     let local_cache = LocalChunkCache::new();
                     let reader = chunk_map.storage().reader(&local_cache);
-                    let reader_map = DEFAULT_BUILDER.build(reader);
+                    let reader_map = DEFAULT_BUILDER.build_with_read_storage(reader);
                     for p in iter_extent.iter_points() {
                         black_box(reader_map.get(&p));
                     }
@@ -161,10 +161,10 @@ fn chunk_hash_map_copy(c: &mut Criterion) {
             b.iter_with_setup(
                 || {
                     let cp_extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
-                    let mut src = DEFAULT_BUILDER.build(FnvHashMap::default());
+                    let mut src = DEFAULT_BUILDER.build_with_rw_storage(FnvHashMap::default());
                     src.fill_extent(&cp_extent, 1);
 
-                    let dst = DEFAULT_BUILDER.build(FnvHashMap::default());
+                    let dst = DEFAULT_BUILDER.build_with_rw_storage(FnvHashMap::default());
 
                     (src, dst, cp_extent)
                 },
@@ -206,14 +206,14 @@ fn set_up_chunk_map<Store>(storage: Store, size: i32) -> (ChunkMap3<i32, (), Sto
 where
     Store: ChunkWriteStorage<[i32; 3], i32, ()>,
 {
-    let mut map = DEFAULT_BUILDER.build(storage);
+    let mut map = DEFAULT_BUILDER.build_with_write_storage(storage);
     let iter_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
     map.fill_extent(&iter_extent, 1);
 
     (map, iter_extent)
 }
 
-const DEFAULT_BUILDER: ChunkMapBuilder<[i32; 3], i32, ()> = ChunkMapBuilder {
+const DEFAULT_BUILDER: ChunkMapBuilder3<i32> = ChunkMapBuilder {
     chunk_shape: PointN([16; 3]),
     ambient_value: 0,
     default_chunk_metadata: (),

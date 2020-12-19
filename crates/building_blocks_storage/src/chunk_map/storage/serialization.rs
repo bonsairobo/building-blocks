@@ -91,7 +91,7 @@ where
             }
         }
 
-        self.builder.build(storage)
+        self.builder.build_with_write_storage(storage)
     }
 }
 
@@ -108,7 +108,7 @@ mod test {
 
     use crate::prelude::*;
 
-    const BUILDER: ChunkMapBuilder<[i32; 3], i32, ()> = ChunkMapBuilder {
+    const BUILDER: ChunkMapBuilder3<i32> = ChunkMapBuilder {
         chunk_shape: PointN([16; 3]),
         ambient_value: 0,
         default_chunk_metadata: (),
@@ -162,7 +162,7 @@ mod test {
             ChunkWriteStorage<[i32; 3], i32, ()> + IntoIterator<Item = (Point3i, Chunk3<i32, ()>)>,
         B: BytesCompression + Copy + DeserializeOwned + Serialize,
     {
-        let mut map = BUILDER.build(storage);
+        let mut map = BUILDER.build_with_write_storage(storage);
         let filled_extent = Extent3i::from_min_and_shape(PointN([-100; 3]), PointN([200; 3]));
         map.fill_extent(&filled_extent, 1);
         let serializable = futures::executor::block_on(SerializableChunkMap::from_chunk_map(

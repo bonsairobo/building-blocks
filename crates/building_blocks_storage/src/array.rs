@@ -681,6 +681,7 @@ where
 //  ╚═════╝ ╚═════╝ ╚═╝        ╚═╝
 
 // Newtype avoids potential conflicting impls downstream.
+#[doc(hidden)]
 #[derive(Copy, Clone)]
 pub struct ArrayCopySrc<Map>(pub Map);
 

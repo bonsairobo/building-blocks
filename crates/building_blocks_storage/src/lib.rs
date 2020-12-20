@@ -15,6 +15,7 @@
 //!   - `TransformMap`: a wrapper of any kind of lattice map that performs an arbitrary transformation
 //!   - `Fn(&PointN<N>)`: some lattice map traits are implemented for functions (like SDFs)
 
+#[macro_use]
 pub mod access;
 pub mod array;
 pub mod chunk_map;
@@ -42,9 +43,9 @@ pub mod prelude {
         ChunkMapBuilder2, ChunkMapBuilder3, ChunkReadStorage, ChunkWriteStorage, Compressed,
         CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
         CompressibleChunkStorageReader, Compression, FastArrayCompression, FastChunkCompression,
-        ForEach, ForEachMut, Get, GetMut, IsEmpty, IterChunkKeys, Local, LocalChunkCache,
-        LocalChunkCache2, LocalChunkCache3, OctreeSet, ReadExtent, SerializableChunkMap, Stride,
-        TransformMap, WriteExtent,
+        ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, IsEmpty, IterChunkKeys, Local,
+        LocalChunkCache, LocalChunkCache2, LocalChunkCache3, OctreeSet, ReadExtent,
+        SerializableChunkMap, Stride, TransformMap, WriteExtent,
     };
 
     #[cfg(feature = "lz4")]

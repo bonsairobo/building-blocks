@@ -63,6 +63,13 @@ pub trait Get<L> {
     fn get(&self, location: L) -> Self::Data;
 }
 
+pub trait GetRef<L> {
+    type Data;
+
+    /// Get an immutable reference to the value at `location`.
+    fn get_ref(&self, location: L) -> &Self::Data;
+}
+
 pub trait GetMut<L> {
     type Data;
 
@@ -79,10 +86,19 @@ pub trait GetUnchecked<L> {
     unsafe fn get_unchecked(&self, location: L) -> Self::Data;
 }
 
+pub trait GetUncheckedRef<L> {
+    type Data;
+
+    /// Get an immutable reference to the value at `location` without doing bounds checking.
+    /// # Safety
+    /// Don't access out of bounds.
+    unsafe fn get_unchecked_ref(&self, location: L) -> &Self::Data;
+}
+
 pub trait GetUncheckedMut<L> {
     type Data;
 
-    /// Get a mutable reference to the value at location without doing bounds checking.
+    /// Get a mutable reference to the value at `location` without doing bounds checking.
     /// # Safety
     /// Don't access out of bounds.
     unsafe fn get_unchecked_mut(&mut self, location: L) -> &mut Self::Data;
@@ -107,8 +123,27 @@ impl<Map, L, T> GetUncheckedRelease<L, T> for Map where
 {
 }
 
+pub trait GetUncheckedRefRelease<L, T>: GetRef<L, Data = T> + GetUncheckedRef<L, Data = T> {
+    /// Get an immutable reference to the value at `location`. Skips bounds checking in release mode.
+    /// # Safety
+    /// Don't access out of bounds.
+    #[inline]
+    fn get_unchecked_ref_release(&self, location: L) -> &T {
+        if cfg!(debug_assertions) {
+            self.get_ref(location)
+        } else {
+            unsafe { self.get_unchecked_ref(location) }
+        }
+    }
+}
+
+impl<Map, L, T> GetUncheckedRefRelease<L, T> for Map where
+    Map: GetRef<L, Data = T> + GetUncheckedRef<L, Data = T>
+{
+}
+
 pub trait GetUncheckedMutRelease<L, T>: GetMut<L, Data = T> + GetUncheckedMut<L, Data = T> {
-    /// Get mutable reference to the value at location. Skips bounds checking in release mode.
+    /// Get an mutable reference to the value at `location`. Skips bounds checking in release mode.
     /// # Safety
     /// Don't access out of bounds.
     #[inline]
@@ -137,6 +172,12 @@ pub trait ForEach<N, Coord> {
     type Data;
 
     fn for_each(&self, extent: &ExtentN<N>, f: impl FnMut(Coord, Self::Data));
+}
+
+pub trait ForEachRef<N, Coord> {
+    type Data;
+
+    fn for_each_ref(&self, extent: &ExtentN<N>, f: impl FnMut(Coord, &Self::Data));
 }
 
 pub trait ForEachMut<N, Coord> {
@@ -178,4 +219,31 @@ where
     for (sub_extent, extent_src) in src_map.read_extent(extent) {
         dst_map.write_extent(&sub_extent, extent_src);
     }
+}
+
+macro_rules! impl_non_ref_given_ref_with_clone {
+    ($map:ty, $($type_params:ident),*) => {
+        impl<L, $($type_params),*> Get<L> for $map
+        where
+            Self: GetRef<L>,
+            <Self as GetRef<L>>::Data: Clone,
+        {
+            type Data = <Self as GetRef<L>>::Data;
+            #[inline]
+            fn get(&self, location: L) -> Self::Data {
+                self.get_ref(location).clone()
+            }
+        }
+        impl<L, $($type_params),*> GetUnchecked<L> for $map
+        where
+            Self: GetUncheckedRef<L>,
+            <Self as GetUncheckedRef<L>>::Data: Clone,
+        {
+            type Data = <Self as GetUncheckedRef<L>>::Data;
+            #[inline]
+            unsafe fn get_unchecked(&self, location: L) -> Self::Data {
+                self.get_unchecked_ref(location).clone()
+            }
+        }
+    };
 }

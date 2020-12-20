@@ -78,9 +78,9 @@ pub use array3::Array3;
 pub use compression::{FastArrayCompression, FastCompressedArray};
 
 use crate::{
-    access::{GetUnchecked, GetUncheckedMut, GetUncheckedMutRelease, GetUncheckedRelease},
-    chunk_map::ChunkCopySrc,
-    ForEach, ForEachMut, Get, GetMut, ReadExtent, TransformMap, WriteExtent,
+    chunk_map::ChunkCopySrc, ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, GetUnchecked,
+    GetUncheckedMut, GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRefRelease,
+    GetUncheckedRelease, ReadExtent, TransformMap, WriteExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -417,27 +417,23 @@ impl SubAssign for Stride {
     }
 }
 
-impl<N, T> Get<Stride> for ArrayN<N, T>
-where
-    T: Clone,
+impl<N, T> GetRef<Stride> for ArrayN<N, T>
 {
     type Data = T;
 
     #[inline]
-    fn get(&self, stride: Stride) -> Self::Data {
-        self.values[stride.0].clone()
+    fn get_ref(&self, stride: Stride) -> &Self::Data {
+        &self.values[stride.0]
     }
 }
 
-impl<N, T> GetUnchecked<Stride> for ArrayN<N, T>
-where
-    T: Clone,
+impl<N, T> GetUncheckedRef<Stride> for ArrayN<N, T>
 {
     type Data = T;
 
     #[inline]
-    unsafe fn get_unchecked(&self, stride: Stride) -> Self::Data {
-        self.values.get_unchecked(stride.0).clone()
+    unsafe fn get_unchecked_ref(&self, stride: Stride) -> &Self::Data {
+        self.values.get_unchecked(stride.0)
     }
 }
 
@@ -459,16 +455,15 @@ impl<N, T> GetUncheckedMut<Stride> for ArrayN<N, T> {
     }
 }
 
-impl<N, T> Get<&Local<N>> for ArrayN<N, T>
+impl<N, T> GetRef<&Local<N>> for ArrayN<N, T>
 where
-    T: Clone,
-    Self: Array<N> + Get<Stride, Data = T>,
+    Self: Array<N> + GetRef<Stride, Data = T>,
 {
     type Data = T;
 
     #[inline]
-    fn get(&self, p: &Local<N>) -> Self::Data {
-        self.get(self.stride_from_local_point(p))
+    fn get_ref(&self, p: &Local<N>) -> &Self::Data {
+        self.get_ref(self.stride_from_local_point(p))
     }
 }
 
@@ -484,19 +479,18 @@ where
     }
 }
 
-impl<N, T> Get<&PointN<N>> for ArrayN<N, T>
+impl<N, T> GetRef<&PointN<N>> for ArrayN<N, T>
 where
-    T: Clone,
-    Self: Array<N> + for<'r> Get<&'r Local<N>, Data = T>,
+    Self: Array<N> + for<'r> GetRef<&'r Local<N>, Data = T>,
     PointN<N>: Point,
 {
     type Data = T;
 
     #[inline]
-    fn get(&self, p: &PointN<N>) -> Self::Data {
+    fn get_ref(&self, p: &PointN<N>) -> &Self::Data {
         let local_p = *p - self.extent().minimum;
 
-        self.get(&Local(local_p))
+        self.get_ref(&Local(local_p))
     }
 }
 
@@ -515,16 +509,15 @@ where
     }
 }
 
-impl<N, T> GetUnchecked<&Local<N>> for ArrayN<N, T>
+impl<N, T> GetUncheckedRef<&Local<N>> for ArrayN<N, T>
 where
-    T: Clone,
-    Self: Array<N> + GetUnchecked<Stride, Data = T>,
+    Self: Array<N> + GetUncheckedRef<Stride, Data = T>,
 {
     type Data = T;
 
     #[inline]
-    unsafe fn get_unchecked(&self, p: &Local<N>) -> Self::Data {
-        self.get_unchecked(self.stride_from_local_point(p))
+    unsafe fn get_unchecked_ref(&self, p: &Local<N>) -> &Self::Data {
+        self.get_unchecked_ref(self.stride_from_local_point(p))
     }
 }
 
@@ -540,19 +533,18 @@ where
     }
 }
 
-impl<N, T> GetUnchecked<&PointN<N>> for ArrayN<N, T>
+impl<N, T> GetUncheckedRef<&PointN<N>> for ArrayN<N, T>
 where
-    T: Clone,
-    Self: Array<N> + for<'r> GetUnchecked<&'r Local<N>, Data = T>,
+    Self: Array<N> + for<'r> GetUncheckedRef<&'r Local<N>, Data = T>,
     PointN<N>: Point,
 {
     type Data = T;
 
     #[inline]
-    unsafe fn get_unchecked(&self, p: &PointN<N>) -> Self::Data {
+    unsafe fn get_unchecked_ref(&self, p: &PointN<N>) -> &Self::Data {
         let local_p = *p - self.extent().minimum;
 
-        self.get_unchecked(&Local(local_p))
+        self.get_unchecked_ref(&Local(local_p))
     }
 }
 
@@ -570,6 +562,8 @@ where
         GetUncheckedMut::<&Local<N>>::get_unchecked_mut(self, &Local(local_p))
     }
 }
+
+impl_non_ref_given_ref_with_clone!(ArrayN<N, T>, N, T);
 
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║
@@ -593,6 +587,23 @@ macro_rules! impl_array_for_each {
                     self.extent(),
                     &extent,
                     |$p, $stride| f($forward_coords, self.get_unchecked_release($stride)),
+                )
+            }
+        }
+
+        impl<N, T> ForEachRef<N, $coords> for ArrayN<N, T>
+        where
+            Self: Sized + GetRef<Stride, Data = T> + GetUncheckedRef<Stride, Data = T>,
+            N: ArrayIndexer<N>,
+        {
+            type Data = T;
+
+            #[inline]
+            fn for_each_ref(&self, extent: &ExtentN<N>, mut f: impl FnMut($coords, &T)) {
+                <Self as Array<N>>::Indexer::for_each_point_and_stride(
+                    self.extent(),
+                    &extent,
+                    |$p, $stride| f($forward_coords, self.get_unchecked_ref_release($stride)),
                 )
             }
         }

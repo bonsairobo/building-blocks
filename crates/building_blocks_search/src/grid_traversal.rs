@@ -100,14 +100,12 @@ impl GridRayTraversal3 {
                 *self.current_voxel.z_mut() += self.step.z();
                 *self.t_max.z_mut() += self.t_delta.z();
             }
+        } else if self.t_max.y() < self.t_max.z() {
+            *self.current_voxel.y_mut() += self.step.y();
+            *self.t_max.y_mut() += self.t_delta.y();
         } else {
-            if self.t_max.y() < self.t_max.z() {
-                *self.current_voxel.y_mut() += self.step.y();
-                *self.t_max.y_mut() += self.t_delta.y();
-            } else {
-                *self.current_voxel.z_mut() += self.step.z();
-                *self.t_max.z_mut() += self.t_delta.z();
-            }
+            *self.current_voxel.z_mut() += self.step.z();
+            *self.t_max.z_mut() += self.t_delta.z();
         }
     }
 

@@ -71,6 +71,7 @@ impl<N> PointN<N>
 where
     Self: MapComponents,
 {
+    #[inline]
     pub fn signum(&self) -> Self
     where
         <Self as MapComponents>::Scalar: Signed,

@@ -15,6 +15,7 @@
 //!   - `TransformMap`: a wrapper of any kind of lattice map that performs an arbitrary transformation
 //!   - `Fn(&PointN<N>)`: some lattice map traits are implemented for functions (like SDFs)
 
+#[macro_use]
 pub mod access;
 pub mod array;
 pub mod chunk_map;

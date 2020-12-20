@@ -120,11 +120,12 @@ pub use chunk::*;
 pub use storage::*;
 
 use crate::{
-    access::{
-        ForEach, ForEachMut, GetUncheckedMutRelease, GetUncheckedRelease, ReadExtent, WriteExtent,
-    },
     array::{ArrayCopySrc, ArrayIndexer, ArrayN},
-    Get, GetMut,
+    Get, GetRef, GetMut,
+    GetUnchecked, GetUncheckedRef,
+    GetUncheckedMutRelease, GetUncheckedRefRelease,
+    ForEach, ForEachRef, ForEachMut,
+    ReadExtent, WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
@@ -472,7 +473,7 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<N, T, Meta, Store> Get<&PointN<N>> for ChunkMap<N, T, Meta, Store>
+impl<N, T, Meta, Store> GetRef<&PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
     N: ArrayIndexer<N>,
@@ -482,10 +483,10 @@ where
     type Data = T;
 
     #[inline]
-    fn get(&self, p: &PointN<N>) -> Self::Data {
+    fn get_ref(&self, p: &PointN<N>) -> &Self::Data {
         self.get_chunk_containing_point(p)
-            .map(|(_key, chunk)| chunk.array.get_unchecked_release(p))
-            .unwrap_or(self.ambient_value)
+            .map(|(_key, chunk)| chunk.array.get_unchecked_ref_release(p))
+            .unwrap_or(&self.ambient_value)
     }
 }
 
@@ -507,6 +508,8 @@ where
     }
 }
 
+impl_non_ref_given_ref_with_clone!(ChunkMap<N, T, Meta, Store>, N, T, Meta, Store);
+
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║
 // █████╗  ██║   ██║██████╔╝    █████╗  ███████║██║     ███████║
@@ -516,22 +519,35 @@ where
 
 impl<N, T, Meta, Store> ForEach<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
+    Self: ForEachRef<N, PointN<N>>,
+    <Self as ForEachRef<N, PointN<N>>>::Data: Clone,
+{
+    type Data = <Self as ForEachRef<N, PointN<N>>>::Data;
+
+    #[inline]
+    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
+        self.for_each_ref(extent, |a, b| f(a, b.clone()));
+    }
+}
+
+impl<N, T, Meta, Store> ForEachRef<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
+where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
-    ArrayN<N, T>: ForEach<N, PointN<N>, Data = T>,
+    ArrayN<N, T>: ForEachRef<N, PointN<N>, Data = T>,
     T: Copy,
     Store: ChunkReadStorage<N, T, Meta>,
 {
     type Data = T;
 
     #[inline]
-    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
+    fn for_each_ref(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &Self::Data)) {
         for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
             if let Some(chunk) = self.get_chunk(&chunk_key) {
-                chunk.array.for_each(extent, |p, value| f(p, value));
+                chunk.array.for_each_ref(extent, |p, value| f(p, value));
             } else {
                 let chunk_extent = self.indexer.extent_for_chunk_at_key(chunk_key);
                 AmbientExtent::new(self.ambient_value)
-                    .for_each(&extent.intersection(&chunk_extent), |p, value| f(p, value));
+                    .for_each(&extent.intersection(&chunk_extent), |p, value| f(p, &value));
             }
         }
     }

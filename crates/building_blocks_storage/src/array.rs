@@ -418,8 +418,6 @@ impl SubAssign for Stride {
 }
 
 impl<N, T> GetRef<Stride> for ArrayN<N, T>
-where
-    T: Clone,
 {
     type Data = T;
 
@@ -430,8 +428,6 @@ where
 }
 
 impl<N, T> GetUncheckedRef<Stride> for ArrayN<N, T>
-where
-    T: Clone,
 {
     type Data = T;
 
@@ -461,7 +457,6 @@ impl<N, T> GetUncheckedMut<Stride> for ArrayN<N, T> {
 
 impl<N, T> GetRef<&Local<N>> for ArrayN<N, T>
 where
-    T: Clone,
     Self: Array<N> + GetRef<Stride, Data = T>,
 {
     type Data = T;
@@ -486,7 +481,6 @@ where
 
 impl<N, T> GetRef<&PointN<N>> for ArrayN<N, T>
 where
-    T: Clone,
     Self: Array<N> + for<'r> GetRef<&'r Local<N>, Data = T>,
     PointN<N>: Point,
 {
@@ -517,7 +511,6 @@ where
 
 impl<N, T> GetUncheckedRef<&Local<N>> for ArrayN<N, T>
 where
-    T: Clone,
     Self: Array<N> + GetUncheckedRef<Stride, Data = T>,
 {
     type Data = T;
@@ -542,7 +535,6 @@ where
 
 impl<N, T> GetUncheckedRef<&PointN<N>> for ArrayN<N, T>
 where
-    T: Clone,
     Self: Array<N> + for<'r> GetUncheckedRef<&'r Local<N>, Data = T>,
     PointN<N>: Point,
 {

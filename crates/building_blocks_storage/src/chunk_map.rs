@@ -474,7 +474,6 @@ impl<N, T, Meta, Store> GetRef<&PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N> + ChunkShape<N>,
     N: ArrayIndexer<N>,
-    T: Copy,
     Store: ChunkReadStorage<N, T, Meta>,
 {
     type Data = T;
@@ -523,7 +522,7 @@ where
 
     #[inline]
     fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
-        self.for_each_ref(extent, |a, b| f(a, b.clone()));
+        self.for_each_ref(extent, |p, data| f(p, data.clone()));
     }
 }
 

@@ -121,11 +121,8 @@ pub use storage::*;
 
 use crate::{
     array::{ArrayCopySrc, ArrayIndexer, ArrayN},
-    Get, GetRef, GetMut,
-    GetUnchecked, GetUncheckedRef,
-    GetUncheckedMutRelease, GetUncheckedRefRelease,
-    ForEach, ForEachRef, ForEachMut,
-    ReadExtent, WriteExtent,
+    ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, GetUnchecked, GetUncheckedMutRelease,
+    GetUncheckedRef, GetUncheckedRefRelease, ReadExtent, WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};

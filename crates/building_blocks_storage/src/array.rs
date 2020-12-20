@@ -78,13 +78,9 @@ pub use array3::Array3;
 pub use compression::{FastArrayCompression, FastCompressedArray};
 
 use crate::{
-    chunk_map::ChunkCopySrc,
-    Get, GetRef, GetMut,
-    GetUnchecked, GetUncheckedRef, GetUncheckedMut,
-    GetUncheckedMutRelease, GetUncheckedRefRelease, GetUncheckedRelease,
-    ForEach, ForEachRef, ForEachMut,
-    ReadExtent, WriteExtent,
-    TransformMap,
+    chunk_map::ChunkCopySrc, ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, GetUnchecked,
+    GetUncheckedMut, GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRefRelease,
+    GetUncheckedRelease, ReadExtent, TransformMap, WriteExtent,
 };
 
 use building_blocks_core::prelude::*;

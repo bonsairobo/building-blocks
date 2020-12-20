@@ -60,7 +60,8 @@ where
 }
 
 /// A `ChunkMap` using `HashMap` as chunk storage.
-pub type ChunkHashMap<N, T, Meta = ()> = ChunkMap<N, T, Meta, FnvHashMap<PointN<N>, Chunk<N, T, Meta>>>;
+pub type ChunkHashMap<N, T, Meta = ()> =
+    ChunkMap<N, T, Meta, FnvHashMap<PointN<N>, Chunk<N, T, Meta>>>;
 /// A 2-dimensional `ChunkHashMap`.
 pub type ChunkHashMap2<T, Meta = ()> = ChunkHashMap<[i32; 2], T, Meta>;
 /// A 3-dimensional `ChunkHashMap`.

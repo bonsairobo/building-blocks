@@ -4,6 +4,7 @@
     clippy::too_many_arguments
 )]
 
+pub mod grid_traversal;
 pub mod pathfinding;
 pub mod surface;
 

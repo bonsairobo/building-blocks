@@ -1,3 +1,6 @@
+#[macro_use]
+pub mod point_traits;
+
 #[cfg(feature = "glam")]
 mod glam_conversions;
 #[cfg(feature = "mint")]
@@ -7,7 +10,6 @@ mod nalgebra_conversions;
 
 mod point2;
 mod point3;
-pub mod point_traits;
 
 pub use point2::*;
 pub use point3::*;
@@ -64,6 +66,18 @@ use serde::{Deserialize, Serialize};
 /// ```
 #[derive(Copy, Clone, Debug, Deserialize, Default, Eq, Hash, PartialEq, Serialize)]
 pub struct PointN<N>(pub N);
+
+impl<N> PointN<N>
+where
+    Self: MapComponents,
+{
+    pub fn signum(&self) -> Self
+    where
+        <Self as MapComponents>::Scalar: Signed,
+    {
+        self.map_components_unary(|c| c.signum())
+    }
+}
 
 impl<N> Abs for PointN<N>
 where

@@ -78,6 +78,26 @@ impl Point2f {
     pub fn floor(&self) -> Self {
         self.map_components_unary(|c| c.floor())
     }
+
+    #[inline]
+    pub fn ceil(&self) -> Point2f {
+        self.map_components_unary(|c| c.ceil())
+    }
+
+    #[inline]
+    pub fn fract(&self) -> Point2f {
+        self.map_components_unary(|c| c.fract())
+    }
+
+    #[inline]
+    pub fn as_2i(&self) -> Point2i {
+        PointN([self.x() as i32, self.y() as i32])
+    }
+
+    #[inline]
+    pub fn in_pixel(&self) -> Point2i {
+        self.floor().as_2i()
+    }
 }
 
 impl<T> Bounded for Point2<T>
@@ -404,14 +424,5 @@ impl From<Point2i> for Point2f {
     }
 }
 
-impl Point2f {
-    #[inline]
-    pub fn as_2i(&self) -> Point2i {
-        PointN([self.x() as i32, self.y() as i32])
-    }
-
-    #[inline]
-    pub fn in_pixel(&self) -> Point2i {
-        self.floor().as_2i()
-    }
-}
+impl_componentwise_ops!(Point2i, i32);
+impl_componentwise_ops!(Point2f, f32);

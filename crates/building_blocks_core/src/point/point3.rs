@@ -130,6 +130,26 @@ impl Point3f {
     pub fn floor(&self) -> Self {
         self.map_components_unary(|c| c.floor())
     }
+
+    #[inline]
+    pub fn ceil(&self) -> Point3f {
+        self.map_components_unary(|c| c.ceil())
+    }
+
+    #[inline]
+    pub fn fract(&self) -> Point3f {
+        self.map_components_unary(|c| c.fract())
+    }
+
+    #[inline]
+    pub fn as_3i(&self) -> Point3i {
+        PointN([self.x() as i32, self.y() as i32, self.z() as i32])
+    }
+
+    #[inline]
+    pub fn in_voxel(&self) -> Point3i {
+        self.floor().as_3i()
+    }
 }
 
 impl<T> Bounded for Point3<T>
@@ -507,14 +527,5 @@ impl From<Point3i> for Point3f {
     }
 }
 
-impl Point3f {
-    #[inline]
-    pub fn as_3i(&self) -> Point3i {
-        PointN([self.x() as i32, self.y() as i32, self.z() as i32])
-    }
-
-    #[inline]
-    pub fn in_voxel(&self) -> Point3i {
-        self.floor().as_3i()
-    }
-}
+impl_componentwise_ops!(Point3i, i32);
+impl_componentwise_ops!(Point3f, f32);

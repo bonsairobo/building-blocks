@@ -2,7 +2,6 @@ use crate::PointN;
 
 use core::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 use num::Zero;
-use std::cmp::{max, min};
 
 /// A trait that bundles op traits that all `PointN<N>` (and its components) should have.
 pub trait Point:
@@ -107,13 +106,31 @@ pub trait IntegerPoint<N>:
     fn is_cube(&self) -> bool;
 }
 
-pub trait ComponentwiseIntegerOps: Point {
+pub trait ComponentwiseOps {
     /// Component-wise maximum.
     fn join(&self, other: &Self) -> Self;
 
     /// Component-wise minimum.
     fn meet(&self, other: &Self) -> Self;
+}
 
+macro_rules! impl_componentwise_ops {
+    ($t:ty, $scalar:ty) => {
+        impl ComponentwiseOps for $t {
+            #[inline]
+            fn join(&self, other: &Self) -> Self {
+                self.map_components_binary(other, <$scalar>::max)
+            }
+
+            #[inline]
+            fn meet(&self, other: &Self) -> Self {
+                self.map_components_binary(other, <$scalar>::min)
+            }
+        }
+    };
+}
+
+pub trait ComponentwiseIntegerOps: ComponentwiseOps + Point {
     /// Left bitshifts all dimensions.
     fn scalar_left_shift(&self, shift_by: <Self as Point>::Scalar) -> Self;
 
@@ -129,18 +146,8 @@ pub trait ComponentwiseIntegerOps: Point {
 
 impl<T> ComponentwiseIntegerOps for T
 where
-    T: MapComponents<Scalar = i32> + Point<Scalar = i32>,
+    T: MapComponents<Scalar = i32> + Point<Scalar = i32> + ComponentwiseOps,
 {
-    #[inline]
-    fn join(&self, other: &Self) -> Self {
-        self.map_components_binary(other, max)
-    }
-
-    #[inline]
-    fn meet(&self, other: &Self) -> Self {
-        self.map_components_binary(other, min)
-    }
-
     #[inline]
     fn scalar_left_shift(&self, shift_by: i32) -> Self {
         self.map_components_unary(|c| c << shift_by)

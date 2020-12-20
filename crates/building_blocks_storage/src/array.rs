@@ -417,8 +417,7 @@ impl SubAssign for Stride {
     }
 }
 
-impl<N, T> GetRef<Stride> for ArrayN<N, T>
-{
+impl<N, T> GetRef<Stride> for ArrayN<N, T> {
     type Data = T;
 
     #[inline]
@@ -427,8 +426,7 @@ impl<N, T> GetRef<Stride> for ArrayN<N, T>
     }
 }
 
-impl<N, T> GetUncheckedRef<Stride> for ArrayN<N, T>
-{
+impl<N, T> GetUncheckedRef<Stride> for ArrayN<N, T> {
     type Data = T;
 
     #[inline]
@@ -563,7 +561,7 @@ where
     }
 }
 
-impl_non_ref_given_ref_with_clone!(ArrayN<N, T>, N, T);
+impl_get_via_get_ref_and_clone!(ArrayN<N, T>, N, T);
 
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║

@@ -504,7 +504,7 @@ where
     }
 }
 
-impl_non_ref_given_ref_with_clone!(ChunkMap<N, T, Meta, Store>, N, T, Meta, Store);
+impl_get_via_get_ref_and_clone!(ChunkMap<N, T, Meta, Store>, N, T, Meta, Store);
 
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║

@@ -161,6 +161,34 @@ impl<Map, L, T> GetUncheckedMutRelease<L, T> for Map where
 {
 }
 
+// We need this macro because doing a blanket impl causes conflicts due to Rust's orphan rules.
+macro_rules! impl_get_via_get_ref_and_clone {
+    ($map:ty, $($type_params:ident),*) => {
+        impl<L, $($type_params),*> Get<L> for $map
+        where
+            Self: GetRef<L>,
+            <Self as GetRef<L>>::Data: Clone,
+        {
+            type Data = <Self as GetRef<L>>::Data;
+            #[inline]
+            fn get(&self, location: L) -> Self::Data {
+                self.get_ref(location).clone()
+            }
+        }
+        impl<L, $($type_params),*> GetUnchecked<L> for $map
+        where
+            Self: GetUncheckedRef<L>,
+            <Self as GetUncheckedRef<L>>::Data: Clone,
+        {
+            type Data = <Self as GetUncheckedRef<L>>::Data;
+            #[inline]
+            unsafe fn get_unchecked(&self, location: L) -> Self::Data {
+                self.get_unchecked_ref(location).clone()
+            }
+        }
+    };
+}
+
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║
 // █████╗  ██║   ██║██████╔╝    █████╗  ███████║██║     ███████║
@@ -219,31 +247,4 @@ where
     for (sub_extent, extent_src) in src_map.read_extent(extent) {
         dst_map.write_extent(&sub_extent, extent_src);
     }
-}
-
-macro_rules! impl_non_ref_given_ref_with_clone {
-    ($map:ty, $($type_params:ident),*) => {
-        impl<L, $($type_params),*> Get<L> for $map
-        where
-            Self: GetRef<L>,
-            <Self as GetRef<L>>::Data: Clone,
-        {
-            type Data = <Self as GetRef<L>>::Data;
-            #[inline]
-            fn get(&self, location: L) -> Self::Data {
-                self.get_ref(location).clone()
-            }
-        }
-        impl<L, $($type_params),*> GetUnchecked<L> for $map
-        where
-            Self: GetUncheckedRef<L>,
-            <Self as GetUncheckedRef<L>>::Data: Clone,
-        {
-            type Data = <Self as GetUncheckedRef<L>>::Data;
-            #[inline]
-            unsafe fn get_unchecked(&self, location: L) -> Self::Data {
-                self.get_unchecked_ref(location).clone()
-            }
-        }
-    };
 }

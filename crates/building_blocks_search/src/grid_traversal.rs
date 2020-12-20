@@ -1,5 +1,59 @@
 use building_blocks_core::prelude::*;
 
+/// 2D grid traversal algorithm by Amanatides and Woo.
+pub struct GridRayTraversal2 {
+    // The current pixel position.
+    current_pixel: Point2i,
+    // Either -1 or +1 in each axis. The direction we step along each axis.
+    step: Point2i,
+    // The amount of time it takes to move 1 unit along each axis.
+    t_delta: Point2f,
+    // The next time when each axis will cross a pixel boundary.
+    t_max: Point2f,
+}
+
+impl GridRayTraversal2 {
+    /// Initialize the traversal, beginning at the `start` position and moving along the `velocity` vector.
+    #[inline]
+    pub fn new(start: Point2f, velocity: Point2f) -> Self {
+        let current_pixel = start.in_pixel();
+        let vel_signs = velocity.signum();
+        let step = vel_signs.as_2i();
+        let t_delta = vel_signs / velocity;
+
+        // For each axis, calculate the time delta we need to reach a pixel boundary on that axis. For a positive velocity, this
+        // is just the next pixel, but for negative, it's the current pixel (hence the join with zero).
+        let next_bounds: Point2f = (current_pixel + step.join(&Point2i::ZERO)).into();
+        let delta_to_next_bounds = next_bounds - start;
+        let t_max = delta_to_next_bounds / velocity;
+
+        Self {
+            current_pixel,
+            step,
+            t_delta,
+            t_max,
+        }
+    }
+
+    /// Move the the next closest pixel along the ray.
+    #[inline]
+    pub fn step(&mut self) {
+        if self.t_max.x() < self.t_max.y() {
+            *self.current_pixel.x_mut() += self.step.x();
+            *self.t_max.x_mut() += self.t_delta.x();
+        } else {
+            *self.current_pixel.y_mut() += self.step.y();
+            *self.t_max.y_mut() += self.t_delta.y();
+        }
+    }
+
+    /// The current pixel position. Changes on every call of `step`.
+    #[inline]
+    pub fn current_pixel(&self) -> Point2i {
+        self.current_pixel
+    }
+}
+
 /// 3D grid traversal algorithm by Amanatides and Woo.
 pub struct GridRayTraversal3 {
     // The current voxel position.
@@ -13,7 +67,7 @@ pub struct GridRayTraversal3 {
 }
 
 impl GridRayTraversal3 {
-    /// Initial the traversal, beginning at the `start` position and moving along the `velocity` vector.
+    /// Initialize the traversal, beginning at the `start` position and moving along the `velocity` vector.
     #[inline]
     pub fn new(start: Point3f, velocity: Point3f) -> Self {
         let current_voxel = start.in_voxel();

@@ -33,11 +33,11 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>
         .spawn(Camera3dComponents::default())
         .current_entity()
         .unwrap();
-    commands.insert_resource(CameraRotationState::new(camera_entity));
 
-    commands.insert_resource(MeshMaterial(
-        materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
-    ));
-
-    commands.insert_resource(MeshGeneratorState::new());
+    commands
+        .insert_resource(CameraRotationState::new(camera_entity))
+        .insert_resource(MeshMaterial(
+            materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
+        ))
+        .insert_resource(MeshGeneratorState::new());
 }

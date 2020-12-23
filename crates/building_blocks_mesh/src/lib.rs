@@ -85,10 +85,10 @@
 //! triangulate_height_map(&tfm_array, &extent, &mut hm_buffer);
 //! ```
 
-pub mod greedy_quads;
-pub mod height_map;
-pub mod quad;
-pub mod surface_nets;
+mod greedy_quads;
+mod height_map;
+mod quad;
+mod surface_nets;
 
 pub use greedy_quads::*;
 pub use height_map::*;

@@ -73,7 +73,7 @@ impl OrientedCubeFace {
     ///      -------->
     ///        +u
     /// ```
-    pub fn quad_corners(&self, quad: &UnorientedQuad) -> [Point3f; 4] {
+    pub fn quad_corners(&self, quad: &UnorientedQuad) -> [Point3i; 4] {
         let w_vec = self.u * quad.width;
         let h_vec = self.v * quad.height;
 
@@ -86,18 +86,18 @@ impl OrientedCubeFace {
         let minu_maxv = minu_minv + h_vec;
         let maxu_maxv = minu_minv + w_vec + h_vec;
 
-        [
-            minu_minv.into(),
-            maxu_minv.into(),
-            minu_maxv.into(),
-            maxu_maxv.into(),
-        ]
+        [minu_minv, maxu_minv, minu_maxv, maxu_maxv]
     }
 
     pub fn quad_mesh_positions(&self, quad: &UnorientedQuad) -> [[f32; 3]; 4] {
         let [c0, c1, c2, c3] = self.quad_corners(quad);
 
-        [c0.0, c1.0, c2.0, c3.0]
+        [
+            Point3f::from(c0).0,
+            Point3f::from(c1).0,
+            Point3f::from(c2).0,
+            Point3f::from(c3).0,
+        ]
     }
 
     pub fn quad_mesh_normals(&self) -> [[f32; 3]; 4] {

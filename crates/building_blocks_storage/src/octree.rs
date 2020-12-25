@@ -351,7 +351,7 @@ impl OffsetTable {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct OctantOffsets {
     offsets: [Point3i; 8],
 }
@@ -376,7 +376,7 @@ impl OctantOffsets {
 
 /// Represents a single non-empty octant in the octree. Used for manual traversal by calling
 /// `OctreeSet::get_child`.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct OctreeNode {
     location: LocationCode,
     octant: Octant,
@@ -439,7 +439,7 @@ impl LocationCode {
 
 /// A cube-shaped extent which is an octant at some level of an octree. As a leaf node, it
 /// represents a totally full set of points.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Octant {
     minimum: Point3i,
     edge_length: i32,

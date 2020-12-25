@@ -146,3 +146,8 @@ pub trait MaterialVoxel {
     /// Get the voxel's material.
     fn material(&self) -> Self::Material;
 }
+
+pub trait IsOpaque {
+    /// Returns `true` if light cannot pass through this voxel.
+    fn is_opaque(&self) -> bool;
+}

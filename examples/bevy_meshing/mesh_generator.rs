@@ -104,6 +104,12 @@ impl MaterialVoxel for CubeVoxel {
     }
 }
 
+impl IsOpaque for CubeVoxel {
+    fn is_opaque(&self) -> bool {
+        true
+    }
+}
+
 impl IsEmpty for CubeVoxel {
     fn is_empty(&self) -> bool {
         !self.0

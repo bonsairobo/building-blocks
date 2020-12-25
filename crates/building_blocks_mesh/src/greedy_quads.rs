@@ -1,6 +1,6 @@
 use super::{
     quad::{OrientedCubeFace, UnorientedQuad},
-    MaterialVoxel,
+    IsOpaque, MaterialVoxel,
 };
 
 use building_blocks_core::{axis::Axis3Permutation, prelude::*};
@@ -87,15 +87,15 @@ pub fn padded_greedy_quads_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {
 ///
 /// A single quad of the greedy mesh will contain faces of voxels that all share the same material. The quads can be
 /// post-processed into meshes as the user sees fit.
-pub fn greedy_quads<V, T>(
-    voxels: &V,
+pub fn greedy_quads<A, T>(
+    voxels: &A,
     extent: &Extent3i,
     output: &mut GreedyQuadsBuffer<T::Material>,
 ) where
-    V: Array<[i32; 3]>
+    A: Array<[i32; 3]>
         + GetUncheckedRelease<Stride, T>
         + ForEach<[i32; 3], (Point3i, Stride), Data = T>,
-    T: IsEmpty + MaterialVoxel,
+    T: IsEmpty + IsOpaque + MaterialVoxel,
 {
     output.reset(*extent);
     let GreedyQuadsBuffer {
@@ -113,17 +113,17 @@ pub fn greedy_quads<V, T>(
     }
 }
 
-fn greedy_quads_for_group<V, T>(
-    voxels: &V,
+fn greedy_quads_for_group<A, T>(
+    voxels: &A,
     interior_min: Point3i,
     interior_shape: Point3i,
     visited: &mut Array3<bool>,
     quad_group: &mut QuadGroup<T::Material>,
 ) where
-    V: Array<[i32; 3]>
+    A: Array<[i32; 3]>
         + GetUncheckedRelease<Stride, T>
         + ForEach<[i32; 3], (Point3i, Stride), Data = T>,
-    T: IsEmpty + MaterialVoxel,
+    T: IsEmpty + IsOpaque + MaterialVoxel,
 {
     visited.reset_values(false);
 
@@ -228,8 +228,8 @@ fn greedy_quads_for_group<V, T>(
     }
 }
 
-fn get_row_width<V, T>(
-    voxels: &V,
+fn get_row_width<A, T>(
+    voxels: &A,
     visited: &Array3<bool>,
     quad_material: &T::Material,
     visibility_offset: Stride,
@@ -238,10 +238,8 @@ fn get_row_width<V, T>(
     max_width: i32,
 ) -> i32
 where
-    V: Array<[i32; 3]>
-        + GetUncheckedRelease<Stride, T>
-        + ForEach<[i32; 3], (Point3i, Stride), Data = T>,
-    T: IsEmpty + MaterialVoxel,
+    A: GetUncheckedRelease<Stride, T>,
+    T: IsEmpty + IsOpaque + MaterialVoxel,
 {
     let mut quad_width = 0;
     let mut row_stride = start_stride;
@@ -258,8 +256,8 @@ where
         }
 
         let adjacent_voxel = voxels.get_unchecked_release(row_stride + visibility_offset);
-        if !adjacent_voxel.is_empty() {
-            // The adjacent voxel sharing this face must be empty for the face to be visible.
+        if adjacent_voxel.is_opaque() && !adjacent_voxel.is_empty() {
+            // The adjacent voxel is occluding this face.
             break;
         }
 

@@ -32,3 +32,7 @@ criterion = "0.3"
 [[bench]]
 name = "find_surface"
 harness = false
+
+[[bench]]
+name = "flood_fill"
+harness = false

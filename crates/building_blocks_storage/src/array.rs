@@ -114,9 +114,7 @@ pub trait Array<N> {
 
     #[inline]
     fn strides_from_local_points(&self, points: &[Local<N>], strides: &mut [Stride]) {
-        for (i, p) in points.iter().enumerate() {
-            strides[i] = self.stride_from_local_point(p);
-        }
+        Self::Indexer::strides_from_local_points(&self.extent().shape, points, strides)
     }
 }
 
@@ -147,6 +145,13 @@ pub trait ArrayIndexer<N> {
         array2_extent: &ExtentN<N>,
         f: impl FnMut(Stride, Stride),
     );
+
+    #[inline]
+    fn strides_from_local_points(shape: &PointN<N>, points: &[Local<N>], strides: &mut [Stride]) {
+        for (i, p) in points.iter().enumerate() {
+            strides[i] = Self::stride_from_local_point(shape, p);
+        }
+    }
 }
 
 /// A map from lattice location `PointN<N>` to data `T`, stored as a flat array on the heap.

@@ -8,15 +8,17 @@ use building_blocks_core::{
 /// Metadata that's used to aid in the geometric calculations for one of the 6 possible cube faces.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct OrientedCubeFace {
-    // Determines the orientation of the plane.
+    /// Determines the orientation of the plane.
     pub n_sign: i32,
 
-    // Determines the {N, U, V} <--> {X, Y, Z} relation.
+    /// Determines the {N, U, V} <--> {X, Y, Z} relation.
     pub permutation: Axis3Permutation,
 
-    // These vectors are some `permutation` of +X, +Y, and +Z.
+    /// First in the `permutation` of +X, +Y, and +Z.
     pub n: Point3i,
+    /// Second in the `permutation` of +X, +Y, and +Z.
     pub u: Point3i,
+    /// Third in the `permutation` of +X, +Y, and +Z.
     pub v: Point3i,
 }
 

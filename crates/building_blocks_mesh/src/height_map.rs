@@ -58,12 +58,12 @@ impl HeightMapMeshBuffer {
 ///
 /// b   b   b   b
 /// ```
-pub fn triangulate_height_map<V, H>(
-    height_map: &V,
+pub fn triangulate_height_map<A, H>(
+    height_map: &A,
     extent: &Extent2i,
     output: &mut HeightMapMeshBuffer,
 ) where
-    V: Array<[i32; 2]>
+    A: Array<[i32; 2]>
         + GetUncheckedRelease<Stride, H>
         + ForEach<[i32; 2], (Point2i, Stride), Data = H>,
     H: Height,
@@ -73,9 +73,8 @@ pub fn triangulate_height_map<V, H>(
     // Avoid accessing out of bounds with a 3x3x3 kernel.
     let interior_extent = extent.padded(-1);
 
-    let deltas: Vec<_> = Local::localize_points(&Point2i::basis());
-    let mut delta_strides = [Stride(0); 2];
-    height_map.strides_from_local_points(&deltas, &mut delta_strides);
+    let x_stride = height_map.stride_from_local_point(&Local(PointN([1, 0])));
+    let y_stride = height_map.stride_from_local_point(&Local(PointN([0, 1])));
 
     height_map.for_each(
         &interior_extent,
@@ -99,10 +98,10 @@ pub fn triangulate_height_map<V, H>(
             // And the gradient is:
             //
             // grad f = [-dh/dx, 1, -dh/dz]
-            let l_stride = stride - delta_strides[0];
-            let r_stride = stride + delta_strides[0];
-            let b_stride = stride - delta_strides[1];
-            let t_stride = stride + delta_strides[1];
+            let l_stride = stride - x_stride;
+            let r_stride = stride + x_stride;
+            let b_stride = stride - y_stride;
+            let t_stride = stride + y_stride;
             let l_y = height_map.get_unchecked_release(l_stride).height();
             let r_y = height_map.get_unchecked_release(r_stride).height();
             let b_y = height_map.get_unchecked_release(b_stride).height();
@@ -118,9 +117,9 @@ pub fn triangulate_height_map<V, H>(
     let quads_extent = interior_extent.add_to_shape(PointN([-1; 2]));
 
     height_map.for_each_point_and_stride(&quads_extent, |_p, bl_stride| {
-        let br_stride = bl_stride + delta_strides[0];
-        let tl_stride = bl_stride + delta_strides[1];
-        let tr_stride = bl_stride + delta_strides[0] + delta_strides[1];
+        let br_stride = bl_stride + x_stride;
+        let tl_stride = bl_stride + y_stride;
+        let tr_stride = bl_stride + x_stride + y_stride;
 
         let bl_index = output.stride_to_index[bl_stride.0];
         let br_index = output.stride_to_index[br_stride.0];

@@ -50,12 +50,12 @@ impl SurfaceNetsBuffer {
 
 /// The Naive Surface Nets smooth voxel meshing algorithm.
 ///
-/// For an in-depth explanation of the algorithm, read [here](https://medium.com/@bonsairobo/smooth-voxel-mapping-a-technical-deep-dive-on-real-time-surface-nets-and-texturing-ef06d0f8ca14).
+/// For an in-depth explanation of the algorithm, read
+/// [here](https://medium.com/@bonsairobo/smooth-voxel-mapping-a-technical-deep-dive-on-real-time-surface-nets-and-texturing-ef06d0f8ca14).
 ///
-/// Extracts an isosurface mesh from the signed distance field `sdf`. The `sdf` describes a 3D
-/// lattice of values. These lattice points will be considered corners of unit cubes. For each unit
-/// cube, a single isosurface vertex will be estimated, as below, where "c" is a cube corner and "s"
-/// is an isosurface vertex.
+/// Extracts an isosurface mesh from the signed distance field `sdf`. The `sdf` describes a 3D lattice of values. These lattice
+/// points will be considered corners of unit cubes. For each unit cube, at most one isosurface vertex will be estimated, as
+/// below, where "c" is a cube corner and "s" is an isosurface vertex.
 ///
 /// ```text
 /// c - c - c - c
@@ -67,8 +67,7 @@ impl SurfaceNetsBuffer {
 /// c - c - c - c
 /// ```
 ///
-/// The set of corners sampled is exactly the set of points in `extent`. `sdf` must contain all of
-/// those points.
+/// The set of corners sampled is exactly the set of points in `extent`. `sdf` must contain all of those points.
 pub fn surface_nets<A, T>(sdf: &A, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
     A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,

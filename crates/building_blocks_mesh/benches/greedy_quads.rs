@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_mesh::{greedy_quads::*, MaterialVoxel};
+use building_blocks_mesh::{greedy_quads::*, IsOpaque, MaterialVoxel};
 use building_blocks_storage::{prelude::*, IsEmpty};
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
@@ -51,5 +51,11 @@ impl MaterialVoxel for CubeVoxel {
 impl IsEmpty for CubeVoxel {
     fn is_empty(&self) -> bool {
         !self.0
+    }
+}
+
+impl IsOpaque for CubeVoxel {
+    fn is_opaque(&self) -> bool {
+        true
     }
 }

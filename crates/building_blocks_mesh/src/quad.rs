@@ -146,8 +146,8 @@ pub fn quad_indices(start: u32, counter_clockwise: bool) -> [u32; 6] {
     }
 }
 
-/// The minimum voxel and size of a quad, without an orientation. To get the actual corners of the
-/// quad, combine with an `OrientedCubeFace`.
+/// The minimum voxel and size of a quad, without an orientation. To get the actual corners of the quad, combine with an
+/// `OrientedCubeFace`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct UnorientedQuad {
     /// The minimum voxel in the quad.

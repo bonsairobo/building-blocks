@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_mesh::{greedy_quads::*, IsOpaque, MaterialVoxel};
+use building_blocks_mesh::{greedy_quads::*, IsOpaque, MergeVoxel};
 use building_blocks_storage::{prelude::*, IsEmpty};
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
@@ -40,11 +40,14 @@ criterion_main!(benches);
 #[derive(Clone)]
 struct CubeVoxel(bool);
 
-impl MaterialVoxel for CubeVoxel {
-    type Material = u8;
+#[derive(Eq, PartialEq)]
+struct TrivialMergeValue;
 
-    fn material(&self) -> Self::Material {
-        1 // only 1 material
+impl MergeVoxel for CubeVoxel {
+    type VoxelValue = TrivialMergeValue;
+
+    fn voxel_merge_value(&self) -> Self::VoxelValue {
+        TrivialMergeValue
     }
 }
 

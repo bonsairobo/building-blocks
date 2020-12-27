@@ -96,11 +96,14 @@ impl Cubic {
 #[derive(Clone, Copy)]
 struct CubeVoxel(bool);
 
-impl MaterialVoxel for CubeVoxel {
-    type Material = u8;
+#[derive(Eq, PartialEq)]
+struct TrivialMergeValue;
 
-    fn material(&self) -> Self::Material {
-        1 // only 1 material
+impl MergeVoxel for CubeVoxel {
+    type VoxelValue = TrivialMergeValue;
+
+    fn voxel_merge_value(&self) -> Self::VoxelValue {
+        TrivialMergeValue
     }
 }
 
@@ -308,7 +311,7 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
 
                 let mut mesh = PosNormMesh::default();
                 for group in buffer.quad_groups.iter() {
-                    for (quad, _material) in group.quads.iter() {
+                    for quad in group.quads.iter() {
                         group.face.add_quad_to_pos_norm_mesh(&quad, &mut mesh);
                     }
                 }

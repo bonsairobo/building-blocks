@@ -8,8 +8,8 @@ use bevy::prelude::*;
 
 fn main() {
     let mut window_desc = WindowDescriptor::default();
-    window_desc.width = 1600;
-    window_desc.height = 900;
+    window_desc.width = 1600.;
+    window_desc.height = 900.;
     window_desc.title = "Building Blocks: Bevy Meshing Example".to_string();
 
     App::build()
@@ -23,14 +23,14 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>) {
-    commands.spawn(LightComponents {
+fn setup(commands: &mut Commands, mut materials: ResMut<Assets<StandardMaterial>>) {
+    commands.spawn(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.100, 150.0, 100.0)),
         ..Default::default()
     });
 
     let camera_entity = commands
-        .spawn(Camera3dComponents::default())
+        .spawn(Camera3dBundle::default())
         .current_entity()
         .unwrap();
 

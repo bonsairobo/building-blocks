@@ -15,7 +15,7 @@ pub fn camera_rotation_system(
     time: Res<Time>,
     mut transforms: Query<&mut Transform>,
 ) {
-    let seconds = time.seconds_since_startup as f32;
+    let seconds = time.seconds_since_startup() as f32;
 
     let target = Vec3::new(0.0, 0.0, 0.0);
     let radius = 80.0;

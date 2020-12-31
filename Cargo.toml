@@ -62,7 +62,7 @@ building_blocks_search = { path = "crates/building_blocks_search", version = "0.
 building_blocks_vox = { path = "crates/building_blocks_vox", version = "0.4", optional = true }
 
 [dev-dependencies]
-bevy = "0.3" # for examples
+bevy = "0.4" # for examples
 log = "0.4"
 
 [[bin]]

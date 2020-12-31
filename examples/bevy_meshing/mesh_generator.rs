@@ -137,7 +137,7 @@ fn choose_shape(index: i32) -> Shape {
 pub struct MeshMaterial(pub Handle<StandardMaterial>);
 
 pub fn mesh_generator_system(
-    mut commands: Commands,
+    commands: &mut Commands,
     pool: Res<ComputeTaskPool>,
     mut state: ResMut<MeshGeneratorState>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -170,7 +170,7 @@ pub fn mesh_generator_system(
             if let Some(mesh) = mesh {
                 state.chunk_mesh_entities.push(create_mesh_entity(
                     mesh,
-                    &mut commands,
+                    commands,
                     material.0.clone(),
                     &mut meshes,
                 ));
@@ -342,13 +342,13 @@ fn create_mesh_entity(
     );
     render_mesh.set_attribute("Vertex_Normal", VertexAttributeValues::Float3(mesh.normals));
     render_mesh.set_attribute(
-        "Vertex_UV",
+        "Vertex_Uv",
         VertexAttributeValues::Float2(vec![[0.0; 2]; num_vertices]),
     );
     render_mesh.set_indices(Some(Indices::U32(mesh.indices)));
 
     commands
-        .spawn(PbrComponents {
+        .spawn(PbrBundle {
             mesh: meshes.add(render_mesh),
             material,
             ..Default::default()

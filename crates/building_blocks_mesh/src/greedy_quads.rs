@@ -254,7 +254,19 @@ where
 
     let adjacent_voxel = voxels.get_unchecked_release(voxel_stride + visibility_offset);
 
-    !adjacent_voxel.is_opaque() || adjacent_voxel.is_empty()
+    if adjacent_voxel.is_empty() {
+        // Must be visible, opaque or transparent.
+        return true;
+    }
+
+    if adjacent_voxel.is_opaque() {
+        // Fully occluded.
+        return false;
+    }
+
+    // TODO: If the face lies between two transparent voxels, we choose not to mesh it. We might need to extend the IsOpaque
+    // trait with different levels of transparency to support this.
+    voxel.is_opaque()
 }
 
 // ███╗   ███╗███████╗██████╗  ██████╗ ███████╗██████╗ ███████╗
@@ -399,14 +411,13 @@ impl<T> VoxelMerger<T> {
             }
 
             let voxel = voxels.get_unchecked_release(row_stride);
-            if voxel.is_empty() || !voxel.voxel_merge_value().eq(quad_merge_voxel_value) {
-                // Voxel needs to be non-empty and match the quad merge value.
+
+            if !face_needs_mesh(&voxel, row_stride, visibility_offset, voxels, visited) {
                 break;
             }
 
-            let adjacent_voxel = voxels.get_unchecked_release(row_stride + visibility_offset);
-            if adjacent_voxel.is_opaque() && !adjacent_voxel.is_empty() {
-                // The adjacent voxel is occluding this face.
+            if !voxel.voxel_merge_value().eq(quad_merge_voxel_value) {
+                // Voxel needs to be non-empty and match the quad merge value.
                 break;
             }
 

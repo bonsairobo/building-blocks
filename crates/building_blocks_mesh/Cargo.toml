@@ -19,7 +19,7 @@ fnv = "1.0"
 criterion = "0.3"
 
 [[bench]]
-name = "surface_nets"
+name = "contour_adf"
 harness = false
 
 [[bench]]
@@ -28,4 +28,8 @@ harness = false
 
 [[bench]]
 name = "greedy_quads"
+harness = false
+
+[[bench]]
+name = "surface_nets"
 harness = false

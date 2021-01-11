@@ -447,6 +447,14 @@ pub struct Octant {
 
 impl Octant {
     #[inline]
+    pub fn new(minimum: Point3i, edge_length: i32) -> Self {
+        Self {
+            minimum,
+            edge_length,
+        }
+    }
+
+    #[inline]
     pub fn minimum(&self) -> Point3i {
         self.minimum
     }

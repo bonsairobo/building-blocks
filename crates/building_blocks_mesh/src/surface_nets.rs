@@ -133,7 +133,7 @@ const CUBE_EDGES: [(usize, usize); 12] = [
 // does at all). Then the estimated surface point is the average of these edge crossings.
 fn estimate_surface_in_voxel<A, T>(
     sdf: &A,
-    point: &Point3i,
+    minimum: &Point3i,
     corner_strides: &[Stride],
 ) -> Option<([f32; 3], [f32; 3])>
 where
@@ -156,36 +156,27 @@ where
         return None;
     }
 
+    let position =
+        interpolate_position_from_sdf_cube(&dists) + Point3f::from(*minimum) + PointN([0.5; 3]);
+
+    Some((position.0, normal_from_sdf_cube(&dists)))
+}
+
+/// Interpolate the isosurface intersection on each edge of the cube and take the average of those intersections.
+#[inline]
+pub fn interpolate_position_from_sdf_cube(dists: &[f32; 8]) -> Point3f {
     let mut count = 0;
-    let mut sum = [0.0, 0.0, 0.0];
+    let mut sum = PointN([0.0; 3]);
     for (offset1, offset2) in CUBE_EDGES.iter() {
         if let Some(intersection) =
             estimate_surface_edge_intersection(*offset1, *offset2, dists[*offset1], dists[*offset2])
         {
             count += 1;
-            sum[0] += intersection[0];
-            sum[1] += intersection[1];
-            sum[2] += intersection[2];
+            sum += intersection;
         }
     }
 
-    // Calculate the normal as the gradient of the distance field. Use central differencing. Don't
-    // bother making it a unit vector, since we'll do that on the GPU.
-    let normal_x = (dists[0b001] + dists[0b011] + dists[0b101] + dists[0b111])
-        - (dists[0b000] + dists[0b010] + dists[0b100] + dists[0b110]);
-    let normal_y = (dists[0b010] + dists[0b011] + dists[0b110] + dists[0b111])
-        - (dists[0b000] + dists[0b001] + dists[0b100] + dists[0b101]);
-    let normal_z = (dists[0b100] + dists[0b101] + dists[0b110] + dists[0b111])
-        - (dists[0b000] + dists[0b001] + dists[0b010] + dists[0b011]);
-
-    Some((
-        [
-            sum[0] / count as f32 + point.x() as f32 + 0.5,
-            sum[1] / count as f32 + point.y() as f32 + 0.5,
-            sum[2] / count as f32 + point.z() as f32 + 0.5,
-        ],
-        [normal_x, normal_y, normal_z],
-    ))
+    sum / count as f32
 }
 
 // Given two cube corners, find the point between them where the SDF is zero.
@@ -195,20 +186,34 @@ fn estimate_surface_edge_intersection(
     offset2: usize,
     value1: f32,
     value2: f32,
-) -> Option<[f32; 3]> {
+) -> Option<Point3f> {
     if (value1 < 0.0) == (value2 < 0.0) {
         return None;
     }
 
     let interp1 = value1 / (value1 - value2);
     let interp2 = 1.0 - interp1;
-    let position = [
+    let position = PointN([
         (offset1 & 1) as f32 * interp2 + (offset2 & 1) as f32 * interp1,
         ((offset1 >> 1) & 1) as f32 * interp2 + ((offset2 >> 1) & 1) as f32 * interp1,
         ((offset1 >> 2) & 1) as f32 * interp2 + ((offset2 >> 2) & 1) as f32 * interp1,
-    ];
+    ]);
 
     Some(position)
+}
+
+/// Calculate the normal as the gradient of the distance field. Use central differencing. Don't bother making it a unit vector,
+/// since we'll do that on the GPU.
+#[inline]
+pub fn normal_from_sdf_cube(dists: &[f32; 8]) -> [f32; 3] {
+    let normal_x = (dists[0b001] + dists[0b011] + dists[0b101] + dists[0b111])
+        - (dists[0b000] + dists[0b010] + dists[0b100] + dists[0b110]);
+    let normal_y = (dists[0b010] + dists[0b011] + dists[0b110] + dists[0b111])
+        - (dists[0b000] + dists[0b001] + dists[0b100] + dists[0b101]);
+    let normal_z = (dists[0b100] + dists[0b101] + dists[0b110] + dists[0b111])
+        - (dists[0b000] + dists[0b001] + dists[0b010] + dists[0b011]);
+
+    [normal_x, normal_y, normal_z]
 }
 
 // For every edge that crosses the isosurface, make a quad between the "centers" of the four cubes

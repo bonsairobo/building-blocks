@@ -68,7 +68,7 @@ where
     PointN<N>: Point,
 {
     #[inline]
-    fn volume(&self) -> <PointN<N> as Point>::Scalar {
+    pub fn volume(&self) -> <PointN<N> as Point>::Scalar {
         self.shape.volume()
     }
 

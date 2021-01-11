@@ -37,6 +37,10 @@ name = "accessors"
 harness = false
 
 [[bench]]
+name = "adaptive_distance_field"
+harness = false
+
+[[bench]]
 name = "compression"
 harness = false
 

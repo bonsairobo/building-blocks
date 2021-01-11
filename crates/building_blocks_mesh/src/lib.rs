@@ -85,11 +85,13 @@
 //! triangulate_height_map(&tfm_array, &extent, &mut hm_buffer);
 //! ```
 
+pub mod contour_adf;
 pub mod greedy_quads;
 pub mod height_map;
 pub mod quad;
 pub mod surface_nets;
 
+pub use contour_adf::*;
 pub use greedy_quads::*;
 pub use height_map::*;
 pub use quad::*;

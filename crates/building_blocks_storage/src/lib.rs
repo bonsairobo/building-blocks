@@ -17,18 +17,22 @@
 
 #[macro_use]
 pub mod access;
+pub mod adaptive_distance_field;
 pub mod array;
 pub mod chunk_map;
 pub mod compression;
 pub mod func;
 pub mod octree;
+pub mod signed_distance;
 pub mod transform_map;
 
 pub use access::*;
+pub use adaptive_distance_field::*;
 pub use array::*;
 pub use chunk_map::*;
 pub use compression::*;
 pub use octree::*;
+pub use signed_distance::*;
 pub use transform_map::*;
 
 /// Used in many generic algorithms to check if a voxel is considered empty.

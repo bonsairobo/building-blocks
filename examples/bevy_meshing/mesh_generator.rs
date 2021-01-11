@@ -11,6 +11,7 @@ use bevy::{
     },
     tasks::{ComputeTaskPool, TaskPool},
 };
+use building_blocks_storage::{padded_adf_chunk_extent, Adf};
 
 pub struct MeshGeneratorState {
     current_shape_index: i32,
@@ -161,7 +162,8 @@ pub fn mesh_generator_system(
 
         // Sample the new shape.
         let chunk_meshes = match choose_shape(state.current_shape_index) {
-            Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(sdf, &pool.0),
+            // Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(sdf, &pool.0),
+            Shape::Sdf(sdf) => generate_mesh_from_adf(sdf),
             Shape::HeightMap(hm) => generate_chunk_meshes_from_height_map(hm, &pool.0),
             Shape::Cubic(cubic) => generate_chunk_meshes_from_cubic(cubic, &pool.0),
         };
@@ -224,6 +226,32 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
             })
         }
     })
+}
+
+fn generate_mesh_from_adf(sdf: Sdf) -> Vec<Option<PosNormMesh>> {
+    let sdf = sdf.get_sdf();
+    let sample_extent = Extent3i::from_min_and_shape(PointN([-32; 3]), PointN([64; 3]));
+    let padded_chunk_extent = padded_adf_chunk_extent(&sample_extent);
+
+    let map = Array3::fill_with(padded_chunk_extent, sdf);
+    let adf = Adf::from_array3(&map, padded_chunk_extent, 1.0, 0.05);
+
+    println!("# leaves = {}", adf.num_leaves());
+
+    let mut adf_contour_buffer = AdfDualContourBuffer::default();
+    adf_dual_contour(&adf, &mut adf_contour_buffer);
+
+    if adf_contour_buffer.mesh.indices.is_empty() {
+        vec![None]
+    } else {
+        println!(
+            "# vertices = {}, # tris = {}",
+            adf_contour_buffer.mesh.positions.len(),
+            adf_contour_buffer.mesh.indices.len() / 3
+        );
+
+        vec![Some(adf_contour_buffer.mesh)]
+    }
 }
 
 fn generate_chunk_meshes_from_height_map(

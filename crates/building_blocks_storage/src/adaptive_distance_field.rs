@@ -170,6 +170,8 @@ impl Adf {
         }
         let next_edge_length = edge_length >> 1;
 
+        let half_encoder = encoder.half_size();
+
         let mut child_nodes = [TemporaryNode::default(); 8];
         let mut child_pointers = [std::u16::MAX; 8];
         let mut child_mask = 0;
@@ -182,7 +184,7 @@ impl Adf {
             let (p, n) = Self::partition_array(
                 sdf,
                 error_tolerance,
-                encoder.half_size(),
+                half_encoder,
                 depth + 1,
                 octant_min,
                 next_edge_length,
@@ -198,8 +200,10 @@ impl Adf {
         let parent_node = TemporaryNode::parent(&child_nodes);
 
         if child_mask != 0 {
+            // We've already created child nodes, so we need link up to the root.
             return Self::create_leaf_nodes_and_parent_branch(
                 encoder,
+                half_encoder,
                 edge_length,
                 parent_node,
                 child_mask,
@@ -210,11 +214,26 @@ impl Adf {
             );
         }
 
-        if !parent_node.contains_isosurface {
+        if !parent_node.some_descendent_contains_isosurface {
             return (NodePointer::NULL, parent_node);
         }
 
-        if depth > 4 {
+        if !parent_node.estimates_isosurface {
+            // We have to create these nodes, otherwise we'll lose the descendents that do contain the surface.
+            return Self::create_leaf_nodes_and_parent_branch(
+                encoder,
+                half_encoder,
+                edge_length,
+                parent_node,
+                child_mask,
+                child_pointers,
+                child_nodes,
+                branches,
+                leaves,
+            );
+        }
+
+        if depth > 0 {
             let trilinear_grid = copy_octants_to_trilinear_grid(&child_nodes);
             if trilinear_approximates_well(&trilinear_grid, error_tolerance) {
                 return (NodePointer::NULL, parent_node);
@@ -223,6 +242,7 @@ impl Adf {
 
         Self::create_leaf_nodes_and_parent_branch(
             encoder,
+            half_encoder,
             edge_length,
             parent_node,
             child_mask,
@@ -235,6 +255,7 @@ impl Adf {
 
     fn create_leaf_nodes_and_parent_branch<D>(
         encoder: DistanceEncoder,
+        half_encoder: DistanceEncoder,
         edge_length: i32,
         parent_node: TemporaryNode<D>,
         mut child_mask: u8,
@@ -250,10 +271,10 @@ impl Adf {
 
         for (octant, child_node) in child_nodes.iter().enumerate() {
             let octant_bit = 1 << octant;
-            if child_node.contains_isosurface && (child_mask & octant_bit) == 0 {
+            if child_node.some_descendent_contains_isosurface && (child_mask & octant_bit) == 0 {
                 child_pointers[octant] = Self::push_node(
                     LeafNode {
-                        distances: encoder.encode_distances(&child_node.distances),
+                        distances: half_encoder.encode_distances(&child_node.distances),
                     },
                     leaves,
                 );
@@ -728,10 +749,11 @@ impl NodePointer {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct TemporaryNode<D> {
     distances: [D; 8],
-    contains_isosurface: bool,
+    estimates_isosurface: bool,
+    some_descendent_contains_isosurface: bool,
 }
 
 impl<D> Default for TemporaryNode<D>
@@ -741,7 +763,8 @@ where
     fn default() -> Self {
         Self {
             distances: [D::ZERO; 8],
-            contains_isosurface: false,
+            estimates_isosurface: false,
+            some_descendent_contains_isosurface: false,
         }
     }
 }
@@ -762,24 +785,31 @@ where
                 num_negative += 1;
             }
         }
+        let estimates_isosurface = num_negative != 0 && num_negative != 8;
 
         Self {
             distances,
-            contains_isosurface: num_negative != 0 && num_negative != 8,
+            estimates_isosurface,
+            some_descendent_contains_isosurface: estimates_isosurface,
         }
     }
 
     fn parent(children: &[Self]) -> Self {
         let mut distances = [D::ZERO; 8];
-        let mut contains_isosurface = false;
+        let mut some_descendent_contains_isosurface = false;
+        let mut num_negative = 0;
         for ((octant, child), distance) in children.iter().enumerate().zip(distances.iter_mut()) {
             *distance = child.distances[octant];
-            contains_isosurface |= child.contains_isosurface;
+            some_descendent_contains_isosurface |= child.some_descendent_contains_isosurface;
+            if distance.is_negative() {
+                num_negative += 1;
+            }
         }
 
         Self {
             distances,
-            contains_isosurface,
+            estimates_isosurface: num_negative != 0 && num_negative != 8,
+            some_descendent_contains_isosurface,
         }
     }
 }
@@ -817,7 +847,7 @@ impl DistanceEncoder {
     }
 
     fn encode_f32(&self, x: f32) -> i8 {
-        (x * self.multiplier) as i8
+        (x * self.multiplier).round() as i8
     }
 
     fn encode_distances<D>(&self, distances: &[D; 8]) -> [i8; 8]
@@ -931,15 +961,25 @@ fn trilinear_approximates_well(grid: &[f32; 27], error_tolerance: f32) -> bool {
         [20, 23, 26],
         [24, 25, 26],
     ];
+    let mut sum = 0.0;
     for &[i0, i1, i2] in EDGES.iter() {
         let d0 = grid[i0];
         let d1 = grid[i1];
         let d2 = grid[i2];
+
         let approx_d1 = 0.5 * (d0 + d2);
 
         if (approx_d1 - d1).abs() > error_tolerance {
             return false;
         }
+
+        sum += approx_d1;
+    }
+
+    const CENTER: usize = 13;
+    const TWELFTH: f32 = 1.0 / 12.0;
+    if (TWELFTH * sum - grid[CENTER]).abs() > error_tolerance {
+        return false;
     }
 
     true

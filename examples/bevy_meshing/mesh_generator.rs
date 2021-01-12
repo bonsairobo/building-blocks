@@ -16,6 +16,7 @@ use building_blocks_storage::{padded_adf_chunk_extent, Adf};
 pub struct MeshGeneratorState {
     current_shape_index: i32,
     chunk_mesh_entities: Vec<Entity>,
+    adf_error_tolerance: f32,
 }
 
 impl MeshGeneratorState {
@@ -23,6 +24,7 @@ impl MeshGeneratorState {
         Self {
             current_shape_index: 0,
             chunk_mesh_entities: Vec::new(),
+            adf_error_tolerance: 0.0,
         }
     }
 }
@@ -46,7 +48,7 @@ impl Sdf {
     fn get_sdf(&self) -> Box<dyn Fn(&Point3i) -> f32> {
         match self {
             Sdf::Cube => Box::new(cube(PointN([0.0, 0.0, 0.0]), 20.0)),
-            Sdf::Plane => Box::new(plane(PointN([0.5, 0.5, 0.5]), 1.0)),
+            Sdf::Plane => Box::new(one_sided_plane(PointN([0.5, 0.5, 0.5]))),
             Sdf::Sphere => Box::new(sphere(PointN([0.0, 0.0, 0.0]), 20.0)),
             Sdf::Torus => Box::new(torus(PointN([16.0, 4.0]))),
         }
@@ -154,6 +156,14 @@ pub fn mesh_generator_system(
         state.current_shape_index = (state.current_shape_index + 1).rem_euclid(NUM_SHAPES);
     }
 
+    if keyboard_input.just_pressed(KeyCode::Up) {
+        state.adf_error_tolerance += 0.05;
+        new_shape_requested = true;
+    } else if keyboard_input.just_pressed(KeyCode::Down) {
+        state.adf_error_tolerance = (state.adf_error_tolerance - 0.05).max(0.0);
+        new_shape_requested = true;
+    }
+
     if new_shape_requested || state.chunk_mesh_entities.is_empty() {
         // Delete the old meshes.
         for entity in state.chunk_mesh_entities.drain(..) {
@@ -163,7 +173,7 @@ pub fn mesh_generator_system(
         // Sample the new shape.
         let chunk_meshes = match choose_shape(state.current_shape_index) {
             // Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(sdf, &pool.0),
-            Shape::Sdf(sdf) => generate_mesh_from_adf(sdf),
+            Shape::Sdf(sdf) => generate_mesh_from_adf(sdf, state.adf_error_tolerance),
             Shape::HeightMap(hm) => generate_chunk_meshes_from_height_map(hm, &pool.0),
             Shape::Cubic(cubic) => generate_chunk_meshes_from_cubic(cubic, &pool.0),
         };
@@ -228,13 +238,15 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
     })
 }
 
-fn generate_mesh_from_adf(sdf: Sdf) -> Vec<Option<PosNormMesh>> {
+fn generate_mesh_from_adf(sdf: Sdf, error_tolerance: f32) -> Vec<Option<PosNormMesh>> {
     let sdf = sdf.get_sdf();
     let sample_extent = Extent3i::from_min_and_shape(PointN([-32; 3]), PointN([64; 3]));
     let padded_chunk_extent = padded_adf_chunk_extent(&sample_extent);
 
+    println!("error tolerance = {:.2}", error_tolerance);
+
     let map = Array3::fill_with(padded_chunk_extent, sdf);
-    let adf = Adf::from_array3(&map, padded_chunk_extent, 1.0, 0.05);
+    let adf = Adf::from_array3(&map, padded_chunk_extent, 1.0, error_tolerance);
 
     println!("# leaves = {}", adf.num_leaves());
 

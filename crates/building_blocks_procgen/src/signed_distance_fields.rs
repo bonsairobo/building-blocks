@@ -10,7 +10,15 @@ pub fn sphere(center: Point3f, radius: f32) -> impl Fn(&Point3i) -> f32 {
     }
 }
 
-pub fn plane(n: Point3f, thickness: f32) -> impl Fn(&Point3i) -> f32 {
+pub fn one_sided_plane(n: Point3f) -> impl Fn(&Point3i) -> f32 {
+    move |p| {
+        let pf: Point3f = (*p).into();
+
+        pf.dot(&n)
+    }
+}
+
+pub fn two_sided_plane(n: Point3f, thickness: f32) -> impl Fn(&Point3i) -> f32 {
     move |p| {
         let pf: Point3f = (*p).into();
 

@@ -47,7 +47,7 @@ let sphere_sdf = sphere(center, radius);
 let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([50; 3]));
 let mut samples = Array3::fill_with(extent, &sphere_sdf);
 
-let mut mesh_buffer = SurfaceNetsBuffer::new();
+let mut mesh_buffer = SurfaceNetsBuffer::default();
 surface_nets(&samples, samples.extent(), &mut mesh_buffer);
 ```
 

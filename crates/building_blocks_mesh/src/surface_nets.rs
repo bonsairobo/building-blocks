@@ -288,9 +288,9 @@ where
     }
 }
 
-// This is where the "dual" nature of surface nets comes into play.
+// Construct a quad in the dual graph of the SDF lattice.
 //
-// The surface point s was found somewhere inside of the cube "at" point p1.
+// The surface point s was found somewhere inside of the cube with minimal corner p1.
 //
 //       x ---- x
 //      /      /|
@@ -314,8 +314,8 @@ where
 //       A
 //   p1 ---> p2
 //
-// then we must find the other 3 quad corners by moving along the other two axes (those orthogonal
-// to A) in the negative directions; these are axis B and axis C.
+// then we must find the other 3 quad corners by moving along the other two axes (those orthogonal to A) in the negative
+// directions; these are axis B and axis C.
 fn maybe_make_quad<A, T>(
     sdf: &A,
     stride_to_index: &[u32],
@@ -329,14 +329,13 @@ fn maybe_make_quad<A, T>(
     A: GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
-    let voxel1 = sdf.get_unchecked_release(p1);
-    let voxel2 = sdf.get_unchecked_release(p2);
-
-    let face_result = is_face(voxel1, voxel2);
-
-    if let FaceResult::NoFace = face_result {
-        return;
-    }
+    let d1 = sdf.get_unchecked_release(p1);
+    let d2 = sdf.get_unchecked_release(p2);
+    let negative_face = match (d1.is_negative(), d2.is_negative()) {
+        (true, false) => false,
+        (false, true) => true,
+        _ => return, // No face.
+    };
 
     // The triangle points, viewed face-front, look like this:
     // v1 v3
@@ -353,16 +352,16 @@ fn maybe_make_quad<A, T>(
     );
     // Split the quad along the shorter axis, rather than the longer one.
     let quad = if sq_dist(pos1, pos4) < sq_dist(pos2, pos3) {
-        match face_result {
-            FaceResult::NoFace => unreachable!(),
-            FaceResult::FacePositive => [v1, v2, v4, v1, v4, v3],
-            FaceResult::FaceNegative => [v1, v4, v2, v1, v3, v4],
+        if negative_face {
+            [v1, v4, v2, v1, v3, v4]
+        } else {
+            [v1, v2, v4, v1, v4, v3]
         }
     } else {
-        match face_result {
-            FaceResult::NoFace => unreachable!(),
-            FaceResult::FacePositive => [v2, v4, v3, v2, v3, v1],
-            FaceResult::FaceNegative => [v2, v3, v4, v2, v1, v3],
+        if negative_face {
+            [v2, v3, v4, v2, v1, v3]
+        } else {
+            [v2, v4, v3, v2, v3, v1]
         }
     };
     indices.extend_from_slice(&quad);
@@ -372,22 +371,4 @@ fn sq_dist(a: [f32; 3], b: [f32; 3]) -> f32 {
     let d = [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 
     d[0] * d[0] + d[1] * d[1] + d[2] * d[2]
-}
-
-enum FaceResult {
-    NoFace,
-    FacePositive,
-    FaceNegative,
-}
-
-// Determine if the sign of the SDF flips between p1 and p2
-fn is_face<T>(d1: T, d2: T) -> FaceResult
-where
-    T: SignedDistance,
-{
-    match (d1.is_negative(), d2.is_negative()) {
-        (true, false) => FaceResult::FacePositive,
-        (false, true) => FaceResult::FaceNegative,
-        _ => FaceResult::NoFace,
-    }
 }

@@ -50,21 +50,24 @@ impl SurfaceNetsBuffer {
 
 /// The Naive Surface Nets smooth voxel meshing algorithm.
 ///
-/// For an in-depth explanation of the algorithm, read
-/// [here](https://medium.com/@bonsairobo/smooth-voxel-mapping-a-technical-deep-dive-on-real-time-surface-nets-and-texturing-ef06d0f8ca14).
+/// This is basically just dual contouring a uniform grid with:
+///   - positions estimated as the centroid of cube edge crossings
+///   - surface normals estimated with central differencing
 ///
-/// Extracts an isosurface mesh from the signed distance field `sdf`. The `sdf` describes a 3D lattice of values. These lattice
-/// points will be considered corners of unit cubes. For each unit cube, at most one isosurface vertex will be estimated, as
-/// below, where "c" is a cube corner and "s" is an isosurface vertex.
+/// Extracts an isosurface mesh from the [signed distance field](https://en.wikipedia.org/wiki/Signed_distance_function) `sdf`.
+/// Each value in the field determines how close that point is to the isosurface. Negative values are considered "interior" of
+/// the surface volume, and positive values are considered "exterior." These lattice points will be considered corners of unit
+/// cubes. For each unit cube, at most one isosurface vertex will be estimated, as below, where `p` is a positive corner value,
+/// `n` is a negative corner value, `s` is an isosurface vertex, and `|` or `-` are mesh polygons connecting the vertices.
 ///
 /// ```text
-/// c - c - c - c
-/// | s | s | s |
-/// c - c - c - c
-/// | s | s | s |
-/// c - c - c - c
-/// | s | s | s |
-/// c - c - c - c
+/// p   p   p   p
+///   s---s
+/// p | n | p   p
+///   s   s---s
+/// p | n   n | p
+///   s---s---s
+/// p   p   p   p
 /// ```
 ///
 /// The set of corners sampled is exactly the set of points in `extent`. `sdf` must contain all of those points.

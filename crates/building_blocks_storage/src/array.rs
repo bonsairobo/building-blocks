@@ -189,15 +189,13 @@ impl<N, T> ArrayN<N, T> {
     pub fn extent(&self) -> &ExtentN<N> {
         &self.extent
     }
-}
 
-impl<N, T> ArrayN<N, T>
-where
-    T: Copy,
-{
     /// Returns the slice of values, reinterpreted as raw bytes.
     #[inline]
-    pub fn bytes_slice(&self) -> &[u8] {
+    pub fn bytes_slice(&self) -> &[u8]
+    where
+        T: Copy,
+    {
         unsafe {
             std::slice::from_raw_parts(
                 self.values.as_ptr() as *const u8,
@@ -243,23 +241,7 @@ where
     pub fn set_minimum(&mut self, p: PointN<N>) {
         self.extent.minimum = p;
     }
-}
 
-impl<N, T> ArrayN<N, T>
-where
-    PointN<N>: Point,
-{
-    /// Returns `true` iff this map contains point `p`.
-    #[inline]
-    pub fn contains(&self, p: &PointN<N>) -> bool {
-        self.extent.contains(p)
-    }
-}
-
-impl<N, T> ArrayN<N, T>
-where
-    PointN<N>: IntegerPoint<N>,
-{
     /// Create a new array for `extent` where each point's value is determined by the `filler`
     /// function.
     pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(&PointN<N>) -> T) -> Self
@@ -281,6 +263,17 @@ where
     #[inline]
     pub fn translate(&mut self, p: PointN<N>) {
         self.extent = self.extent.add(p);
+    }
+}
+
+impl<N, T> ArrayN<N, T>
+where
+    PointN<N>: Point,
+{
+    /// Returns `true` iff this map contains point `p`.
+    #[inline]
+    pub fn contains(&self, p: &PointN<N>) -> bool {
+        self.extent.contains(p)
     }
 }
 

@@ -9,20 +9,14 @@ pub fn padded_surface_nets_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {
     chunk_extent.padded(1)
 }
 
-pub trait SignedDistance {
+pub trait SignedDistance: Into<f32> {
     fn is_negative(self) -> bool;
-    fn as_f32(self) -> f32;
 }
 
 impl SignedDistance for f32 {
     #[inline]
     fn is_negative(self) -> bool {
         self < 0.0
-    }
-
-    #[inline]
-    fn as_f32(self) -> f32 {
-        self
     }
 }
 
@@ -154,7 +148,7 @@ where
     let mut dists = [0.0; 8];
     let mut num_negative = 0;
     for (i, dist) in dists.iter_mut().enumerate() {
-        let d = sdf.get_unchecked_release(corner_strides[i]).as_f32();
+        let d = sdf.get_unchecked_release(corner_strides[i]).into();
         *dist = d;
         if d < 0.0 {
             num_negative += 1;

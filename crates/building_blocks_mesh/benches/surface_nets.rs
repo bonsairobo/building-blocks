@@ -38,9 +38,11 @@ impl SignedDistance for Voxel {
     fn is_negative(self) -> bool {
         self.0 < 0.0
     }
+}
 
-    fn as_f32(self) -> f32 {
-        self.0
+impl From<Voxel> for f32 {
+    fn from(v: Voxel) -> f32 {
+        v.0
     }
 }
 

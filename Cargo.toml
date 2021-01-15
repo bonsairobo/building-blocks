@@ -67,6 +67,7 @@ log = "0.4"
 
 [[bin]]
 name = "measure_compression_rate"
+path = "bin/measure_compression_rate"
 required-features = ["lz4", "snappy", "vox"]
 
 [[example]]

@@ -10,12 +10,19 @@ pub fn padded_surface_nets_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {
 }
 
 pub trait SignedDistance {
-    fn distance(&self) -> f32;
+    fn is_negative(self) -> bool;
+    fn as_f32(self) -> f32;
 }
 
 impl SignedDistance for f32 {
-    fn distance(&self) -> f32 {
-        *self
+    #[inline]
+    fn is_negative(self) -> bool {
+        self < 0.0
+    }
+
+    #[inline]
+    fn as_f32(self) -> f32 {
+        self
     }
 }
 
@@ -114,19 +121,19 @@ where
     });
 }
 
-const CUBE_EDGES: [(usize, usize); 12] = [
-    (0b000, 0b001),
-    (0b000, 0b010),
-    (0b000, 0b100),
-    (0b001, 0b011),
-    (0b001, 0b101),
-    (0b010, 0b011),
-    (0b010, 0b110),
-    (0b011, 0b111),
-    (0b100, 0b101),
-    (0b100, 0b110),
-    (0b101, 0b111),
-    (0b110, 0b111),
+const CUBE_EDGES: [[usize; 2]; 12] = [
+    [0b000, 0b001],
+    [0b000, 0b010],
+    [0b000, 0b100],
+    [0b001, 0b011],
+    [0b001, 0b101],
+    [0b010, 0b011],
+    [0b010, 0b110],
+    [0b011, 0b111],
+    [0b100, 0b101],
+    [0b100, 0b110],
+    [0b101, 0b111],
+    [0b110, 0b111],
 ];
 
 // Consider the grid-aligned cube where `point` is the minimal corner. Find a point inside this cube
@@ -147,7 +154,7 @@ where
     let mut dists = [0.0; 8];
     let mut num_negative = 0;
     for (i, dist) in dists.iter_mut().enumerate() {
-        let d = sdf.get_unchecked_release(corner_strides[i]).distance();
+        let d = sdf.get_unchecked_release(corner_strides[i]).as_f32();
         *dist = d;
         if d < 0.0 {
             num_negative += 1;
@@ -159,59 +166,56 @@ where
         return None;
     }
 
+    let position =
+        Point3f::from(*point) + centroid_of_edge_intersections(&dists) + PointN([0.5; 3]);
+    let normal = sdf_gradient(&dists);
+
+    Some((position.0, normal))
+}
+
+fn centroid_of_edge_intersections(dists: &[f32; 8]) -> Point3f {
     let mut count = 0;
-    let mut sum = [0.0, 0.0, 0.0];
-    for (offset1, offset2) in CUBE_EDGES.iter() {
-        if let Some(intersection) =
-            estimate_surface_edge_intersection(*offset1, *offset2, dists[*offset1], dists[*offset2])
-        {
+    let mut sum = PointN([0.0; 3]);
+    for [offset1, offset2] in CUBE_EDGES.iter() {
+        let d1 = dists[*offset1];
+        let d2 = dists[*offset2];
+        if (d1 < 0.0) != (d2 < 0.0) {
             count += 1;
-            sum[0] += intersection[0];
-            sum[1] += intersection[1];
-            sum[2] += intersection[2];
+            sum += estimate_surface_edge_intersection(*offset1, *offset2, d1, d2);
         }
     }
 
-    // Calculate the normal as the gradient of the distance field. Use central differencing. Don't
-    // bother making it a unit vector, since we'll do that on the GPU.
-    let normal_x = (dists[0b001] + dists[0b011] + dists[0b101] + dists[0b111])
-        - (dists[0b000] + dists[0b010] + dists[0b100] + dists[0b110]);
-    let normal_y = (dists[0b010] + dists[0b011] + dists[0b110] + dists[0b111])
-        - (dists[0b000] + dists[0b001] + dists[0b100] + dists[0b101]);
-    let normal_z = (dists[0b100] + dists[0b101] + dists[0b110] + dists[0b111])
-        - (dists[0b000] + dists[0b001] + dists[0b010] + dists[0b011]);
-
-    Some((
-        [
-            sum[0] / count as f32 + point.x() as f32 + 0.5,
-            sum[1] / count as f32 + point.y() as f32 + 0.5,
-            sum[2] / count as f32 + point.z() as f32 + 0.5,
-        ],
-        [normal_x, normal_y, normal_z],
-    ))
+    sum / count as f32
 }
 
-// Given two cube corners, find the point between them where the SDF is zero.
-// (This might not exist).
+// Given two cube corners, find the point between them where the SDF is zero. (This might not exist).
 fn estimate_surface_edge_intersection(
     offset1: usize,
     offset2: usize,
     value1: f32,
     value2: f32,
-) -> Option<[f32; 3]> {
-    if (value1 < 0.0) == (value2 < 0.0) {
-        return None;
-    }
-
+) -> Point3f {
     let interp1 = value1 / (value1 - value2);
     let interp2 = 1.0 - interp1;
-    let position = [
+
+    PointN([
         (offset1 & 1) as f32 * interp2 + (offset2 & 1) as f32 * interp1,
         ((offset1 >> 1) & 1) as f32 * interp2 + ((offset2 >> 1) & 1) as f32 * interp1,
         ((offset1 >> 2) & 1) as f32 * interp2 + ((offset2 >> 2) & 1) as f32 * interp1,
-    ];
+    ])
+}
 
-    Some(position)
+/// Calculate the normal as the gradient of the distance field. Use central differencing. Don't bother making it a unit vector,
+/// since we'll do that on the GPU.
+fn sdf_gradient(dists: &[f32; 8]) -> [f32; 3] {
+    [
+        (dists[0b001] + dists[0b011] + dists[0b101] + dists[0b111])
+            - (dists[0b000] + dists[0b010] + dists[0b100] + dists[0b110]),
+        (dists[0b010] + dists[0b011] + dists[0b110] + dists[0b111])
+            - (dists[0b000] + dists[0b001] + dists[0b100] + dists[0b101]),
+        (dists[0b100] + dists[0b101] + dists[0b110] + dists[0b111])
+            - (dists[0b000] + dists[0b001] + dists[0b010] + dists[0b011]),
+    ]
 }
 
 // For every edge that crosses the isosurface, make a quad between the "centers" of the four cubes
@@ -328,7 +332,7 @@ fn maybe_make_quad<A, T>(
     let voxel1 = sdf.get_unchecked_release(p1);
     let voxel2 = sdf.get_unchecked_release(p2);
 
-    let face_result = is_face(voxel1.distance(), voxel2.distance());
+    let face_result = is_face(voxel1, voxel2);
 
     if let FaceResult::NoFace = face_result {
         return;
@@ -377,8 +381,11 @@ enum FaceResult {
 }
 
 // Determine if the sign of the SDF flips between p1 and p2
-fn is_face(d1: f32, d2: f32) -> FaceResult {
-    match (d1 < 0.0, d2 < 0.0) {
+fn is_face<T>(d1: T, d2: T) -> FaceResult
+where
+    T: SignedDistance,
+{
+    match (d1.is_negative(), d2.is_negative()) {
         (true, false) => FaceResult::FacePositive,
         (false, true) => FaceResult::FaceNegative,
         _ => FaceResult::NoFace,

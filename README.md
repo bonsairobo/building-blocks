@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/building-blocks.svg)](https://crates.io/crates/building-blocks)
 [![Docs.rs](https://docs.rs/building-blocks/badge.svg)](https://docs.rs/building-blocks)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/bonsairobo/building-blocks/blob/main/LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Crates.io](https://img.shields.io/crates/d/building-blocks.svg)](https://crates.io/crates/building-blocks)
 [![Discord](https://img.shields.io/discord/770726405557321778.svg?logo=discord&colorB=7289DA)](https://discord.gg/CnTNjwb)
 

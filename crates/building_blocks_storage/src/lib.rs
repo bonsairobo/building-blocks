@@ -64,3 +64,12 @@ pub mod prelude {
         MaybeCompressedChunk3, MaybeCompressedChunkRef2, MaybeCompressedChunkRef3,
     };
 }
+
+#[cfg(feature = "dot_vox")]
+mod dot_vox_conversions;
+#[cfg(feature = "dot_vox")]
+pub use dot_vox_conversions::*;
+#[cfg(feature = "image")]
+mod image_conversions;
+#[cfg(feature = "image")]
+pub use image_conversions::*;

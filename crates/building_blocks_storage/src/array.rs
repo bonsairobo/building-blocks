@@ -73,6 +73,11 @@ mod array2;
 mod array3;
 mod compression;
 
+#[cfg(feature = "dot_vox")]
+mod dot_vox_conversions;
+#[cfg(feature = "image")]
+mod image_conversions;
+
 pub use array2::Array2;
 pub use array3::Array3;
 pub use compression::{FastArrayCompression, FastCompressedArray};

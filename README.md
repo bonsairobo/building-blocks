@@ -52,31 +52,23 @@ let mut mesh_buffer = SurfaceNetsBuffer::default();
 surface_nets(&samples, samples.extent(), &mut mesh_buffer);
 ```
 
-```toml
-[profile.release]
-lto = true
-```
-
 ## Learning
 
-The current best way to learn about the library is to read the documentation and examples.
+### Docs and Examples
 
-For the latest stable docs, look [here](https://docs.rs/building_blocks/latest/building_blocks).
-
-For the latest unstable docs, clone the repo and run
+The current best way to learn about the library is to read the documentation and examples. For the latest stable docs, look
+[here](https://docs.rs/building_blocks/latest/building_blocks). For the latest unstable docs, clone the repo and run
 
 ```sh
 cargo doc --open
 ```
 
-There is plentiful documentation with examples.
+There is plentiful documentation with examples. Take a look in the `examples/` directory to see how Building Blocks can be
+used in real applications.
 
-Take a look in the `examples/` directory to see how Building Blocks can be used in real applications.
+### Benchmarks
 
 To run the benchmarks (using the "criterion" crate), go to the root of a crate and run `cargo bench`.
-
-To learn more about the motivations behind the library's design, read about our [design philosophy and
-architecture](https://github.com/bonsairobo/building-blocks/blob/main/DESIGN.md).
 
 ### Getting Started
 
@@ -87,11 +79,9 @@ This library is organized into several crates. The most fundamental are:
 
 Then you get extra bits of functionality from the others:
 
-- **image**: conversion of 2D lattice maps to/from images
 - **mesh**: 3D mesh generation algorithms
 - **procgen**: procedural generation of lattice maps
 - **search**: search algorithms on lattice maps
-- **vox**: conversion of 3D lattice maps to/from VOX data format
 
 To learn the basics about lattice maps, start with these doc pages:
 
@@ -105,14 +95,26 @@ To learn the basics about lattice maps, start with these doc pages:
 
 ## Configuration
 
-### Features and WASM
+### LTO
+
+It is highly recommended that you enable link-time optimization when using building-blocks. It will improve the performance
+of critical algorithms like meshing by up to 2x. Just add this to your Cargo.toml:
+
+```toml
+[profile.release]
+lto = true
+```
+
+### Cargo Features and WASM
 
 Building Blocks is organized into several crates, some of which are hidden behind features, and some have features
 themselves, which get re-exported by the top-level crate.
 
-For example, chunk compression supports two backends out of the box: `Lz4` and `Snappy`. They are enabled with the "lz4" and
-"snappy" features. "lz4" is the default, but it relies on a C++ library, so it's not compatible with WASM. But Snappy is
-pure Rust, so it can! Just use `default-features = false` and add "snappy" to you `features` list, like so:
+#### Compression Backends
+
+Chunk compression supports two backends out of the box: `Lz4` and `Snappy`. They are enabled with the "lz4" and "snappy"
+features. "lz4" is the default, but it relies on a C++ library, so it's not compatible with WASM. But Snappy is pure Rust,
+so it can! Just use `default-features = false` and add "snappy" to you `features` list, like so:
 
 ```toml
 [dependencies.building-blocks]
@@ -121,10 +123,15 @@ default-features = false
 features = ["snappy"]
 ```
 
-### LTO
+#### VOX Files
 
-It is highly recommended that you enable link-time optimization when using building-blocks. It will improve the performance
-of critical algorithms like meshing by up to 2x. Just add this to your Cargo.toml:
+".VOX" files are supported via the `dot_vox` crate. Enable the `dot_vox` feature to expose the generic `encode_vox` function
+and `Array3::decode_vox` constructor.
+
+#### Images
+
+Arrays can be converted to `ImageBuffer`s and constructed from `GenericImageView`s from the `images` crate. Enable the
+`images` feature to expose the generic `encode_image` function and `From<Im> where Im: GenericImageView` impl.
 
 ## Development
 

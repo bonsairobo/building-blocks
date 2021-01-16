@@ -9,21 +9,23 @@ repository = "https://github.com/bonsairobo/building-blocks"
 keywords = ["voxel"]
 
 [package.metadata.docs.rs]
-features = ["glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "procgen", "search", "vox"]
+features = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "procgen", "search"]
 
 [features]
 # All features (except "snappy") are default because we want them to be easily discoverable on docs.rs. You can define your own
 # list of features by disabling the defaults with "default-features = false".
 #
 # "snappy" is excluded because there are useful type aliases that rely on the compression backends being mutually exclusive.
-default = ["glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "procgen", "search", "vox"]
+default = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "procgen", "search"]
 
 # Optional crates.
-image = ["building_blocks_image"]
 mesh = ["building_blocks_mesh"]
 procgen = ["building_blocks_procgen"]
 search = ["building_blocks_search"]
-vox = ["building_blocks_vox"]
+
+# Integrations.
+dot_vox = ["building_blocks_storage/dot_vox"]
+image = ["building_blocks_storage/image"]
 
 # Math type conversions.
 glam = ["building_blocks_core/glam"]
@@ -55,11 +57,9 @@ building_blocks_core = { path = "crates/building_blocks_core", version = "0.4.3"
 building_blocks_storage = { path = "crates/building_blocks_storage", version = "0.4.3", default-features = false }
 
 # Optional, feature-gated
-building_blocks_image = { path = "crates/building_blocks_image", version = "0.4.3", optional = true }
 building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.4.3", optional = true }
 building_blocks_procgen = { path = "crates/building_blocks_procgen", version = "0.4", optional = true }
 building_blocks_search = { path = "crates/building_blocks_search", version = "0.4.3", optional = true, default-features = false }
-building_blocks_vox = { path = "crates/building_blocks_vox", version = "0.4", optional = true }
 
 [dev-dependencies]
 bevy = "0.4" # for examples
@@ -67,8 +67,8 @@ log = "0.4"
 
 [[bin]]
 name = "measure_compression_rate"
-path = "bin/measure_compression_rate"
-required-features = ["lz4", "snappy", "vox"]
+path = "src/bin/measure_compression_rate.rs"
+required-features = ["dot_vox", "lz4", "snappy"]
 
 [[example]]
 name = "bevy_meshing"

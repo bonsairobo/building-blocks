@@ -137,7 +137,7 @@ Arrays can be converted to `ImageBuffer`s and constructed from `GenericImageView
 
 We prioritize work according to the [project board](https://github.com/bonsairobo/building-blocks/projects/1).
 
-If you'd like to make a contribution, please first read the **[contribution
-guidelines](https://github.com/bonsairobo/building-blocks/blob/main/CONTRIBUTING.md)**.
+If you'd like to make a contribution, please first read the **[design philosophy](DESIGN.md)** and **[contribution
+guidelines](CONTRIBUTING.md)**.
 
 License: MIT

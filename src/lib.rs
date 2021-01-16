@@ -135,8 +135,8 @@
 //!
 //! We prioritize work according to the [project board](https://github.com/bonsairobo/building-blocks/projects/1).
 //!
-//! If you'd like to make a contribution, please first read the **[contribution
-//! guidelines](https://github.com/bonsairobo/building-blocks/blob/main/CONTRIBUTING.md)**.
+//! If you'd like to make a contribution, please first read the **[design philosophy](DESIGN.md)** and **[contribution
+//! guidelines](CONTRIBUTING.md)**.
 
 // TODO: when rust 1.49 is stable, update the the hyperlinks above to use RFC 1946 "intra-links"
 

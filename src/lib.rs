@@ -64,10 +64,6 @@
 //! There is plentiful documentation with examples. Take a look in the `examples/` directory to see how Building Blocks can be
 //! used in real applications.
 //!
-//! ## Benchmarks
-//!
-//! To run the benchmarks (using the "criterion" crate), go to the root of a crate and run `cargo bench`.
-//!
 //! ## Getting Started
 //!
 //! This library is organized into several crates. The most fundamental are:
@@ -90,6 +86,10 @@
 //! - [chunk maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/chunk_map/index.html)
 //! - [transform maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/transform_map/index.html)
 //! - [fn maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/func/index.html)
+//!
+//! ## Benchmarks
+//!
+//! To run the benchmarks (using the "criterion" crate), go to the root of a crate and run `cargo bench`.
 //!
 //! # Configuration
 //!

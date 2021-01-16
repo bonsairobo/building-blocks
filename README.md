@@ -105,12 +105,16 @@ of critical algorithms like meshing by up to 2x. Just add this to your Cargo.tom
 lto = true
 ```
 
-### Cargo Features and WASM
+### Cargo Features
 
 Building Blocks is organized into several crates, some of which are hidden behind features, and some have features
 themselves, which get re-exported by the top-level crate.
 
-#### Compression Backends
+#### Math Type Conversions
+
+The `PointN` types have conversions to/from `glam`, `nalgebra`, and `mint` types by enabling the corresponding feature.
+
+#### Compression Backends and WASM
 
 Chunk compression supports two backends out of the box: `Lz4` and `Snappy`. They are enabled with the "lz4" and "snappy"
 features. "lz4" is the default, but it relies on a C++ library, so it's not compatible with WASM. But Snappy is pure Rust,

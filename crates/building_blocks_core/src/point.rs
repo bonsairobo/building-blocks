@@ -16,7 +16,7 @@ pub use point3::*;
 
 use point_traits::*;
 
-use core::ops::{Add, AddAssign, Neg, Sub, SubAssign};
+use core::ops::{Add, AddAssign, Mul, Neg, Rem, Sub, SubAssign};
 use num::{Signed, Zero};
 use serde::{Deserialize, Serialize};
 
@@ -93,8 +93,7 @@ where
 
 impl<N> Neg for PointN<N>
 where
-    N: Copy,
-    PointN<N>: Sub<Output = Self> + Zero,
+    Self: Copy + Sub<Output = Self> + Zero,
 {
     type Output = Self;
 
@@ -107,7 +106,7 @@ where
 impl<N, T> Add for PointN<N>
 where
     Self: MapComponents<Scalar = T>,
-    T: Copy + Add<Output = T>,
+    T: Add<Output = T>,
 {
     type Output = Self;
 
@@ -120,7 +119,7 @@ where
 impl<N, T> Sub for PointN<N>
 where
     Self: MapComponents<Scalar = T>,
-    T: Copy + Sub<Output = T>,
+    T: Sub<Output = T>,
 {
     type Output = Self;
 
@@ -132,8 +131,7 @@ where
 
 impl<N> AddAssign for PointN<N>
 where
-    N: Copy,
-    PointN<N>: Add<Output = Self>,
+    Self: Copy + Add<Output = Self>,
 {
     #[inline]
     fn add_assign(&mut self, rhs: Self) {
@@ -143,8 +141,7 @@ where
 
 impl<N> SubAssign for PointN<N>
 where
-    N: Copy,
-    PointN<N>: Sub<Output = Self>,
+    Self: Copy + Sub<Output = Self>,
 {
     #[inline]
     fn sub_assign(&mut self, rhs: Self) {
@@ -164,5 +161,31 @@ where
     #[inline]
     fn is_zero(&self) -> bool {
         *self == Self::zero()
+    }
+}
+
+impl<N, T> Mul<Self> for PointN<N>
+where
+    Self: MapComponents<Scalar = T>,
+    T: Mul<Output = T>,
+{
+    type Output = Self;
+
+    #[inline]
+    fn mul(self, other: Self) -> Self {
+        self.map_components_binary(&other, |c1, c2| c1 * c2)
+    }
+}
+
+impl<N, T> Rem<Self> for PointN<N>
+where
+    Self: MapComponents<Scalar = T>,
+    T: Rem<Output = T>,
+{
+    type Output = Self;
+
+    #[inline]
+    fn rem(self, other: Self) -> Self {
+        self.map_components_binary(&other, |c1, c2| c1 % c2)
     }
 }

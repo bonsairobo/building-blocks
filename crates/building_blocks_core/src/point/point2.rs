@@ -66,6 +66,16 @@ impl Point2i {
     pub fn scalar_div_floor(&self, rhs: i32) -> Self {
         self.map_components_unary(|c| c.div_floor(&rhs))
     }
+
+    #[inline]
+    pub fn vector_div_ceil(&self, rhs: &Self) -> Self {
+        self.map_components_binary(rhs, |c1, c2| c1.div_ceil(&c2))
+    }
+
+    #[inline]
+    pub fn scalar_div_ceil(&self, rhs: i32) -> Self {
+        self.map_components_unary(|c| c.div_ceil(&rhs))
+    }
 }
 
 impl Point2f {
@@ -353,6 +363,7 @@ where
     }
 }
 
+// TODO: this could be defined on PointN once we have specialization
 impl<T> Mul<T> for Point2<T>
 where
     T: Copy + Mul<Output = T>,
@@ -362,18 +373,6 @@ where
     #[inline]
     fn mul(self, rhs: T) -> Self {
         self.map_components_unary(|c| rhs * c)
-    }
-}
-
-impl<T> Mul<Point2<T>> for Point2<T>
-where
-    T: Copy + Mul<Output = T>,
-{
-    type Output = Self;
-
-    #[inline]
-    fn mul(self, other: Self) -> Self {
-        self.map_components_binary(&other, |c1, c2| c1 * c2)
     }
 }
 

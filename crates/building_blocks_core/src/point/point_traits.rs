@@ -104,6 +104,14 @@ pub trait IntegerPoint<N>:
 
     /// Returns `true` iff all dimensions are equal.
     fn is_cube(&self) -> bool;
+
+    fn vector_div_floor(&self, rhs: &Self) -> Self;
+
+    fn scalar_div_floor(&self, rhs: i32) -> Self;
+
+    fn vector_div_ceil(&self, rhs: &Self) -> Self;
+
+    fn scalar_div_ceil(&self, rhs: i32) -> Self;
 }
 
 pub trait ComponentwiseOps {

@@ -160,28 +160,6 @@ where
     const MIN: Self = PointN([T::MIN; 3]);
 }
 
-impl Point3i {
-    #[inline]
-    pub fn vector_div_floor(&self, rhs: &Self) -> Self {
-        self.map_components_binary(rhs, |c1, c2| c1.div_floor(&c2))
-    }
-
-    #[inline]
-    pub fn scalar_div_floor(&self, rhs: i32) -> Self {
-        self.map_components_unary(|c| c.div_floor(&rhs))
-    }
-
-    #[inline]
-    pub fn vector_div_ceil(&self, rhs: &Self) -> Self {
-        self.map_components_binary(rhs, |c1, c2| c1.div_ceil(&c2))
-    }
-
-    #[inline]
-    pub fn scalar_div_ceil(&self, rhs: i32) -> Self {
-        self.map_components_unary(|c| c.div_ceil(&rhs))
-    }
-}
-
 impl<T> MapComponents for Point3<T>
 where
     T: Copy,
@@ -325,6 +303,26 @@ impl IntegerPoint<[i32; 3]> for Point3i {
     #[inline]
     fn is_cube(&self) -> bool {
         self.x() == self.y() && self.x() == self.z()
+    }
+
+    #[inline]
+    fn vector_div_floor(&self, rhs: &Self) -> Self {
+        self.map_components_binary(rhs, |c1, c2| c1.div_floor(&c2))
+    }
+
+    #[inline]
+    fn scalar_div_floor(&self, rhs: i32) -> Self {
+        self.map_components_unary(|c| c.div_floor(&rhs))
+    }
+
+    #[inline]
+    fn vector_div_ceil(&self, rhs: &Self) -> Self {
+        self.map_components_binary(rhs, |c1, c2| c1.div_ceil(&c2))
+    }
+
+    #[inline]
+    fn scalar_div_ceil(&self, rhs: i32) -> Self {
+        self.map_components_unary(|c| c.div_ceil(&rhs))
     }
 }
 

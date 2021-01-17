@@ -241,16 +241,16 @@ impl Point for Point3f {
     }
 }
 
-impl<T> SmallZero for Point3<T>
+impl<T> ConstZero for Point3<T>
 where
-    T: SmallZero,
+    T: ConstZero,
 {
     const ZERO: Self = PointN([T::ZERO; 3]);
 }
 
 impl<T> Ones for Point3<T>
 where
-    T: SmallOne,
+    T: ConstOne,
 {
     const ONES: Self = PointN([T::ONE; 3]);
 }

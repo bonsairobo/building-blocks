@@ -18,10 +18,10 @@ pub use num;
 
 pub mod prelude {
     pub use super::{
-        point::point_traits::*, Axis2, Axis3, Bounded, ComponentwiseIntegerOps, Distance,
-        DotProduct, Extent2, Extent2f, Extent2i, Extent3, Extent3f, Extent3i, ExtentN,
+        point::point_traits::*, Axis2, Axis3, Bounded, ComponentwiseIntegerOps, ConstZero,
+        Distance, DotProduct, Extent2, Extent2f, Extent2i, Extent3, Extent3f, Extent3i, ExtentN,
         GetComponent, IntegerPoint, MapComponents, Neighborhoods, Norm, NormSquared, Ones, Point,
-        Point2, Point2f, Point2i, Point3, Point3f, Point3i, PointN, SmallZero,
+        Point2, Point2f, Point2i, Point3, Point3f, Point3i, PointN,
     };
 }
 

@@ -187,26 +187,26 @@ pub trait IterExtent<N> {
 }
 
 // `Zero` trait doesn't allow associated constants for zero because of bignums.
-pub trait SmallZero: Copy {
+pub trait ConstZero: Copy {
     const ZERO: Self;
 }
 
 // `One` trait doesn't allow associated constants for one because of bignums.
-pub trait SmallOne: Copy {
+pub trait ConstOne: Copy {
     const ONE: Self;
 }
 
-impl SmallZero for i32 {
+impl ConstZero for i32 {
     const ZERO: i32 = 0;
 }
-impl SmallOne for i32 {
+impl ConstOne for i32 {
     const ONE: i32 = 1;
 }
 
-impl SmallZero for f32 {
+impl ConstZero for f32 {
     const ZERO: f32 = 0.0;
 }
-impl SmallOne for f32 {
+impl ConstOne for f32 {
     const ONE: f32 = 1.0;
 }
 

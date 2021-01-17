@@ -154,7 +154,7 @@ where
 
 impl<N> Zero for PointN<N>
 where
-    Self: Point + SmallZero,
+    Self: Point + ConstZero,
 {
     #[inline]
     fn zero() -> Self {

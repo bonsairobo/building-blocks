@@ -10,6 +10,7 @@ pub trait Point:
     + Add<Output = Self>
     + AddAssign
     + Bounded
+    + ConstZero
     + Copy
     + Div<<Self as Point>::Scalar, Output = Self>
     + Div<Self, Output = Self>

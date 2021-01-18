@@ -309,17 +309,6 @@ where
 
         self.storage.get(key)
     }
-
-    /// Returns the chunk containing `point` if it exists.
-    #[inline]
-    pub fn get_chunk_containing_point(
-        &self,
-        point: &PointN<N>,
-    ) -> Option<(PointN<N>, &Chunk<N, T, Meta>)> {
-        let chunk_key = self.indexer.chunk_key_containing_point(point);
-
-        self.get_chunk(&chunk_key).map(|c| (chunk_key, c))
-    }
 }
 
 impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
@@ -357,7 +346,7 @@ where
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    fn get_mut_chunk(&mut self, key: &PointN<N>) -> Option<&mut Chunk<N, T, Meta>> {
+    pub fn get_mut_chunk(&mut self, key: &PointN<N>) -> Option<&mut Chunk<N, T, Meta>> {
         debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.get_mut(key)
@@ -377,43 +366,10 @@ where
         self.storage.get_mut_or_insert_with(key, create_chunk)
     }
 
-    /// Returns the mutable chunk containing `point` if it exists.
+    /// Get mutable data for point `p` along with the chunk key. If `p` is in a chunk that doesn't exist yet, then the chunk
+    /// will first be filled with the ambient value and default metadata.
     #[inline]
-    pub fn get_mut_chunk_containing_point(
-        &mut self,
-        point: &PointN<N>,
-    ) -> Option<(PointN<N>, &mut Chunk<N, T, Meta>)> {
-        let chunk_key = self.indexer.chunk_key_containing_point(point);
-
-        self.get_mut_chunk(&chunk_key).map(|c| (chunk_key, c))
-    }
-
-    /// Get mutable data for point `p` along with the chunk key. If `p` does not exist, calls `create_chunk` to fill that entry
-    /// first.
-    #[inline]
-    pub fn get_mut_point_or_insert_chunk_with(
-        &mut self,
-        p: &PointN<N>,
-        create_chunk: impl FnOnce(PointN<N>, ExtentN<N>) -> Chunk<N, T, Meta>,
-    ) -> (PointN<N>, &mut T)
-    where
-        N: ArrayIndexer<N>,
-    {
-        let key = self.indexer.chunk_key_containing_point(p);
-        let Self {
-            indexer, storage, ..
-        } = self;
-        let chunk = storage.get_mut_or_insert_with(key, || {
-            create_chunk(key, indexer.extent_for_chunk_at_key(key))
-        });
-
-        (key, chunk.array.get_unchecked_mut_release(p))
-    }
-
-    /// Sets point `p` to value `T`. If `p` is in a chunk that doesn't exist yet, then the chunk will first be filled with the
-    /// ambient value and default metadata.
-    #[inline]
-    pub fn get_mut_point_and_chunk_key(&mut self, p: &PointN<N>) -> (PointN<N>, &mut T)
+    fn get_mut_point(&mut self, p: &PointN<N>) -> (PointN<N>, &mut T)
     where
         N: ArrayIndexer<N>,
         T: Copy,
@@ -498,7 +454,7 @@ where
 
     #[inline]
     fn get_mut(&mut self, p: &PointN<N>) -> &mut Self::Data {
-        let (_chunk_key, value_mut) = self.get_mut_point_and_chunk_key(p);
+        let (_chunk_key, value_mut) = self.get_mut_point(p);
 
         value_mut
     }

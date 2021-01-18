@@ -309,6 +309,42 @@ where
 
         self.storage.get(key)
     }
+
+    /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be represented by an `AmbientExtent`.
+    #[inline]
+    pub fn visit_chunks_in_extent(
+        &self,
+        extent: &ExtentN<N>,
+        mut visitor: impl FnMut(Either<&Chunk<N, T, Meta>, (&ExtentN<N>, AmbientExtent<N, T>)>),
+    ) where
+        T: Copy,
+    {
+        for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
+            if let Some(chunk) = self.get_chunk(&chunk_key) {
+                visitor(Either::Left(chunk))
+            } else {
+                let chunk_extent = self.indexer.extent_for_chunk_at_key(chunk_key);
+                visitor(Either::Right((
+                    &chunk_extent,
+                    AmbientExtent::new(self.ambient_value),
+                )))
+            }
+        }
+    }
+
+    /// Call `visitor` on all occupied chunks that overlap `extent`.
+    #[inline]
+    pub fn visit_occupied_chunks_in_extent(
+        &self,
+        extent: &ExtentN<N>,
+        mut visitor: impl FnMut(&Chunk<N, T, Meta>),
+    ) {
+        for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
+            if let Some(chunk) = self.get_chunk(&chunk_key) {
+                visitor(chunk)
+            }
+        }
+    }
 }
 
 impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
@@ -366,16 +402,17 @@ where
         self.storage.get_mut_or_insert_with(key, create_chunk)
     }
 
-    /// Get mutable data for point `p` along with the chunk key. If `p` is in a chunk that doesn't exist yet, then the chunk
-    /// will first be filled with the ambient value and default metadata.
+    /// Mutably borrow the chunk at `key`. If the chunk doesn't exist, a new chunk is created with the ambient value.
+    ///
+    /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    fn get_mut_point(&mut self, p: &PointN<N>) -> (PointN<N>, &mut T)
+    pub fn get_mut_chunk_or_insert_ambient(&mut self, key: PointN<N>) -> &mut Chunk<N, T, Meta>
     where
-        N: ArrayIndexer<N>,
         T: Copy,
         Meta: Clone,
     {
-        let key = self.indexer.chunk_key_containing_point(p);
+        debug_assert!(self.indexer.chunk_key_is_valid(&key));
+
         let Self {
             indexer,
             ambient_value,
@@ -383,14 +420,40 @@ where
             storage,
             ..
         } = self;
-        let array = &mut storage
-            .get_mut_or_insert_with(key, || Chunk {
-                metadata: default_chunk_metadata.clone(),
-                array: ArrayN::fill(indexer.extent_for_chunk_at_key(key), *ambient_value),
-            })
-            .array;
 
-        (key, array.get_unchecked_mut_release(p))
+        storage.get_mut_or_insert_with(key, || Chunk {
+            metadata: default_chunk_metadata.clone(),
+            array: ArrayN::fill(indexer.extent_for_chunk_at_key(key), *ambient_value),
+        })
+    }
+
+    /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be created first with ambient value.
+    #[inline]
+    pub fn visit_chunks_in_extent_mut(
+        &mut self,
+        extent: &ExtentN<N>,
+        mut visitor: impl FnMut(&mut Chunk<N, T, Meta>),
+    ) where
+        T: Copy,
+        Meta: Clone,
+    {
+        for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
+            visitor(self.get_mut_chunk_or_insert_ambient(chunk_key));
+        }
+    }
+
+    /// Call `visitor` on all occupied chunks that overlap `extent`.
+    #[inline]
+    pub fn visit_occupied_chunks_in_extent_mut(
+        &mut self,
+        extent: &ExtentN<N>,
+        mut visitor: impl FnMut(&Chunk<N, T, Meta>),
+    ) {
+        for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
+            if let Some(chunk) = self.get_mut_chunk(&chunk_key) {
+                visitor(chunk)
+            }
+        }
     }
 
     /// Fill all of `extent` with the same `value`.
@@ -436,8 +499,10 @@ where
 
     #[inline]
     fn get_ref(&self, p: &PointN<N>) -> &Self::Data {
-        self.get_chunk_containing_point(p)
-            .map(|(_key, chunk)| chunk.array.get_unchecked_ref_release(p))
+        let key = self.indexer.chunk_key_containing_point(p);
+
+        self.get_chunk(&key)
+            .map(|chunk| chunk.array.get_unchecked_ref_release(p))
             .unwrap_or(&self.ambient_value)
     }
 }
@@ -454,9 +519,10 @@ where
 
     #[inline]
     fn get_mut(&mut self, p: &PointN<N>) -> &mut Self::Data {
-        let (_chunk_key, value_mut) = self.get_mut_point(p);
+        let key = self.indexer.chunk_key_containing_point(p);
+        let chunk = self.get_mut_chunk_or_insert_ambient(key);
 
-        value_mut
+        chunk.array.get_unchecked_mut_release(p)
     }
 }
 
@@ -493,15 +559,14 @@ where
 
     #[inline]
     fn for_each_ref(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &Self::Data)) {
-        for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
-            if let Some(chunk) = self.get_chunk(&chunk_key) {
+        self.visit_chunks_in_extent(extent, |chunk| match chunk {
+            Either::Left(chunk) => {
                 chunk.array.for_each_ref(extent, |p, value| f(p, value));
-            } else {
-                let chunk_extent = self.indexer.extent_for_chunk_at_key(chunk_key);
-                AmbientExtent::new(self.ambient_value)
-                    .for_each(&extent.intersection(&chunk_extent), |p, value| f(p, &value));
             }
-        }
+            Either::Right((chunk_extent, ambient)) => {
+                ambient.for_each(&extent.intersection(&chunk_extent), |p, value| f(p, &value))
+            }
+        });
     }
 }
 
@@ -517,21 +582,9 @@ where
 
     #[inline]
     fn for_each_mut(&mut self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &mut Self::Data)) {
-        let Self {
-            indexer,
-            ambient_value,
-            default_chunk_metadata,
-            storage,
-            ..
-        } = self;
-
-        for chunk_key in indexer.chunk_keys_for_extent(extent) {
-            let chunk = storage.get_mut_or_insert_with(chunk_key, || Chunk {
-                metadata: default_chunk_metadata.clone(),
-                array: ArrayN::fill(indexer.extent_for_chunk_at_key(chunk_key), *ambient_value),
-            });
-            chunk.array.for_each_mut(extent, |p, value| f(p, value));
-        }
+        self.visit_chunks_in_extent_mut(extent, |chunk| {
+            chunk.array.for_each_mut(extent, |p, value| f(p, value))
+        });
     }
 }
 

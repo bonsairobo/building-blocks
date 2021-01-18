@@ -637,21 +637,7 @@ where
     Src: Copy,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src) {
-        let Self {
-            indexer,
-            ambient_value,
-            default_chunk_metadata,
-            storage,
-            ..
-        } = self;
-
-        for chunk_key in indexer.chunk_keys_for_extent(extent) {
-            let chunk = storage.get_mut_or_insert_with(chunk_key, || Chunk {
-                metadata: default_chunk_metadata.clone(),
-                array: ArrayN::fill(indexer.extent_for_chunk_at_key(chunk_key), *ambient_value),
-            });
-            chunk.array.write_extent(extent, src);
-        }
+        self.visit_chunks_in_extent_mut(extent, |chunk| chunk.array.write_extent(extent, src));
     }
 }
 

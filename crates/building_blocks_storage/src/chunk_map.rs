@@ -312,7 +312,7 @@ where
 
     /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be represented by an `AmbientExtent`.
     #[inline]
-    pub fn visit_chunks_in_extent(
+    pub fn visit_chunks(
         &self,
         extent: &ExtentN<N>,
         mut visitor: impl FnMut(Either<&Chunk<N, T, Meta>, (&ExtentN<N>, AmbientExtent<N, T>)>),
@@ -334,7 +334,7 @@ where
 
     /// Call `visitor` on all occupied chunks that overlap `extent`.
     #[inline]
-    pub fn visit_occupied_chunks_in_extent(
+    pub fn visit_occupied_chunks(
         &self,
         extent: &ExtentN<N>,
         mut visitor: impl FnMut(&Chunk<N, T, Meta>),
@@ -429,7 +429,7 @@ where
 
     /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be created first with ambient value.
     #[inline]
-    pub fn visit_chunks_in_extent_mut(
+    pub fn visit_mut_chunks(
         &mut self,
         extent: &ExtentN<N>,
         mut visitor: impl FnMut(&mut Chunk<N, T, Meta>),
@@ -444,10 +444,10 @@ where
 
     /// Call `visitor` on all occupied chunks that overlap `extent`.
     #[inline]
-    pub fn visit_occupied_chunks_in_extent_mut(
+    pub fn visit_occupied_mut_chunks(
         &mut self,
         extent: &ExtentN<N>,
-        mut visitor: impl FnMut(&Chunk<N, T, Meta>),
+        mut visitor: impl FnMut(&mut Chunk<N, T, Meta>),
     ) {
         for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
             if let Some(chunk) = self.get_mut_chunk(&chunk_key) {
@@ -559,7 +559,7 @@ where
 
     #[inline]
     fn for_each_ref(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &Self::Data)) {
-        self.visit_chunks_in_extent(extent, |chunk| match chunk {
+        self.visit_chunks(extent, |chunk| match chunk {
             Either::Left(chunk) => {
                 chunk.array.for_each_ref(extent, |p, value| f(p, value));
             }
@@ -582,7 +582,7 @@ where
 
     #[inline]
     fn for_each_mut(&mut self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &mut Self::Data)) {
-        self.visit_chunks_in_extent_mut(extent, |chunk| {
+        self.visit_mut_chunks(extent, |chunk| {
             chunk.array.for_each_mut(extent, |p, value| f(p, value))
         });
     }
@@ -637,7 +637,7 @@ where
     Src: Copy,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src) {
-        self.visit_chunks_in_extent_mut(extent, |chunk| chunk.array.write_extent(extent, src));
+        self.visit_mut_chunks(extent, |chunk| chunk.array.write_extent(extent, src));
     }
 }
 

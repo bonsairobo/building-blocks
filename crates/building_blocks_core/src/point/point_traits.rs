@@ -154,6 +154,15 @@ macro_rules! impl_unary_ops {
                 self.map_components_unary(|c| rhs * c)
             }
         }
+
+        impl Mul<$t> for $scalar {
+            type Output = $t;
+
+            #[inline]
+            fn mul(self, rhs: $t) -> $t {
+                rhs * self
+            }
+        }
     };
 }
 

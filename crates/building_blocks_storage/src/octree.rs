@@ -51,7 +51,7 @@ impl OctreeSet {
         // These are the corners of the root octant, in local coordinates.
         let corner_offsets: Vec<_> = Point3i::corner_offsets()
             .into_iter()
-            .map(|p| Local(p * edge_length))
+            .map(|p| Local(edge_length * p))
             .collect();
         // Convert into strides for indexing efficiency.
         let mut corner_strides = [Stride(0); 8];
@@ -170,7 +170,7 @@ impl OctreeSet {
         let edge_len = self.edge_length();
         let corner_offsets: Vec<_> = Point3i::corner_offsets()
             .into_iter()
-            .map(|p| p * edge_len)
+            .map(|p| edge_len * p)
             .collect();
 
         self._visit(LocationCode(1), minimum, edge_len, &corner_offsets, visitor)

@@ -105,6 +105,8 @@ pub trait IntegerPoint<N>:
     + Neighborhoods
     + Point<Scalar = i32>
     + Rem<Self, Output = Self>
+    + Shl<i32, Output = Self>
+    + Shr<i32, Output = Self>
     + Shl<Self, Output = Self>
     + Shr<Self, Output = Self>
 {

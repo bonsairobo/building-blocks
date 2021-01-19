@@ -1,6 +1,6 @@
 use crate::PointN;
 
-use core::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
+use core::ops::{Add, AddAssign, Div, Mul, Neg, Rem, Shl, Shr, Sub, SubAssign};
 use num::Zero;
 
 /// A trait that bundles op traits that all `PointN<N>` (and its components) should have.
@@ -98,14 +98,24 @@ pub trait DotProduct {
 }
 
 pub trait IntegerPoint<N>:
-    ComponentwiseIntegerOps + Eq + IterExtent<N> + Neighborhoods + Point<Scalar = i32>
+    ComponentwiseOps
+    + Eq
+    + IntegerDiv
+    + IterExtent<N>
+    + Neighborhoods
+    + Point<Scalar = i32>
+    + Rem<Self, Output = Self>
+    + Shl<Self, Output = Self>
+    + Shr<Self, Output = Self>
 {
     /// Returns `true` iff all dimensions are powers of 2.
     fn dimensions_are_powers_of_2(&self) -> bool;
 
     /// Returns `true` iff all dimensions are equal.
     fn is_cube(&self) -> bool;
+}
 
+pub trait IntegerDiv {
     fn vector_div_floor(&self, rhs: &Self) -> Self;
 
     fn scalar_div_floor(&self, rhs: i32) -> Self;
@@ -123,7 +133,21 @@ pub trait ComponentwiseOps {
     fn meet(&self, other: &Self) -> Self;
 }
 
-macro_rules! impl_componentwise_ops {
+macro_rules! impl_unary_ops {
+    ($t:ty, $scalar:ty) => {
+        // TODO: this could be defined on PointN once we have specialization
+        impl Mul<$scalar> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn mul(self, rhs: $scalar) -> Self {
+                self.map_components_unary(|c| rhs * c)
+            }
+        }
+    };
+}
+
+macro_rules! impl_binary_ops {
     ($t:ty, $scalar:ty) => {
         impl ComponentwiseOps for $t {
             #[inline]
@@ -136,46 +160,137 @@ macro_rules! impl_componentwise_ops {
                 self.map_components_binary(other, <$scalar>::min)
             }
         }
+
+        // TODO: this could be defined on PointN once we have specialization
+        impl Mul<Self> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn mul(self, rhs: Self) -> Self {
+                self.map_components_binary(&rhs, |c1, c2| c1 * c2)
+            }
+        }
     };
 }
 
-pub trait ComponentwiseIntegerOps: ComponentwiseOps + Point {
-    /// Left bitshifts all dimensions.
-    fn scalar_left_shift(&self, shift_by: <Self as Point>::Scalar) -> Self;
+macro_rules! impl_unary_float_ops {
+    ($t:ty) => {
+        impl $t {
+            #[inline]
+            pub fn round(&self) -> Self {
+                self.map_components_unary(|c| c.round())
+            }
 
-    /// Right bitshifts all dimensions.
-    fn scalar_right_shift(&self, shift_by: <Self as Point>::Scalar) -> Self;
+            #[inline]
+            pub fn floor(&self) -> Self {
+                self.map_components_unary(|c| c.floor())
+            }
 
-    /// Left bitshifts all dimensions, component-wise.
-    fn vector_left_shift(&self, shift_by: &Self) -> Self;
+            #[inline]
+            pub fn ceil(&self) -> Self {
+                self.map_components_unary(|c| c.ceil())
+            }
 
-    /// Right bitshifts all dimensions, component-wise.
-    fn vector_right_shift(&self, shift_by: &Self) -> Self;
+            #[inline]
+            pub fn fract(&self) -> Self {
+                self.map_components_unary(|c| c.fract())
+            }
+        }
+    };
 }
 
-impl<T> ComponentwiseIntegerOps for T
-where
-    T: MapComponents<Scalar = i32> + Point<Scalar = i32> + ComponentwiseOps,
-{
-    #[inline]
-    fn scalar_left_shift(&self, shift_by: i32) -> Self {
-        self.map_components_unary(|c| c << shift_by)
-    }
+macro_rules! impl_unary_integer_ops {
+    ($t:ty, $scalar:ty) => {
+        impl Shl<$scalar> for $t {
+            type Output = Self;
 
-    #[inline]
-    fn scalar_right_shift(&self, shift_by: i32) -> Self {
-        self.map_components_unary(|c| c >> shift_by)
-    }
+            #[inline]
+            fn shl(self, rhs: $scalar) -> Self {
+                self.map_components_unary(|c| c << rhs)
+            }
+        }
 
-    #[inline]
-    fn vector_left_shift(&self, shift_by: &Self) -> Self {
-        self.map_components_binary(shift_by, |c1, c2| c1 << c2)
-    }
+        impl Shr<$scalar> for $t {
+            type Output = Self;
 
-    #[inline]
-    fn vector_right_shift(&self, shift_by: &Self) -> Self {
-        self.map_components_binary(shift_by, |c1, c2| c1 >> c2)
-    }
+            #[inline]
+            fn shr(self, rhs: $scalar) -> Self {
+                self.map_components_unary(|c| c >> rhs)
+            }
+        }
+    };
+}
+
+macro_rules! impl_float_div {
+    ($t:ty, $scalar:ty) => {
+        // TODO: this could be defined on PointN once we have specialization
+        impl Div<$scalar> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn div(self, rhs: $scalar) -> Self {
+                self.map_components_unary(|c| rhs / c)
+            }
+        }
+
+        // TODO: this could be defined on PointN once we have specialization
+        impl Div<Self> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn div(self, rhs: Self) -> Self {
+                self.map_components_binary(&rhs, |c1, c2| c1 / c2)
+            }
+        }
+    };
+}
+
+macro_rules! impl_integer_div {
+    ($t:ty, $scalar:ty) => {
+        // Use specialized implementation for integers because the default Div impl rounds towards zero, which is not what we
+        // want.
+        impl Div<$scalar> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn div(self, rhs: $scalar) -> Self {
+                self.scalar_div_floor(rhs)
+            }
+        }
+
+        // Use specialized implementation for integers because the default Div impl rounds towards zero,
+        // which is not what we want.
+        impl Div<Self> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn div(self, rhs: Self) -> Self {
+                self.vector_div_floor(&rhs)
+            }
+        }
+
+        impl IntegerDiv for $t {
+            #[inline]
+            fn vector_div_floor(&self, rhs: &Self) -> Self {
+                self.map_components_binary(rhs, |c1, c2| c1.div_floor(&c2))
+            }
+
+            #[inline]
+            fn scalar_div_floor(&self, rhs: i32) -> Self {
+                self.map_components_unary(|c| c.div_floor(&rhs))
+            }
+
+            #[inline]
+            fn vector_div_ceil(&self, rhs: &Self) -> Self {
+                self.map_components_binary(rhs, |c1, c2| c1.div_ceil(&c2))
+            }
+
+            #[inline]
+            fn scalar_div_ceil(&self, rhs: i32) -> Self {
+                self.map_components_unary(|c| c.div_ceil(&rhs))
+            }
+        }
+    };
 }
 
 pub trait Neighborhoods: Sized {

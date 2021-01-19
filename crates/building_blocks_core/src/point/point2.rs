@@ -2,7 +2,7 @@ use crate::{Axis2, IterExtent};
 
 use super::{point_traits::*, PointN};
 
-use core::ops::{Add, Div, Mul, Range};
+use core::ops::{Add, Div, Mul, Range, Shl, Shr};
 use itertools::{iproduct, Product};
 use num::{traits::Pow, Integer, Signed};
 use std::cmp::Ordering;
@@ -57,26 +57,6 @@ where
 }
 
 impl Point2f {
-    #[inline]
-    pub fn round(&self) -> Self {
-        self.map_components_unary(|c| c.round())
-    }
-
-    #[inline]
-    pub fn floor(&self) -> Self {
-        self.map_components_unary(|c| c.floor())
-    }
-
-    #[inline]
-    pub fn ceil(&self) -> Point2f {
-        self.map_components_unary(|c| c.ceil())
-    }
-
-    #[inline]
-    pub fn fract(&self) -> Point2f {
-        self.map_components_unary(|c| c.fract())
-    }
-
     #[inline]
     pub fn as_2i(&self) -> Point2i {
         PointN([self.x() as i32, self.y() as i32])
@@ -230,26 +210,6 @@ impl IntegerPoint<[i32; 2]> for Point2i {
     fn is_cube(&self) -> bool {
         self.x() == self.y()
     }
-
-    #[inline]
-    fn vector_div_floor(&self, rhs: &Self) -> Self {
-        self.map_components_binary(rhs, |c1, c2| c1.div_floor(&c2))
-    }
-
-    #[inline]
-    fn scalar_div_floor(&self, rhs: i32) -> Self {
-        self.map_components_unary(|c| c.div_floor(&rhs))
-    }
-
-    #[inline]
-    fn vector_div_ceil(&self, rhs: &Self) -> Self {
-        self.map_components_binary(rhs, |c1, c2| c1.div_ceil(&c2))
-    }
-
-    #[inline]
-    fn scalar_div_ceil(&self, rhs: i32) -> Self {
-        self.map_components_unary(|c| c.div_ceil(&rhs))
-    }
 }
 
 impl Neighborhoods for Point2i {
@@ -361,59 +321,6 @@ where
     }
 }
 
-// TODO: this could be defined on PointN once we have specialization
-impl<T> Mul<T> for Point2<T>
-where
-    T: Copy + Mul<Output = T>,
-{
-    type Output = Self;
-
-    #[inline]
-    fn mul(self, rhs: T) -> Self {
-        self.map_components_unary(|c| rhs * c)
-    }
-}
-
-// Use specialized implementation for integers because the default Div impl rounds towards zero,
-// which is not what we want.
-impl Div<i32> for Point2i {
-    type Output = Self;
-
-    #[inline]
-    fn div(self, rhs: i32) -> Self {
-        self.scalar_div_floor(rhs)
-    }
-}
-
-impl Div<f32> for Point2f {
-    type Output = Self;
-
-    #[inline]
-    fn div(self, rhs: f32) -> Self {
-        self.map_components_unary(|c| c / rhs)
-    }
-}
-
-impl Div<Self> for Point2f {
-    type Output = Self;
-
-    #[inline]
-    fn div(self, rhs: Self) -> Self {
-        self.map_components_binary(&rhs, |c1, c2| c1 / c2)
-    }
-}
-
-// Use specialized implementation for integers because the default Div impl rounds towards zero,
-// which is not what we want.
-impl Div<Point2i> for Point2i {
-    type Output = Self;
-
-    #[inline]
-    fn div(self, rhs: Point2i) -> Self {
-        self.vector_div_floor(&rhs)
-    }
-}
-
 impl From<Point2i> for Point2f {
     #[inline]
     fn from(p: Point2i) -> Self {
@@ -421,5 +328,14 @@ impl From<Point2i> for Point2f {
     }
 }
 
-impl_componentwise_ops!(Point2i, i32);
-impl_componentwise_ops!(Point2f, f32);
+impl_unary_ops!(Point2f, f32);
+impl_unary_ops!(Point2i, i32);
+
+impl_binary_ops!(Point2i, i32);
+impl_binary_ops!(Point2f, f32);
+
+impl_unary_float_ops!(Point2f);
+impl_unary_integer_ops!(Point2i, i32);
+
+impl_float_div!(Point2f, f32);
+impl_integer_div!(Point2i, i32);

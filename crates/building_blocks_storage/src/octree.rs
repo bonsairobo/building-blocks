@@ -227,7 +227,7 @@ impl OctreeSet {
         for (child_corner, parent_corner) in
             octant_corner_offsets.iter_mut().zip(corner_offsets.iter())
         {
-            *child_corner = parent_corner.scalar_right_shift(1);
+            *child_corner = *parent_corner >> 1;
         }
 
         let half_edge_length = edge_length >> 1;

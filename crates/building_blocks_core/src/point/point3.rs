@@ -2,7 +2,7 @@ use crate::Axis3;
 
 use super::{point_traits::*, Point2, PointN};
 
-use core::ops::{Add, Div, Mul, Range, Sub};
+use core::ops::{Add, Div, Mul, Range, Shl, Shr, Sub};
 use itertools::{iproduct, ConsTuples, Product};
 use num::{traits::Pow, Integer, Signed};
 use std::cmp::Ordering;
@@ -91,17 +91,17 @@ where
     }
 
     #[inline]
-    pub fn yzx(&self) -> Point3<T> {
+    pub fn yzx(&self) -> Self {
         PointN([self.y(), self.z(), self.x()])
     }
 
     #[inline]
-    pub fn zxy(&self) -> Point3<T> {
+    pub fn zxy(&self) -> Self {
         PointN([self.z(), self.x(), self.y()])
     }
 
     #[inline]
-    pub fn zyx(&self) -> Point3<T> {
+    pub fn zyx(&self) -> Self {
         PointN([self.z(), self.y(), self.x()])
     }
 }
@@ -121,26 +121,6 @@ where
 }
 
 impl Point3f {
-    #[inline]
-    pub fn round(&self) -> Self {
-        self.map_components_unary(|c| c.round())
-    }
-
-    #[inline]
-    pub fn floor(&self) -> Self {
-        self.map_components_unary(|c| c.floor())
-    }
-
-    #[inline]
-    pub fn ceil(&self) -> Point3f {
-        self.map_components_unary(|c| c.ceil())
-    }
-
-    #[inline]
-    pub fn fract(&self) -> Point3f {
-        self.map_components_unary(|c| c.fract())
-    }
-
     #[inline]
     pub fn as_3i(&self) -> Point3i {
         PointN([self.x() as i32, self.y() as i32, self.z() as i32])
@@ -304,26 +284,6 @@ impl IntegerPoint<[i32; 3]> for Point3i {
     fn is_cube(&self) -> bool {
         self.x() == self.y() && self.x() == self.z()
     }
-
-    #[inline]
-    fn vector_div_floor(&self, rhs: &Self) -> Self {
-        self.map_components_binary(rhs, |c1, c2| c1.div_floor(&c2))
-    }
-
-    #[inline]
-    fn scalar_div_floor(&self, rhs: i32) -> Self {
-        self.map_components_unary(|c| c.div_floor(&rhs))
-    }
-
-    #[inline]
-    fn vector_div_ceil(&self, rhs: &Self) -> Self {
-        self.map_components_binary(rhs, |c1, c2| c1.div_ceil(&c2))
-    }
-
-    #[inline]
-    fn scalar_div_ceil(&self, rhs: i32) -> Self {
-        self.map_components_unary(|c| c.div_ceil(&rhs))
-    }
 }
 
 impl Neighborhoods for Point3i {
@@ -464,59 +424,6 @@ where
     }
 }
 
-// TODO: this could be defined on PointN once we have specialization
-impl<T> Mul<T> for Point3<T>
-where
-    T: Copy + Mul<Output = T>,
-{
-    type Output = Self;
-
-    #[inline]
-    fn mul(self, rhs: T) -> Self {
-        self.map_components_unary(|c| rhs * c)
-    }
-}
-
-// Use specialized implementation for integers because the default Div impl rounds towards zero,
-// which is not what we want.
-impl Div<i32> for Point3i {
-    type Output = Self;
-
-    #[inline]
-    fn div(self, rhs: i32) -> Self {
-        self.scalar_div_floor(rhs)
-    }
-}
-
-impl Div<f32> for Point3f {
-    type Output = Self;
-
-    #[inline]
-    fn div(self, rhs: f32) -> Self {
-        self.map_components_unary(|c| c / rhs)
-    }
-}
-
-impl Div<Self> for Point3f {
-    type Output = Self;
-
-    #[inline]
-    fn div(self, rhs: Self) -> Self {
-        self.map_components_binary(&rhs, |c1, c2| c1 / c2)
-    }
-}
-
-// Use specialized implementation for integers because the default Div impl rounds towards zero,
-// which is not what we want.
-impl Div<Self> for Point3i {
-    type Output = Self;
-
-    #[inline]
-    fn div(self, rhs: Point3i) -> Self {
-        self.vector_div_floor(&rhs)
-    }
-}
-
 impl From<Point3i> for Point3f {
     #[inline]
     fn from(p: Point3i) -> Self {
@@ -524,5 +431,14 @@ impl From<Point3i> for Point3f {
     }
 }
 
-impl_componentwise_ops!(Point3i, i32);
-impl_componentwise_ops!(Point3f, f32);
+impl_unary_ops!(Point3f, f32);
+impl_unary_ops!(Point3i, i32);
+
+impl_binary_ops!(Point3i, i32);
+impl_binary_ops!(Point3f, f32);
+
+impl_unary_float_ops!(Point3f);
+impl_unary_integer_ops!(Point3i, i32);
+
+impl_float_div!(Point3f, f32);
+impl_integer_div!(Point3i, i32);

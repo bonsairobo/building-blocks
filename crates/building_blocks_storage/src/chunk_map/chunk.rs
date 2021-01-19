@@ -105,13 +105,13 @@ where
 
     /// Returns an iterator over all chunk keys for chunks that overlap the given extent.
     pub fn chunk_keys_for_extent(&self, extent: &ExtentN<N>) -> impl Iterator<Item = PointN<N>> {
-        let key_min = extent.minimum.vector_right_shift(&self.chunk_shape_log2);
-        let key_max = extent.max().vector_right_shift(&self.chunk_shape_log2);
+        let key_min = extent.minimum >> self.chunk_shape_log2;
+        let key_max = extent.max() >> self.chunk_shape_log2;
         let shape_log2 = self.chunk_shape_log2;
 
         ExtentN::from_min_and_max(key_min, key_max)
             .iter_points()
-            .map(move |p| p.vector_left_shift(&shape_log2))
+            .map(move |p| p << shape_log2)
     }
 
     /// The extent spanned by the chunk at `key`.

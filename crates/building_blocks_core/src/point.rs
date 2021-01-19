@@ -16,7 +16,7 @@ pub use point3::*;
 
 use point_traits::*;
 
-use core::ops::{Add, AddAssign, Neg, Rem, Shl, Shr, Sub, SubAssign};
+use core::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 use num::{Signed, Zero};
 use serde::{Deserialize, Serialize};
 
@@ -161,44 +161,5 @@ where
     #[inline]
     fn is_zero(&self) -> bool {
         *self == Self::zero()
-    }
-}
-
-impl<N, T> Rem<Self> for PointN<N>
-where
-    Self: MapComponents<Scalar = T>,
-    T: Rem<Output = T>,
-{
-    type Output = Self;
-
-    #[inline]
-    fn rem(self, other: Self) -> Self {
-        self.map_components_binary(&other, |c1, c2| c1 % c2)
-    }
-}
-
-impl<N, T> Shl<Self> for PointN<N>
-where
-    Self: MapComponents<Scalar = T>,
-    T: Shl<Output = T>,
-{
-    type Output = Self;
-
-    #[inline]
-    fn shl(self, other: Self) -> Self {
-        self.map_components_binary(&other, |c1, c2| c1 << c2)
-    }
-}
-
-impl<N, T> Shr<Self> for PointN<N>
-where
-    Self: MapComponents<Scalar = T>,
-    T: Shr<Output = T>,
-{
-    type Output = Self;
-
-    #[inline]
-    fn shr(self, other: Self) -> Self {
-        self.map_components_binary(&other, |c1, c2| c1 >> c2)
     }
 }

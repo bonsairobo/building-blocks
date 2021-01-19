@@ -2,7 +2,7 @@ use crate::Axis3;
 
 use super::{point_traits::*, Point2, PointN};
 
-use core::ops::{Add, Div, Mul, Range, Shl, Shr, Sub};
+use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Range, Rem, Shl, Shr, Sub};
 use itertools::{iproduct, ConsTuples, Product};
 use num::{traits::Pow, Integer, Signed};
 use std::cmp::Ordering;
@@ -439,6 +439,8 @@ impl_binary_ops!(Point3f, f32);
 
 impl_unary_float_ops!(Point3f);
 impl_unary_integer_ops!(Point3i, i32);
+
+impl_binary_integer_ops!(Point3i);
 
 impl_float_div!(Point3f, f32);
 impl_integer_div!(Point3i, i32);

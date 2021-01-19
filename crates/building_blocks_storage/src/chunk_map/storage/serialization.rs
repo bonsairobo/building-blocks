@@ -1,6 +1,6 @@
 use crate::{
     BincodeCompressedChunk, BincodeCompression, BytesCompression, Chunk, ChunkMap, ChunkMapBuilder,
-    ChunkShape, ChunkWriteStorage, Compression,
+    ChunkWriteStorage, Compression,
 };
 
 use building_blocks_core::prelude::*;
@@ -31,7 +31,7 @@ where
 
 impl<N, T, Meta, B> SerializableChunkMap<N, T, Meta, B>
 where
-    PointN<N>: IntegerPoint<N> + Hash + Eq + ChunkShape<N>,
+    PointN<N>: IntegerPoint<N> + Hash + Eq,
     Chunk<N, T, Meta>: DeserializeOwned + Serialize,
     T: Copy,
     Meta: Clone,

@@ -1,6 +1,8 @@
 use crate::PointN;
 
-use core::ops::{Add, AddAssign, Div, Mul, Neg, Rem, Shl, Shr, Sub, SubAssign};
+use core::ops::{
+    Add, AddAssign, BitAnd, BitOr, BitXor, Div, Mul, Neg, Rem, Shl, Shr, Sub, SubAssign,
+};
 use num::Zero;
 
 /// A trait that bundles op traits that all `PointN<N>` (and its components) should have.
@@ -98,17 +100,24 @@ pub trait DotProduct {
 }
 
 pub trait IntegerPoint<N>:
-    ComponentwiseOps
+    BitAnd<Self, Output = Self>
+    + BitOr<Self, Output = Self>
+    + BitXor<Self, Output = Self>
+    + BitAnd<i32, Output = Self>
+    + BitOr<i32, Output = Self>
+    + BitXor<i32, Output = Self>
     + Eq
     + IntegerDiv
     + IterExtent<N>
+    + LatticeOrder
     + Neighborhoods
     + Point<Scalar = i32>
     + Rem<Self, Output = Self>
-    + Shl<i32, Output = Self>
-    + Shr<i32, Output = Self>
     + Shl<Self, Output = Self>
     + Shr<Self, Output = Self>
+    + Rem<i32, Output = Self>
+    + Shl<i32, Output = Self>
+    + Shr<i32, Output = Self>
 {
     /// Returns `true` iff all dimensions are powers of 2.
     fn dimensions_are_powers_of_2(&self) -> bool;
@@ -127,7 +136,7 @@ pub trait IntegerDiv {
     fn scalar_div_ceil(&self, rhs: i32) -> Self;
 }
 
-pub trait ComponentwiseOps {
+pub trait LatticeOrder {
     /// Component-wise maximum.
     fn join(&self, other: &Self) -> Self;
 
@@ -137,7 +146,6 @@ pub trait ComponentwiseOps {
 
 macro_rules! impl_unary_ops {
     ($t:ty, $scalar:ty) => {
-        // TODO: this could be defined on PointN once we have specialization
         impl Mul<$scalar> for $t {
             type Output = Self;
 
@@ -151,7 +159,7 @@ macro_rules! impl_unary_ops {
 
 macro_rules! impl_binary_ops {
     ($t:ty, $scalar:ty) => {
-        impl ComponentwiseOps for $t {
+        impl LatticeOrder for $t {
             #[inline]
             fn join(&self, other: &Self) -> Self {
                 self.map_components_binary(other, <$scalar>::max)
@@ -163,7 +171,6 @@ macro_rules! impl_binary_ops {
             }
         }
 
-        // TODO: this could be defined on PointN once we have specialization
         impl Mul<Self> for $t {
             type Output = Self;
 
@@ -203,6 +210,42 @@ macro_rules! impl_unary_float_ops {
 
 macro_rules! impl_unary_integer_ops {
     ($t:ty, $scalar:ty) => {
+        impl BitAnd<$scalar> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn bitand(self, rhs: $scalar) -> Self {
+                self.map_components_unary(|c| c & rhs)
+            }
+        }
+
+        impl BitOr<$scalar> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn bitor(self, rhs: $scalar) -> Self {
+                self.map_components_unary(|c| c | rhs)
+            }
+        }
+
+        impl BitXor<$scalar> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn bitxor(self, rhs: $scalar) -> Self {
+                self.map_components_unary(|c| c ^ rhs)
+            }
+        }
+
+        impl Rem<$scalar> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn rem(self, rhs: $scalar) -> Self {
+                self.map_components_unary(|c| c % rhs)
+            }
+        }
+
         impl Shl<$scalar> for $t {
             type Output = Self;
 
@@ -223,9 +266,66 @@ macro_rules! impl_unary_integer_ops {
     };
 }
 
+macro_rules! impl_binary_integer_ops {
+    ($t:ty) => {
+        impl BitAnd<Self> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn bitand(self, rhs: Self) -> Self {
+                self.map_components_binary(&rhs, |c1, c2| c1 & c2)
+            }
+        }
+
+        impl BitOr<Self> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn bitor(self, rhs: Self) -> Self {
+                self.map_components_binary(&rhs, |c1, c2| c1 | c2)
+            }
+        }
+
+        impl BitXor<Self> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn bitxor(self, rhs: Self) -> Self {
+                self.map_components_binary(&rhs, |c1, c2| c1 ^ c2)
+            }
+        }
+
+        impl Rem<Self> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn rem(self, other: Self) -> Self {
+                self.map_components_binary(&other, |c1, c2| c1 % c2)
+            }
+        }
+
+        impl Shl<Self> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn shl(self, rhs: Self) -> Self {
+                self.map_components_binary(&rhs, |c1, c2| c1 << c2)
+            }
+        }
+
+        impl Shr<Self> for $t {
+            type Output = Self;
+
+            #[inline]
+            fn shr(self, rhs: Self) -> Self {
+                self.map_components_binary(&rhs, |c1, c2| c1 >> c2)
+            }
+        }
+    };
+}
+
 macro_rules! impl_float_div {
     ($t:ty, $scalar:ty) => {
-        // TODO: this could be defined on PointN once we have specialization
         impl Div<$scalar> for $t {
             type Output = Self;
 
@@ -235,7 +335,6 @@ macro_rules! impl_float_div {
             }
         }
 
-        // TODO: this could be defined on PointN once we have specialization
         impl Div<Self> for $t {
             type Output = Self;
 

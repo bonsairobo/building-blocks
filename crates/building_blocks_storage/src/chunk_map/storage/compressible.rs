@@ -1,5 +1,5 @@
 use crate::{
-    BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkShape, ChunkWriteStorage, Compressed,
+    BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkWriteStorage, Compressed,
     CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression, FastChunkCompression,
     FnvLruCache, IterChunkKeys, LocalChunkCache, LruCacheEntries, LruCacheIntoIter, LruCacheKeys,
     MaybeCompressedChunk,
@@ -246,7 +246,7 @@ pub type CompressibleChunkMap<N, T, Meta, B> =
 
 impl<N, T, Meta, B> CompressibleChunkMap<N, T, Meta, B>
 where
-    PointN<N>: IntegerPoint<N> + ChunkShape<N> + Hash,
+    PointN<N>: IntegerPoint<N> + Hash,
     T: Copy,
     Meta: Clone,
     B: BytesCompression,

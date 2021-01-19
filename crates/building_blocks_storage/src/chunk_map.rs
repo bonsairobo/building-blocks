@@ -181,7 +181,7 @@ pub type ChunkMapBuilder3<T, Meta = ()> = ChunkMapBuilder<[i32; 3], T, Meta>;
 
 impl<N, T, Meta> ChunkMapBuilder<N, T, Meta>
 where
-    PointN<N>: IntegerPoint<N> + ChunkShape<N>,
+    PointN<N>: IntegerPoint<N>,
 {
     /// Create a new `ChunkMap` with the given `storage` which must implement both `ChunkReadStorage` and `ChunkWriteStorage`.
     pub fn build_with_rw_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Meta, Store>
@@ -262,7 +262,7 @@ impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store> {
 
 impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
 where
-    PointN<N>: IntegerPoint<N> + ChunkShape<N>,
+    PointN<N>: IntegerPoint<N>,
 {
     /// Creates a map using the given `storage`.
     ///
@@ -297,7 +297,7 @@ where
 
 impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
 where
-    PointN<N>: IntegerPoint<N> + ChunkShape<N>,
+    PointN<N>: IntegerPoint<N>,
     Store: ChunkReadStorage<N, T, Meta>,
 {
     /// Borrow the chunk at `key`.
@@ -349,7 +349,7 @@ where
 
 impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
 where
-    PointN<N>: IntegerPoint<N> + ChunkShape<N>,
+    PointN<N>: IntegerPoint<N>,
     Store: ChunkWriteStorage<N, T, Meta>,
 {
     /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
@@ -469,7 +469,7 @@ where
 
 impl<'a, N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
 where
-    PointN<N>: IntegerPoint<N> + ChunkShape<N>,
+    PointN<N>: IntegerPoint<N>,
     Store: IterChunkKeys<'a, N>,
 {
     /// The smallest extent that bounds all chunks.
@@ -491,7 +491,7 @@ where
 
 impl<N, T, Meta, Store> GetRef<&PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
-    PointN<N>: IntegerPoint<N> + ChunkShape<N>,
+    PointN<N>: IntegerPoint<N>,
     N: ArrayIndexer<N>,
     Store: ChunkReadStorage<N, T, Meta>,
 {
@@ -509,7 +509,7 @@ where
 
 impl<N, T, Meta, Store> GetMut<&PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
-    PointN<N>: IntegerPoint<N> + ChunkShape<N>,
+    PointN<N>: IntegerPoint<N>,
     N: ArrayIndexer<N>,
     T: Copy,
     Meta: Clone,
@@ -550,7 +550,7 @@ where
 
 impl<N, T, Meta, Store> ForEachRef<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
-    PointN<N>: IntegerPoint<N> + ChunkShape<N>,
+    PointN<N>: IntegerPoint<N>,
     ArrayN<N, T>: ForEachRef<N, PointN<N>, Data = T>,
     T: Copy,
     Store: ChunkReadStorage<N, T, Meta>,
@@ -572,7 +572,7 @@ where
 
 impl<N, T, Meta, Store> ForEachMut<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
-    PointN<N>: IntegerPoint<N> + ChunkShape<N>,
+    PointN<N>: IntegerPoint<N>,
     ArrayN<N, T>: ForEachMut<N, PointN<N>, Data = T>,
     T: Copy,
     Meta: Clone,
@@ -598,7 +598,7 @@ where
 impl<'a, N, T, Meta, Store> ReadExtent<'a, N> for ChunkMap<N, T, Meta, Store>
 where
     N: ArrayIndexer<N>,
-    PointN<N>: 'a + IntegerPoint<N> + ChunkShape<N>,
+    PointN<N>: 'a + IntegerPoint<N>,
     T: 'a + Copy,
     Store: ChunkReadStorage<N, T, Meta>,
 {
@@ -629,7 +629,7 @@ where
 // If ArrayN supports writing from type Src, then so does ChunkMap.
 impl<N, T, Meta, Store, Src> WriteExtent<N, Src> for ChunkMap<N, T, Meta, Store>
 where
-    PointN<N>: IntegerPoint<N> + ChunkShape<N>,
+    PointN<N>: IntegerPoint<N>,
     ArrayN<N, T>: WriteExtent<N, Src>,
     T: Copy,
     Meta: Clone,

@@ -1,7 +1,7 @@
 # Contributing
 
 We strongly encourage users to contribute improvements to Building Blocks when
-they identify gaps is performance or functionality. Please also be cognizant of
+they identify gaps in performance or functionality. Please also be cognizant of
 the fact that we desire an elegant and coherent design for our feature set. If
 you have an idea for how to improve Building Blocks, please consult the roadmap,
 issue tracker, and project board to see if your idea is already tracking.

@@ -47,7 +47,11 @@ impl Sdf {
             Sdf::Cube => Box::new(cube(PointN([0.0, 0.0, 0.0]), 20.0)),
             Sdf::Plane => Box::new(plane(PointN([0.5, 0.5, 0.5]), 1.0)),
             Sdf::Sphere => Box::new(sphere(PointN([0.0, 0.0, 0.0]), 20.0)),
-            Sdf::Torus => Box::new(torus(PointN([16.0, 4.0]))),
+            Sdf::Torus => {
+                let t = torus(PointN([16.0, 4.0]));
+
+                Box::new(move |p| t(&p.yzx()))
+            }
         }
     }
 }

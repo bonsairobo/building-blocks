@@ -11,12 +11,12 @@ The architecture of Building Blocks is driven by a few guiding principles:
   - Critical algorithms must be benchmarked with Criterion so we can guide
     optimization with evidence.
 - **Composable APIs**
-  - APIs are more powerful when they are generic. You will find many examples
-    of generic APIs that require the input types to implement some traits.
+  - APIs are more powerful when they are generic. You will find many examples of
+    generic APIs that require the input types to implement some traits.
   - This is most prevalent in the storage crate, where we desire all of the
-    lattice map types to be accessible through the same core set of traits.
-    This results in a very powerful function, `copy_extent`, which works with
-    all implementations of the `ReadExtent` and `WriteExtent` traits.
+    lattice map types to be accessible through the same core set of traits. This
+    results in a very powerful function, `copy_extent`, which works with all
+    implementations of the `ReadExtent` and `WriteExtent` traits.
 - **KISS (Keep It Simple Stupid)**
   - There are *many* complex data structures and algorithms used in voxel
     technology. While they certainly all serve a purpose, it is not feasible for
@@ -66,7 +66,8 @@ which brought about the current feature set:
     The container for these chunks is called a `ChunkMap3`.
   - With both the `Array3` and `ChunkMap3` serving similar purposes, we've made
     them implement a common set of traits for data access. This includes random
-    access, iteration, and copying.
+    access, iteration, and copying, using the `Get*`, `ForEach*`, `ReadExtent`,
+    and `WriteExtent` traits.
   - When you have large voxel worlds, it's not feasible to store a lot of unique
     data for every voxel. A common strategy is to have each voxel labeled with
     some "type." If you only want to use a single byte for each voxel's type,
@@ -83,10 +84,9 @@ which brought about the current feature set:
     on large voxel maps. The simplest way to save memory without changing the
     underlying array containers was to use compression inside of the `ChunkMap`.
     To make this optional, we made `ChunkMap` take a new chunk storage type
-    parameter that can implement `ChunkReadStorage` or `ChunkWriteStorage`.
-    This makes it so `ChunkMap`s can work with any kind of backing
-    storage, be it a simple hash map or an LRU-cache of chunks that can be
-    compressed.
+    parameter that can implement `ChunkReadStorage` or `ChunkWriteStorage`. This
+    makes it so `ChunkMap`s can work with any kind of backing storage, be it a
+    simple hash map or an LRU-cache of chunks that can be compressed.
 - **Meshing**
   - There are many ways of generating meshes from voxel data. You can make each
     occupied voxel into a cube, which gives the classis Minecraft aesthetic. Or
@@ -95,14 +95,18 @@ which brought about the current feature set:
     surfaces. We would like to support both schemes.
   - For cubic meshes, the fastest algorithm we know of to produce efficient
     meshes is coined as "Greedy Meshing" by the 0fps blog.
-  - For smooth meshes, the most pervasive algorithm is Marching Cubes. However,
-    we found the Naive Surface Nets algorithm to be simpler to implement and
-    just as efficient, if not moreso.
-  - We've also considered the Dual Contouring family of algorithms for smooth
-    meshing. While they offer more control over the shape of a mesh, they are
-    also more complex and thus expensive to compute. For now, we've decided not
-    to pursue these algorithms, but we are open to any contributions in this
-    area.
+  - For smooth meshes, the most pervasive algorithm is Marching Cubes which is
+    referred to as a "primal method." Marching Cubes places vertices on the
+    edges of a voxel and constructs an independent mesh component for each
+    voxel. There are also "dual methods," which place vertices on the interior
+    of each voxel and connect them using a subset of the dual graph of the voxel
+    lattice. We have found (Naive) Surface Nets, a dual method, to be simpler to
+    implement and just as efficient, if not moreso, as Marching Cubes.
+  - Another dual method, "Dual Contouring of Hermite Data," is essentially the
+    same as Surface Nets, but it works on an octree and optimizes quadratic
+    error functions (QEFs) to place vertices in more accurate locations, which
+    helps with reproducing sharp features. This algorithm is rather difficult to
+    optimize, so we are consciously taking it off the table in the near term.
   - While 3D voxel data is required for meshes with arbitrary topologies, one
     can choose to constrain themselves to a simpler planar topology and reap
     performance benefits, both in terms of space and time. A surface with planar
@@ -117,13 +121,13 @@ which brought about the current feature set:
     `DBVT` (dynamic bounding volume tree) structure for doing raycasting.
     Unfortunately, storing an `AABB<f32>` for every voxel cost us 6 `f32`s or 24
     bytes per voxel. That simply doesn't scale. So as a replacement, we
-    implemented the `OctreeSet` and `OctreeDBVT` types. The `OctreeSet` is essentially
-    a hierarchical bitset, making it very memory efficient; it doesn't contain
-    any voxel data, but it can tell you whether a `Point3i` is contained in the
-    set. More importantly, it supports a visitor API that can be used for
-    spatial queries like raycasting. Since the `OctreeSet` has a limited size, we
-    also provide the `OctreeDBVT`, which is essentially a `DBVT` which may
-    contain an arbitrary number of `OctreeSet`s.
+    implemented the `OctreeSet` and `OctreeDBVT` types. The `OctreeSet` is
+    essentially a hierarchical bitset, making it very memory efficient; it
+    doesn't contain any voxel data, but it can tell you whether a `Point3i` is
+    contained in the set. More importantly, it supports a visitor API that can
+    be used for spatial queries like raycasting. Since the `OctreeSet` has a
+    limited size, we also provide the `OctreeDBVT`, which is essentially a
+    `DBVT` which may contain an arbitrary number of `OctreeSet`s.
   - `OctreeDBVT` requires taking on the `ncollide3d` dependency. We decided this
     was acceptable for the time being, since we don't have spare time to
     implement our own efficient `DBVT`.

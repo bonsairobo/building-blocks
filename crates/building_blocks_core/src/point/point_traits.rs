@@ -340,7 +340,7 @@ macro_rules! impl_float_div {
 
             #[inline]
             fn div(self, rhs: $scalar) -> Self {
-                self.map_components_unary(|c| rhs / c)
+                self.map_components_unary(|c| c / rhs)
             }
         }
 

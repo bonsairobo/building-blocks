@@ -12,6 +12,15 @@ pub enum VoxColor {
     Empty,
 }
 
+impl IsEmpty for VoxColor {
+    fn is_empty(&self) -> bool {
+        match self {
+            VoxColor::Empty => true,
+            _ => false,
+        }
+    }
+}
+
 // TODO: should take a type parameter that implements a trait to access `VoxColor`
 pub fn encode_vox<Map>(map: &Map, map_extent: Extent3i) -> DotVoxData
 where

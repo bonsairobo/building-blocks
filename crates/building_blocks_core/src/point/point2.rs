@@ -113,6 +113,11 @@ impl Point for Point2i {
     type Scalar = i32;
 
     #[inline]
+    fn fill(value: i32) -> Self {
+        Self([value; 2])
+    }
+
+    #[inline]
     fn basis() -> Vec<Self> {
         vec![PointN([1, 0]), PointN([0, 1])]
     }
@@ -125,6 +130,11 @@ impl Point for Point2i {
 
 impl Point for Point2f {
     type Scalar = f32;
+
+    #[inline]
+    fn fill(value: f32) -> Self {
+        Self([value; 2])
+    }
 
     #[inline]
     fn basis() -> Vec<Self> {

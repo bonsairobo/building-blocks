@@ -31,6 +31,8 @@ pub trait Point:
 {
     type Scalar: Copy;
 
+    fn fill(value: <Self as Point>::Scalar) -> Self;
+
     fn basis() -> Vec<Self>;
 
     fn volume(&self) -> <Self as Point>::Scalar;

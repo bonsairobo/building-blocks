@@ -39,6 +39,10 @@ name = "accessors"
 harness = false
 
 [[bench]]
+name = "chunk_clip_map"
+harness = false
+
+[[bench]]
 name = "compression"
 harness = false
 

@@ -456,7 +456,7 @@ impl SubAssign for Stride {
 
 impl<N, T, Store> GetRef<Stride> for ArrayN<N, T, Store>
 where
-    Store: Index<usize, Output = T>,
+    Store: Deref<Target = [T]>,
 {
     type Data = T;
 
@@ -480,7 +480,7 @@ where
 
 impl<N, T, Store> GetMut<Stride> for ArrayN<N, T, Store>
 where
-    Store: IndexMut<usize, Output = T>,
+    Store: DerefMut<Target = [T]>,
 {
     type Data = T;
 

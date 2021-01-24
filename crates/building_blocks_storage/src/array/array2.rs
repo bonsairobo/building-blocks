@@ -6,7 +6,7 @@ use building_blocks_core::prelude::*;
 pub type Local2i = Local<[i32; 2]>;
 
 /// A 2-dimensional `Array`.
-pub type Array2<T> = ArrayN<[i32; 2], T>;
+pub type Array2<T, Store = Vec<T>> = ArrayN<[i32; 2], T, Store>;
 
 impl ArrayIndexer<[i32; 2]> for [i32; 2] {
     #[inline]

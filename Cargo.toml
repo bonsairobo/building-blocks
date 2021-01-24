@@ -74,3 +74,8 @@ required-features = ["dot_vox", "lz4", "snappy"]
 name = "bevy_meshing"
 path = "examples/bevy_meshing/bevy_meshing.rs"
 required-features = ["mesh"]
+
+[[example]]
+name = "bevy_minimal"
+path = "examples/bevy_minimal/bevy_minimal.rs"
+required-features = ["mesh"]

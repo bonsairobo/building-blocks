@@ -18,19 +18,21 @@
 #[macro_use]
 pub mod access;
 pub mod array;
-pub mod chunk_clip_map;
 pub mod chunk_map;
+pub mod chunk_pyramid;
 pub mod compression;
 pub mod func;
 pub mod octree;
+pub mod sampling;
 pub mod transform_map;
 
 pub use access::*;
 pub use array::*;
-pub use chunk_clip_map::*;
 pub use chunk_map::*;
+pub use chunk_pyramid::*;
 pub use compression::*;
 pub use octree::*;
+pub use sampling::*;
 pub use transform_map::*;
 
 /// Used in many generic algorithms to check if a voxel is considered empty.

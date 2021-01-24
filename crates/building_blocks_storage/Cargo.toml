@@ -39,7 +39,7 @@ name = "accessors"
 harness = false
 
 [[bench]]
-name = "chunk_clip_map"
+name = "sampling"
 harness = false
 
 [[bench]]

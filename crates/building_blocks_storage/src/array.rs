@@ -338,6 +338,7 @@ where
 /// Most commonly, you will index a lattice map with a `PointN<N>`, which is assumed to be in global
 /// coordinates. `Local<N>` only applies to lattice maps where a point must first be translated from
 /// global coordinates into map-local coordinates before indexing with `Get<Local<N>>`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Local<N>(pub PointN<N>);
 
 impl<N> Local<N> {

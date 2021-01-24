@@ -50,7 +50,7 @@ pub trait GetComponent {
 }
 
 pub trait MapComponents {
-    type Scalar: Copy;
+    type Scalar;
 
     /// Returns the point after applying `f` component-wise.
     fn map_components_unary(&self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self;

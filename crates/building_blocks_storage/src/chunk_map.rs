@@ -550,8 +550,8 @@ where
 
 impl<N, T, Meta, Store> ForEachRef<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
+    N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
-    ArrayN<N, T>: ForEachRef<N, PointN<N>, Data = T>,
     T: Copy,
     Store: ChunkReadStorage<N, T, Meta>,
 {
@@ -572,8 +572,8 @@ where
 
 impl<N, T, Meta, Store> ForEachMut<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
+    N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
-    ArrayN<N, T>: ForEachMut<N, PointN<N>, Data = T>,
     T: Copy,
     Meta: Clone,
     Store: ChunkWriteStorage<N, T, Meta>,

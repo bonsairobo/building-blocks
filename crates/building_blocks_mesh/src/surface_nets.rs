@@ -105,7 +105,7 @@ where
             corner_strides[i] = p_stride + corner_offset_strides[i];
         }
 
-        if let Some((position, normal)) = estimate_surface_in_voxel(sdf, &p, &corner_strides) {
+        if let Some((position, normal)) = estimate_surface_in_cube(sdf, &p, &corner_strides) {
             output.stride_to_index[p_stride.0] = output.mesh.positions.len() as u32;
             output.surface_points.push(p);
             output.surface_strides.push(p_stride);
@@ -135,9 +135,9 @@ const CUBE_EDGES: [[usize; 2]; 12] = [
 //
 // This is done by estimating, for each cube edge, where the isosurface crosses the edge (if it
 // does at all). Then the estimated surface point is the average of these edge crossings.
-fn estimate_surface_in_voxel<A, T>(
+fn estimate_surface_in_cube<A, T>(
     sdf: &A,
-    point: &Point3i,
+    cube_min_corner: &Point3i,
     corner_strides: &[Stride],
 ) -> Option<([f32; 3], [f32; 3])>
 where
@@ -145,9 +145,9 @@ where
     T: SignedDistance,
 {
     // Get the signed distance values at each corner of this cube.
-    let mut dists = [0.0; 8];
+    let mut corner_dists = [0.0; 8];
     let mut num_negative = 0;
-    for (i, dist) in dists.iter_mut().enumerate() {
+    for (i, dist) in corner_dists.iter_mut().enumerate() {
         let d = sdf.get_unchecked_release(corner_strides[i]).into();
         *dist = d;
         if d < 0.0 {
@@ -160,9 +160,9 @@ where
         return None;
     }
 
-    let position =
-        Point3f::from(*point) + centroid_of_edge_intersections(&dists) + PointN([0.5; 3]);
-    let normal = sdf_gradient(&dists);
+    let centroid = centroid_of_edge_intersections(&corner_dists);
+    let position = Point3f::from(*cube_min_corner) + centroid + PointN([0.5; 3]);
+    let normal = sdf_gradient(&corner_dists, &centroid);
 
     Some((position.0, normal))
 }
@@ -199,17 +199,29 @@ fn estimate_surface_edge_intersection(
     ])
 }
 
-/// Calculate the normal as the gradient of the distance field. Use central differencing. Don't bother making it a unit vector,
-/// since we'll do that on the GPU.
-fn sdf_gradient(dists: &[f32; 8]) -> [f32; 3] {
-    [
-        (dists[0b001] + dists[0b011] + dists[0b101] + dists[0b111])
-            - (dists[0b000] + dists[0b010] + dists[0b100] + dists[0b110]),
-        (dists[0b010] + dists[0b011] + dists[0b110] + dists[0b111])
-            - (dists[0b000] + dists[0b001] + dists[0b100] + dists[0b101]),
-        (dists[0b100] + dists[0b101] + dists[0b110] + dists[0b111])
-            - (dists[0b000] + dists[0b001] + dists[0b010] + dists[0b011]),
-    ]
+/// Calculate the normal as the gradient of the distance field. Don't bother making it a unit vector, since we'll do that on the
+/// GPU.
+///
+/// For each dimension, there are 4 cube edges along that axis. This will do bilinear interpolation between the differences
+/// along those edges based on the position of the surface (s).
+fn sdf_gradient(dists: &[f32; 8], s: &Point3f) -> [f32; 3] {
+    let nx = 1.0 - s.x();
+    let ny = 1.0 - s.y();
+    let nz = 1.0 - s.z();
+
+    let dx_z0 = ny * (dists[0b001] - dists[0b000]) + s.y() * (dists[0b011] - dists[0b010]);
+    let dx_z1 = ny * (dists[0b101] - dists[0b100]) + s.y() * (dists[0b111] - dists[0b110]);
+    let dx = nz * dx_z0 + s.z() * dx_z1;
+
+    let dy_x0 = nz * (dists[0b010] - dists[0b000]) + s.z() * (dists[0b110] - dists[0b100]);
+    let dy_x1 = nz * (dists[0b011] - dists[0b001]) + s.z() * (dists[0b111] - dists[0b101]);
+    let dy = nx * dy_x0 + s.x() * dy_x1;
+
+    let dz_y0 = nx * (dists[0b100] - dists[0b000]) + s.x() * (dists[0b101] - dists[0b001]);
+    let dz_y1 = nx * (dists[0b110] - dists[0b010]) + s.x() * (dists[0b111] - dists[0b011]);
+    let dz = ny * dz_y0 + s.y() * dz_y1;
+
+    [dx, dy, dz]
 }
 
 // For every edge that crosses the isosurface, make a quad between the "centers" of the four cubes

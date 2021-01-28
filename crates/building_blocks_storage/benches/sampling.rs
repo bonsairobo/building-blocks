@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{Array3, ChunkDownsampler, PointDownsampler};
+use building_blocks_storage::{Array3, ChunkDownsampler, Local, PointDownsampler};
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
@@ -17,7 +17,7 @@ fn point_downsample3(c: &mut Criterion) {
                     (src, dst, chunk_shape)
                 },
                 |(src, mut dst, chunk_shape)| {
-                    PointDownsampler.downsample(&src, &mut dst, chunk_shape / 2, 1);
+                    PointDownsampler.downsample(&src, &mut dst, Local(chunk_shape / 2), 1);
                     black_box(dst);
                 },
             );

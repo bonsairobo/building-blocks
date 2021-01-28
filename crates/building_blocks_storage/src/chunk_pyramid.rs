@@ -21,8 +21,12 @@ impl<N, T, Meta, Store> ChunkPyramid<N, T, Meta, Store> {
         &self.levels[..]
     }
 
-    pub fn levels_mut_slice(&mut self) -> &mut [ChunkMap<N, T, Meta, Store>] {
-        &mut self.levels[..]
+    pub fn level(&self, lod: u8) -> &ChunkMap<N, T, Meta, Store> {
+        &self.levels[lod as usize]
+    }
+
+    pub fn level_mut(&mut self, lod: u8) -> &mut ChunkMap<N, T, Meta, Store> {
+        &mut self.levels[lod as usize]
     }
 }
 
@@ -34,7 +38,7 @@ where
     Meta: Clone,
     Store: ChunkWriteStorage<N, T, Meta>,
 {
-    pub fn downsample<Samp>(
+    pub fn downsample_chunk<Samp>(
         &mut self,
         sampler: &Samp,
         src_chunk_key: PointN<N>,
@@ -44,18 +48,17 @@ where
         Samp: ChunkDownsampler<N, T>,
         PointN<N>: Debug,
     {
-        assert!(src_lod > 0);
         assert!(dst_lod > src_lod);
         let lod_delta = dst_lod - src_lod;
 
         // A trick to borrow mutably two different levels.
-        let (head, tail) = self.levels.split_at_mut(src_lod as usize);
+        let (head, tail) = self.levels.split_at_mut(dst_lod as usize);
         let src_map = &mut head[src_lod as usize];
         let dst_map = &mut tail[dst_lod as usize - src_lod as usize - 1];
 
         let chunk_shape = src_map.indexer.chunk_shape();
 
-        let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_key, dst_lod);
+        let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_key, lod_delta);
         let dst_chunk = dst_map.get_mut_chunk_or_insert_ambient(dst.dst_chunk_key);
 
         // HACK: only needs get_mut_chunk because of CompressibleChunkStorage
@@ -92,12 +95,12 @@ impl<N, T> ChunkHashMapPyramid<N, T>
 where
     PointN<N>: Hash + IntegerPoint<N>,
 {
-    pub fn with_hash_map_level_stores(builder: ChunkMapBuilder<N, T>, num_levels: usize) -> Self
+    pub fn new(builder: ChunkMapBuilder<N, T>, num_levels: u8) -> Self
     where
         ChunkMapBuilder<N, T>: Copy,
     {
-        let mut levels = Vec::with_capacity(num_levels);
-        levels.resize_with(num_levels, || {
+        let mut levels = Vec::with_capacity(num_levels as usize);
+        levels.resize_with(num_levels as usize, || {
             builder.build_with_write_storage(FnvHashMap::default())
         });
 
@@ -136,17 +139,13 @@ where
     Meta: Clone,
     B: BytesCompression,
 {
-    pub fn with_compressible_level_stores(
-        builder: ChunkMapBuilder<N, T, Meta>,
-        num_levels: usize,
-        compression: B,
-    ) -> Self
+    pub fn new(builder: ChunkMapBuilder<N, T, Meta>, num_levels: u8, compression: B) -> Self
     where
         B: Copy,
         ChunkMapBuilder<N, T, Meta>: Copy,
     {
-        let mut levels = Vec::with_capacity(num_levels);
-        levels.resize_with(num_levels, || {
+        let mut levels = Vec::with_capacity(num_levels as usize);
+        levels.resize_with(num_levels as usize, || {
             builder.build_with_write_storage(CompressibleChunkStorage::new(compression))
         });
 

@@ -245,19 +245,17 @@ impl OctreeSet {
         }
     }
 
-    /// Returns the child `OctreeNode` of `parent` at the given `child_octant_index`, where
-    /// `0 < child_octant < 8`. `offset_table` is a constant that can be constructed by
-    /// `self.offset_table()` and reused with any octree of the same size, indefinitely.
+    /// Returns the child `OctreeNode` of `parent` at the given `child_index`, where `0 < child_octant < 8`.
     #[inline]
-    pub fn get_child(&self, parent: &OctreeNode, child_octant_index: u8) -> Option<OctreeNode> {
-        debug_assert!(child_octant_index < 8);
+    pub fn get_child(&self, parent: &OctreeNode, child_index: u8) -> Option<OctreeNode> {
+        debug_assert!(child_index < 8);
 
-        if parent.child_bitmask & (1 << child_octant_index) == 0 {
+        if parent.child_bitmask & (1 << child_index) == 0 {
             return None;
         }
 
         let child_power = parent.power - 1;
-        let child_octant = parent.octant.child(child_octant_index);
+        let child_octant = parent.octant.child(child_index);
 
         if child_power == 0 {
             // The child is a leaf, so we don't need to extend the location or look for a child
@@ -273,7 +271,7 @@ impl OctreeSet {
         let child_location = parent
             .location
             .extend()
-            .with_lowest_octant(child_octant_index as u16);
+            .with_lowest_octant(child_index as u16);
 
         let (location, child_bitmask) = if let Some(bitmask) = self.nodes.get(&child_location) {
             (child_location, *bitmask)

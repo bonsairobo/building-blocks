@@ -383,12 +383,45 @@ impl Octant {
             edge_length: half_edge_length,
         }
     }
+
+    /// Visit `self` and all octants descending from `self` (children and children's children).
+    pub fn visit_self_and_descendants(self, visitor: &mut impl OctantVisitor) -> VisitStatus {
+        let status = visitor.visit_octant(self);
+
+        if self.edge_length == 1 || status != VisitStatus::Continue {
+            return status;
+        }
+
+        for child_index in 0..8 {
+            match self.child(child_index).visit_self_and_descendants(visitor) {
+                VisitStatus::Continue => (),
+                VisitStatus::ExitEarly => return VisitStatus::ExitEarly,
+                VisitStatus::Stop => continue,
+            }
+        }
+
+        VisitStatus::Continue
+    }
 }
 
 impl From<Octant> for Extent3i {
     #[inline]
     fn from(octant: Octant) -> Self {
         Extent3i::from_min_and_shape(octant.minimum, PointN([octant.edge_length; 3]))
+    }
+}
+
+pub trait OctantVisitor {
+    fn visit_octant(&mut self, octant: Octant) -> VisitStatus;
+}
+
+impl<F> OctantVisitor for F
+where
+    F: FnMut(Octant) -> VisitStatus,
+{
+    #[inline]
+    fn visit_octant(&mut self, octant: Octant) -> VisitStatus {
+        (self)(octant)
     }
 }
 

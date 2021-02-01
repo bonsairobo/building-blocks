@@ -1,7 +1,7 @@
 use crate::PointN;
 
 use core::ops::{
-    Add, AddAssign, BitAnd, BitOr, BitXor, Div, Mul, Neg, Rem, Shl, Shr, Sub, SubAssign,
+    Add, AddAssign, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub, SubAssign,
 };
 use num::Zero;
 
@@ -113,6 +113,7 @@ pub trait IntegerPoint<N>:
     + IterExtent<N>
     + LatticeOrder
     + Neighborhoods
+    + Not<Output = Self>
     + Point<Scalar = i32>
     + Rem<Self, Output = Self>
     + Shl<Self, Output = Self>
@@ -245,6 +246,15 @@ macro_rules! impl_unary_integer_ops {
             #[inline]
             fn bitxor(self, rhs: $scalar) -> Self {
                 self.map_components_unary(|c| c ^ rhs)
+            }
+        }
+
+        impl Not for $t {
+            type Output = Self;
+
+            #[inline]
+            fn not(self) -> Self {
+                self.map_components_unary(|c| !c)
             }
         }
 

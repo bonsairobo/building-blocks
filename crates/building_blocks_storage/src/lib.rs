@@ -36,6 +36,12 @@ pub trait IsEmpty {
     fn is_empty(&self) -> bool;
 }
 
+impl IsEmpty for bool {
+    fn is_empty(&self) -> bool {
+        !*self
+    }
+}
+
 pub mod prelude {
     pub use super::{
         copy_extent, Array, Array2, Array3, ArrayN, Chunk, Chunk2, Chunk3, ChunkHashMap2,

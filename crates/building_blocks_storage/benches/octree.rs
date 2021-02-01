@@ -87,19 +87,17 @@ fn octree_visit_all_octant_nodes_of_sphere(c: &mut Criterion) {
                 b.iter_with_setup(
                     || {
                         let map = make_sphere_array(edge_len);
-                        let octree = OctreeSet::from_array3(&map, *map.extent());
-                        let offset_table = octree.offset_table();
 
-                        (octree, offset_table)
+                        OctreeSet::from_array3(&map, *map.extent())
                     },
-                    |(octree, offset_table)| {
+                    |octree| {
                         let mut queue = vec![octree.root_node()];
                         while !queue.is_empty() {
                             if let Some(node) = queue.pop().unwrap() {
                                 black_box(&node);
                                 if !node.is_leaf() {
                                     for octant in 0..8 {
-                                        queue.push(octree.get_child(&offset_table, &node, octant));
+                                        queue.push(octree.get_child(&node, octant));
                                     }
                                 }
                             }

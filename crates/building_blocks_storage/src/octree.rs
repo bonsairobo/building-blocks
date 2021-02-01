@@ -49,10 +49,13 @@ impl OctreeSet {
         let edge_length = 1 << power;
 
         // These are the corners of the root octant, in local coordinates.
-        let corner_offsets: Vec<_> = Point3i::corner_offsets()
-            .into_iter()
-            .map(|p| Local(edge_length * p))
-            .collect();
+        let mut corner_offsets = [Local(Point3i::ZERO); 8];
+        for (&p, dst) in Point3i::CUBE_CORNER_OFFSETS
+            .iter()
+            .zip(corner_offsets.iter_mut())
+        {
+            *dst = Local(edge_length * p);
+        }
         // Convert into strides for indexing efficiency.
         let mut corner_strides = [Stride(0); 8];
         array.strides_from_local_points(&corner_offsets, &mut corner_strides);
@@ -166,14 +169,7 @@ impl OctreeSet {
             return VisitStatus::Continue;
         }
 
-        let minimum = self.extent.minimum;
-        let edge_len = self.edge_length();
-        let corner_offsets: Vec<_> = Point3i::corner_offsets()
-            .into_iter()
-            .map(|p| edge_len * p)
-            .collect();
-
-        self._visit(LocationCode(1), minimum, edge_len, &corner_offsets, visitor)
+        self._visit(LocationCode(1), self.octant(), visitor)
     }
 
     /// Same as `visit`, but visit only the octants that overlap `extent`.
@@ -190,20 +186,13 @@ impl OctreeSet {
     fn _visit(
         &self,
         location: LocationCode,
-        minimum: Point3i,
-        edge_length: i32,
-        corner_offsets: &[Point3i],
+        octant: Octant,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
         // Precondition: location exists.
 
-        let octant = Octant {
-            minimum,
-            edge_length,
-        };
-
         // Base case where the octant is a single leaf voxel.
-        if edge_length == 1 {
+        if octant.edge_length == 1 {
             return visitor.visit_octant(octant, true);
         }
 
@@ -223,31 +212,16 @@ impl OctreeSet {
             return status;
         }
 
-        let mut octant_corner_offsets = [PointN([0; 3]); 8];
-        for (child_corner, parent_corner) in
-            octant_corner_offsets.iter_mut().zip(corner_offsets.iter())
-        {
-            *child_corner = *parent_corner >> 1;
-        }
-
-        let half_edge_length = edge_length >> 1;
         let extended_location = location.extend();
-        for (octant, offset) in octant_corner_offsets.iter().enumerate() {
-            if (child_bitmask & (1 << octant)) == 0 {
+        for child_index in 0..8 {
+            if (child_bitmask & (1 << child_index)) == 0 {
                 // This child does not exist.
                 continue;
             }
 
-            let octant_min = minimum + *offset;
-            let octant_location = extended_location.with_lowest_octant(octant as u16);
-            if self._visit(
-                octant_location,
-                octant_min,
-                half_edge_length,
-                &octant_corner_offsets,
-                visitor,
-            ) == VisitStatus::ExitEarly
-            {
+            let child_octant = octant.child(child_index);
+            let octant_location = extended_location.with_lowest_octant(child_index as u16);
+            if self._visit(octant_location, child_octant, visitor) == VisitStatus::ExitEarly {
                 return VisitStatus::ExitEarly;
             }
         }
@@ -271,28 +245,17 @@ impl OctreeSet {
         }
     }
 
-    /// Returns the child `OctreeNode` of `parent` at the given `child_octant_index`, where
-    /// `0 < child_octant < 8`. `offset_table` is a constant that can be constructed by
-    /// `self.offset_table()` and reused with any octree of the same size, indefinitely.
+    /// Returns the child `OctreeNode` of `parent` at the given `child_index`, where `0 < child_octant < 8`.
     #[inline]
-    pub fn get_child(
-        &self,
-        offset_table: &OffsetTable,
-        parent: &OctreeNode,
-        child_octant_index: u8,
-    ) -> Option<OctreeNode> {
-        debug_assert!(child_octant_index < 8);
+    pub fn get_child(&self, parent: &OctreeNode, child_index: u8) -> Option<OctreeNode> {
+        debug_assert!(child_index < 8);
 
-        if parent.child_bitmask & (1 << child_octant_index) == 0 {
+        if parent.child_bitmask & (1 << child_index) == 0 {
             return None;
         }
 
         let child_power = parent.power - 1;
-        let child_octant = Octant {
-            minimum: parent.octant.minimum
-                + offset_table.get_octant_offset(child_power, child_octant_index),
-            edge_length: parent.octant.edge_length >> 1,
-        };
+        let child_octant = parent.octant.child(child_index);
 
         if child_power == 0 {
             // The child is a leaf, so we don't need to extend the location or look for a child
@@ -308,7 +271,7 @@ impl OctreeSet {
         let child_location = parent
             .location
             .extend()
-            .with_lowest_octant(child_octant_index as u16);
+            .with_lowest_octant(child_index as u16);
 
         let (location, child_bitmask) = if let Some(bitmask) = self.nodes.get(&child_location) {
             (child_location, *bitmask)
@@ -322,55 +285,6 @@ impl OctreeSet {
             child_bitmask,
             power: child_power,
         })
-    }
-
-    /// Returns the `OffsetTable` for this octree's shape. Used for manual node-based traversal.
-    #[inline]
-    pub fn offset_table(&self) -> OffsetTable {
-        OffsetTable::for_power(self.power)
-    }
-}
-
-/// A cache of offset values used for calculating octant minimums. These offsets never change for a
-/// given octree shape.
-pub struct OffsetTable {
-    levels: Vec<OctantOffsets>,
-}
-
-impl OffsetTable {
-    fn for_power(power: u8) -> Self {
-        Self {
-            levels: (0..power)
-                .map(|pow| OctantOffsets::with_edge_length(1 << pow))
-                .collect(),
-        }
-    }
-
-    fn get_octant_offset(&self, power: u8, octant: u8) -> Point3i {
-        self.levels[power as usize].get_octant_offset(octant)
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-struct OctantOffsets {
-    offsets: [Point3i; 8],
-}
-
-impl OctantOffsets {
-    fn with_edge_length(edge_length: i32) -> Self {
-        let mut offsets = [PointN([0; 3]); 8];
-        for (dst, src) in offsets
-            .iter_mut()
-            .zip(Point3i::corner_offsets().into_iter())
-        {
-            *dst = src * edge_length;
-        }
-
-        OctantOffsets { offsets }
-    }
-
-    fn get_octant_offset(&self, octant: u8) -> Point3i {
-        self.offsets[octant as usize]
     }
 }
 
@@ -455,12 +369,57 @@ impl Octant {
     pub fn edge_length(&self) -> i32 {
         self.edge_length
     }
+
+    /// Returns the child octant, where `child_index` specifies the child as a number in `[0..7]` of the binary format `0bZYX`.
+    #[inline]
+    pub fn child(&self, child_index: u8) -> Self {
+        let half_edge_length = self.edge_length >> 1;
+
+        Self {
+            minimum: self.minimum
+                + half_edge_length * Point3i::CUBE_CORNER_OFFSETS[child_index as usize],
+            edge_length: half_edge_length,
+        }
+    }
+
+    /// Visit `self` and all octants descending from `self` (children and children's children).
+    pub fn visit_self_and_descendants(self, visitor: &mut impl OctantVisitor) -> VisitStatus {
+        let status = visitor.visit_octant(self);
+
+        if self.edge_length == 1 || status != VisitStatus::Continue {
+            return status;
+        }
+
+        for child_index in 0..8 {
+            match self.child(child_index).visit_self_and_descendants(visitor) {
+                VisitStatus::Continue => (),
+                VisitStatus::ExitEarly => return VisitStatus::ExitEarly,
+                VisitStatus::Stop => continue,
+            }
+        }
+
+        VisitStatus::Continue
+    }
 }
 
 impl From<Octant> for Extent3i {
     #[inline]
     fn from(octant: Octant) -> Self {
         Extent3i::from_min_and_shape(octant.minimum, PointN([octant.edge_length; 3]))
+    }
+}
+
+pub trait OctantVisitor {
+    fn visit_octant(&mut self, octant: Octant) -> VisitStatus;
+}
+
+impl<F> OctantVisitor for F
+where
+    F: FnMut(Octant) -> VisitStatus,
+{
+    #[inline]
+    fn visit_octant(&mut self, octant: Octant) -> VisitStatus {
+        (self)(octant)
     }
 }
 
@@ -533,7 +492,6 @@ mod tests {
         // Now do the same test with a manual node traversal.
         let mut octant_voxels = HashSet::new();
 
-        let offset_table = octree.offset_table();
         let mut queue = vec![octree.root_node()];
         while !queue.is_empty() {
             if let Some(node) = queue.pop().unwrap() {
@@ -543,7 +501,7 @@ mod tests {
                     }
                 } else {
                     for octant in 0..8 {
-                        queue.push(octree.get_child(&offset_table, &node, octant));
+                        queue.push(octree.get_child(&node, octant));
                     }
                 }
             }

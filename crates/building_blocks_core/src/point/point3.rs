@@ -120,6 +120,58 @@ where
     }
 }
 
+impl Point3i {
+    pub const CUBE_CORNER_OFFSETS: [Self; 8] = [
+        PointN([0, 0, 0]),
+        PointN([1, 0, 0]),
+        PointN([0, 1, 0]),
+        PointN([1, 1, 0]),
+        PointN([0, 0, 1]),
+        PointN([1, 0, 1]),
+        PointN([0, 1, 1]),
+        PointN([1, 1, 1]),
+    ];
+
+    pub const VON_NEUMANN_OFFSETS: [Self; 6] = [
+        PointN([-1, 0, 0]),
+        PointN([1, 0, 0]),
+        PointN([0, -1, 0]),
+        PointN([0, 1, 0]),
+        PointN([0, 0, -1]),
+        PointN([0, 0, 1]),
+    ];
+
+    // Because there are "moore" of them... huehuehue
+    pub const MOORE_OFFSETS: [Self; 26] = [
+        PointN([-1, -1, -1]),
+        PointN([0, -1, -1]),
+        PointN([1, -1, -1]),
+        PointN([-1, 0, -1]),
+        PointN([0, 0, -1]),
+        PointN([1, 0, -1]),
+        PointN([-1, 1, -1]),
+        PointN([0, 1, -1]),
+        PointN([1, 1, -1]),
+        PointN([-1, -1, 0]),
+        PointN([0, -1, 0]),
+        PointN([1, -1, 0]),
+        PointN([-1, 0, 0]),
+        PointN([1, 0, 0]),
+        PointN([-1, 1, 0]),
+        PointN([0, 1, 0]),
+        PointN([1, 1, 0]),
+        PointN([-1, -1, 1]),
+        PointN([0, -1, 1]),
+        PointN([1, -1, 1]),
+        PointN([-1, 0, 1]),
+        PointN([0, 0, 1]),
+        PointN([1, 0, 1]),
+        PointN([-1, 1, 1]),
+        PointN([0, 1, 1]),
+        PointN([1, 1, 1]),
+    ];
+}
+
 impl Point3f {
     #[inline]
     pub fn as_3i(&self) -> Point3i {
@@ -299,61 +351,17 @@ impl IntegerPoint<[i32; 3]> for Point3i {
 impl Neighborhoods for Point3i {
     #[inline]
     fn corner_offsets() -> Vec<Self> {
-        vec![
-            PointN([0, 0, 0]),
-            PointN([1, 0, 0]),
-            PointN([0, 1, 0]),
-            PointN([1, 1, 0]),
-            PointN([0, 0, 1]),
-            PointN([1, 0, 1]),
-            PointN([0, 1, 1]),
-            PointN([1, 1, 1]),
-        ]
+        Self::CUBE_CORNER_OFFSETS.iter().cloned().collect()
     }
 
     #[inline]
     fn von_neumann_offsets() -> Vec<Self> {
-        vec![
-            PointN([-1, 0, 0]),
-            PointN([1, 0, 0]),
-            PointN([0, -1, 0]),
-            PointN([0, 1, 0]),
-            PointN([0, 0, -1]),
-            PointN([0, 0, 1]),
-        ]
+        Self::VON_NEUMANN_OFFSETS.iter().cloned().collect()
     }
 
-    // Because there are "moore" of them... huehuehue
     #[inline]
     fn moore_offsets() -> Vec<Self> {
-        vec![
-            PointN([-1, -1, -1]),
-            PointN([0, -1, -1]),
-            PointN([1, -1, -1]),
-            PointN([-1, 0, -1]),
-            PointN([0, 0, -1]),
-            PointN([1, 0, -1]),
-            PointN([-1, 1, -1]),
-            PointN([0, 1, -1]),
-            PointN([1, 1, -1]),
-            PointN([-1, -1, 0]),
-            PointN([0, -1, 0]),
-            PointN([1, -1, 0]),
-            PointN([-1, 0, 0]),
-            PointN([1, 0, 0]),
-            PointN([-1, 1, 0]),
-            PointN([0, 1, 0]),
-            PointN([1, 1, 0]),
-            PointN([-1, -1, 1]),
-            PointN([0, -1, 1]),
-            PointN([1, -1, 1]),
-            PointN([-1, 0, 1]),
-            PointN([0, 0, 1]),
-            PointN([1, 0, 1]),
-            PointN([-1, 1, 1]),
-            PointN([0, 1, 1]),
-            PointN([1, 1, 1]),
-        ]
+        Self::MOORE_OFFSETS.iter().cloned().collect()
     }
 }
 

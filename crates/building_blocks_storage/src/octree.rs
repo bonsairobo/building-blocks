@@ -183,6 +183,17 @@ impl OctreeSet {
         })
     }
 
+    /// Same as `visit`, but descendants of collapsed octants are also visited using an `OctantVisitor`.
+    pub fn visit_all_octants(&self, visitor: &mut impl OctantVisitor) -> VisitStatus {
+        self.visit(&mut |octant: Octant, is_leaf| {
+            if is_leaf {
+                octant.visit_self_and_descendants(visitor)
+            } else {
+                visitor.visit_octant(octant)
+            }
+        })
+    }
+
     fn _visit(
         &self,
         location: LocationCode,

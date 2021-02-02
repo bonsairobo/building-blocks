@@ -46,7 +46,7 @@ where
 
         Self {
             chunk_shape,
-            chunk_shape_mask: chunk_shape.map_components_unary(|c| !(c - 1)),
+            chunk_shape_mask: !(chunk_shape - PointN::ONES),
             chunk_shape_log2: chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32),
         }
     }
@@ -120,5 +120,13 @@ mod tests {
                 PointN([16, 16, 16])
             ]
         );
+    }
+
+    #[test]
+    fn chunk_key_for_negative_point_is_negative() {
+        let indexer = ChunkIndexer::new(PointN([16; 3]));
+        let p = PointN([-1; 3]);
+        let key = indexer.chunk_key_containing_point(&p);
+        assert_eq!(key, PointN([-16; 3]));
     }
 }

@@ -2,7 +2,7 @@ use crate::{Axis2, IterExtent};
 
 use super::{point_traits::*, PointN};
 
-use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Range, Rem, Shl, Shr};
+use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Not, Range, Rem, Shl, Shr};
 use itertools::{iproduct, Product};
 use num::{traits::Pow, Integer, Signed};
 use std::cmp::Ordering;

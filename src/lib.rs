@@ -47,7 +47,8 @@
 //! let mut samples = Array3::fill_with(extent, &sphere_sdf);
 //!
 //! let mut mesh_buffer = SurfaceNetsBuffer::default();
-//! surface_nets(&samples, samples.extent(), &mut mesh_buffer);
+//! let voxel_size = 2.0; // length of the edge of a voxel
+//! surface_nets(&samples, samples.extent(), voxel_size, &mut mesh_buffer);
 //! ```
 //!
 //! # Learning

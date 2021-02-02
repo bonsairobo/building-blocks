@@ -72,27 +72,35 @@ impl SurfaceNetsBuffer {
 /// ```
 ///
 /// The set of corners sampled is exactly the set of points in `extent`. `sdf` must contain all of those points.
-pub fn surface_nets<A, T>(sdf: &A, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
-where
+pub fn surface_nets<A, T>(
+    sdf: &A,
+    extent: &Extent3i,
+    voxel_size: f32,
+    output: &mut SurfaceNetsBuffer,
+) where
     A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     output.reset(sdf.extent().num_points());
 
-    estimate_surface(sdf, extent, output);
+    estimate_surface(sdf, extent, voxel_size, output);
     make_all_quads(sdf, &extent, output);
 }
 
 // Find all vertex positions and normals. Also generate a map from grid position to vertex index
 // to be used to look up vertices when generating quads.
-fn estimate_surface<A, T>(sdf: &A, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
-where
+fn estimate_surface<A, T>(
+    sdf: &A,
+    extent: &Extent3i,
+    voxel_size: f32,
+    output: &mut SurfaceNetsBuffer,
+) where
     A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     // Precalculate these offsets to do faster linear indexing.
     let mut corner_offset_strides = [Stride(0); 8];
-    let corner_offsets = Local::localize_points(&Point3i::corner_offsets());
+    let corner_offsets = Local::localize_points(&Point3i::CUBE_CORNER_OFFSETS);
     sdf.strides_from_local_points(&corner_offsets, &mut corner_offset_strides);
 
     // Avoid accessing out of bounds with a 2x2x2 kernel.
@@ -105,7 +113,9 @@ where
             corner_strides[i] = p_stride + corner_offset_strides[i];
         }
 
-        if let Some((position, normal)) = estimate_surface_in_cube(sdf, &p, &corner_strides) {
+        if let Some((position, normal)) =
+            estimate_surface_in_cube(sdf, voxel_size, &p, &corner_strides)
+        {
             output.stride_to_index[p_stride.0] = output.mesh.positions.len() as u32;
             output.surface_points.push(p);
             output.surface_strides.push(p_stride);
@@ -137,6 +147,7 @@ const CUBE_EDGES: [[usize; 2]; 12] = [
 // does at all). Then the estimated surface point is the average of these edge crossings.
 fn estimate_surface_in_cube<A, T>(
     sdf: &A,
+    voxel_size: f32,
     cube_min_corner: &Point3i,
     corner_strides: &[Stride],
 ) -> Option<([f32; 3], [f32; 3])>
@@ -161,7 +172,7 @@ where
     }
 
     let centroid = centroid_of_edge_intersections(&corner_dists);
-    let position = Point3f::from(*cube_min_corner) + centroid + PointN([0.5; 3]);
+    let position = voxel_size * (Point3f::from(*cube_min_corner) + centroid + PointN([0.5; 3]));
     let normal = sdf_gradient(&corner_dists, &centroid);
 
     Some((position.0, normal))

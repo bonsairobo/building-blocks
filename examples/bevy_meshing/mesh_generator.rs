@@ -214,9 +214,11 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
                 // TODO bevy: we could avoid re-allocating the buffers on every call if we had
                 // thread-local storage accessible from this task
                 let mut surface_nets_buffer = SurfaceNetsBuffer::default();
+                let voxel_size = 1.0;
                 surface_nets(
                     &padded_chunk,
                     &padded_chunk_extent,
+                    voxel_size,
                     &mut surface_nets_buffer,
                 );
 

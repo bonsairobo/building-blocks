@@ -27,7 +27,8 @@ fn setup(
     let samples = Array3::fill_with(extent, &sphere_sdf);
 
     let mut mesh_buffer = SurfaceNetsBuffer::default();
-    surface_nets(&samples, samples.extent(), &mut mesh_buffer);
+    let voxel_size = 1.0;
+    surface_nets(&samples, samples.extent(), voxel_size, &mut mesh_buffer);
     let mesh = mesh_buffer.mesh;
     let num_vertices = mesh.positions.len();
 

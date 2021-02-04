@@ -1,8 +1,9 @@
 //! N-dimensional arrays, where N is 2 or 3.
 //!
-//! The domains of all arrays are located within an ambient space, a signed integer lattice where
-//! the elements are `Point2i` or `Point3i`. This means they contain data at exactly the set of
-//! points in an `ExtentN`, and no more.
+//! The domains of all arrays are located within an ambient space, a signed integer lattice where the elements are `Point2i` or
+//! `Point3i`. This means they contain data at exactly the set of points in an `ExtentN`, and no more.
+//!
+//! # Indexing
 //!
 //! You can index an array with 3 kinds of coordinates, with traits:
 //!   - `Get*<Stride>`: flat array offset
@@ -11,9 +12,8 @@
 //!
 //! Indexing assumes that the coordinates are in-bounds of the array, panicking otherwise.
 //!
-//! Arrays also support fast iteration over extents with `ForEach*` trait impls. These methods will
-//! only iterate over the section of the extent which is in-bounds of the array, so it's impossible
-//! to index out of bounds.
+//! Arrays also support fast iteration over extents with `ForEach*` trait impls. These methods will only iterate over the
+//! section of the extent which is in-bounds of the array, so it's impossible to index out of bounds.
 //!
 //! ```
 //! use building_blocks_core::prelude::*;
@@ -36,9 +36,8 @@
 //! );
 //! ```
 //!
-//! Since `Stride` lookups are fast and linear, they are ideal for kernel-based algorithms (like
-//! edge/surface detection). Use the `ForEach*<N, Stride>` traits to iterate over an extent and use
-//! the linearity of `Stride` to access adjacent points.
+//! Since `Stride` lookups are fast and linear, they are ideal for kernel-based algorithms (like edge/surface detection). Use
+//! the `ForEach*<N, Stride>` traits to iterate over an extent and use the linearity of `Stride` to access adjacent points.
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
@@ -65,9 +64,34 @@
 //!     }
 //! });
 //! ```
-//! This means you keep the performance of simple array indexing, as opposed to indexing with a
-//! `Point3i`, which requires 2 multiplications to convert to a `Stride`. You'd be surprised how
-//! important this difference can be in tight loops.
+//! This means you keep the performance of simple array indexing, as opposed to indexing with a `Point3i`, which requires 2
+//! multiplications to convert to a `Stride`. You'd be surprised how important this difference can be in tight loops.
+//!
+//! # Storage
+//!
+//! By default, `ArrayN` uses a `Vec` to store elements. But any type that implements `Deref<Target = [T]>` or `DerefMut<Target
+//! = [T]>` should be usable. This means you can construct an array with most pointer types.
+//!
+//! ```
+//! # use building_blocks_core::prelude::*;
+//! # use building_blocks_storage::prelude::*;
+//! # let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([64; 3]));
+//! // Borrow `array`'s values for the lifetime of `other_array`.
+//! let array = Array3::fill(extent, 1);
+//! let other_array = Array3::new(extent, array.values_slice());
+//! assert_eq!(other_array.get(Stride(0)), 1);
+//!
+//! // A stack-allocated array.
+//! let mut data = [1; 64 * 64 * 64];
+//! let mut stack_array = Array3::new(extent, &mut data[..]);
+//! *stack_array.get_mut(Stride(0)) = 2;
+//! assert_eq!(data[0], 2);
+//!
+//! // A boxed array.
+//! let data: Box<[u32]> = Box::new([1; 64 * 64 * 64]); // must forget the size
+//! let box_array = Array3::new(extent, data);
+//! box_array.for_each(&extent, |p: Point3i, value| assert_eq!(value, 1));
+//! ```
 
 mod array2;
 mod array3;

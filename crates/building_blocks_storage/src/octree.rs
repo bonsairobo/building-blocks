@@ -317,8 +317,8 @@ impl OctreeSet {
     }
 
     /// Add all points from `extent` to the set.
-    pub fn insert_extent(&mut self, add_extent: &Extent3i) {
-        let (root_exists, _full) = self._insert_extent(
+    pub fn add_extent(&mut self, add_extent: &Extent3i) {
+        let (root_exists, _full) = self._add_extent(
             LocationCode::ROOT,
             self.octant(),
             self.root_exists,
@@ -327,7 +327,7 @@ impl OctreeSet {
         self.root_exists = root_exists;
     }
 
-    fn _insert_extent(
+    fn _add_extent(
         &mut self,
         location: LocationCode,
         octant: Octant,
@@ -373,7 +373,7 @@ impl OctreeSet {
             let child_location = extended_location.with_lowest_octant(child_index as u16);
             let child_octant = octant.child(child_index);
             let child_already_exists = child_bitmask & (1 << child_index) != 0;
-            let (child_exists_after_insert, child_full) = self._insert_extent(
+            let (child_exists_after_insert, child_full) = self._add_extent(
                 child_location,
                 child_octant,
                 child_already_exists,
@@ -586,7 +586,7 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
-    fn insert_extents() {
+    fn add_extents() {
         let domain = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([32; 3]));
 
         // No overlap, but they touch.
@@ -631,7 +631,7 @@ mod tests {
                 expected_array_set,
             } = self;
 
-            set.insert_extent(&add_extent);
+            set.add_extent(&add_extent);
 
             set.assert_all_nodes_reachable();
 

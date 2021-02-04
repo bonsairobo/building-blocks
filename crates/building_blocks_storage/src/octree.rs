@@ -18,6 +18,7 @@ use fnv::FnvHashMap;
 /// The octree is a cube shape and the edge lengths can only be a power of 2, at most 64. When an
 /// entire octant is full, it will be stored in a collapsed representation, so the leaves of the
 /// tree can be differently sized octants.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OctreeSet {
     extent: Extent3i,
     power: u8,
@@ -29,6 +30,28 @@ pub struct OctreeSet {
 }
 
 impl OctreeSet {
+    /// Make an empty set in the universe (domain) of `extent`.
+    pub fn empty(extent: Extent3i) -> Self {
+        let power = Self::check_extent(&extent);
+
+        Self {
+            power,
+            root_exists: false,
+            extent,
+            nodes: FnvHashMap::default(),
+        }
+    }
+
+    fn check_extent(extent: &Extent3i) -> u8 {
+        assert!(extent.shape.dimensions_are_powers_of_2());
+        assert!(extent.shape.is_cube());
+        let power = extent.shape.x().trailing_zeros() as u8;
+        // Constrained by 16-bit location code.
+        assert!(power > 0 && power <= 6);
+
+        power
+    }
+
     // TODO: from_height_map
 
     /// Constructs an `Octree` which contains all of the points in `extent` which are not empty (as
@@ -40,12 +63,7 @@ impl OctreeSet {
         A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
         T: Clone + IsEmpty,
     {
-        assert!(extent.shape.dimensions_are_powers_of_2());
-        assert!(extent.shape.is_cube());
-        let power = extent.shape.x().trailing_zeros() as u8;
-        // Constrained by 16-bit location code.
-        assert!(power > 0 && power <= 6);
-
+        let power = Self::check_extent(&extent);
         let edge_length = 1 << power;
 
         // These are the corners of the root octant, in local coordinates.
@@ -63,7 +81,7 @@ impl OctreeSet {
         let mut nodes = FnvHashMap::default();
         let min_local = Local(extent.minimum - array.extent().minimum);
         let root_minimum = array.stride_from_local_point(&min_local);
-        let root_location = LocationCode(1);
+        let root_location = LocationCode::ROOT;
         let (root_exists, _full) = Self::partition_array(
             root_location,
             root_minimum,
@@ -123,7 +141,7 @@ impl OctreeSet {
                 nodes,
             );
             child_bitmask |= (child_exists as u8) << octant;
-            all_children_full = all_children_full && child_full;
+            all_children_full &= child_full;
         }
 
         let exists = child_bitmask != 0;
@@ -169,7 +187,7 @@ impl OctreeSet {
             return VisitStatus::Continue;
         }
 
-        self._visit(LocationCode(1), self.octant(), visitor)
+        self._visit(LocationCode::ROOT, self.octant(), visitor)
     }
 
     /// Same as `visit`, but visit only the octants that overlap `extent`.
@@ -203,7 +221,7 @@ impl OctreeSet {
         // Precondition: location exists.
 
         // Base case where the octant is a single leaf voxel.
-        if octant.edge_length == 1 {
+        if octant.is_single_voxel() {
             return visitor.visit_octant(octant, true);
         }
 
@@ -246,9 +264,9 @@ impl OctreeSet {
     pub fn root_node(&self) -> Option<OctreeNode> {
         if self.root_exists {
             Some(OctreeNode {
-                location: LocationCode(1),
+                location: LocationCode::ROOT,
                 octant: self.octant(),
-                child_bitmask: self.nodes.get(&LocationCode(1)).cloned().unwrap_or(0),
+                child_bitmask: self.nodes.get(&LocationCode::ROOT).cloned().unwrap_or(0),
                 power: self.power,
             })
         } else {
@@ -296,6 +314,94 @@ impl OctreeSet {
             child_bitmask,
             power: child_power,
         })
+    }
+
+    /// Add all points from `extent` to the set.
+    pub fn insert_extent(&mut self, add_extent: &Extent3i) {
+        let (root_exists, _full) = self._insert_extent(
+            LocationCode::ROOT,
+            self.octant(),
+            self.root_exists,
+            add_extent,
+        );
+        self.root_exists = root_exists;
+    }
+
+    fn _insert_extent(
+        &mut self,
+        location: LocationCode,
+        octant: Octant,
+        already_exists: bool,
+        add_extent: &Extent3i,
+    ) -> (bool, bool) {
+        if octant.is_single_voxel() {
+            let intersects = add_extent.contains(&octant.minimum);
+            return (intersects, intersects || already_exists);
+        }
+
+        let octant_extent = Extent3i::from(octant);
+        let octant_intersection = add_extent.intersection(&octant_extent);
+
+        if octant_extent == octant_intersection {
+            // The octant is a subset of the extent being inserted, so we can make it an implicit leaf.
+            if already_exists {
+                self.remove_subtree(&location);
+            }
+            return (true, true);
+        }
+
+        let (mut child_bitmask, already_had_bitmask) =
+            if let Some(&child_bitmask) = self.nodes.get(&location) {
+                // Mixed branch node.
+                (child_bitmask, true)
+            } else if already_exists {
+                // Implicit leaf node.
+                return (true, true);
+            } else {
+                // New node.
+                (0, false)
+            };
+
+        if octant_intersection.is_empty() {
+            // Nothing to do for this octant.
+            return (already_exists, false);
+        }
+
+        let mut all_children_full = true;
+        let extended_location = location.extend();
+        for child_index in 0..8 {
+            let child_location = extended_location.with_lowest_octant(child_index as u16);
+            let child_octant = octant.child(child_index);
+            let child_already_exists = child_bitmask & (1 << child_index) != 0;
+            let (child_exists_after_insert, child_full) = self._insert_extent(
+                child_location,
+                child_octant,
+                child_already_exists,
+                add_extent,
+            );
+            child_bitmask |= (child_exists_after_insert as u8) << child_index;
+            all_children_full &= child_full;
+        }
+
+        if child_bitmask != 0 && !all_children_full {
+            self.nodes.insert(location, child_bitmask);
+        } else if already_had_bitmask && all_children_full {
+            self.remove_subtree(&location);
+        }
+
+        (true, all_children_full)
+    }
+
+    fn remove_subtree(&mut self, location: &LocationCode) {
+        if let Some(child_bitmask) = self.nodes.remove(location) {
+            let extended_location = location.extend();
+            for child_index in 0..8 {
+                if child_bitmask & (1 << child_index) != 0 {
+                    let child_location = extended_location.with_lowest_octant(child_index);
+                    self.remove_subtree(&child_location);
+                }
+            }
+        }
     }
 }
 
@@ -350,15 +456,16 @@ type ChildBitMask = u8;
 struct LocationCode(u16);
 
 impl LocationCode {
+    const ROOT: Self = Self(1);
     // Leaves don't need to store child bitmasks, so we can give them a sentinel code.
-    const LEAF: Self = LocationCode(0);
+    const LEAF: Self = Self(0);
 
     fn extend(self) -> Self {
-        LocationCode(self.0 << 3)
+        Self(self.0 << 3)
     }
 
     fn with_lowest_octant(self, octant: u16) -> Self {
-        LocationCode(self.0 | octant)
+        Self(self.0 | octant)
     }
 }
 
@@ -381,6 +488,11 @@ impl Octant {
         self.edge_length
     }
 
+    #[inline]
+    pub fn is_single_voxel(&self) -> bool {
+        self.edge_length == 1
+    }
+
     /// Returns the child octant, where `child_index` specifies the child as a number in `[0..7]` of the binary format `0bZYX`.
     #[inline]
     pub fn child(&self, child_index: u8) -> Self {
@@ -397,7 +509,7 @@ impl Octant {
     pub fn visit_self_and_descendants(self, visitor: &mut impl OctantVisitor) -> VisitStatus {
         let status = visitor.visit_octant(self);
 
-        if self.edge_length == 1 || status != VisitStatus::Continue {
+        if self.is_single_voxel() || status != VisitStatus::Continue {
             return status;
         }
 
@@ -474,9 +586,74 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
+    fn insert_extents() {
+        let domain = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([32; 3]));
+
+        // No overlap, but they touch.
+        let mut test = InsertTest::new(domain);
+        test.assert_extent_added(Extent3i::from_min_and_max(
+            PointN([5, 0, 0]),
+            PointN([9, 5, 5]),
+        ));
+        test.assert_extent_added(Extent3i::from_min_and_max(
+            PointN([10, 0, 0]),
+            PointN([14, 5, 5]),
+        ));
+
+        // With overlap.
+        let mut test = InsertTest::new(domain);
+        test.assert_extent_added(Extent3i::from_min_and_max(PointN([8; 3]), PointN([12; 3])));
+        test.assert_extent_added(Extent3i::from_min_and_max(PointN([10; 3]), PointN([15; 3])));
+    }
+
+    struct InsertTest {
+        domain: Extent3i,
+        set: OctreeSet,
+        mirror_array_set: Array3<bool>,
+        expected_array_set: Array3<bool>,
+    }
+
+    impl InsertTest {
+        fn new(domain: Extent3i) -> Self {
+            Self {
+                domain,
+                set: OctreeSet::empty(domain),
+                mirror_array_set: Array3::fill(domain, false),
+                expected_array_set: Array3::fill(domain, false),
+            }
+        }
+
+        fn assert_extent_added(&mut self, add_extent: Extent3i) {
+            let Self {
+                domain,
+                set,
+                mirror_array_set,
+                expected_array_set,
+            } = self;
+
+            set.insert_extent(&add_extent);
+
+            set.assert_all_nodes_reachable();
+
+            expected_array_set.fill_extent(&add_extent, true);
+            set.visit(&mut |octant, is_leaf| {
+                if is_leaf {
+                    mirror_array_set.fill_extent(&Extent3i::from(octant), true);
+                }
+
+                VisitStatus::Continue
+            });
+            assert_eq!(mirror_array_set, expected_array_set);
+            assert_eq!(*set, OctreeSet::from_array3(expected_array_set, *domain));
+        }
+    }
+
+    #[test]
     fn octants_occupied_iff_not_empty() {
         let voxels = random_voxels();
         let octree = OctreeSet::from_array3(&voxels, *voxels.extent());
+
+        octree.assert_all_nodes_reachable();
 
         let mut non_empty_voxels = HashSet::new();
 
@@ -534,6 +711,44 @@ mod tests {
     impl IsEmpty for Voxel {
         fn is_empty(&self) -> bool {
             !self.0
+        }
+    }
+
+    impl OctreeSet {
+        fn assert_all_nodes_reachable(&self) {
+            let num_reachable_nodes = if self.root_exists {
+                self.count_nodes(LocationCode::ROOT, self.power())
+            } else {
+                0
+            };
+
+            assert_eq!(self.nodes.len(), num_reachable_nodes);
+        }
+
+        fn count_nodes(&self, location: LocationCode, level: u8) -> usize {
+            if level == 0 {
+                return 0;
+            }
+
+            let child_bitmask = if let Some(child_bitmask) = self.nodes.get(&location) {
+                child_bitmask
+            } else {
+                return 0;
+            };
+
+            let mut nodes_sum = 1;
+            let extended_location = location.extend();
+            for child_index in 0..8 {
+                if (child_bitmask & (1 << child_index)) == 0 {
+                    // This child does not exist.
+                    continue;
+                }
+
+                let octant_location = extended_location.with_lowest_octant(child_index as u16);
+                nodes_sum += self.count_nodes(octant_location, level - 1);
+            }
+
+            nodes_sum
         }
     }
 }

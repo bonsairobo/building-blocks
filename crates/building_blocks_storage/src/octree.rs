@@ -345,7 +345,7 @@ impl OctreeSet {
         if octant_extent == octant_intersection {
             // The octant is a subset of the extent being inserted, so we can make it an implicit leaf.
             if already_exists {
-                self.remove_subtree(&location);
+                self.remove_subtree(&location, octant.power());
             }
             return (true, true);
         }
@@ -386,19 +386,23 @@ impl OctreeSet {
         if child_bitmask != 0 && !all_children_full {
             self.nodes.insert(location, child_bitmask);
         } else if already_had_bitmask && all_children_full {
-            self.remove_subtree(&location);
+            self.remove_subtree(&location, octant.power());
         }
 
         (true, all_children_full)
     }
 
-    fn remove_subtree(&mut self, location: &LocationCode) {
+    fn remove_subtree(&mut self, location: &LocationCode, level: u8) {
         if let Some(child_bitmask) = self.nodes.remove(location) {
+            if level == 1 {
+                return;
+            }
+
             let extended_location = location.extend();
             for child_index in 0..8 {
                 if child_bitmask & (1 << child_index) != 0 {
                     let child_location = extended_location.with_lowest_octant(child_index);
-                    self.remove_subtree(&child_location);
+                    self.remove_subtree(&child_location, level - 1);
                 }
             }
         }
@@ -491,6 +495,11 @@ impl Octant {
     #[inline]
     pub fn is_single_voxel(&self) -> bool {
         self.edge_length == 1
+    }
+
+    #[inline]
+    pub fn power(&self) -> u8 {
+        self.edge_length.trailing_zeros() as u8
     }
 
     /// Returns the child octant, where `child_index` specifies the child as a number in `[0..7]` of the binary format `0bZYX`.

@@ -1,6 +1,8 @@
-use building_blocks::core::prelude::*;
+use building_blocks::core::{
+    prelude::*,
+    sdfu::{self, SDF},
+};
 use building_blocks::mesh::*;
-use building_blocks::procgen::signed_distance_fields::*;
 use building_blocks::storage::{prelude::*, IsEmpty};
 
 use bevy::{
@@ -36,7 +38,6 @@ enum Shape {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Sdf {
     Cube,
-    Plane,
     Sphere,
     Torus,
 }
@@ -44,14 +45,9 @@ enum Sdf {
 impl Sdf {
     fn get_sdf(&self) -> Box<dyn Fn(&Point3i) -> f32> {
         match self {
-            Sdf::Cube => Box::new(cube(PointN([0.0, 0.0, 0.0]), 20.0)),
-            Sdf::Plane => Box::new(plane(PointN([0.5, 0.5, 0.5]), 1.0)),
-            Sdf::Sphere => Box::new(sphere(PointN([0.0, 0.0, 0.0]), 20.0)),
-            Sdf::Torus => {
-                let t = torus(PointN([16.0, 4.0]));
-
-                Box::new(move |p| t(&p.yzx()))
-            }
+            Sdf::Cube => Box::new(|p| sdfu::Box::new(PointN([20.0; 3])).dist(Point3f::from(*p))),
+            Sdf::Sphere => Box::new(|p| sdfu::Sphere::new(20.0).dist(Point3f::from(*p))),
+            Sdf::Torus => Box::new(|p| sdfu::Torus::new(4.0, 16.0).dist(Point3f::from(p.yzx()))),
         }
     }
 }
@@ -123,16 +119,15 @@ impl IsEmpty for CubeVoxel {
     }
 }
 
-const NUM_SHAPES: i32 = 6;
+const NUM_SHAPES: i32 = 5;
 
 fn choose_shape(index: i32) -> Shape {
     match index {
         0 => Shape::Sdf(Sdf::Cube),
-        1 => Shape::Sdf(Sdf::Plane),
-        2 => Shape::Sdf(Sdf::Sphere),
-        3 => Shape::Sdf(Sdf::Torus),
-        4 => Shape::HeightMap(HeightMap::Wave),
-        5 => Shape::Cubic(Cubic::Terrace),
+        1 => Shape::Sdf(Sdf::Sphere),
+        2 => Shape::Sdf(Sdf::Torus),
+        3 => Shape::HeightMap(HeightMap::Wave),
+        4 => Shape::Cubic(Cubic::Terrace),
         _ => panic!("bad shape index"),
     }
 }

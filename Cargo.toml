@@ -74,7 +74,7 @@ required-features = ["dot_vox", "lz4", "snappy"]
 [[example]]
 name = "bevy_meshing"
 path = "examples/bevy_meshing/bevy_meshing.rs"
-required-features = ["mesh"]
+required-features = ["mesh", "sdfu"]
 
 [[example]]
 name = "bevy_minimal"

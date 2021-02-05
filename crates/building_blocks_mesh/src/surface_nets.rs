@@ -181,12 +181,12 @@ where
 fn centroid_of_edge_intersections(dists: &[f32; 8]) -> Point3f {
     let mut count = 0;
     let mut sum = PointN([0.0; 3]);
-    for [offset1, offset2] in CUBE_EDGES.iter() {
-        let d1 = dists[*offset1];
-        let d2 = dists[*offset2];
+    for [corner1, corner2] in CUBE_EDGES.iter() {
+        let d1 = dists[*corner1];
+        let d2 = dists[*corner2];
         if (d1 < 0.0) != (d2 < 0.0) {
             count += 1;
-            sum += estimate_surface_edge_intersection(*offset1, *offset2, d1, d2);
+            sum += estimate_surface_edge_intersection(*corner1, *corner2, d1, d2);
         }
     }
 
@@ -195,8 +195,8 @@ fn centroid_of_edge_intersections(dists: &[f32; 8]) -> Point3f {
 
 // Given two cube corners, find the point between them where the SDF is zero. (This might not exist).
 fn estimate_surface_edge_intersection(
-    offset1: usize,
-    offset2: usize,
+    corner1: usize,
+    corner2: usize,
     value1: f32,
     value2: f32,
 ) -> Point3f {
@@ -204,9 +204,9 @@ fn estimate_surface_edge_intersection(
     let interp2 = 1.0 - interp1;
 
     PointN([
-        (offset1 & 1) as f32 * interp2 + (offset2 & 1) as f32 * interp1,
-        ((offset1 >> 1) & 1) as f32 * interp2 + ((offset2 >> 1) & 1) as f32 * interp1,
-        ((offset1 >> 2) & 1) as f32 * interp2 + ((offset2 >> 2) & 1) as f32 * interp1,
+        (corner1 & 1) as f32 * interp2 + (corner2 & 1) as f32 * interp1,
+        ((corner1 >> 1) & 1) as f32 * interp2 + ((corner2 >> 1) & 1) as f32 * interp1,
+        ((corner1 >> 2) & 1) as f32 * interp2 + ((corner2 >> 2) & 1) as f32 * interp1,
     ])
 }
 

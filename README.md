@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/building-blocks.svg)](https://crates.io/crates/building-blocks)
 [![Docs.rs](https://docs.rs/building-blocks/badge.svg)](https://docs.rs/building-blocks)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Crates.io](https://img.shields.io/crates/d/building-blocks.svg)](https://crates.io/crates/building-blocks)
 [![Discord](https://img.shields.io/discord/770726405557321778.svg?logo=discord&colorB=7289DA)](https://discord.gg/CnTNjwb)
 
@@ -26,7 +26,7 @@ The primary focus is core data structures and algorithms. Features include:
   - range queries
 - procedural generation
   - sampling signed distance fields
-  - constructive solid geometry (TODO)
+  - constructive solid geometry
 - pathfinding on voxel maps
 
 ## Short Code Example
@@ -36,20 +36,21 @@ mesh from it.
 
 ```rust
 use building_blocks::{
+    core::sdfu::{Sphere, SDF},
     prelude::*,
     mesh::{SurfaceNetsBuffer, surface_nets},
-    procgen::signed_distance_fields::sphere,
 };
 
 let center = PointN([25.0; 3]);
 let radius = 10.0;
-let sphere_sdf = sphere(center, radius);
+let sphere_sdf = Sphere::new(radius).translate(center);
 
 let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([50; 3]));
-let mut samples = Array3::fill_with(extent, &sphere_sdf);
+let mut samples = Array3::fill_with(extent, |p| sphere_sdf.dist(Point3f::from(*p)));
 
 let mut mesh_buffer = SurfaceNetsBuffer::default();
-surface_nets(&samples, samples.extent(), &mut mesh_buffer);
+let voxel_size = 2.0; // length of the edge of a voxel
+surface_nets(&samples, samples.extent(), voxel_size, &mut mesh_buffer);
 ```
 
 ## Learning
@@ -76,7 +77,6 @@ This library is organized into several crates. The most fundamental are:
 Then you get extra bits of functionality from the others:
 
 - **mesh**: 3D mesh generation algorithms
-- **procgen**: procedural generation of lattice maps
 - **search**: search algorithms on lattice maps
 
 To learn the basics about lattice maps, start with these doc pages:
@@ -136,6 +136,12 @@ and `Array3::decode_vox` constructor.
 
 Arrays can be converted to `ImageBuffer`s and constructed from `GenericImageView`s from the `images` crate. Enable the
 `images` feature to expose the generic `encode_image` function and `From<Im> where Im: GenericImageView` impl.
+
+#### Signed Distance Field Utilities (sdfu)
+
+The `sdfu` crate provides convenient APIs for constructive solid geometry operations. By enabling this feature, the `PointN`
+types will implement the `sdfu::mathtypes` traits in order to be used with these APIs. The `sdfu` crate also gets exported
+under `building_blocks::core::sdfu`.
 
 ## Development
 

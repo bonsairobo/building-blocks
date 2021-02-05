@@ -24,7 +24,7 @@
 //!   - range queries
 //! - procedural generation
 //!   - sampling signed distance fields
-//!   - constructive solid geometry (TODO)
+//!   - constructive solid geometry
 //! - pathfinding on voxel maps
 //!
 //! # Short Code Example
@@ -34,17 +34,17 @@
 //!
 //! ```
 //! use building_blocks::{
+//!     core::sdfu::{Sphere, SDF},
 //!     prelude::*,
 //!     mesh::{SurfaceNetsBuffer, surface_nets},
-//!     procgen::signed_distance_fields::sphere,
 //! };
 //!
 //! let center = PointN([25.0; 3]);
 //! let radius = 10.0;
-//! let sphere_sdf = sphere(center, radius);
+//! let sphere_sdf = Sphere::new(radius).translate(center);
 //!
 //! let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([50; 3]));
-//! let mut samples = Array3::fill_with(extent, &sphere_sdf);
+//! let mut samples = Array3::fill_with(extent, |p| sphere_sdf.dist(Point3f::from(*p)));
 //!
 //! let mut mesh_buffer = SurfaceNetsBuffer::default();
 //! let voxel_size = 2.0; // length of the edge of a voxel
@@ -75,7 +75,6 @@
 //! Then you get extra bits of functionality from the others:
 //!
 //! - **mesh**: 3D mesh generation algorithms
-//! - **procgen**: procedural generation of lattice maps
 //! - **search**: search algorithms on lattice maps
 //!
 //! To learn the basics about lattice maps, start with these doc pages:
@@ -161,7 +160,5 @@ pub mod prelude {
 
 #[cfg(feature = "mesh")]
 pub use building_blocks_mesh as mesh;
-#[cfg(feature = "procgen")]
-pub use building_blocks_procgen as procgen;
 #[cfg(feature = "search")]
 pub use building_blocks_search as search;

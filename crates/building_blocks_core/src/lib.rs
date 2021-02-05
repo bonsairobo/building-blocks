@@ -33,3 +33,6 @@ pub use mint;
 
 #[cfg(feature = "nalgebra")]
 pub use nalgebra as na;
+
+#[cfg(feature = "sdfu")]
+pub use sdfu;

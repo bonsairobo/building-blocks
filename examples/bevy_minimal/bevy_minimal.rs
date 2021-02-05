@@ -7,7 +7,6 @@ use bevy::{
 };
 use building_blocks::core::prelude::*;
 use building_blocks::mesh::*;
-use building_blocks::procgen::signed_distance_fields::*;
 use building_blocks::storage::prelude::*;
 
 fn main() {
@@ -22,9 +21,21 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    let sphere_sdf = sphere(PointN([0.0; 3]), 10.0);
-    let extent = Extent3i::from_min_and_max(PointN([-25; 3]), PointN([25; 3]));
-    let samples = Array3::fill_with(extent, &sphere_sdf);
+    use building_blocks::core::sdfu::{self, SDF};
+
+    let sdf = sdfu::Sphere::new(0.45)
+        .subtract(sdfu::Box::new(PointN([0.25, 0.25, 1.5])))
+        .union_smooth(
+            sdfu::Sphere::new(0.3).translate(PointN([0.3, 0.3, 0.0])),
+            0.1,
+        )
+        .union_smooth(
+            sdfu::Sphere::new(0.3).translate(PointN([-0.3, 0.3, 0.0])),
+            0.1,
+        );
+
+    let extent = Extent3i::from_min_and_max(PointN([-100; 3]), PointN([100; 3]));
+    let samples = Array3::fill_with(extent, |p| sdf.dist(0.01 * Point3f::from(*p)));
 
     let mut mesh_buffer = SurfaceNetsBuffer::default();
     let voxel_size = 1.0;
@@ -50,8 +61,8 @@ fn setup(
             ..Default::default()
         })
         .spawn(Camera3dBundle {
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 100.0))
-                .looking_at(Vec3::zero(), Vec3::unit_y()),
+            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 150.0))
+                .looking_at(Vec3::new(0.0, 10.0, 0.0), Vec3::unit_y()),
             ..Default::default()
         })
         .spawn(PbrBundle {

@@ -21,3 +21,4 @@ serde = { version = "1.0", features = ["derive"] }
 glam = { version = "0.12", optional = true }
 mint = { version = "0.5", optional = true }
 nalgebra = { version = "0.23", optional = true }
+sdfu = { version = "0.3", optional = true }

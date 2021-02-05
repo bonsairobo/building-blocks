@@ -16,7 +16,7 @@ features = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncol
 # list of features by disabling the defaults with "default-features = false".
 #
 # "snappy" is excluded because there are useful type aliases that rely on the compression backends being mutually exclusive.
-default = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "procgen", "search"]
+default = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "procgen", "sdfu", "search"]
 
 # Optional crates.
 mesh = ["building_blocks_mesh"]
@@ -26,6 +26,7 @@ search = ["building_blocks_search"]
 # Integrations.
 dot_vox = ["building_blocks_storage/dot_vox"]
 image = ["building_blocks_storage/image"]
+sdfu = ["building_blocks_core/sdfu"]
 
 # Math type conversions.
 glam = ["building_blocks_core/glam"]
@@ -78,4 +79,4 @@ required-features = ["mesh"]
 [[example]]
 name = "bevy_minimal"
 path = "examples/bevy_minimal/bevy_minimal.rs"
-required-features = ["mesh"]
+required-features = ["mesh", "sdfu"]

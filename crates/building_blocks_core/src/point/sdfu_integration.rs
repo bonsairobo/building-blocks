@@ -153,17 +153,3 @@ impl mt::Vec<f32> for Point3f {
         self.norm()
     }
 }
-
-impl mt::Exp2 for Point2f {
-    #[inline]
-    fn exp2(&self) -> Self {
-        self.map_components_unary(|c| 2.0f32.powf(c))
-    }
-}
-
-impl mt::Exp2 for Point3f {
-    #[inline]
-    fn exp2(&self) -> Self {
-        self.map_components_unary(|c| 2.0f32.powf(c))
-    }
-}

@@ -136,6 +136,12 @@
 //! Arrays can be converted to `ImageBuffer`s and constructed from `GenericImageView`s from the `images` crate. Enable the
 //! `images` feature to expose the generic `encode_image` function and `From<Im> where Im: GenericImageView` impl.
 //!
+//! ### Signed Distance Field Utilities (sdfu)
+//!
+//! The `sdfu` crate provides convenient APIs for constructive solid geometry operations. By enabling this feature, the `PointN`
+//! types will implement the `sdfu::mathtypes` traits in order to be used with these APIs. The `sdfu` crate also gets exported
+//! under `building_blocks::core::sdfu`.
+//!
 //! # Development
 //!
 //! We prioritize work according to the [project board](https://github.com/bonsairobo/building-blocks/projects/1).

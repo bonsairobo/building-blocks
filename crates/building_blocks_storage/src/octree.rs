@@ -1,5 +1,7 @@
 //! The `OctreeSet` type is a memory-efficient set of points organized hierarchically.
 //!
+//! # Use Cases
+//!
 //! The `OctreeSet` has many uses.
 //!
 //! One possible use case is to construct one using `OctreeSet::from_array3`, then insert it into an `OctreeDBVT` in order to
@@ -9,9 +11,38 @@
 //! useful for level of detail algorithms like clipmap traversal because inner nodes may correspond to downsampled chunks stored
 //! in a separate structure.
 //!
+//! # Traversal
+//!
 //! `OctreeSet` supports two modes of traversal. One is using the visitor pattern via `OctreeVisitor` and `OctantVisitor`
-//! traits, which are the most efficient. The other is "node-based," which is slightly less efficient and more manual but also
-//! more flexible.
+//! traits, which are the most efficient.
+//!
+//! ## Nested Traversal
+//!
+//! ```
+//! # let some_condition = |_, _| true;
+//! use building_blocks_core::prelude::*;
+//! use building_blocks_storage::{octree::*, prelude::*};
+//!
+//! let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([32; 3]));
+//! let voxels = Array3::fill(extent, true); // boring example
+//! let octree = OctreeSet::from_array3(&voxels, Extent3i::from_min_and_shape(PointN([8; 3]), PointN([16; 3])));
+//!
+//! octree.visit(&mut |location: &LocationHandle, octant: Octant, is_leaf| {
+//!     if some_condition(octant, is_leaf) {
+//!         // Found a particular subtree, now narrow the search using a different algorithm.
+//!         location.visit_descendants(&octree, &mut |_location: &_, _octant, _is_leaf| {
+//!             VisitStatus::Continue
+//!         });
+//!
+//!         VisitStatus::ExitEarly
+//!     } else {
+//!         VisitStatus::Continue
+//!     }
+//! });
+//! ```
+//!
+//! The other form of traversal is "node-based," which is slightly less efficient and more manual but also more flexible. See
+//! the `OctreeSet::root_node`, `OctreeSet::child_node`, and `OctreeNode` documentation for details.
 
 use crate::{access::GetUncheckedRelease, prelude::*, IsEmpty};
 
@@ -656,24 +687,6 @@ mod tests {
 
     use rand::Rng;
     use std::collections::HashSet;
-
-    #[test]
-    fn nested_visitors() {
-        let voxels = random_voxels();
-        let octree = OctreeSet::from_array3(&voxels, *voxels.extent());
-
-        octree.visit(&mut |location: &LocationHandle, octant: Octant, _is_leaf| {
-            if octant.power() == 3 {
-                location.visit_descendants(&octree, &mut |_location: &_, _octant, _is_leaf| {
-                    VisitStatus::Continue
-                });
-
-                VisitStatus::Stop
-            } else {
-                VisitStatus::Continue
-            }
-        });
-    }
 
     #[test]
     fn add_extents() {

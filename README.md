@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/building-blocks.svg)](https://crates.io/crates/building-blocks)
 [![Docs.rs](https://docs.rs/building-blocks/badge.svg)](https://docs.rs/building-blocks)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Crates.io](https://img.shields.io/crates/d/building-blocks.svg)](https://crates.io/crates/building-blocks)
 [![Discord](https://img.shields.io/discord/770726405557321778.svg?logo=discord&colorB=7289DA)](https://discord.gg/CnTNjwb)
 
@@ -13,10 +13,10 @@ Building Blocks is a voxel library for real-time applications.
 The primary focus is core data structures and algorithms. Features include:
 
 - memory-efficient storage of voxel maps
-  - a `ChunkMap` with generic chunk storage
+  - a [`ChunkMap`](crate::storage::chunk_map) with generic chunk storage
   - LRU-cached storage of compressed chunks
   - compressed serialization format
-  - `OctreeSet` bitset structure
+  - [`OctreeSet`](crate::storage::octree) bitset structure
 - mesh generation
   - isosurface
   - cubic / blocky
@@ -26,7 +26,7 @@ The primary focus is core data structures and algorithms. Features include:
   - range queries
 - procedural generation
   - sampling signed distance fields
-  - constructive solid geometry (TODO)
+  - constructive solid geometry
 - pathfinding on voxel maps
 
 ## Short Code Example
@@ -36,20 +36,21 @@ mesh from it.
 
 ```rust
 use building_blocks::{
+    core::sdfu::{Sphere, SDF},
     prelude::*,
     mesh::{SurfaceNetsBuffer, surface_nets},
-    procgen::signed_distance_fields::sphere,
 };
 
 let center = PointN([25.0; 3]);
 let radius = 10.0;
-let sphere_sdf = sphere(center, radius);
+let sphere_sdf = Sphere::new(radius).translate(center);
 
 let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([50; 3]));
-let mut samples = Array3::fill_with(extent, &sphere_sdf);
+let mut samples = Array3::fill_with(extent, |p| sphere_sdf.dist(Point3f::from(p)));
 
 let mut mesh_buffer = SurfaceNetsBuffer::default();
-surface_nets(&samples, samples.extent(), &mut mesh_buffer);
+let voxel_size = 2.0; // length of the edge of a voxel
+surface_nets(&samples, samples.extent(), voxel_size, &mut mesh_buffer);
 ```
 
 ## Learning
@@ -70,14 +71,13 @@ used in real applications.
 
 This library is organized into several crates. The most fundamental are:
 
-- **core**: lattice point and extent data types
-- **storage**: storage for lattice maps, i.e. functions defined on `Z^2` and `Z^3`
+- [**core**](crate::core): lattice point and extent data types
+- [**storage**](crate::storage): storage for lattice maps, i.e. functions defined on `Z^2` and `Z^3`
 
 Then you get extra bits of functionality from the others:
 
-- **mesh**: 3D mesh generation algorithms
-- **procgen**: procedural generation of lattice maps
-- **search**: search algorithms on lattice maps
+- [**mesh**](crate::mesh): 3D mesh generation algorithms
+- [**search**](crate::search): search algorithms on lattice maps
 
 To learn the basics about lattice maps, start with these doc pages:
 
@@ -112,7 +112,8 @@ themselves, which get re-exported by the top-level crate.
 
 #### Math Type Conversions
 
-The `PointN` types have conversions to/from `glam`, `nalgebra`, and `mint` types by enabling the corresponding feature.
+The `PointN` types have conversions to/from [`glam`](https://docs.rs/glam), [`nalgebra`](https://nalgebra.org/), and
+[`mint`](https://docs.rs/mint) types by enabling the corresponding feature.
 
 #### Compression Backends and WASM
 
@@ -129,19 +130,27 @@ features = ["snappy"]
 
 #### VOX Files
 
-".VOX" files are supported via the `dot_vox` crate. Enable the `dot_vox` feature to expose the generic `encode_vox` function
-and `Array3::decode_vox` constructor.
+".VOX" files are supported via the [`dot_vox`](https://docs.rs/dot_vox/) crate. Enable the `dot_vox` feature to expose the
+generic `encode_vox` function and `Array3::decode_vox` constructor.
 
 #### Images
 
-Arrays can be converted to `ImageBuffer`s and constructed from `GenericImageView`s from the `images` crate. Enable the
-`images` feature to expose the generic `encode_image` function and `From<Im> where Im: GenericImageView` impl.
+Arrays can be converted to `ImageBuffer`s and constructed from `GenericImageView`s from the [`image`](https://docs.rs/image)
+crate. Enable the `image` feature to expose the generic `encode_image` function and `From<Im> where Im: GenericImageView`
+impl.
+
+#### Signed Distance Field Utilities (sdfu)
+
+The [`sdfu`](https://docs.rs/sdfu) crate provides convenient APIs for constructive solid geometry operations. By enabling
+this feature, the `PointN` types will implement the `sdfu::mathtypes` traits in order to be used with these APIs. The `sdfu`
+crate also gets exported under `building_blocks::core::sdfu`.
 
 ## Development
 
 We prioritize work according to the [project board](https://github.com/bonsairobo/building-blocks/projects/1).
 
-If you'd like to make a contribution, please first read the **[design philosophy](DESIGN.md)** and **[contribution
-guidelines](CONTRIBUTING.md)**.
+If you'd like to make a contribution, please first read the **[design
+philosophy](https://github.com/bonsairobo/building-blocks/blob/main/DESIGN.md)** and **[contribution
+guidelines](https://github.com/bonsairobo/building-blocks/blob/main/CONTRIBUTING.md)**.
 
 License: MIT

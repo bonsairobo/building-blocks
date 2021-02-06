@@ -14,14 +14,14 @@
 //!
 //! let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
 //! let mut index_map = Array3::fill(extent, 0u8);
-//! *index_map.get_mut(&PointN([0, 0, 1])) = 1;
+//! *index_map.get_mut(PointN([0, 0, 1])) = 1;
 //!
 //! let palette = vec![BigData([1; 9001]), BigData([2; 9001])];
 //! let lookup = |i: u8| palette[i as usize].0[0];
 //! let big_data_map = TransformMap::new(&index_map, &lookup);
 //!
-//! assert_eq!(big_data_map.get(&PointN([0, 0, 0])), palette[0].0[0]);
-//! assert_eq!(big_data_map.get(&PointN([0, 0, 1])), palette[1].0[0]);
+//! assert_eq!(big_data_map.get(PointN([0, 0, 0])), palette[0].0[0]);
+//! assert_eq!(big_data_map.get(PointN([0, 0, 1])), palette[1].0[0]);
 //! ```
 //!
 //! `TransformMap` also gives us an efficient way of applying transforms to array data during a copy:
@@ -236,7 +236,7 @@ mod tests {
         let palette = vec![1, 2, 3];
         let outer_map = TransformMap::new(&inner_map, |i: usize| palette[i]);
 
-        assert_eq!(outer_map.get(&PointN([0; 3])), 1);
+        assert_eq!(outer_map.get(PointN([0; 3])), 1);
 
         outer_map.for_each(&extent, |_s: Stride, value| {
             assert_eq!(value, 1);
@@ -249,7 +249,7 @@ mod tests {
         });
 
         let outer_map = TransformMap::new(&inner_map, |i: usize| palette[i]);
-        assert_eq!(outer_map.get(&PointN([0; 3])), 1);
+        assert_eq!(outer_map.get(PointN([0; 3])), 1);
     }
 
     #[cfg(feature = "lz4")]

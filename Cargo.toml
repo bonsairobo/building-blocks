@@ -9,23 +9,23 @@ repository = "https://github.com/bonsairobo/building-blocks"
 keywords = ["voxel"]
 
 [package.metadata.docs.rs]
-features = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "procgen", "search"]
+features = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "search"]
 
 [features]
 # All features (except "snappy") are default because we want them to be easily discoverable on docs.rs. You can define your own
 # list of features by disabling the defaults with "default-features = false".
 #
 # "snappy" is excluded because there are useful type aliases that rely on the compression backends being mutually exclusive.
-default = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "procgen", "search"]
+default = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "sdfu", "search"]
 
 # Optional crates.
 mesh = ["building_blocks_mesh"]
-procgen = ["building_blocks_procgen"]
 search = ["building_blocks_search"]
 
 # Integrations.
 dot_vox = ["building_blocks_storage/dot_vox"]
 image = ["building_blocks_storage/image"]
+sdfu = ["building_blocks_core/sdfu"]
 
 # Math type conversions.
 glam = ["building_blocks_core/glam"]
@@ -58,7 +58,6 @@ building_blocks_storage = { path = "crates/building_blocks_storage", version = "
 
 # Optional, feature-gated
 building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.4.3", optional = true }
-building_blocks_procgen = { path = "crates/building_blocks_procgen", version = "0.4", optional = true }
 building_blocks_search = { path = "crates/building_blocks_search", version = "0.4.3", optional = true, default-features = false }
 
 [dev-dependencies]
@@ -73,9 +72,9 @@ required-features = ["dot_vox", "lz4", "snappy"]
 [[example]]
 name = "bevy_meshing"
 path = "examples/bevy_meshing/bevy_meshing.rs"
-required-features = ["mesh"]
+required-features = ["mesh", "sdfu"]
 
 [[example]]
 name = "bevy_minimal"
 path = "examples/bevy_minimal/bevy_minimal.rs"
-required-features = ["mesh"]
+required-features = ["mesh", "sdfu"]

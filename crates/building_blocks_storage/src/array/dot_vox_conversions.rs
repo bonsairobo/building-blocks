@@ -17,7 +17,7 @@ impl Array3<VoxColor> {
         let mut map = Array3::fill(extent, VoxColor::Empty);
         for Voxel { x, y, z, i } in voxels.iter() {
             let point = PointN([*x as i32, *y as i32, *z as i32]);
-            *map.get_mut(&point) = VoxColor::Color(*i);
+            *map.get_mut(point) = VoxColor::Color(*i);
         }
 
         map

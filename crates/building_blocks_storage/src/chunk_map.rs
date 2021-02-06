@@ -34,8 +34,8 @@
 //!
 //! // Although we only write 3 points, 3 whole dense chunks will be inserted.
 //! let write_points = [PointN([-100; 3]), PointN([0; 3]), PointN([100; 3])];
-//! for p in write_points.iter() {
-//!     *map.get_mut(&p) = 1;
+//! for &p in write_points.iter() {
+//!     *map.get_mut(p) = 1;
 //! }
 //!
 //! // Even though the map is sparse, we can get the smallest extent that bounds all of the occupied
@@ -56,10 +56,10 @@
 //!
 //! // You can also access individual points like you can with a `ArrayN`. This is
 //! // slower than iterating, because it hashes the chunk coordinates for every access.
-//! for p in write_points.iter() {
+//! for &p in write_points.iter() {
 //!     assert_eq!(map.get(p), 1);
 //! }
-//! assert_eq!(map.get(&PointN([1, 1, 1])), 0);
+//! assert_eq!(map.get(PointN([1, 1, 1])), 0);
 //!
 //! // Sometimes you need to implement very fast algorithms (like kernel-based methods) that do a
 //! // lot of random access. In this case it's most efficient to use `Stride`s, but `ChunkMap`
@@ -86,8 +86,8 @@
 //!
 //! // You can write voxels the same as any other `ChunkMap`. As chunks are created, they will be placed in an LRU cache.
 //! let write_points = [PointN([-100; 3]), PointN([0; 3]), PointN([100; 3])];
-//! for p in write_points.iter() {
-//!     *map.get_mut(&p) = 1;
+//! for &p in write_points.iter() {
+//!     *map.get_mut(p) = 1;
 //! }
 //!
 //! // Save some space by compressing the least recently used chunks. On further access to the compressed chunks, they will get
@@ -304,7 +304,7 @@ where
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    pub fn get_chunk(&self, key: &PointN<N>) -> Option<&Chunk<N, T, Meta>> {
+    pub fn get_chunk(&self, key: PointN<N>) -> Option<&Chunk<N, T, Meta>> {
         debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.get(key)
@@ -320,7 +320,7 @@ where
         T: Copy,
     {
         for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
-            if let Some(chunk) = self.get_chunk(&chunk_key) {
+            if let Some(chunk) = self.get_chunk(chunk_key) {
                 visitor(Either::Left(chunk))
             } else {
                 let chunk_extent = self.indexer.extent_for_chunk_at_key(chunk_key);
@@ -340,7 +340,7 @@ where
         mut visitor: impl FnMut(&Chunk<N, T, Meta>),
     ) {
         for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
-            if let Some(chunk) = self.get_chunk(&chunk_key) {
+            if let Some(chunk) = self.get_chunk(chunk_key) {
                 visitor(chunk)
             }
         }
@@ -358,7 +358,7 @@ where
     #[inline]
     pub fn write_chunk(&mut self, key: PointN<N>, chunk: Chunk<N, T, Meta>) {
         debug_assert!(chunk.array.extent().shape.eq(&self.indexer.chunk_shape()));
-        debug_assert!(self.indexer.chunk_key_is_valid(&key));
+        debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.write(key, chunk);
     }
@@ -373,7 +373,7 @@ where
         chunk: Chunk<N, T, Meta>,
     ) -> Option<Chunk<N, T, Meta>> {
         debug_assert!(chunk.array.extent().shape.eq(&self.indexer.chunk_shape()));
-        debug_assert!(self.indexer.chunk_key_is_valid(&key));
+        debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.replace(key, chunk)
     }
@@ -382,7 +382,7 @@ where
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    pub fn get_mut_chunk(&mut self, key: &PointN<N>) -> Option<&mut Chunk<N, T, Meta>> {
+    pub fn get_mut_chunk(&mut self, key: PointN<N>) -> Option<&mut Chunk<N, T, Meta>> {
         debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.get_mut(key)
@@ -397,7 +397,7 @@ where
         key: PointN<N>,
         create_chunk: impl FnOnce() -> Chunk<N, T, Meta>,
     ) -> &mut Chunk<N, T, Meta> {
-        debug_assert!(self.indexer.chunk_key_is_valid(&key));
+        debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.get_mut_or_insert_with(key, create_chunk)
     }
@@ -411,7 +411,7 @@ where
         T: Copy,
         Meta: Clone,
     {
-        debug_assert!(self.indexer.chunk_key_is_valid(&key));
+        debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         let Self {
             indexer,
@@ -450,7 +450,7 @@ where
         mut visitor: impl FnMut(&mut Chunk<N, T, Meta>),
     ) {
         for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
-            if let Some(chunk) = self.get_mut_chunk(&chunk_key) {
+            if let Some(chunk) = self.get_mut_chunk(chunk_key) {
                 visitor(chunk)
             }
         }
@@ -489,7 +489,7 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<N, T, Meta, Store> GetRef<&PointN<N>> for ChunkMap<N, T, Meta, Store>
+impl<N, T, Meta, Store> GetRef<PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N>,
     N: ArrayIndexer<N>,
@@ -498,16 +498,16 @@ where
     type Data = T;
 
     #[inline]
-    fn get_ref(&self, p: &PointN<N>) -> &Self::Data {
+    fn get_ref(&self, p: PointN<N>) -> &Self::Data {
         let key = self.indexer.chunk_key_containing_point(p);
 
-        self.get_chunk(&key)
+        self.get_chunk(key)
             .map(|chunk| chunk.array.get_unchecked_ref_release(p))
             .unwrap_or(&self.ambient_value)
     }
 }
 
-impl<N, T, Meta, Store> GetMut<&PointN<N>> for ChunkMap<N, T, Meta, Store>
+impl<N, T, Meta, Store> GetMut<PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N>,
     N: ArrayIndexer<N>,
@@ -518,7 +518,7 @@ where
     type Data = T;
 
     #[inline]
-    fn get_mut(&mut self, p: &PointN<N>) -> &mut Self::Data {
+    fn get_mut(&mut self, p: PointN<N>) -> &mut Self::Data {
         let key = self.indexer.chunk_key_containing_point(p);
         let chunk = self.get_mut_chunk_or_insert_ambient(key);
 
@@ -615,7 +615,7 @@ where
 
                 (
                     intersection,
-                    self.get_chunk(&key)
+                    self.get_chunk(key)
                         .map(|chunk| Either::Left(ArrayCopySrc(&chunk.array)))
                         .unwrap_or_else(|| Either::Right(AmbientExtent::new(self.ambient_value))),
                 )
@@ -685,9 +685,9 @@ mod tests {
         ];
 
         for p in points.iter().cloned() {
-            assert_eq!(map.get_mut(&PointN(p)), &mut 0);
-            *map.get_mut(&PointN(p)) = 1;
-            assert_eq!(map.get_mut(&PointN(p)), &mut 1);
+            assert_eq!(map.get_mut(PointN(p)), &mut 0);
+            *map.get_mut(PointN(p)) = 1;
+            assert_eq!(map.get_mut(PointN(p)), &mut 1);
         }
     }
 
@@ -700,10 +700,10 @@ mod tests {
 
         let read_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
         for p in read_extent.iter_points() {
-            if write_extent.contains(&p) {
-                assert_eq!(map.get(&p), 1);
+            if write_extent.contains(p) {
+                assert_eq!(map.get(p), 1);
             } else {
-                assert_eq!(map.get(&p), 0);
+                assert_eq!(map.get(p), 0);
             }
         }
     }
@@ -719,10 +719,10 @@ mod tests {
 
         let read_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
         for p in read_extent.iter_points() {
-            if extent_to_copy.contains(&p) {
-                assert_eq!(map.get(&p), 1);
+            if extent_to_copy.contains(p) {
+                assert_eq!(map.get(p), 1);
             } else {
-                assert_eq!(map.get(&p), 0);
+                assert_eq!(map.get(p), 0);
             }
         }
     }

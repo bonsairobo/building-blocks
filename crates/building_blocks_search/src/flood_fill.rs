@@ -202,7 +202,7 @@ mod tests {
         let center = PointN([0; 3]);
         let map_extent = *map.extent();
         map.for_each_mut(&map_extent, |p: Point3i, value| {
-            if p.l2_distance_squared(&center) < sphere_radius * sphere_radius {
+            if p.l2_distance_squared(center) < sphere_radius * sphere_radius {
                 *value = old_color;
             }
         });
@@ -213,11 +213,11 @@ mod tests {
         let visitor = |p: Point3i| {
             num_visits += 1;
 
-            if map.get(&p) != old_color {
+            if map.get(p) != old_color {
                 return false;
             }
 
-            *map.get_mut(&p) = new_color;
+            *map.get_mut(p) = new_color;
 
             true
         };
@@ -225,7 +225,7 @@ mod tests {
 
         // Assert that we actually filled the sphere, and only the sphere.
         map.for_each(&map_extent, |p: Point3i, value| {
-            if p.l2_distance_squared(&center) < sphere_radius * sphere_radius {
+            if p.l2_distance_squared(center) < sphere_radius * sphere_radius {
                 assert_eq!(value, new_color);
             } else {
                 assert_eq!(value, background_color);

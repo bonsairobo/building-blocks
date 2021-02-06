@@ -33,7 +33,7 @@ fn height_map_plane(c: &mut Criterion) {
 criterion_group!(benches, height_map_plane);
 criterion_main!(benches);
 
-fn plane(p: &Point2i) -> Pixel {
+fn plane(p: Point2i) -> Pixel {
     Pixel(p.x() as f32 + p.y() as f32)
 }
 

@@ -1,0 +1,14 @@
+{
+    "rust-analyzer.cargo.features": [
+        "dot_vox",
+        "glam",
+        "image",
+        "lz4",
+        "mesh",
+        "mint",
+        "nalgebra",
+        "ncollide",
+        "sdfu"
+    ],
+    "files.eol": "\n"
+}

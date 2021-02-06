@@ -10,7 +10,7 @@ pub type Array3<T, Store = Vec<T>> = ArrayN<[i32; 3], T, Store>;
 
 impl ArrayIndexer<[i32; 3]> for [i32; 3] {
     #[inline]
-    fn stride_from_local_point(s: &Point3i, p: &Local3i) -> Stride {
+    fn stride_from_local_point(s: Point3i, p: Local3i) -> Stride {
         Stride((p.z() * s.y() * s.x() + p.y() * s.x() + p.x()) as usize)
     }
 

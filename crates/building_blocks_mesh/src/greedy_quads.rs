@@ -164,9 +164,9 @@ fn greedy_quads_for_group<A, T, Merger>(
     let slice_shape = *n + *u * interior.shape.at(i_u) + *v * interior.shape.at(i_v);
     let mut slice_extent = Extent3i::from_min_and_shape(interior.minimum, slice_shape);
 
-    let n_stride = voxels.stride_from_local_point(&Local(*n));
-    let u_stride = voxels.stride_from_local_point(&Local(*u));
-    let v_stride = voxels.stride_from_local_point(&Local(*v));
+    let n_stride = voxels.stride_from_local_point(Local(*n));
+    let u_stride = voxels.stride_from_local_point(Local(*u));
+    let v_stride = voxels.stride_from_local_point(Local(*v));
     let face_strides = FaceStrides {
         n_stride,
         u_stride,

@@ -4,7 +4,9 @@
 //! placed into the `OctreeDBVT`.
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::octree::{Octant, OctreeSet, OctreeVisitor, VisitStatus};
+use building_blocks_storage::octree::{
+    LocationHandle, Octant, OctreeSet, OctreeVisitor, VisitStatus,
+};
 
 use core::hash::Hash;
 use fnv::FnvHashMap;
@@ -71,7 +73,12 @@ impl<'a, V> OctreeVisitor for DBVTVisitorImpl<'a, V>
 where
     V: OctreeDBVTVisitor,
 {
-    fn visit_octant(&mut self, octant: Octant, is_leaf: bool) -> VisitStatus {
+    fn visit_octree(
+        &mut self,
+        _location: &LocationHandle,
+        octant: Octant,
+        is_leaf: bool,
+    ) -> VisitStatus {
         let aabb = octant_aabb(&octant);
 
         self.0.visit(&aabb, Some(&octant), is_leaf)

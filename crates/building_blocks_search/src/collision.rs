@@ -379,7 +379,7 @@ mod tests {
     fn bvt_with_voxels_filled(fill_points: &[Point3i]) -> OctreeDBVT<i32> {
         let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
         let mut voxels = Array3::fill(extent, Voxel(false));
-        for p in fill_points.iter() {
+        for &p in fill_points.iter() {
             *voxels.get_mut(p) = Voxel(true);
         }
 

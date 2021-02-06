@@ -13,8 +13,8 @@ where
     PointN<N>: Hash + Eq,
 {
     #[inline]
-    fn get(&self, key: &PointN<N>) -> Option<&Chunk<N, T, Meta>> {
-        self.get(key)
+    fn get(&self, key: PointN<N>) -> Option<&Chunk<N, T, Meta>> {
+        self.get(&key)
     }
 }
 
@@ -23,8 +23,8 @@ where
     PointN<N>: Hash + Eq,
 {
     #[inline]
-    fn get_mut(&mut self, key: &PointN<N>) -> Option<&mut Chunk<N, T, Meta>> {
-        self.get_mut(key)
+    fn get_mut(&mut self, key: PointN<N>) -> Option<&mut Chunk<N, T, Meta>> {
+        self.get_mut(&key)
     }
 
     #[inline]

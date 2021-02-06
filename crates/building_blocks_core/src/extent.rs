@@ -86,10 +86,10 @@ where
 
     /// Returns `true` iff the point `p` is contained in this extent.
     #[inline]
-    pub fn contains(&self, p: &PointN<N>) -> bool {
+    pub fn contains(&self, p: PointN<N>) -> bool {
         let lub = self.least_upper_bound();
 
-        self.minimum <= *p && *p < lub
+        self.minimum <= p && p < lub
     }
 
     /// Resize the extent by mutating its `shape` by `delta`.
@@ -133,7 +133,7 @@ where
     pub fn from_min_and_lub(minimum: PointN<N>, least_upper_bound: PointN<N>) -> Self {
         let minimum = minimum;
         // We want to avoid negative shape components.
-        let shape = (least_upper_bound - minimum).join(&PointN::zero());
+        let shape = (least_upper_bound - minimum).join(PointN::zero());
 
         Self { minimum, shape }
     }
@@ -141,8 +141,8 @@ where
     /// Returns the extent containing only the points in both `self` and `other`.
     #[inline]
     pub fn intersection(&self, other: &Self) -> Self {
-        let minimum = self.minimum.join(&other.minimum);
-        let lub = self.least_upper_bound().meet(&other.least_upper_bound());
+        let minimum = self.minimum.join(other.minimum);
+        let lub = self.least_upper_bound().meet(other.least_upper_bound());
 
         Self::from_min_and_lub(minimum, lub)
     }
@@ -171,8 +171,8 @@ where
     /// Constructs the unique extent with both `p1` and `p2` as corners.
     #[inline]
     pub fn from_corners(p1: PointN<N>, p2: PointN<N>) -> Self {
-        let min = p1.meet(&p2);
-        let max = p1.join(&p2);
+        let min = p1.meet(p2);
+        let max = p1.join(p2);
 
         Self::from_min_and_max(min, max)
     }
@@ -189,7 +189,7 @@ where
     /// ```
     #[inline]
     pub fn iter_points(&self) -> <PointN<N> as IterExtent<N>>::PointIter {
-        PointN::iter_extent(&self.minimum, &self.least_upper_bound())
+        PointN::iter_extent(self.minimum, self.least_upper_bound())
     }
 }
 
@@ -253,8 +253,8 @@ where
     let mut min_point = PointN::MAX;
     let mut max_point = PointN::MIN;
     for p in points {
-        min_point = min_point.meet(&p);
-        max_point = max_point.join(&p);
+        min_point = min_point.meet(p);
+        max_point = max_point.join(p);
     }
 
     ExtentN::from_min_and_max(min_point, max_point)

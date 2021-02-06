@@ -1,10 +1,17 @@
-//! The `OctreeSet` type is a memory-efficient set of points.
+//! The `OctreeSet` type is a memory-efficient set of points organized hierarchically.
 //!
-//! The typical workflow for using an `Octree` is to construct it from an `Array3`, then insert it into an `OctreeDBVT` in order
-//! to perform spatial queries like raycasting.
+//! The `OctreeSet` has many uses.
 //!
-//! `OctreeSet` supports two modes of traversal. One is using the visitor pattern, which is the most efficient. The other is
-//! "node-based," which is less efficient and more manual but also more flexible.
+//! One possible use case is to construct one using `OctreeSet::from_array3`, then insert it into an `OctreeDBVT` in order to
+//! perform spatial queries like raycasting.
+//!
+//! You might also use an `OctreeSet` as a chunk index, where each point represents a single chunk. This representation is
+//! useful for level of detail algorithms like clipmap traversal because inner nodes may correspond to downsampled chunks stored
+//! in a separate structure.
+//!
+//! `OctreeSet` supports two modes of traversal. One is using the visitor pattern via `OctreeVisitor` and `OctantVisitor`
+//! traits, which are the most efficient. The other is "node-based," which is slightly less efficient and more manual but also
+//! more flexible.
 
 use crate::{access::GetUncheckedRelease, prelude::*, IsEmpty};
 

@@ -62,7 +62,7 @@ where
         let dst_chunk = dst_map.get_mut_chunk_or_insert_ambient(dst.dst_chunk_key);
 
         // HACK: only needs get_mut_chunk because of CompressibleChunkStorage
-        if let Some(src_chunk) = src_map.get_mut_chunk(&src_chunk_key) {
+        if let Some(src_chunk) = src_map.get_mut_chunk(src_chunk_key) {
             debug_assert_eq!(src_chunk.array.extent().shape, chunk_shape);
 
             sampler.downsample(

@@ -37,7 +37,7 @@ where
         debug_assert!(sample_shape > PointN::ZERO);
 
         for p in ExtentN::from_min_and_shape(PointN::ZERO, sample_shape).iter_points() {
-            *dst_chunk.get_mut(&Local(dst_min.0 + p)) = src_chunk.get(&Local(p << lod_delta));
+            *dst_chunk.get_mut(Local(dst_min.0 + p)) = src_chunk.get(Local(p << lod_delta));
         }
     }
 }

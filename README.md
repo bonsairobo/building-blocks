@@ -46,7 +46,7 @@ let radius = 10.0;
 let sphere_sdf = Sphere::new(radius).translate(center);
 
 let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([50; 3]));
-let mut samples = Array3::fill_with(extent, |p| sphere_sdf.dist(Point3f::from(*p)));
+let mut samples = Array3::fill_with(extent, |p| sphere_sdf.dist(Point3f::from(p)));
 
 let mut mesh_buffer = SurfaceNetsBuffer::default();
 let voxel_size = 2.0; // length of the edge of a voxel

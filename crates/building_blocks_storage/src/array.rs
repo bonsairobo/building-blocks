@@ -405,7 +405,6 @@ where
 /// Most commonly, you will index a lattice map with a `PointN<N>`, which is assumed to be in global
 /// coordinates. `Local<N>` only applies to lattice maps where a point must first be translated from
 /// global coordinates into map-local coordinates before indexing with `Get<Local<N>>`.
-#[derive(Copy)]
 pub struct Local<N>(pub PointN<N>);
 
 impl<N> Clone for Local<N>
@@ -416,6 +415,7 @@ where
         Local(self.0.clone())
     }
 }
+impl<N> Copy for Local<N> where PointN<N>: Copy {}
 
 impl<N> Local<N> {
     /// Wraps all of the `points` using the `Local` constructor.

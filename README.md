@@ -135,9 +135,9 @@ generic `encode_vox` function and `Array3::decode_vox` constructor.
 
 #### Images
 
-Arrays can be converted to `ImageBuffer`s and constructed from `GenericImageView`s from the
-[`images`](https://docs.rs/images) crate. Enable the `images` feature to expose the generic `encode_image` function and
-`From<Im> where Im: GenericImageView` impl.
+Arrays can be converted to `ImageBuffer`s and constructed from `GenericImageView`s from the [`image`](https://docs.rs/image)
+crate. Enable the `image` feature to expose the generic `encode_image` function and `From<Im> where Im: GenericImageView`
+impl.
 
 #### Signed Distance Field Utilities (sdfu)
 

@@ -17,7 +17,7 @@ where
         for (x, y, pixel) in image.pixels() {
             let point = PointN([x as i32, y as i32]);
             unsafe {
-                map.get_mut(&Local(point)).as_mut_ptr().write(pixel);
+                map.get_mut(Local(point)).as_mut_ptr().write(pixel);
             }
         }
 

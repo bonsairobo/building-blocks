@@ -31,11 +31,6 @@ impl<T> Point3<T> {
     }
 
     #[inline]
-    pub fn axis_component(&self, axis: Axis3) -> &T {
-        &self.0[axis.index()]
-    }
-
-    #[inline]
     pub fn axis_component_mut(&mut self, axis: Axis3) -> &mut T {
         &mut self.0[axis.index()]
     }
@@ -46,62 +41,67 @@ where
     T: Copy,
 {
     #[inline]
-    pub fn x(&self) -> T {
+    pub fn axis_component(self, axis: Axis3) -> T {
+        self.0[axis.index()]
+    }
+
+    #[inline]
+    pub fn x(self) -> T {
         self.0[0]
     }
 
     #[inline]
-    pub fn y(&self) -> T {
+    pub fn y(self) -> T {
         self.0[1]
     }
 
     #[inline]
-    pub fn z(&self) -> T {
+    pub fn z(self) -> T {
         self.0[2]
     }
 
     #[inline]
-    pub fn xy(&self) -> Point2<T> {
+    pub fn xy(self) -> Point2<T> {
         PointN([self.x(), self.y()])
     }
 
     #[inline]
-    pub fn yx(&self) -> Point2<T> {
+    pub fn yx(self) -> Point2<T> {
         PointN([self.y(), self.x()])
     }
 
     #[inline]
-    pub fn yz(&self) -> Point2<T> {
+    pub fn yz(self) -> Point2<T> {
         PointN([self.y(), self.z()])
     }
 
     #[inline]
-    pub fn zy(&self) -> Point2<T> {
+    pub fn zy(self) -> Point2<T> {
         PointN([self.z(), self.y()])
     }
 
     #[inline]
-    pub fn zx(&self) -> Point2<T> {
+    pub fn zx(self) -> Point2<T> {
         PointN([self.z(), self.x()])
     }
 
     #[inline]
-    pub fn xz(&self) -> Point2<T> {
+    pub fn xz(self) -> Point2<T> {
         PointN([self.x(), self.z()])
     }
 
     #[inline]
-    pub fn yzx(&self) -> Self {
+    pub fn yzx(self) -> Self {
         PointN([self.y(), self.z(), self.x()])
     }
 
     #[inline]
-    pub fn zxy(&self) -> Self {
+    pub fn zxy(self) -> Self {
         PointN([self.z(), self.x(), self.y()])
     }
 
     #[inline]
-    pub fn zyx(&self) -> Self {
+    pub fn zyx(self) -> Self {
         PointN([self.z(), self.y(), self.x()])
     }
 }
@@ -111,7 +111,7 @@ where
     T: Copy + Mul<Output = T> + Sub<Output = T>,
 {
     #[inline]
-    pub fn cross(&self, other: &Self) -> Self {
+    pub fn cross(self, other: Self) -> Self {
         Self([
             self.y() * other.z() - self.z() * other.y(),
             self.z() * other.x() - self.x() * other.z(),
@@ -174,12 +174,12 @@ impl Point3i {
 
 impl Point3f {
     #[inline]
-    pub fn as_3i(&self) -> Point3i {
+    pub fn as_3i(self) -> Point3i {
         PointN([self.x() as i32, self.y() as i32, self.z() as i32])
     }
 
     #[inline]
-    pub fn in_voxel(&self) -> Point3i {
+    pub fn in_voxel(self) -> Point3i {
         self.floor().as_3i()
     }
 }
@@ -199,14 +199,14 @@ where
     type Scalar = T;
 
     #[inline]
-    fn map_components_unary(&self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self {
+    fn map_components_unary(self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self {
         PointN([f(self.x()), f(self.y()), f(self.z())])
     }
 
     #[inline]
     fn map_components_binary(
-        &self,
-        other: &Self,
+        self,
+        other: Self,
         f: impl Fn(Self::Scalar, Self::Scalar) -> Self::Scalar,
     ) -> Self {
         PointN([
@@ -221,11 +221,11 @@ impl MinMaxComponent for Point3i {
     type Scalar = i32;
 
     #[inline]
-    fn min_component(&self) -> Self::Scalar {
+    fn min_component(self) -> Self::Scalar {
         self.x().min(self.y()).min(self.z())
     }
     #[inline]
-    fn max_component(&self) -> Self::Scalar {
+    fn max_component(self) -> Self::Scalar {
         self.x().max(self.y()).max(self.z())
     }
 }
@@ -234,11 +234,11 @@ impl MinMaxComponent for Point3f {
     type Scalar = f32;
 
     #[inline]
-    fn min_component(&self) -> Self::Scalar {
+    fn min_component(self) -> Self::Scalar {
         self.x().min(self.y()).min(self.z())
     }
     #[inline]
-    fn max_component(&self) -> Self::Scalar {
+    fn max_component(self) -> Self::Scalar {
         self.x().max(self.y()).max(self.z())
     }
 }
@@ -250,7 +250,7 @@ where
     type Scalar = T;
 
     #[inline]
-    fn at(&self, component_index: usize) -> T {
+    fn at(self, component_index: usize) -> T {
         self.0[component_index]
     }
 }
@@ -269,7 +269,7 @@ impl Point for Point3i {
     }
 
     #[inline]
-    fn volume(&self) -> <Self as Point>::Scalar {
+    fn volume(self) -> <Self as Point>::Scalar {
         self.x() * self.y() * self.z()
     }
 }
@@ -292,7 +292,7 @@ impl Point for Point3f {
     }
 
     #[inline]
-    fn volume(&self) -> <Self as Point>::Scalar {
+    fn volume(self) -> <Self as Point>::Scalar {
         self.x() * self.y()
     }
 }
@@ -317,15 +317,15 @@ where
     Point3<T>: Point<Scalar = T>,
 {
     #[inline]
-    fn l1_distance(&self, other: &Self) -> T {
-        let diff = *self - *other;
+    fn l1_distance(self, other: Self) -> T {
+        let diff = self - other;
 
         diff.x().abs() + diff.y().abs() + diff.z().abs()
     }
 
     #[inline]
-    fn l2_distance_squared(&self, other: &Self) -> T {
-        let diff = *self - *other;
+    fn l2_distance_squared(self, other: Self) -> T {
+        let diff = self - other;
 
         diff.x().pow(2) + diff.y().pow(2) + diff.z().pow(2)
     }
@@ -333,15 +333,15 @@ where
 
 impl NormSquared for Point3i {
     #[inline]
-    fn norm_squared(&self) -> f32 {
-        self.dot(&self) as f32
+    fn norm_squared(self) -> f32 {
+        self.dot(self) as f32
     }
 }
 
 impl NormSquared for Point3f {
     #[inline]
-    fn norm_squared(&self) -> f32 {
-        self.dot(&self)
+    fn norm_squared(self) -> f32 {
+        self.dot(self)
     }
 }
 
@@ -352,14 +352,14 @@ where
     type Scalar = T;
 
     #[inline]
-    fn dot(&self, other: &Self) -> Self::Scalar {
+    fn dot(self, other: Self) -> Self::Scalar {
         self.x() * other.x() + self.y() * other.y() + self.z() * other.z()
     }
 }
 
 impl IntegerPoint<[i32; 3]> for Point3i {
     #[inline]
-    fn dimensions_are_powers_of_2(&self) -> bool {
+    fn dimensions_are_powers_of_2(self) -> bool {
         self.x().is_positive()
             && self.y().is_positive()
             && self.z().is_positive()
@@ -369,7 +369,7 @@ impl IntegerPoint<[i32; 3]> for Point3i {
     }
 
     #[inline]
-    fn is_cube(&self) -> bool {
+    fn is_cube(self) -> bool {
         self.x() == self.y() && self.x() == self.z()
     }
 }
@@ -420,7 +420,7 @@ impl IterExtent<[i32; 3]> for Point3i {
     type PointIter = Extent3PointIter<i32>;
 
     #[inline(always)]
-    fn iter_extent(min: &Point3i, lub: &Point3i) -> Self::PointIter {
+    fn iter_extent(min: Self, lub: Self) -> Self::PointIter {
         Extent3PointIter {
             // iproduct is opposite of row-major order.
             product_iter: iproduct!(min.z()..lub.z(), min.y()..lub.y(), min.x()..lub.x()),

@@ -13,7 +13,7 @@
 //!
 //! Then there are "meta" lattice maps that provide some extra utility:
 //!   - `TransformMap`: a wrapper of any kind of lattice map that performs an arbitrary transformation
-//!   - `Fn(&PointN<N>)`: some lattice map traits are implemented for functions (like SDFs)
+//!   - `Fn(PointN<N>)`: some lattice map traits are implemented for functions (like SDFs)
 
 #[macro_use]
 pub mod access;

@@ -8,7 +8,7 @@
 //! You can index an array with 3 kinds of coordinates, with traits:
 //!   - `Get*<Stride>`: flat array offset
 //!   - `Get*<&LocalN>`: N-dimensional point in extent-local coordinates (i.e. min = `[0, 0, 0]`)
-//!   - `Get*<&PointN>`: N-dimensional point in global (ambient) coordinates
+//!   - `Get*<PointN>`: N-dimensional point in global (ambient) coordinates
 //!
 //! Indexing assumes that the coordinates are in-bounds of the array, panicking otherwise.
 //!
@@ -28,7 +28,7 @@
 //!
 //! // Only the points in the extent should have been written.
 //! array.for_each(array.extent(), |p: Point3i, value|
-//!     if write_extent.contains(&p) {
+//!     if write_extent.contains(p) {
 //!         assert_eq!(value, 1);
 //!     } else {
 //!         assert_eq!(value, 0);
@@ -137,18 +137,24 @@ pub trait Array<N> {
     }
 
     #[inline]
-    fn stride_from_local_point(&self, p: &Local<N>) -> Stride {
-        Self::Indexer::stride_from_local_point(&self.extent().shape, p)
+    fn stride_from_local_point(&self, p: Local<N>) -> Stride
+    where
+        PointN<N>: Copy,
+    {
+        Self::Indexer::stride_from_local_point(self.extent().shape, p)
     }
 
     #[inline]
-    fn strides_from_local_points(&self, points: &[Local<N>], strides: &mut [Stride]) {
-        Self::Indexer::strides_from_local_points(&self.extent().shape, points, strides)
+    fn strides_from_local_points(&self, points: &[Local<N>], strides: &mut [Stride])
+    where
+        PointN<N>: Copy,
+    {
+        Self::Indexer::strides_from_local_points(self.extent().shape, points, strides)
     }
 }
 
 pub trait ArrayIndexer<N> {
-    fn stride_from_local_point(shape: &PointN<N>, point: &Local<N>) -> Stride;
+    fn stride_from_local_point(shape: PointN<N>, point: Local<N>) -> Stride;
 
     fn for_each_point_and_stride(
         array_extent: &ExtentN<N>,
@@ -164,9 +170,12 @@ pub trait ArrayIndexer<N> {
     );
 
     #[inline]
-    fn strides_from_local_points(shape: &PointN<N>, points: &[Local<N>], strides: &mut [Stride]) {
+    fn strides_from_local_points(shape: PointN<N>, points: &[Local<N>], strides: &mut [Stride])
+    where
+        PointN<N>: Copy,
+    {
         for (i, p) in points.iter().enumerate() {
-            strides[i] = Self::stride_from_local_point(shape, p);
+            strides[i] = Self::stride_from_local_point(shape, *p);
         }
     }
 }
@@ -269,15 +278,15 @@ where
     }
 
     /// Create a new array for `extent` where each point's value is determined by the `filler` function.
-    pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(&PointN<N>) -> T) -> Self
+    pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> T) -> Self
     where
-        ArrayN<N, MaybeUninit<T>>: for<'r> GetMut<&'r PointN<N>, Data = MaybeUninit<T>>,
+        ArrayN<N, MaybeUninit<T>>: GetMut<PointN<N>, Data = MaybeUninit<T>>,
     {
         let mut array = unsafe { ArrayN::maybe_uninit(extent) };
 
         for p in extent.iter_points() {
             unsafe {
-                array.get_mut(&p).as_mut_ptr().write(filler(&p));
+                array.get_mut(p).as_mut_ptr().write(filler(p));
             }
         }
 
@@ -321,7 +330,7 @@ where
 {
     /// Returns `true` iff this map contains point `p`.
     #[inline]
-    pub fn contains(&self, p: &PointN<N>) -> bool {
+    pub fn contains(&self, p: PointN<N>) -> bool {
         self.extent.contains(p)
     }
 }
@@ -396,8 +405,17 @@ where
 /// Most commonly, you will index a lattice map with a `PointN<N>`, which is assumed to be in global
 /// coordinates. `Local<N>` only applies to lattice maps where a point must first be translated from
 /// global coordinates into map-local coordinates before indexing with `Get<Local<N>>`.
-#[derive(Clone, Copy)]
+#[derive(Copy)]
 pub struct Local<N>(pub PointN<N>);
+
+impl<N> Clone for Local<N>
+where
+    PointN<N>: Clone,
+{
+    fn clone(&self) -> Self {
+        Local(self.0.clone())
+    }
+}
 
 impl<N> Local<N> {
     /// Wraps all of the `points` using the `Local` constructor.
@@ -527,111 +545,115 @@ where
     }
 }
 
-impl<N, T, Store> GetRef<&Local<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetRef<Local<N>> for ArrayN<N, T, Store>
 where
     Self: Array<N> + GetRef<Stride, Data = T>,
+    PointN<N>: Copy,
 {
     type Data = T;
 
     #[inline]
-    fn get_ref(&self, p: &Local<N>) -> &Self::Data {
+    fn get_ref(&self, p: Local<N>) -> &Self::Data {
         self.get_ref(self.stride_from_local_point(p))
     }
 }
 
-impl<N, T, Store> GetMut<&Local<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetMut<Local<N>> for ArrayN<N, T, Store>
 where
     Self: Array<N> + GetMut<Stride, Data = T>,
+    PointN<N>: Copy,
 {
     type Data = T;
 
     #[inline]
-    fn get_mut(&mut self, p: &Local<N>) -> &mut Self::Data {
+    fn get_mut(&mut self, p: Local<N>) -> &mut Self::Data {
         self.get_mut(self.stride_from_local_point(p))
     }
 }
 
-impl<N, T, Store> GetRef<&PointN<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetRef<PointN<N>> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + for<'r> GetRef<&'r Local<N>, Data = T>,
+    Self: Array<N> + GetRef<Local<N>, Data = T>,
     PointN<N>: Point,
 {
     type Data = T;
 
     #[inline]
-    fn get_ref(&self, p: &PointN<N>) -> &Self::Data {
-        let local_p = *p - self.extent().minimum;
+    fn get_ref(&self, p: PointN<N>) -> &Self::Data {
+        let local_p = p - self.extent().minimum;
 
-        self.get_ref(&Local(local_p))
+        self.get_ref(Local(local_p))
     }
 }
 
-impl<N, T, Store> GetMut<&PointN<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetMut<PointN<N>> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + for<'r> GetMut<&'r Local<N>, Data = T>,
+    Self: Array<N> + GetMut<Local<N>, Data = T>,
     PointN<N>: Point,
 {
     type Data = T;
 
     #[inline]
-    fn get_mut(&mut self, p: &PointN<N>) -> &mut Self::Data {
-        let local_p = *p - self.extent().minimum;
+    fn get_mut(&mut self, p: PointN<N>) -> &mut Self::Data {
+        let local_p = p - self.extent().minimum;
 
-        GetMut::<&Local<N>>::get_mut(self, &Local(local_p))
+        GetMut::<Local<N>>::get_mut(self, Local(local_p))
     }
 }
 
-impl<N, T, Store> GetUncheckedRef<&Local<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedRef<Local<N>> for ArrayN<N, T, Store>
 where
     Self: Array<N> + GetUncheckedRef<Stride, Data = T>,
+    PointN<N>: Copy,
 {
     type Data = T;
 
     #[inline]
-    unsafe fn get_unchecked_ref(&self, p: &Local<N>) -> &Self::Data {
+    unsafe fn get_unchecked_ref(&self, p: Local<N>) -> &Self::Data {
         self.get_unchecked_ref(self.stride_from_local_point(p))
     }
 }
 
-impl<N, T, Store> GetUncheckedMut<&Local<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedMut<Local<N>> for ArrayN<N, T, Store>
 where
     Self: Array<N> + GetUncheckedMut<Stride, Data = T>,
+    PointN<N>: Copy,
 {
     type Data = T;
 
     #[inline]
-    unsafe fn get_unchecked_mut(&mut self, p: &Local<N>) -> &mut Self::Data {
+    unsafe fn get_unchecked_mut(&mut self, p: Local<N>) -> &mut Self::Data {
         self.get_unchecked_mut(self.stride_from_local_point(p))
     }
 }
 
-impl<N, T, Store> GetUncheckedRef<&PointN<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedRef<PointN<N>> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + for<'r> GetUncheckedRef<&'r Local<N>, Data = T>,
+    Self: Array<N> + GetUncheckedRef<Local<N>, Data = T>,
     PointN<N>: Point,
 {
     type Data = T;
 
     #[inline]
-    unsafe fn get_unchecked_ref(&self, p: &PointN<N>) -> &Self::Data {
-        let local_p = *p - self.extent().minimum;
+    unsafe fn get_unchecked_ref(&self, p: PointN<N>) -> &Self::Data {
+        let local_p = p - self.extent().minimum;
 
-        self.get_unchecked_ref(&Local(local_p))
+        self.get_unchecked_ref(Local(local_p))
     }
 }
 
-impl<N, T, Store> GetUncheckedMut<&PointN<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedMut<PointN<N>> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + for<'r> GetUncheckedMut<&'r Local<N>, Data = T>,
+    Self: Array<N> + GetUncheckedMut<Local<N>, Data = T>,
     PointN<N>: Point,
 {
     type Data = T;
 
     #[inline]
-    unsafe fn get_unchecked_mut(&mut self, p: &PointN<N>) -> &mut Self::Data {
-        let local_p = *p - self.extent().minimum;
+    unsafe fn get_unchecked_mut(&mut self, p: PointN<N>) -> &mut Self::Data {
+        let local_p = p - self.extent().minimum;
 
-        GetUncheckedMut::<&Local<N>>::get_unchecked_mut(self, &Local(local_p))
+        GetUncheckedMut::<Local<N>>::get_unchecked_mut(self, Local(local_p))
     }
 }
 
@@ -827,11 +849,11 @@ where
 impl<'a, N, T: 'a + Clone, Store, F> WriteExtent<N, F> for ArrayN<N, T, Store>
 where
     Self: ForEachMut<N, PointN<N>, Data = T>,
-    F: Fn(&PointN<N>) -> T,
+    F: Fn(PointN<N>) -> T,
     PointN<N>: IntegerPoint<N>,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: F) {
-        self.for_each_mut(extent, |p, v| *v = (src)(&p));
+        self.for_each_mut(extent, |p, v| *v = (src)(p));
     }
 }
 
@@ -861,18 +883,18 @@ mod tests {
         assert_eq!(unsafe { array.get_unchecked(Stride(0)) }, 1);
         assert_eq!(unsafe { array.get_unchecked_mut(Stride(0)) }, &mut 1);
 
-        assert_eq!(array.get(&Local(PointN([0, 0]))), 1);
-        assert_eq!(array.get_mut(&Local(PointN([0, 0]))), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(&Local(PointN([0, 0]))) }, 1);
+        assert_eq!(array.get(Local(PointN([0, 0]))), 1);
+        assert_eq!(array.get_mut(Local(PointN([0, 0]))), &mut 1);
+        assert_eq!(unsafe { array.get_unchecked(Local(PointN([0, 0]))) }, 1);
         assert_eq!(
-            unsafe { array.get_unchecked_mut(&Local(PointN([0, 0]))) },
+            unsafe { array.get_unchecked_mut(Local(PointN([0, 0]))) },
             &mut 1
         );
 
-        assert_eq!(array.get(&PointN([1, 1])), 1);
-        assert_eq!(array.get_mut(&PointN([1, 1])), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(&PointN([1, 1])) }, 1);
-        assert_eq!(unsafe { array.get_unchecked_mut(&PointN([1, 1])) }, &mut 1);
+        assert_eq!(array.get(PointN([1, 1])), 1);
+        assert_eq!(array.get_mut(PointN([1, 1])), &mut 1);
+        assert_eq!(unsafe { array.get_unchecked(PointN([1, 1])) }, 1);
+        assert_eq!(unsafe { array.get_unchecked_mut(PointN([1, 1])) }, &mut 1);
     }
 
     #[test]
@@ -887,19 +909,19 @@ mod tests {
         assert_eq!(unsafe { array.get_unchecked(Stride(0)) }, 1);
         assert_eq!(unsafe { array.get_unchecked_mut(Stride(0)) }, &mut 1);
 
-        assert_eq!(array.get(&Local(PointN([0, 0, 0]))), 1);
-        assert_eq!(array.get_mut(&Local(PointN([0, 0, 0]))), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(&Local(PointN([0, 0, 0]))) }, 1);
+        assert_eq!(array.get(Local(PointN([0, 0, 0]))), 1);
+        assert_eq!(array.get_mut(Local(PointN([0, 0, 0]))), &mut 1);
+        assert_eq!(unsafe { array.get_unchecked(Local(PointN([0, 0, 0]))) }, 1);
         assert_eq!(
-            unsafe { array.get_unchecked_mut(&Local(PointN([0, 0, 0]))) },
+            unsafe { array.get_unchecked_mut(Local(PointN([0, 0, 0]))) },
             &mut 1
         );
 
-        assert_eq!(array.get(&PointN([1, 1, 1])), 1);
-        assert_eq!(array.get_mut(&PointN([1, 1, 1])), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(&PointN([1, 1, 1])) }, 1);
+        assert_eq!(array.get(PointN([1, 1, 1])), 1);
+        assert_eq!(array.get_mut(PointN([1, 1, 1])), &mut 1);
+        assert_eq!(unsafe { array.get_unchecked(PointN([1, 1, 1])) }, 1);
         assert_eq!(
-            unsafe { array.get_unchecked_mut(&PointN([1, 1, 1])) },
+            unsafe { array.get_unchecked_mut(PointN([1, 1, 1])) },
             &mut 1
         );
     }
@@ -911,14 +933,14 @@ mod tests {
 
         for p in extent.iter_points() {
             unsafe {
-                array.get_mut(&p).as_mut_ptr().write(1);
+                array.get_mut(p).as_mut_ptr().write(1);
             }
         }
 
         let array = unsafe { array.assume_init() };
 
         for p in extent.iter_points() {
-            assert_eq!(array.get(&p), 1i32);
+            assert_eq!(array.get(p), 1i32);
         }
     }
 
@@ -929,7 +951,7 @@ mod tests {
 
         let subextent = Extent3::from_min_and_shape(PointN([1; 3]), PointN([5; 3]));
         for p in subextent.iter_points() {
-            *array.get_mut(&p) = p.x() + p.y() + p.z();
+            *array.get_mut(p) = p.x() + p.y() + p.z();
         }
 
         let mut other_array = Array3::fill(extent, 0);

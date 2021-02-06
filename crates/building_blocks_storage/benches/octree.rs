@@ -138,7 +138,7 @@ fn make_sphere_array(edge_length: i32) -> Array3<Voxel> {
     let center = PointN([0; 3]);
     let map_extent = *map.extent();
     map.for_each_mut(&map_extent, |p: Point3i, value| {
-        if p.l2_distance_squared(&center) <= sphere_radius * sphere_radius {
+        if p.l2_distance_squared(center) <= sphere_radius * sphere_radius {
             *value = Voxel(true)
         }
     });

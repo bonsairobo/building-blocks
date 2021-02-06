@@ -74,7 +74,7 @@ where
     Self: MapComponents,
 {
     #[inline]
-    pub fn signum(&self) -> Self
+    pub fn signum(self) -> Self
     where
         <Self as MapComponents>::Scalar: Signed,
     {
@@ -88,7 +88,7 @@ where
     <Self as MapComponents>::Scalar: Signed,
 {
     #[inline]
-    fn abs(&self) -> Self {
+    fn abs(self) -> Self {
         self.map_components_unary(|c| c.abs())
     }
 }
@@ -114,7 +114,7 @@ where
 
     #[inline]
     fn add(self, rhs: Self) -> Self::Output {
-        self.map_components_binary(&rhs, |c1, c2| c1 + c2)
+        self.map_components_binary(rhs, |c1, c2| c1 + c2)
     }
 }
 
@@ -127,7 +127,7 @@ where
 
     #[inline]
     fn sub(self, rhs: Self) -> Self::Output {
-        self.map_components_binary(&rhs, |c1, c2| c1 - c2)
+        self.map_components_binary(rhs, |c1, c2| c1 - c2)
     }
 }
 

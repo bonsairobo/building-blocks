@@ -46,8 +46,8 @@ impl OrientedCubeFace {
     pub fn quad_from_extent(&self, extent: &Extent3i) -> UnorientedQuad {
         UnorientedQuad {
             minimum: extent.minimum,
-            width: self.u.dot(&extent.shape),
-            height: self.v.dot(&extent.shape),
+            width: self.u.dot(extent.shape),
+            height: self.v.dot(extent.shape),
         }
     }
 

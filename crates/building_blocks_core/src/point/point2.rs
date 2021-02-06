@@ -26,11 +26,6 @@ impl<T> Point2<T> {
     }
 
     #[inline]
-    pub fn axis_component(&self, axis: Axis2) -> &T {
-        &self.0[axis.index()]
-    }
-
-    #[inline]
     pub fn axis_component_mut(&mut self, axis: Axis2) -> &mut T {
         &mut self.0[axis.index()]
     }
@@ -41,17 +36,22 @@ where
     T: Copy,
 {
     #[inline]
-    pub fn x(&self) -> T {
+    pub fn axis_component(self, axis: Axis2) -> T {
+        self.0[axis.index()]
+    }
+
+    #[inline]
+    pub fn x(self) -> T {
         self.0[0]
     }
 
     #[inline]
-    pub fn y(&self) -> T {
+    pub fn y(self) -> T {
         self.0[1]
     }
 
     #[inline]
-    pub fn yx(&self) -> Self {
+    pub fn yx(self) -> Self {
         PointN([self.y(), self.x()])
     }
 }
@@ -85,12 +85,12 @@ impl Point2i {
 
 impl Point2f {
     #[inline]
-    pub fn as_2i(&self) -> Point2i {
+    pub fn as_2i(self) -> Point2i {
         PointN([self.x() as i32, self.y() as i32])
     }
 
     #[inline]
-    pub fn in_pixel(&self) -> Point2i {
+    pub fn in_pixel(self) -> Point2i {
         self.floor().as_2i()
     }
 }
@@ -110,14 +110,14 @@ where
     type Scalar = T;
 
     #[inline]
-    fn map_components_unary(&self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self {
+    fn map_components_unary(self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self {
         PointN([f(self.x()), f(self.y())])
     }
 
     #[inline]
     fn map_components_binary(
-        &self,
-        other: &Self,
+        self,
+        other: Self,
         f: impl Fn(Self::Scalar, Self::Scalar) -> Self::Scalar,
     ) -> Self {
         PointN([f(self.x(), other.x()), f(self.y(), other.y())])
@@ -128,11 +128,11 @@ impl MinMaxComponent for Point2i {
     type Scalar = i32;
 
     #[inline]
-    fn min_component(&self) -> Self::Scalar {
+    fn min_component(self) -> Self::Scalar {
         self.x().min(self.y())
     }
     #[inline]
-    fn max_component(&self) -> Self::Scalar {
+    fn max_component(self) -> Self::Scalar {
         self.x().max(self.y())
     }
 }
@@ -141,11 +141,11 @@ impl MinMaxComponent for Point2f {
     type Scalar = f32;
 
     #[inline]
-    fn min_component(&self) -> Self::Scalar {
+    fn min_component(self) -> Self::Scalar {
         self.x().min(self.y())
     }
     #[inline]
-    fn max_component(&self) -> Self::Scalar {
+    fn max_component(self) -> Self::Scalar {
         self.x().max(self.y())
     }
 }
@@ -157,7 +157,7 @@ where
     type Scalar = T;
 
     #[inline]
-    fn at(&self, component_index: usize) -> T {
+    fn at(self, component_index: usize) -> T {
         self.0[component_index]
     }
 }
@@ -176,7 +176,7 @@ impl Point for Point2i {
     }
 
     #[inline]
-    fn volume(&self) -> <Self as Point>::Scalar {
+    fn volume(self) -> <Self as Point>::Scalar {
         self.x() * self.y()
     }
 }
@@ -195,7 +195,7 @@ impl Point for Point2f {
     }
 
     #[inline]
-    fn volume(&self) -> <Self as Point>::Scalar {
+    fn volume(self) -> <Self as Point>::Scalar {
         self.x() * self.y()
     }
 }
@@ -220,15 +220,15 @@ where
     Point2<T>: Point<Scalar = T>,
 {
     #[inline]
-    fn l1_distance(&self, other: &Self) -> T {
-        let diff = *self - *other;
+    fn l1_distance(self, other: Self) -> T {
+        let diff = self - other;
 
         diff.x().abs() + diff.y().abs()
     }
 
     #[inline]
-    fn l2_distance_squared(&self, other: &Self) -> T {
-        let diff = *self - *other;
+    fn l2_distance_squared(self, other: Self) -> T {
+        let diff = self - other;
 
         diff.x().pow(2) + diff.y().pow(2)
     }
@@ -236,15 +236,15 @@ where
 
 impl NormSquared for Point2i {
     #[inline]
-    fn norm_squared(&self) -> f32 {
-        self.dot(&self) as f32
+    fn norm_squared(self) -> f32 {
+        self.dot(self) as f32
     }
 }
 
 impl NormSquared for Point2f {
     #[inline]
-    fn norm_squared(&self) -> f32 {
-        self.dot(&self)
+    fn norm_squared(self) -> f32 {
+        self.dot(self)
     }
 }
 
@@ -255,14 +255,14 @@ where
     type Scalar = T;
 
     #[inline]
-    fn dot(&self, other: &Self) -> Self::Scalar {
+    fn dot(self, other: Self) -> Self::Scalar {
         self.x() * other.x() + self.y() * other.y()
     }
 }
 
 impl IntegerPoint<[i32; 2]> for Point2i {
     #[inline]
-    fn dimensions_are_powers_of_2(&self) -> bool {
+    fn dimensions_are_powers_of_2(self) -> bool {
         self.x().is_positive()
             && self.y().is_positive()
             && (self.x() as u32).is_power_of_two()
@@ -270,7 +270,7 @@ impl IntegerPoint<[i32; 2]> for Point2i {
     }
 
     #[inline]
-    fn is_cube(&self) -> bool {
+    fn is_cube(self) -> bool {
         self.x() == self.y()
     }
 }
@@ -317,7 +317,7 @@ impl IterExtent<[i32; 2]> for Point2i {
     type PointIter = Extent2PointIter<i32>;
 
     #[inline]
-    fn iter_extent(min: &Point2i, lub: &Point2i) -> Self::PointIter {
+    fn iter_extent(min: Point2i, lub: Point2i) -> Self::PointIter {
         Extent2PointIter {
             // iproduct is opposite of row-major order.
             product_iter: iproduct!(min.y()..lub.y(), min.x()..lub.x()),

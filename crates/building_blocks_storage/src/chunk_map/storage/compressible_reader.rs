@@ -31,7 +31,7 @@ where
     B: BytesCompression,
 {
     #[inline]
-    fn get(&self, key: &PointN<N>) -> Option<&Chunk<N, T, Meta>> {
+    fn get(&self, key: PointN<N>) -> Option<&Chunk<N, T, Meta>> {
         let Self {
             storage: CompressibleChunkStorage {
                 cache, compressed, ..
@@ -39,10 +39,10 @@ where
             local_cache,
         } = self;
 
-        cache.get(key).map(|entry| match entry {
+        cache.get(&key).map(|entry| match entry {
             CacheEntry::Cached(value) => value,
             CacheEntry::Evicted(location) => local_cache
-                .get_or_insert_with(*key, || compressed.get(location.0).unwrap().decompress()),
+                .get_or_insert_with(key, || compressed.get(location.0).unwrap().decompress()),
         })
     }
 }

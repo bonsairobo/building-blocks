@@ -80,7 +80,7 @@ fn array_point_indexing(c: &mut Criterion) {
                 || set_up_array(size),
                 |(array, iter_extent)| {
                     for p in iter_extent.iter_points() {
-                        black_box(array.get(&p));
+                        black_box(array.get(p));
                     }
                 },
             );
@@ -97,7 +97,7 @@ fn chunk_hash_map_point_indexing(c: &mut Criterion) {
                 || set_up_chunk_map(FnvHashMap::default(), size),
                 |(chunk_map, iter_extent)| {
                     for p in iter_extent.iter_points() {
-                        black_box(chunk_map.get(&p));
+                        black_box(chunk_map.get(p));
                     }
                 },
             );
@@ -121,7 +121,7 @@ fn compressible_chunk_map_point_indexing(c: &mut Criterion) {
                     let reader = chunk_map.storage().reader(&local_cache);
                     let reader_map = DEFAULT_BUILDER.build_with_read_storage(reader);
                     for p in iter_extent.iter_points() {
-                        black_box(reader_map.get(&p));
+                        black_box(reader_map.get(p));
                     }
                 },
             );

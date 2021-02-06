@@ -28,11 +28,11 @@ impl mt::Clamp for Point2f {
 impl mt::MaxMin for Point2f {
     #[inline]
     fn max(&self, other: Self) -> Self {
-        self.join(&other)
+        self.join(other)
     }
     #[inline]
     fn min(&self, other: Self) -> Self {
-        self.meet(&other)
+        self.meet(other)
     }
 }
 
@@ -60,11 +60,11 @@ impl mt::Clamp for Point3f {
 impl mt::MaxMin for Point3f {
     #[inline]
     fn max(&self, other: Self) -> Self {
-        self.join(&other)
+        self.join(other)
     }
     #[inline]
     fn min(&self, other: Self) -> Self {
-        self.meet(&other)
+        self.meet(other)
     }
 }
 
@@ -75,11 +75,11 @@ impl mt::Vec2<f32> for Point2f {
     }
     #[inline]
     fn x(&self) -> f32 {
-        self.x()
+        self.0[0]
     }
     #[inline]
     fn y(&self) -> f32 {
-        self.y()
+        self.0[1]
     }
 }
 
@@ -90,15 +90,15 @@ impl mt::Vec3<f32> for Point3f {
     }
     #[inline]
     fn x(&self) -> f32 {
-        self.x()
+        self.0[0]
     }
     #[inline]
     fn y(&self) -> f32 {
-        self.y()
+        self.0[1]
     }
     #[inline]
     fn z(&self) -> f32 {
-        self.z()
+        self.0[2]
     }
 }
 
@@ -109,12 +109,12 @@ impl mt::Vec<f32> for Point2f {
 
     #[inline]
     fn dot(&self, other: Self) -> f32 {
-        DotProduct::dot(self, &other)
+        DotProduct::dot(*self, other)
     }
 
     #[inline]
     fn abs(&self) -> Self {
-        Abs::abs(self)
+        Abs::abs(*self)
     }
 
     #[inline]
@@ -135,12 +135,12 @@ impl mt::Vec<f32> for Point3f {
 
     #[inline]
     fn dot(&self, other: Self) -> f32 {
-        DotProduct::dot(self, &other)
+        DotProduct::dot(*self, other)
     }
 
     #[inline]
     fn abs(&self) -> Self {
-        Abs::abs(self)
+        Abs::abs(*self)
     }
 
     #[inline]

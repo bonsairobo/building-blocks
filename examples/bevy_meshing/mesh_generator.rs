@@ -43,17 +43,17 @@ enum Sdf {
 }
 
 impl Sdf {
-    fn get_sdf(&self) -> Box<dyn Fn(&Point3i) -> f32> {
+    fn get_sdf(&self) -> Box<dyn Fn(Point3i) -> f32> {
         match self {
             Sdf::Cube => {
                 let cube = sdfu::Box::new(PointN([20.0; 3]));
 
-                Box::new(move |p| cube.dist(Point3f::from(*p)))
+                Box::new(move |p| cube.dist(Point3f::from(p)))
             }
             Sdf::Sphere => {
                 let sphere = sdfu::Sphere::new(20.0);
 
-                Box::new(move |p| sphere.dist(Point3f::from(*p)))
+                Box::new(move |p| sphere.dist(Point3f::from(p)))
             }
             Sdf::Torus => {
                 let torus = sdfu::Torus::new(4.0, 16.0);
@@ -70,10 +70,10 @@ enum HeightMap {
 }
 
 impl HeightMap {
-    fn get_height_map(&self) -> impl Fn(&Point2i) -> f32 {
+    fn get_height_map(&self) -> impl Fn(Point2i) -> f32 {
         match self {
             HeightMap::Wave => {
-                |p: &Point2i| 10.0 * (1.0 + (0.2 * p.x() as f32).cos() + (0.2 * p.y() as f32).sin())
+                |p: Point2i| 10.0 * (1.0 + (0.2 * p.x() as f32).cos() + (0.2 * p.y() as f32).sin())
             }
         }
     }

@@ -35,7 +35,7 @@ fn setup(
         );
 
     let extent = Extent3i::from_min_and_max(PointN([-100; 3]), PointN([100; 3]));
-    let samples = Array3::fill_with(extent, |p| sdf.dist(0.01 * Point3f::from(*p)));
+    let samples = Array3::fill_with(extent, |p| sdf.dist(0.01 * Point3f::from(p)));
 
     let mut mesh_buffer = SurfaceNetsBuffer::default();
     let voxel_size = 1.0;

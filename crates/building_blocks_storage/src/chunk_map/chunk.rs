@@ -52,8 +52,8 @@ where
     }
 
     /// Determines whether `key` is a valid chunk key. This means it must be a multiple of the chunk shape.
-    pub fn chunk_key_is_valid(&self, key: &PointN<N>) -> bool {
-        self.chunk_shape.mul(key.div(self.chunk_shape)).eq(key)
+    pub fn chunk_key_is_valid(&self, key: PointN<N>) -> bool {
+        self.chunk_shape.mul(key.div(self.chunk_shape)).eq(&key)
     }
 
     /// The constant shape of a chunk. The same for all chunks.
@@ -67,8 +67,8 @@ where
     }
 
     /// Returns the key of the chunk that contains `point`.
-    pub fn chunk_key_containing_point(&self, point: &PointN<N>) -> PointN<N> {
-        self.chunk_shape_mask() & *point
+    pub fn chunk_key_containing_point(&self, point: PointN<N>) -> PointN<N> {
+        self.chunk_shape_mask() & point
     }
 
     /// Returns an iterator over all chunk keys for chunks that overlap the given extent.
@@ -126,7 +126,7 @@ mod tests {
     fn chunk_key_for_negative_point_is_negative() {
         let indexer = ChunkIndexer::new(PointN([16; 3]));
         let p = PointN([-1; 3]);
-        let key = indexer.chunk_key_containing_point(&p);
+        let key = indexer.chunk_key_containing_point(p);
         assert_eq!(key, PointN([-16; 3]));
     }
 }

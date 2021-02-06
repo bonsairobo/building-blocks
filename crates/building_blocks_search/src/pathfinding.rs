@@ -10,8 +10,8 @@ use std::collections::BinaryHeap;
 /// `predicate`. Returns `true` iff the path reaches `finish`. Otherwise, the path that got closest to `finish` is returned
 /// after `max_iterations`.
 pub fn greedy_path<N, C>(
-    start: &PointN<N>,
-    finish: &PointN<N>,
+    start: PointN<N>,
+    finish: PointN<N>,
     predicate: impl Fn(&PointN<N>) -> bool,
     heuristic: impl Fn(&PointN<N>) -> C,
     max_iterations: usize,
@@ -20,7 +20,7 @@ where
     C: Copy + Ord,
     PointN<N>: core::hash::Hash + Eq + IntegerPoint<N>,
 {
-    if !predicate(start) {
+    if !predicate(&start) {
         return (false, vec![]);
     }
 
@@ -35,10 +35,10 @@ where
             .collect::<Vec<PointN<N>>>()
     };
 
-    let success = |p: &PointN<N>| *p == *finish;
+    let success = |p: &PointN<N>| *p == finish;
 
     let (reached_finish, path) =
-        greedy_best_first(start, successors, heuristic, success, max_iterations);
+        greedy_best_first(&start, successors, heuristic, success, max_iterations);
 
     (reached_finish, path)
 }
@@ -46,8 +46,8 @@ where
 /// Uses L1 distance as a heuristic to do greedy best-first search from `start` to `finish`. All points on the path must satisfy
 /// `predicate`.
 pub fn greedy_path_with_l1_heuristic<N>(
-    start: &PointN<N>,
-    finish: &PointN<N>,
+    start: PointN<N>,
+    finish: PointN<N>,
     predicate: impl Fn(&PointN<N>) -> bool,
     max_iterations: usize,
 ) -> (bool, Vec<PointN<N>>)
@@ -55,7 +55,7 @@ where
     PointN<N>: core::hash::Hash + Eq + Distance + IntegerPoint<N>,
     <PointN<N> as Point>::Scalar: Ord,
 {
-    let heuristic = |p: &PointN<N>| finish.l1_distance(p);
+    let heuristic = |&p: &PointN<N>| finish.l1_distance(p);
 
     greedy_path(start, finish, predicate, heuristic, max_iterations)
 }

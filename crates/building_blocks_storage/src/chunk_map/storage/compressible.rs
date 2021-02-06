@@ -65,13 +65,13 @@ where
     /// inefficient to cache the chunk only for it to be overwritten by the modified version.
     pub fn copy_without_caching(
         &self,
-        key: &PointN<N>,
+        key: PointN<N>,
     ) -> Option<MaybeCompressedChunk<N, T, Meta, B>>
     where
         Chunk<N, T, Meta>: Clone,
         Compressed<FastChunkCompression<N, T, Meta, B>>: Clone,
     {
-        self.cache.get(key).map(|entry| match entry {
+        self.cache.get(&key).map(|entry| match entry {
             CacheEntry::Cached(chunk) => MaybeCompressedChunk::Decompressed(chunk.clone()),
             CacheEntry::Evicted(location) => {
                 MaybeCompressedChunk::Compressed(self.compressed.get(location.0).unwrap().clone())
@@ -80,8 +80,8 @@ where
     }
 
     /// Remove the `Chunk` at `key`.
-    pub fn remove(&mut self, key: &PointN<N>) -> Option<MaybeCompressedChunk<N, T, Meta, B>> {
-        self.cache.remove(key).map(|entry| match entry {
+    pub fn remove(&mut self, key: PointN<N>) -> Option<MaybeCompressedChunk<N, T, Meta, B>> {
+        self.cache.remove(&key).map(|entry| match entry {
             CacheEntry::Cached(chunk) => MaybeCompressedChunk::Decompressed(chunk),
             CacheEntry::Evicted(location) => {
                 MaybeCompressedChunk::Compressed(self.compressed.remove(location.0))
@@ -162,12 +162,12 @@ where
     B: BytesCompression,
 {
     #[inline]
-    fn get_mut(&mut self, key: &PointN<N>) -> Option<&mut Chunk<N, T, Meta>> {
+    fn get_mut(&mut self, key: PointN<N>) -> Option<&mut Chunk<N, T, Meta>> {
         let Self {
             cache, compressed, ..
         } = self;
-        cache
-            .get_mut_or_repopulate_with(*key, |location| compressed.remove(location.0).decompress())
+
+        cache.get_mut_or_repopulate_with(key, |location| compressed.remove(location.0).decompress())
     }
 
     #[inline]

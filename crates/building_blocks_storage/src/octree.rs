@@ -80,7 +80,7 @@ impl OctreeSet {
 
         let mut nodes = FnvHashMap::default();
         let min_local = Local(extent.minimum - array.extent().minimum);
-        let root_minimum = array.stride_from_local_point(&min_local);
+        let root_minimum = array.stride_from_local_point(min_local);
         let root_location = LocationCode::ROOT;
         let (root_exists, _full) = Self::partition_array(
             root_location,
@@ -335,7 +335,7 @@ impl OctreeSet {
         add_extent: &Extent3i,
     ) -> (bool, bool) {
         if octant.is_single_voxel() {
-            let intersects = add_extent.contains(&octant.minimum);
+            let intersects = add_extent.contains(octant.minimum);
             return (intersects, intersects || already_exists);
         }
 

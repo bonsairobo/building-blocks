@@ -35,30 +35,30 @@ pub trait Point:
 
     fn basis() -> Vec<Self>;
 
-    fn volume(&self) -> <Self as Point>::Scalar;
+    fn volume(self) -> <Self as Point>::Scalar;
 }
 
 pub trait Abs {
-    fn abs(&self) -> Self;
+    fn abs(self) -> Self;
 }
 
 pub trait GetComponent {
     type Scalar: Copy;
 
     /// Returns the component specified by index. I.e. X = 0, Y = 1, Z = 2.
-    fn at(&self, component_index: usize) -> Self::Scalar;
+    fn at(self, component_index: usize) -> Self::Scalar;
 }
 
 pub trait MapComponents {
     type Scalar;
 
     /// Returns the point after applying `f` component-wise.
-    fn map_components_unary(&self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self;
+    fn map_components_unary(self, f: impl Fn(Self::Scalar) -> Self::Scalar) -> Self;
 
     /// Returns the point after applying `f` component-wise to both `self` and `other` in parallel.
     fn map_components_binary(
-        &self,
-        other: &Self,
+        self,
+        other: Self,
         f: impl Fn(Self::Scalar, Self::Scalar) -> Self::Scalar,
     ) -> Self;
 }
@@ -66,8 +66,8 @@ pub trait MapComponents {
 pub trait MinMaxComponent {
     type Scalar;
 
-    fn min_component(&self) -> Self::Scalar;
-    fn max_component(&self) -> Self::Scalar;
+    fn min_component(self) -> Self::Scalar;
+    fn max_component(self) -> Self::Scalar;
 }
 
 pub trait Ones: Copy {
@@ -77,18 +77,18 @@ pub trait Ones: Copy {
 
 pub trait Distance: Point {
     /// The L1 distance between points.
-    fn l1_distance(&self, other: &Self) -> <Self as Point>::Scalar;
+    fn l1_distance(self, other: Self) -> <Self as Point>::Scalar;
 
     /// The square of the L2 (Euclidean) distance between points.
-    fn l2_distance_squared(&self, other: &Self) -> <Self as Point>::Scalar;
+    fn l2_distance_squared(self, other: Self) -> <Self as Point>::Scalar;
 }
 
 pub trait NormSquared {
-    fn norm_squared(&self) -> f32;
+    fn norm_squared(self) -> f32;
 }
 
 pub trait Norm {
-    fn norm(&self) -> f32;
+    fn norm(self) -> f32;
 }
 
 impl<T> Norm for T
@@ -96,7 +96,7 @@ where
     T: NormSquared,
 {
     #[inline]
-    fn norm(&self) -> f32 {
+    fn norm(self) -> f32 {
         self.norm_squared().sqrt()
     }
 }
@@ -105,7 +105,7 @@ pub trait DotProduct {
     type Scalar: Copy;
 
     /// The vector dot product.
-    fn dot(&self, other: &Self) -> Self::Scalar;
+    fn dot(self, other: Self) -> Self::Scalar;
 }
 
 pub trait IntegerPoint<N>:
@@ -130,28 +130,28 @@ pub trait IntegerPoint<N>:
     + Shr<i32, Output = Self>
 {
     /// Returns `true` iff all dimensions are powers of 2.
-    fn dimensions_are_powers_of_2(&self) -> bool;
+    fn dimensions_are_powers_of_2(self) -> bool;
 
     /// Returns `true` iff all dimensions are equal.
-    fn is_cube(&self) -> bool;
+    fn is_cube(self) -> bool;
 }
 
 pub trait IntegerDiv {
-    fn vector_div_floor(&self, rhs: &Self) -> Self;
+    fn vector_div_floor(self, rhs: Self) -> Self;
 
-    fn scalar_div_floor(&self, rhs: i32) -> Self;
+    fn scalar_div_floor(self, rhs: i32) -> Self;
 
-    fn vector_div_ceil(&self, rhs: &Self) -> Self;
+    fn vector_div_ceil(self, rhs: Self) -> Self;
 
-    fn scalar_div_ceil(&self, rhs: i32) -> Self;
+    fn scalar_div_ceil(self, rhs: i32) -> Self;
 }
 
 pub trait LatticeOrder {
     /// Component-wise maximum.
-    fn join(&self, other: &Self) -> Self;
+    fn join(self, other: Self) -> Self;
 
     /// Component-wise minimum.
-    fn meet(&self, other: &Self) -> Self;
+    fn meet(self, other: Self) -> Self;
 }
 
 macro_rules! impl_unary_ops {
@@ -180,12 +180,12 @@ macro_rules! impl_binary_ops {
     ($t:ty, $scalar:ty) => {
         impl LatticeOrder for $t {
             #[inline]
-            fn join(&self, other: &Self) -> Self {
+            fn join(self, other: Self) -> Self {
                 self.map_components_binary(other, <$scalar>::max)
             }
 
             #[inline]
-            fn meet(&self, other: &Self) -> Self {
+            fn meet(self, other: Self) -> Self {
                 self.map_components_binary(other, <$scalar>::min)
             }
         }
@@ -195,7 +195,7 @@ macro_rules! impl_binary_ops {
 
             #[inline]
             fn mul(self, rhs: Self) -> Self {
-                self.map_components_binary(&rhs, |c1, c2| c1 * c2)
+                self.map_components_binary(rhs, |c1, c2| c1 * c2)
             }
         }
     };
@@ -205,22 +205,22 @@ macro_rules! impl_unary_float_ops {
     ($t:ty) => {
         impl $t {
             #[inline]
-            pub fn round(&self) -> Self {
+            pub fn round(self) -> Self {
                 self.map_components_unary(|c| c.round())
             }
 
             #[inline]
-            pub fn floor(&self) -> Self {
+            pub fn floor(self) -> Self {
                 self.map_components_unary(|c| c.floor())
             }
 
             #[inline]
-            pub fn ceil(&self) -> Self {
+            pub fn ceil(self) -> Self {
                 self.map_components_unary(|c| c.ceil())
             }
 
             #[inline]
-            pub fn fract(&self) -> Self {
+            pub fn fract(self) -> Self {
                 self.map_components_unary(|c| c.fract())
             }
         }
@@ -301,7 +301,7 @@ macro_rules! impl_binary_integer_ops {
 
             #[inline]
             fn bitand(self, rhs: Self) -> Self {
-                self.map_components_binary(&rhs, |c1, c2| c1 & c2)
+                self.map_components_binary(rhs, |c1, c2| c1 & c2)
             }
         }
 
@@ -310,7 +310,7 @@ macro_rules! impl_binary_integer_ops {
 
             #[inline]
             fn bitor(self, rhs: Self) -> Self {
-                self.map_components_binary(&rhs, |c1, c2| c1 | c2)
+                self.map_components_binary(rhs, |c1, c2| c1 | c2)
             }
         }
 
@@ -319,7 +319,7 @@ macro_rules! impl_binary_integer_ops {
 
             #[inline]
             fn bitxor(self, rhs: Self) -> Self {
-                self.map_components_binary(&rhs, |c1, c2| c1 ^ c2)
+                self.map_components_binary(rhs, |c1, c2| c1 ^ c2)
             }
         }
 
@@ -328,7 +328,7 @@ macro_rules! impl_binary_integer_ops {
 
             #[inline]
             fn rem(self, other: Self) -> Self {
-                self.map_components_binary(&other, |c1, c2| c1 % c2)
+                self.map_components_binary(other, |c1, c2| c1 % c2)
             }
         }
 
@@ -337,7 +337,7 @@ macro_rules! impl_binary_integer_ops {
 
             #[inline]
             fn shl(self, rhs: Self) -> Self {
-                self.map_components_binary(&rhs, |c1, c2| c1 << c2)
+                self.map_components_binary(rhs, |c1, c2| c1 << c2)
             }
         }
 
@@ -346,7 +346,7 @@ macro_rules! impl_binary_integer_ops {
 
             #[inline]
             fn shr(self, rhs: Self) -> Self {
-                self.map_components_binary(&rhs, |c1, c2| c1 >> c2)
+                self.map_components_binary(rhs, |c1, c2| c1 >> c2)
             }
         }
     };
@@ -368,7 +368,7 @@ macro_rules! impl_float_div {
 
             #[inline]
             fn div(self, rhs: Self) -> Self {
-                self.map_components_binary(&rhs, |c1, c2| c1 / c2)
+                self.map_components_binary(rhs, |c1, c2| c1 / c2)
             }
         }
     };
@@ -394,28 +394,28 @@ macro_rules! impl_integer_div {
 
             #[inline]
             fn div(self, rhs: Self) -> Self {
-                self.vector_div_floor(&rhs)
+                self.vector_div_floor(rhs)
             }
         }
 
         impl IntegerDiv for $t {
             #[inline]
-            fn vector_div_floor(&self, rhs: &Self) -> Self {
+            fn vector_div_floor(self, rhs: Self) -> Self {
                 self.map_components_binary(rhs, |c1, c2| c1.div_floor(&c2))
             }
 
             #[inline]
-            fn scalar_div_floor(&self, rhs: i32) -> Self {
+            fn scalar_div_floor(self, rhs: i32) -> Self {
                 self.map_components_unary(|c| c.div_floor(&rhs))
             }
 
             #[inline]
-            fn vector_div_ceil(&self, rhs: &Self) -> Self {
+            fn vector_div_ceil(self, rhs: Self) -> Self {
                 self.map_components_binary(rhs, |c1, c2| c1.div_ceil(&c2))
             }
 
             #[inline]
-            fn scalar_div_ceil(&self, rhs: i32) -> Self {
+            fn scalar_div_ceil(self, rhs: i32) -> Self {
                 self.map_components_unary(|c| c.div_ceil(&rhs))
             }
         }
@@ -436,7 +436,7 @@ pub trait Neighborhoods: Sized {
 pub trait IterExtent<N> {
     type PointIter: Iterator<Item = PointN<N>>;
 
-    fn iter_extent(min: &PointN<N>, max: &PointN<N>) -> Self::PointIter;
+    fn iter_extent(min: PointN<N>, max: PointN<N>) -> Self::PointIter;
 }
 
 // `Zero` trait doesn't allow associated constants for zero because of bignums.

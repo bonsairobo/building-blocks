@@ -73,8 +73,8 @@ pub fn triangulate_height_map<A, H>(
     // Avoid accessing out of bounds with a 3x3x3 kernel.
     let interior_extent = extent.padded(-1);
 
-    let x_stride = height_map.stride_from_local_point(&Local(PointN([1, 0])));
-    let y_stride = height_map.stride_from_local_point(&Local(PointN([0, 1])));
+    let x_stride = height_map.stride_from_local_point(Local(PointN([1, 0])));
+    let y_stride = height_map.stride_from_local_point(Local(PointN([0, 1])));
 
     height_map.for_each(
         &interior_extent,

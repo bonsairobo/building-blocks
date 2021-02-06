@@ -81,13 +81,13 @@ Then you get extra bits of functionality from the others:
 
 To learn the basics about lattice maps, start with these doc pages:
 
-- [points](crate::core::point::PointN)
-- [extents](crate::core::extent::ExtentN)
-- [arrays](crate::storage::array)
-- [access traits](crate::storage::access)
-- [chunk maps](crate::storage::chunk_map)
-- [transform maps](crate::storage::transform_map)
-- [fn maps](crate::storage::func)
+- [points](https://docs.rs/building_blocks_core/latest/building_blocks_core/point/struct.PointN.html)
+- [extents](https://docs.rs/building_blocks_core/latest/building_blocks_core/extent/struct.ExtentN.html)
+- [arrays](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/array/index.html)
+- [access traits](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/access/index.html)
+- [chunk maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/chunk_map/index.html)
+- [transform maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/transform_map/index.html)
+- [fn maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/func/index.html)
 
 ### Benchmarks
 

@@ -110,7 +110,8 @@
 //!
 //! ### Math Type Conversions
 //!
-//! The `PointN` types have conversions to/from `glam`, `nalgebra`, and `mint` types by enabling the corresponding feature.
+//! The `PointN` types have conversions to/from [`glam`](https://docs.rs/glam), [`nalgebra`](https://nalgebra.org/), and
+//! [`mint`](https://docs.rs/mint) types by enabling the corresponding feature.
 //!
 //! ### Compression Backends and WASM
 //!
@@ -127,19 +128,20 @@
 //!
 //! ### VOX Files
 //!
-//! ".VOX" files are supported via the `dot_vox` crate. Enable the `dot_vox` feature to expose the generic `encode_vox` function
-//! and `Array3::decode_vox` constructor.
+//! ".VOX" files are supported via the [`dot_vox`](https://docs.rs/dot_vox/) crate. Enable the `dot_vox` feature to expose the
+//! generic `encode_vox` function and `Array3::decode_vox` constructor.
 //!
 //! ### Images
 //!
-//! Arrays can be converted to `ImageBuffer`s and constructed from `GenericImageView`s from the `images` crate. Enable the
-//! `images` feature to expose the generic `encode_image` function and `From<Im> where Im: GenericImageView` impl.
+//! Arrays can be converted to `ImageBuffer`s and constructed from `GenericImageView`s from the
+//! [`images`](https://docs.rs/images) crate. Enable the `images` feature to expose the generic `encode_image` function and
+//! `From<Im> where Im: GenericImageView` impl.
 //!
 //! ### Signed Distance Field Utilities (sdfu)
 //!
-//! The `sdfu` crate provides convenient APIs for constructive solid geometry operations. By enabling this feature, the `PointN`
-//! types will implement the `sdfu::mathtypes` traits in order to be used with these APIs. The `sdfu` crate also gets exported
-//! under `building_blocks::core::sdfu`.
+//! The [`sdfu`](https://docs.rs/sdfu) crate provides convenient APIs for constructive solid geometry operations. By enabling
+//! this feature, the `PointN` types will implement the `sdfu::mathtypes` traits in order to be used with these APIs. The `sdfu`
+//! crate also gets exported under `building_blocks::core::sdfu`.
 //!
 //! # Development
 //!

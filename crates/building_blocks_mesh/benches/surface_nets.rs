@@ -50,7 +50,7 @@ impl From<Voxel> for f32 {
 const EXTENT_RADIUS: i32 = 30;
 
 // The higher the frequency (n) the more surface area to mesh.
-fn sine_sdf(p: &Point3i) -> Voxel {
+fn sine_sdf(p: Point3i) -> Voxel {
     let n = 10.0;
     let val = ((p.x() as f32 / EXTENT_RADIUS as f32) * n * std::f32::consts::PI / 2.0).sin()
         + ((p.y() as f32 / EXTENT_RADIUS as f32) * n * std::f32::consts::PI / 2.0).sin()

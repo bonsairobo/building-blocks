@@ -63,6 +63,13 @@ pub trait MapComponents {
     ) -> Self;
 }
 
+pub trait MinMaxComponent {
+    type Scalar;
+
+    fn min_component(&self) -> Self::Scalar;
+    fn max_component(&self) -> Self::Scalar;
+}
+
 pub trait Ones: Copy {
     /// A point of all ones.
     const ONES: Self;

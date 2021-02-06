@@ -124,6 +124,32 @@ where
     }
 }
 
+impl MinMaxComponent for Point2i {
+    type Scalar = i32;
+
+    #[inline]
+    fn min_component(&self) -> Self::Scalar {
+        self.x().min(self.y())
+    }
+    #[inline]
+    fn max_component(&self) -> Self::Scalar {
+        self.x().max(self.y())
+    }
+}
+
+impl MinMaxComponent for Point2f {
+    type Scalar = f32;
+
+    #[inline]
+    fn min_component(&self) -> Self::Scalar {
+        self.x().min(self.y())
+    }
+    #[inline]
+    fn max_component(&self) -> Self::Scalar {
+        self.x().max(self.y())
+    }
+}
+
 impl<T> GetComponent for Point2<T>
 where
     T: Copy,

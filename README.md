@@ -13,10 +13,10 @@ Building Blocks is a voxel library for real-time applications.
 The primary focus is core data structures and algorithms. Features include:
 
 - memory-efficient storage of voxel maps
-  - a `ChunkMap` with generic chunk storage
+  - a [`ChunkMap`](crate::storage::chunk_map) with generic chunk storage
   - LRU-cached storage of compressed chunks
   - compressed serialization format
-  - `OctreeSet` bitset structure
+  - [`OctreeSet`](crate::storage::octree) bitset structure
 - mesh generation
   - isosurface
   - cubic / blocky
@@ -71,23 +71,23 @@ used in real applications.
 
 This library is organized into several crates. The most fundamental are:
 
-- **core**: lattice point and extent data types
-- **storage**: storage for lattice maps, i.e. functions defined on `Z^2` and `Z^3`
+- [**core**](crate::core): lattice point and extent data types
+- [**storage**](crate::storage): storage for lattice maps, i.e. functions defined on `Z^2` and `Z^3`
 
 Then you get extra bits of functionality from the others:
 
-- **mesh**: 3D mesh generation algorithms
-- **search**: search algorithms on lattice maps
+- [**mesh**](crate::mesh): 3D mesh generation algorithms
+- [**search**](crate::search): search algorithms on lattice maps
 
 To learn the basics about lattice maps, start with these doc pages:
 
-- [points](https://docs.rs/building_blocks_core/latest/building_blocks_core/point/struct.PointN.html)
-- [extents](https://docs.rs/building_blocks_core/latest/building_blocks_core/extent/struct.ExtentN.html)
-- [arrays](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/array/index.html)
-- [access traits](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/access/index.html)
-- [chunk maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/chunk_map/index.html)
-- [transform maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/transform_map/index.html)
-- [fn maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/func/index.html)
+- [points](crate::core::point::PointN)
+- [extents](crate::core::extent::ExtentN)
+- [arrays](crate::storage::array)
+- [access traits](crate::storage::access)
+- [chunk maps](crate::storage::chunk_map)
+- [transform maps](crate::storage::transform_map)
+- [fn maps](crate::storage::func)
 
 ### Benchmarks
 
@@ -149,7 +149,8 @@ crate also gets exported under `building_blocks::core::sdfu`.
 
 We prioritize work according to the [project board](https://github.com/bonsairobo/building-blocks/projects/1).
 
-If you'd like to make a contribution, please first read the **[design philosophy](DESIGN.md)** and **[contribution
-guidelines](CONTRIBUTING.md)**.
+If you'd like to make a contribution, please first read the **[design
+philosophy](https://github.com/bonsairobo/building-blocks/blob/main/DESIGN.md)** and **[contribution
+guidelines](https://github.com/bonsairobo/building-blocks/blob/main/CONTRIBUTING.md)**.
 
 License: MIT

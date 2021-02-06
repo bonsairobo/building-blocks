@@ -192,18 +192,18 @@ impl OctreeSet {
 
     /// Same as `visit`, but visit only the octants that overlap `extent`.
     pub fn visit_extent(&self, extent: &Extent3i, visitor: &mut impl OctreeVisitor) -> VisitStatus {
-        self.visit(&mut |octant: Octant, is_leaf: bool| {
+        self.visit(&mut |location: &_, octant: Octant, is_leaf| {
             if Extent3i::from(octant).intersection(extent).is_empty() {
                 return VisitStatus::Stop;
             }
 
-            visitor.visit_octant(octant, is_leaf)
+            visitor.visit_octree(location, octant, is_leaf)
         })
     }
 
     /// Same as `visit`, but descendants of collapsed octants are also visited using an `OctantVisitor`.
     pub fn visit_all_octants(&self, visitor: &mut impl OctantVisitor) -> VisitStatus {
-        self.visit(&mut |octant: Octant, is_leaf| {
+        self.visit(&mut |_location: &_, octant: Octant, is_leaf| {
             if is_leaf {
                 octant.visit_self_and_descendants(visitor)
             } else {
@@ -222,7 +222,7 @@ impl OctreeSet {
 
         // Base case where the octant is a single leaf voxel.
         if octant.is_single_voxel() {
-            return visitor.visit_octant(octant, true);
+            return visitor.visit_octree(&LocationHandle(LocationCode::LEAF), octant, true);
         }
 
         // Continue traversal of this branch.
@@ -232,11 +232,11 @@ impl OctreeSet {
         } else {
             // Since we know that location exists, but it's not in the nodes map, this means that we
             // can assume the entire octant is full. This is an implicit leaf node.
-            return visitor.visit_octant(octant, true);
+            return visitor.visit_octree(&LocationHandle(location), octant, true);
         };
 
         // Definitely not at a leaf node.
-        let status = visitor.visit_octant(octant, false);
+        let status = visitor.visit_octree(&LocationHandle(location), octant, false);
         if status != VisitStatus::Continue {
             return status;
         }
@@ -442,6 +442,25 @@ impl OctreeNode {
 
 type ChildBitMask = u8;
 
+/// An opaque handle for users to visit a location or subtree of an `OctreeSet`.
+pub struct LocationHandle(LocationCode);
+
+impl LocationHandle {
+    /// Allows a visitor to visit a subtree using a different function. Useful for traversals that need to find a subtree, then
+    /// search within that subtree using a different algorithm.
+    pub fn visit_descendants(
+        &self,
+        octree: &OctreeSet,
+        visitor: &mut impl OctreeVisitor,
+    ) -> VisitStatus {
+        if self.0 == LocationCode::LEAF {
+            return VisitStatus::Continue;
+        }
+
+        octree._visit(self.0, self.0.octant(octree.octant()), visitor)
+    }
+}
+
 /// Uniquely identifies a location in a given octree.
 ///
 /// Supports an octree with at most 6 levels.
@@ -460,6 +479,8 @@ type ChildBitMask = u8;
 struct LocationCode(u16);
 
 impl LocationCode {
+    const NUM_TRIPLETS: usize = 5;
+
     const ROOT: Self = Self(1);
     // Leaves don't need to store child bitmasks, so we can give them a sentinel code.
     const LEAF: Self = Self(0);
@@ -470,6 +491,36 @@ impl LocationCode {
 
     fn with_lowest_octant(self, octant: u16) -> Self {
         Self(self.0 | octant)
+    }
+
+    fn lowest_octant(self) -> u8 {
+        (self.0 & 0b111) as u8
+    }
+
+    fn decode_octants(mut self) -> (usize, [u8; Self::NUM_TRIPLETS]) {
+        assert!(self != Self::LEAF);
+
+        let mut i = 0;
+        let mut octant_path = [0; Self::NUM_TRIPLETS];
+
+        while self != Self::ROOT {
+            octant_path[i] = self.lowest_octant();
+            self.0 >>= 3;
+            i += 1;
+        }
+
+        (i, octant_path)
+    }
+
+    fn octant(&self, root_octant: Octant) -> Octant {
+        let (num_levels, octant_path) = self.decode_octants();
+
+        let mut octant = root_octant;
+        for i in (0..num_levels).rev() {
+            octant = octant.child(octant_path[i]);
+        }
+
+        octant
     }
 }
 
@@ -556,17 +607,28 @@ where
 }
 
 pub trait OctreeVisitor {
-    /// Visit any octant that contains points in the octree.
-    fn visit_octant(&mut self, octant: Octant, is_leaf: bool) -> VisitStatus;
+    /// Visit any octant that contains points in the octree. `is_leaf` is true iff all points in `octant` are contained in the
+    /// set. `location` maybe used to visit this sub-octree using a nested visitor.
+    fn visit_octree(
+        &mut self,
+        location: &LocationHandle,
+        octant: Octant,
+        is_leaf: bool,
+    ) -> VisitStatus;
 }
 
 impl<F> OctreeVisitor for F
 where
-    F: FnMut(Octant, bool) -> VisitStatus,
+    F: FnMut(&LocationHandle, Octant, bool) -> VisitStatus,
 {
     #[inline]
-    fn visit_octant(&mut self, octant: Octant, is_leaf: bool) -> VisitStatus {
-        (self)(octant, is_leaf)
+    fn visit_octree(
+        &mut self,
+        location: &LocationHandle,
+        octant: Octant,
+        is_leaf: bool,
+    ) -> VisitStatus {
+        (self)(location, octant, is_leaf)
     }
 }
 
@@ -593,6 +655,24 @@ mod tests {
 
     use rand::Rng;
     use std::collections::HashSet;
+
+    #[test]
+    fn nested_visitors() {
+        let voxels = random_voxels();
+        let octree = OctreeSet::from_array3(&voxels, *voxels.extent());
+
+        octree.visit(&mut |location: &LocationHandle, octant: Octant, _is_leaf| {
+            if octant.power() == 3 {
+                location.visit_descendants(&octree, &mut |_location: &_, _octant, _is_leaf| {
+                    VisitStatus::Continue
+                });
+
+                VisitStatus::Stop
+            } else {
+                VisitStatus::Continue
+            }
+        });
+    }
 
     #[test]
     fn add_extents() {
@@ -645,7 +725,7 @@ mod tests {
             set.assert_all_nodes_reachable();
 
             expected_array_set.fill_extent(&add_extent, true);
-            set.visit(&mut |octant, is_leaf| {
+            set.visit(&mut |_location: &_, octant, is_leaf| {
                 if is_leaf {
                     mirror_array_set.fill_extent(&Extent3i::from(octant), true);
                 }
@@ -674,7 +754,7 @@ mod tests {
 
         let mut octant_voxels = HashSet::new();
 
-        octree.visit(&mut |octant: Octant, is_leaf: bool| {
+        octree.visit(&mut |_location: &_, octant: Octant, is_leaf: bool| {
             if is_leaf {
                 for p in Extent3i::from(octant).iter_points() {
                     octant_voxels.insert(p);

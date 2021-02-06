@@ -1,11 +1,10 @@
 //! The `OctreeSet` type is a memory-efficient set of points.
 //!
-//! The typical workflow for using an `Octree` is to construct it from an `Array3`, then insert it
-//! into an `OctreeDBVT` in order to perform spatial queries like raycasting.
+//! The typical workflow for using an `Octree` is to construct it from an `Array3`, then insert it into an `OctreeDBVT` in order
+//! to perform spatial queries like raycasting.
 //!
-//! `OctreeSet` supports two modes of traversal. One is using the visitor pattern, which is the most
-//! efficient. The other is "node-based," which is less efficient and more manual but also more
-//! flexible.
+//! `OctreeSet` supports two modes of traversal. One is using the visitor pattern, which is the most efficient. The other is
+//! "node-based," which is less efficient and more manual but also more flexible.
 
 use crate::{access::GetUncheckedRelease, prelude::*, IsEmpty};
 
@@ -15,17 +14,15 @@ use fnv::FnvHashMap;
 
 /// A sparse set of voxel coordinates (3D integer points). Supports spatial queries.
 ///
-/// The octree is a cube shape and the edge lengths can only be a power of 2, at most 64. When an
-/// entire octant is full, it will be stored in a collapsed representation, so the leaves of the
-/// tree can be differently sized octants.
+/// The octree is a cube shape and the edge lengths can only be a power of 2, at most 64. When an entire octant is full, it will
+/// be stored in a collapsed representation, so the leaves of the tree can be differently sized octants.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OctreeSet {
     extent: Extent3i,
     power: u8,
     root_exists: bool,
-    // Save memory by using 2-byte location codes as hash map keys instead of 64-bit node pointers.
-    // The total memory usage can be approximated as 4 bytes per node, assuming the hashbrown table
-    // has 1 byte of overhead per entry.
+    // Save memory by using 2-byte location codes as hash map keys instead of 64-bit node pointers. The total memory usage can
+    // be approximated as 4 bytes per node, assuming the hashbrown table has 1 byte of overhead per entry.
     nodes: FnvHashMap<LocationCode, ChildBitMask>,
 }
 
@@ -54,10 +51,9 @@ impl OctreeSet {
 
     // TODO: from_height_map
 
-    /// Constructs an `Octree` which contains all of the points in `extent` which are not empty (as
-    /// defined by the `IsEmpty` trait). `extent` must be cube-shaped with edge length being a power
-    /// of 2. For exponent E where edge length is 2^E, we must have `0 < E <= 6`, because there is a
-    /// maximum fixed depth of the octree.
+    /// Constructs an `Octree` which contains all of the points in `extent` which are not empty (as defined by the `IsEmpty`
+    /// trait). `extent` must be cube-shaped with edge length being a power of 2. For exponent E where edge length is 2^E, we
+    /// must have `0 < E <= 6`, because there is a maximum fixed depth of the octree.
     pub fn from_array3<A, T>(array: &A, extent: Extent3i) -> Self
     where
         A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
@@ -111,8 +107,8 @@ impl OctreeSet {
         A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
         T: Clone + IsEmpty,
     {
-        // Base case where the octant is a single voxel. The `location` is invalid and unnecessary
-        // in this case; we avoid using it by returning early.
+        // Base case where the octant is a single voxel. The `location` is invalid and unnecessary in this case; we avoid using
+        // it by returning early.
         if edge_length == 1 {
             let exists = !array.get_unchecked_release(minimum).is_empty();
             return (exists, exists);
@@ -230,8 +226,8 @@ impl OctreeSet {
         let child_bitmask = if let Some(child_bitmask) = self.nodes.get(&location) {
             child_bitmask
         } else {
-            // Since we know that location exists, but it's not in the nodes map, this means that we
-            // can assume the entire octant is full. This is an implicit leaf node.
+            // Since we know that location exists, but it's not in the nodes map, this means that we can assume the entire
+            // octant is full. This is an implicit leaf node.
             return visitor.visit_octree(&LocationHandle(location), octant, true);
         };
 
@@ -287,8 +283,7 @@ impl OctreeSet {
         let child_octant = parent.octant.child(child_index);
 
         if child_power == 0 {
-            // The child is a leaf, so we don't need to extend the location or look for a child
-            // bitmask.
+            // The child is a leaf, so we don't need to extend the location or look for a child bitmask.
             return Some(OctreeNode {
                 location: LocationCode::LEAF,
                 octant: child_octant,
@@ -409,8 +404,7 @@ impl OctreeSet {
     }
 }
 
-/// Represents a single non-empty octant in the octree. Used for manual traversal by calling
-/// `OctreeSet::get_child`.
+/// Represents a single non-empty octant in the octree. Used for manual traversal by calling `OctreeSet::get_child`.
 #[derive(Clone, Copy, Debug)]
 pub struct OctreeNode {
     location: LocationCode,
@@ -431,9 +425,9 @@ impl OctreeNode {
         self.octant
     }
 
-    /// The power of a node is directly related to the edge length of octants at that level of the
-    /// tree. So the power of the root node is `P` where `edge_length = 2 ^ P`. The power of any
-    /// single-point leaf octant is 0, because `edge_length = 1 = 2 ^ 0`.
+    /// The power of a node is directly related to the edge length of octants at that level of the tree. So the power of the
+    /// root node is `P` where `edge_length = 2 ^ P`. The power of any single-point leaf octant is 0, because `edge_length = 1 =
+    /// 2 ^ 0`.
     #[inline]
     pub fn power(&self) -> u8 {
         self.power
@@ -442,7 +436,7 @@ impl OctreeNode {
 
 type ChildBitMask = u8;
 
-/// An opaque handle for users to visit a location or subtree of an `OctreeSet`.
+/// An opaque handle for users to visit a sub-octree of an `OctreeSet`.
 pub struct LocationHandle(LocationCode);
 
 impl LocationHandle {
@@ -524,8 +518,8 @@ impl LocationCode {
     }
 }
 
-/// A cube-shaped extent which is an octant at some level of an octree. As a leaf node, it
-/// represents a totally full set of points.
+/// A cube-shaped extent which is an octant at some level of an octree. As a leaf node, it represents a totally full set of
+/// points.
 #[derive(Clone, Copy, Debug)]
 pub struct Octant {
     minimum: Point3i,

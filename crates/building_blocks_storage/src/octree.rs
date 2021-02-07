@@ -664,8 +664,8 @@ impl Location {
     }
 
     #[inline]
-    pub fn octant(&self) -> Octant {
-        self.octant
+    pub fn octant(&self) -> &Octant {
+        &self.octant
     }
 }
 

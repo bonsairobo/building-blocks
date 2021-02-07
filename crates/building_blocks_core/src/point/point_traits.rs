@@ -270,7 +270,7 @@ macro_rules! impl_unary_integer_ops {
 
             #[inline]
             fn rem(self, rhs: $scalar) -> Self {
-                self.map_components_unary(|c| c % rhs)
+                self.map_components_unary(|c| c.rem_euclid(rhs))
             }
         }
 
@@ -328,7 +328,7 @@ macro_rules! impl_binary_integer_ops {
 
             #[inline]
             fn rem(self, other: Self) -> Self {
-                self.map_components_binary(other, |c1, c2| c1 % c2)
+                self.map_components_binary(other, |c1, c2| c1.rem_euclid(c2))
             }
         }
 

@@ -736,7 +736,7 @@ mod tests {
             expected_array_set.fill_extent(&add_extent, true);
             set.visit_branches_and_leaves(&mut |location: &Location| {
                 if location.is_full() {
-                    mirror_array_set.fill_extent(&Extent3i::from(location.octant()), true);
+                    mirror_array_set.fill_extent(&Extent3i::from(*location.octant()), true);
                 }
 
                 VisitStatus::Continue
@@ -765,7 +765,7 @@ mod tests {
 
         octree.visit_branches_and_leaves(&mut |location: &Location| {
             if location.is_full() {
-                for p in Extent3i::from(location.octant()).iter_points() {
+                for p in Extent3i::from(*location.octant()).iter_points() {
                     octant_voxels.insert(p);
                 }
             }

@@ -245,19 +245,17 @@ where
 
 /// Returns the smallest extent containing all of the given points.
 #[inline]
-pub fn bounding_extent<N, I>(points: I) -> ExtentN<N>
+pub fn bounding_extent<N, I>(mut points: I) -> ExtentN<N>
 where
     I: Iterator<Item = PointN<N>>,
     PointN<N>: IntegerPoint<N>,
 {
-    let mut points = points.peekable();
-    assert!(
-        points.peek().is_some(),
-        "Cannot find bounding extent of empty set of points"
-    );
+    let first_point = points
+        .next()
+        .expect("Cannot find bounding extent of empty set of points");
 
-    let mut min_point = PointN::MAX;
-    let mut max_point = PointN::MIN;
+    let mut min_point = first_point;
+    let mut max_point = first_point;
     for p in points {
         min_point = min_point.meet(p);
         max_point = max_point.join(p);

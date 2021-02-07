@@ -4,9 +4,7 @@
 //! placed into the `OctreeDBVT`.
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::octree::{
-    LocationHandle, Octant, OctreeSet, OctreeVisitor, VisitStatus,
-};
+use building_blocks_storage::octree::{Location, Octant, OctreeSet, OctreeVisitor, VisitStatus};
 
 use core::hash::Hash;
 use fnv::FnvHashMap;
@@ -73,15 +71,11 @@ impl<'a, V> OctreeVisitor for DBVTVisitorImpl<'a, V>
 where
     V: OctreeDBVTVisitor,
 {
-    fn visit_octree(
-        &mut self,
-        _location: &LocationHandle,
-        octant: Octant,
-        is_leaf: bool,
-    ) -> VisitStatus {
-        let aabb = octant_aabb(&octant);
+    fn visit_octant(&mut self, location: &Location) -> VisitStatus {
+        let aabb = octant_aabb(&location.octant());
 
-        self.0.visit(&aabb, Some(&octant), is_leaf)
+        self.0
+            .visit(&aabb, Some(location.octant()), location.is_full())
     }
 }
 
@@ -91,7 +85,7 @@ where
 {
     fn visit(&mut self, aabb: &AABB<f32>, octree: Option<&OctreeSet>) -> nc_part::VisitStatus {
         let status = if let Some(octree) = octree {
-            octree.visit(self)
+            octree.visit_branches_and_leaves(self)
         } else {
             self.0.visit(aabb, None, false)
         };
@@ -106,7 +100,7 @@ where
 
 pub trait OctreeDBVTVisitor {
     /// `octant` is only `Some` when traversing an `Octree`. Otherwise, you are traversing an upper-level internal node.
-    fn visit(&mut self, aabb: &AABB<f32>, octant: Option<&Octant>, is_leaf: bool) -> VisitStatus;
+    fn visit(&mut self, aabb: &AABB<f32>, octant: Option<&Octant>, is_full: bool) -> VisitStatus;
 }
 
 /// Returns the axis-aligned bounding box that bounds `octant`.

@@ -73,7 +73,7 @@ impl<'a, V> OctreeVisitor for DBVTVisitorImpl<'a, V>
 where
     V: OctreeDBVTVisitor,
 {
-    fn visit_octree(
+    fn visit_octant(
         &mut self,
         _location: &LocationHandle,
         octant: Octant,

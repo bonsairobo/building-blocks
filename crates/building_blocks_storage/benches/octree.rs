@@ -1,6 +1,6 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{
-    octree::{Octant, OctreeSet, VisitStatus},
+    octree::{Location, OctreeSet, VisitStatus},
     prelude::*,
     IsEmpty,
 };
@@ -63,8 +63,8 @@ fn octree_visit_all_octants_of_sphere(c: &mut Criterion) {
                         OctreeSet::from_array3(&map, *map.extent())
                     },
                     |octree| {
-                        octree.visit(&mut |location: &_, octant: Octant, is_leaf: bool| {
-                            black_box((location, octant, is_leaf));
+                        octree.visit_branches_and_leaves(&mut |location: &Location| {
+                            black_box(location);
 
                             VisitStatus::Continue
                         })

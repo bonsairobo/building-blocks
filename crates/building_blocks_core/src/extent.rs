@@ -250,6 +250,12 @@ where
     I: Iterator<Item = PointN<N>>,
     PointN<N>: IntegerPoint<N>,
 {
+    let mut points = points.peekable();
+    assert!(
+        points.peek().is_some(),
+        "Cannot find bounding extent of empty set of points"
+    );
+
     let mut min_point = PointN::MAX;
     let mut max_point = PointN::MIN;
     for p in points {

@@ -121,7 +121,7 @@
 //!
 //! ```toml
 //! [dependencies.building-blocks]
-//! version = "0.4.1"
+//! version = "0.5"
 //! default-features = false
 //! features = ["snappy"]
 //! ```

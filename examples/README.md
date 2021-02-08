@@ -9,7 +9,7 @@ Uses sdfu for modeling a signed distance field.
 cargo run --example bevy_minimal
 ```
 
-<img src="https://i.imgur.com/pnTRdO4.png" alt="Minimal" width="400" height="400">
+<img src="https://i.imgur.com/pnTRdO4.png" alt="Minimal" width="400">
 
 ## Bevy Meshing
 

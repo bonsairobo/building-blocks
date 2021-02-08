@@ -1,6 +1,6 @@
 [package]
 name = "building-blocks"
-version = "0.4.3"
+version = "0.5.0"
 edition = "2018"
 authors = ["Duncan <bonsairobo@gmail.com>"]
 description = "Data types, collections, and algorithms for working with maps on 2D and 3D integer lattices. Commonly known as voxel data."
@@ -53,12 +53,12 @@ lto = true
 lto = true
 
 [dependencies]
-building_blocks_core = { path = "crates/building_blocks_core", version = "0.4.3", default-features = false }
-building_blocks_storage = { path = "crates/building_blocks_storage", version = "0.4.3", default-features = false }
+building_blocks_core = { path = "crates/building_blocks_core", version = "0.5.0", default-features = false }
+building_blocks_storage = { path = "crates/building_blocks_storage", version = "0.5.0", default-features = false }
 
 # Optional, feature-gated
-building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.4.3", optional = true }
-building_blocks_search = { path = "crates/building_blocks_search", version = "0.4.3", optional = true, default-features = false }
+building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.5.0", optional = true }
+building_blocks_search = { path = "crates/building_blocks_search", version = "0.5.0", optional = true, default-features = false }
 
 [dev-dependencies]
 bevy = "0.4" # for examples

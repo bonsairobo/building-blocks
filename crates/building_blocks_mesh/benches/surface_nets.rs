@@ -6,24 +6,31 @@ use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 fn surface_nets_sine_sdf(c: &mut Criterion) {
     let mut group = c.benchmark_group("surface_nets_sine_sdf");
-    for radius in [4, 8, 16, 32].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(radius), radius, |b, &radius| {
-            b.iter_with_setup(
-                || {
-                    let sample_extent =
-                        Extent3i::from_min_and_max(PointN([-radius; 3]), PointN([radius; 3]));
-                    let mut samples = Array3::fill(sample_extent, Voxel(0.0));
-                    copy_extent(&sample_extent, &sine_sdf, &mut samples);
+    for diameter in [8, 16, 32, 64].iter() {
+        group.bench_with_input(
+            BenchmarkId::from_parameter(diameter),
+            diameter,
+            |b, &diameter| {
+                b.iter_with_setup(
+                    || {
+                        let radius = diameter >> 1;
+                        let sample_extent =
+                            Extent3i::from_min_and_max(PointN([-radius; 3]), PointN([radius; 3]));
+                        let mut samples = Array3::fill(sample_extent, Voxel(0.0));
+                        copy_extent(&sample_extent, &sine_sdf, &mut samples);
 
-                    // Do a single run first to allocate the buffer to the right size.
-                    let mut buffer = SurfaceNetsBuffer::default();
-                    surface_nets(&samples, samples.extent(), 1.0, &mut buffer);
+                        // Do a single run first to allocate the buffer to the right size.
+                        let mut buffer = SurfaceNetsBuffer::default();
+                        surface_nets(&samples, samples.extent(), 1.0, &mut buffer);
 
-                    (samples, buffer)
-                },
-                |(samples, mut buffer)| surface_nets(&samples, samples.extent(), 1.0, &mut buffer),
-            );
-        });
+                        (samples, buffer)
+                    },
+                    |(samples, mut buffer)| {
+                        surface_nets(&samples, samples.extent(), 1.0, &mut buffer)
+                    },
+                );
+            },
+        );
     }
     group.finish();
 }

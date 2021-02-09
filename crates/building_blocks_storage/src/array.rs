@@ -735,6 +735,10 @@ impl_array_for_each!(
     coords: PointN<N>;
     forwarder = |p, _stride| p;
 );
+impl_array_for_each!(
+    coords: ();
+    forwarder = |_p, _stride| ();
+);
 
 //  ██████╗ ██████╗ ██████╗ ██╗   ██╗
 // ██╔════╝██╔═══██╗██╔══██╗╚██╗ ██╔╝

@@ -55,7 +55,7 @@ pub mod prelude {
         CompressibleChunkStorageReader, Compression, FastArrayCompression, FastChunkCompression,
         ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, IsEmpty, IterChunkKeys, Local,
         LocalChunkCache, LocalChunkCache2, LocalChunkCache3, OctreeSet, ReadExtent,
-        SerializableChunkMap, Stride, TransformMap, WriteExtent,
+        SerializableChunkMap, SignedDistance, Stride, TransformMap, WriteExtent,
     };
 
     #[cfg(feature = "lz4")]

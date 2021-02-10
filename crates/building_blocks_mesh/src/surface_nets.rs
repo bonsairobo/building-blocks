@@ -9,17 +9,6 @@ pub fn padded_surface_nets_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {
     chunk_extent.padded(1)
 }
 
-pub trait SignedDistance: Into<f32> {
-    fn is_negative(self) -> bool;
-}
-
-impl SignedDistance for f32 {
-    #[inline]
-    fn is_negative(self) -> bool {
-        self < 0.0
-    }
-}
-
 /// The output buffers used by `surface_nets`. These buffers can be reused to avoid reallocating
 /// memory.
 #[derive(Default)]

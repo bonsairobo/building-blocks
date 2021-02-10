@@ -17,15 +17,15 @@ pub struct Sd16(pub i16);
 impl Sd8 {
     pub const RESOLUTION: f32 = std::i8::MAX as f32;
     pub const PRECISION: f32 = 1.0 / Self::RESOLUTION;
-    pub const MIN: Self = Self(std::i8::MIN);
-    pub const MAX: Self = Self(std::i8::MAX);
+    pub const NEG_ONE: Self = Self(std::i8::MIN);
+    pub const ONE: Self = Self(std::i8::MAX);
 }
 
 impl Sd16 {
     pub const RESOLUTION: f32 = std::i16::MAX as f32;
     pub const PRECISION: f32 = 1.0 / Self::RESOLUTION;
-    pub const MIN: Self = Self(std::i16::MIN);
-    pub const MAX: Self = Self(std::i16::MAX);
+    pub const NEG_ONE: Self = Self(std::i16::MIN);
+    pub const ONE: Self = Self(std::i16::MAX);
 }
 
 impl From<Sd8> for f32 {

@@ -3,7 +3,7 @@ use building_blocks::core::{
     sdfu::{self, SDF},
 };
 use building_blocks::mesh::*;
-use building_blocks::storage::{prelude::*, IsEmpty};
+use building_blocks::storage::{prelude::*, IsEmpty, Sd16};
 
 use bevy::{
     prelude::*,
@@ -43,22 +43,22 @@ enum Sdf {
 }
 
 impl Sdf {
-    fn get_sdf(&self) -> Box<dyn Fn(Point3i) -> f32> {
+    fn get_sdf(&self) -> Box<dyn Fn(Point3i) -> Sd16> {
         match self {
             Sdf::Cube => {
                 let cube = sdfu::Box::new(PointN([20.0; 3]));
 
-                Box::new(move |p| cube.dist(Point3f::from(p)))
+                Box::new(move |p| Sd16::from(cube.dist(Point3f::from(p))))
             }
             Sdf::Sphere => {
                 let sphere = sdfu::Sphere::new(20.0);
 
-                Box::new(move |p| sphere.dist(Point3f::from(p)))
+                Box::new(move |p| Sd16::from(sphere.dist(Point3f::from(p))))
             }
             Sdf::Torus => {
                 let torus = sdfu::Torus::new(4.0, 16.0);
 
-                Box::new(move |p| torus.dist(Point3f::from(p.yzx())))
+                Box::new(move |p| Sd16::from(torus.dist(Point3f::from(p.yzx()))))
             }
         }
     }
@@ -198,7 +198,7 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
 
     let builder = ChunkMapBuilder {
         chunk_shape: PointN([CHUNK_SIZE; 3]),
-        ambient_value: std::f32::MAX, // air
+        ambient_value: Sd16::ONE, // air
         default_chunk_metadata: (),
     };
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
@@ -215,7 +215,7 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
                 let padded_chunk_extent = padded_surface_nets_chunk_extent(
                     &map_ref.indexer.extent_for_chunk_at_key(*chunk_key),
                 );
-                let mut padded_chunk = Array3::fill(padded_chunk_extent, 0.0);
+                let mut padded_chunk = Array3::fill(padded_chunk_extent, Sd16(0));
                 copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
 
                 // TODO bevy: we could avoid re-allocating the buffers on every call if we had

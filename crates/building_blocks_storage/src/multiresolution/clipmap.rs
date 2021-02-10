@@ -3,7 +3,7 @@ use crate::{Location, LodChunkKey, LodChunkKey3, Octant, OctreeSet, VisitStatus}
 use building_blocks_core::prelude::*;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ClipMapConfig {
+pub struct ClipMapConfig3 {
     /// The number of levels of detail.
     pub num_lods: u8,
     /// The radius (in chunks) of a clipbox at any level of detail.
@@ -15,7 +15,7 @@ pub struct ClipMapConfig {
     pub chunk_shape: Point3i,
 }
 
-impl ClipMapConfig {
+impl ClipMapConfig3 {
     pub fn chunk_edge_length_log2(&self) -> i32 {
         self.chunk_shape.x().trailing_zeros() as i32
     }
@@ -23,7 +23,7 @@ impl ClipMapConfig {
 
 /// Traverse `octree` to find the `LodChunkKey3`s that are "active" when the clipmap is centered at `lod0_center`.
 pub fn active_clipmap_lod_chunks(
-    config: ClipMapConfig,
+    config: ClipMapConfig3,
     lod0_center: Point3i,
     octree: &OctreeSet,
     mut init_rx: impl FnMut(LodChunkKey3),
@@ -94,7 +94,7 @@ pub struct ClipMapUpdate3 {
 impl ClipMapUpdate3 {
     /// Prepare to run the `find_chunk_updates` method after the clipmap center has moved from `old_lod0_center` to
     /// `new_lod0_center`.
-    pub fn new(config: ClipMapConfig, old_lod0_center: Point3i, new_lod0_center: Point3i) -> Self {
+    pub fn new(config: ClipMapConfig3, old_lod0_center: Point3i, new_lod0_center: Point3i) -> Self {
         Self {
             chunk_log2: config.chunk_shape.x().trailing_zeros() as i32,
             num_lods: config.num_lods,

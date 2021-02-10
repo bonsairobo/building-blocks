@@ -23,6 +23,7 @@ pub mod compression;
 pub mod func;
 pub mod multiresolution;
 pub mod octree;
+pub mod signed_distance;
 pub mod transform_map;
 
 pub use access::*;
@@ -31,6 +32,7 @@ pub use chunk_map::*;
 pub use compression::*;
 pub use multiresolution::*;
 pub use octree::*;
+pub use signed_distance::*;
 pub use transform_map::*;
 
 /// Used in many generic algorithms to check if a voxel is considered empty.

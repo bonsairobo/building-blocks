@@ -23,7 +23,7 @@ impl ClipMapConfig3 {
 
 /// Traverse `octree` to find the `LodChunkKey3`s that are "active" when the clipmap is centered at `lod0_center`.
 pub fn active_clipmap_lod_chunks(
-    config: ClipMapConfig3,
+    config: &ClipMapConfig3,
     lod0_center: Point3i,
     octree: &OctreeSet,
     mut init_rx: impl FnMut(LodChunkKey3),
@@ -94,7 +94,11 @@ pub struct ClipMapUpdate3 {
 impl ClipMapUpdate3 {
     /// Prepare to run the `find_chunk_updates` method after the clipmap center has moved from `old_lod0_center` to
     /// `new_lod0_center`.
-    pub fn new(config: ClipMapConfig3, old_lod0_center: Point3i, new_lod0_center: Point3i) -> Self {
+    pub fn new(
+        config: &ClipMapConfig3,
+        old_lod0_center: Point3i,
+        new_lod0_center: Point3i,
+    ) -> Self {
         Self {
             chunk_log2: config.chunk_shape.x().trailing_zeros() as i32,
             num_lods: config.num_lods,

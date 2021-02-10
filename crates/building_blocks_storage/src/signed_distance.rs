@@ -37,7 +37,7 @@ impl From<Sd8> for f32 {
 }
 impl From<f32> for Sd8 {
     fn from(s: f32) -> Self {
-        Sd8((s.min(1.0).max(-1.0) / Self::RESOLUTION) as i8)
+        Sd8((Self::RESOLUTION * s.min(1.0).max(-1.0)) as i8)
     }
 }
 impl SignedDistance for Sd8 {
@@ -54,7 +54,7 @@ impl From<Sd16> for f32 {
 }
 impl From<f32> for Sd16 {
     fn from(s: f32) -> Self {
-        Sd16((s.min(1.0).max(-1.0) / Self::RESOLUTION) as i16)
+        Sd16((Self::RESOLUTION * s.min(1.0).max(-1.0)) as i16)
     }
 }
 impl SignedDistance for Sd16 {

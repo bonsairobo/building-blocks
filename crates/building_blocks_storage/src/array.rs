@@ -24,7 +24,7 @@
 //!
 //! // Write all points in the extent to the same value.
 //! let write_extent = Extent3i::from_min_and_lub(PointN([10, 10, 10]), PointN([20, 20, 20]));
-//! array.for_each_mut(&write_extent, |_stride: Stride, value| *value = 1);
+//! array.for_each_mut(&write_extent, |_: (), value| *value = 1);
 //!
 //! // Only the points in the extent should have been written.
 //! array.for_each(array.extent(), |p: Point3i, value|
@@ -132,8 +132,39 @@ pub trait Array<N> {
     fn extent(&self) -> &ExtentN<N>;
 
     #[inline]
-    fn for_each_point_and_stride(&self, extent: &ExtentN<N>, f: impl FnMut(PointN<N>, Stride)) {
-        Self::Indexer::for_each_point_and_stride(self.extent(), extent, f);
+    fn for_each_point_and_stride(&self, extent: &ExtentN<N>, f: impl FnMut(PointN<N>, Stride))
+    where
+        PointN<N>: IntegerPoint<N>,
+    {
+        Self::Indexer::for_each_point_and_stride_global(self.extent(), extent, f);
+    }
+
+    #[inline]
+    unsafe fn for_each_point_and_stride_global_unchecked(
+        &self,
+        iter_extent: &ExtentN<N>,
+        f: impl FnMut(PointN<N>, Stride),
+    ) where
+        PointN<N>: IntegerPoint<N>,
+    {
+        Self::Indexer::for_each_point_and_stride_global_unchecked(self.extent(), iter_extent, f);
+    }
+
+    #[inline]
+    unsafe fn for_each_point_and_stride_local_unchecked(
+        &self,
+        iter_min: Local<N>,
+        iter_shape: PointN<N>,
+        f: impl FnMut(PointN<N>, Stride),
+    ) where
+        PointN<N>: Copy,
+    {
+        Self::Indexer::for_each_point_and_stride_local_unchecked(
+            self.extent().shape,
+            iter_min,
+            iter_shape,
+            f,
+        );
     }
 
     #[inline]
@@ -156,18 +187,94 @@ pub trait Array<N> {
 pub trait ArrayIndexer<N> {
     fn stride_from_local_point(shape: PointN<N>, point: Local<N>) -> Stride;
 
-    fn for_each_point_and_stride(
-        array_extent: &ExtentN<N>,
-        extent: &ExtentN<N>,
+    fn for_each_point_and_stride_unchecked(
+        array_shape: PointN<N>,
+        index_min: Local<N>,
+        iter_min: PointN<N>,
+        iter_shape: PointN<N>,
         f: impl FnMut(PointN<N>, Stride),
     );
 
-    fn for_each_stride_parallel(
+    fn for_each_stride_parallel_global_unchecked(
         iter_extent: &ExtentN<N>,
         array1_extent: &ExtentN<N>,
         array2_extent: &ExtentN<N>,
         f: impl FnMut(Stride, Stride),
     );
+
+    #[inline]
+    fn for_each_point_and_stride_local_unchecked(
+        array_shape: PointN<N>,
+        index_min: Local<N>,
+        iter_shape: PointN<N>,
+        f: impl FnMut(PointN<N>, Stride),
+    ) where
+        PointN<N>: Copy,
+    {
+        Self::for_each_point_and_stride_unchecked(
+            array_shape,
+            index_min,
+            index_min.0,
+            iter_shape,
+            f,
+        );
+    }
+
+    #[inline]
+    fn for_each_point_and_stride_local(
+        array_extent: &ExtentN<N>,
+        iter_extent: &ExtentN<N>,
+        f: impl FnMut(PointN<N>, Stride),
+    ) where
+        PointN<N>: IntegerPoint<N>,
+    {
+        // Make sure we don't index out of array bounds.
+        let iter_extent = iter_extent.intersection(&ExtentN::from_min_and_shape(
+            PointN::ZERO,
+            array_extent.shape,
+        ));
+
+        Self::for_each_point_and_stride_local_unchecked(
+            array_extent.shape,
+            Local(iter_extent.minimum),
+            iter_extent.shape,
+            f,
+        );
+    }
+
+    #[inline]
+    fn for_each_point_and_stride_global_unchecked(
+        array_extent: &ExtentN<N>,
+        iter_extent: &ExtentN<N>,
+        f: impl FnMut(PointN<N>, Stride),
+    ) where
+        PointN<N>: IntegerPoint<N>,
+    {
+        // Translate to local coordinates.
+        let index_min = iter_extent.minimum - array_extent.minimum;
+
+        Self::for_each_point_and_stride_unchecked(
+            array_extent.shape,
+            Local(index_min),
+            iter_extent.minimum,
+            iter_extent.shape,
+            f,
+        );
+    }
+
+    #[inline]
+    fn for_each_point_and_stride_global(
+        array_extent: &ExtentN<N>,
+        iter_extent: &ExtentN<N>,
+        f: impl FnMut(PointN<N>, Stride),
+    ) where
+        PointN<N>: IntegerPoint<N>,
+    {
+        // Make sure we don't index out of array bounds.
+        let iter_extent = iter_extent.intersection(array_extent);
+
+        Self::for_each_point_and_stride_global_unchecked(array_extent, &iter_extent, f);
+    }
 
     #[inline]
     fn strides_from_local_points(shape: PointN<N>, points: &[Local<N>], strides: &mut [Stride])
@@ -672,16 +779,15 @@ macro_rules! impl_array_for_each {
         where
             Self: Sized + Get<Stride, Data = T> + GetUnchecked<Stride, Data = T>,
             N: ArrayIndexer<N>,
+            PointN<N>: IntegerPoint<N>,
         {
             type Data = T;
 
             #[inline]
-            fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut($coords, T)) {
-                <Self as Array<N>>::Indexer::for_each_point_and_stride(
-                    self.extent(),
-                    &extent,
-                    |$p, $stride| f($forward_coords, self.get_unchecked_release($stride)),
-                )
+            fn for_each(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, T)) {
+                self.for_each_point_and_stride(iter_extent, |$p, $stride| {
+                    f($forward_coords, self.get_unchecked_release($stride))
+                })
             }
         }
 
@@ -689,16 +795,15 @@ macro_rules! impl_array_for_each {
         where
             Self: Sized + GetRef<Stride, Data = T> + GetUncheckedRef<Stride, Data = T>,
             N: ArrayIndexer<N>,
+            PointN<N>: IntegerPoint<N>,
         {
             type Data = T;
 
             #[inline]
-            fn for_each_ref(&self, extent: &ExtentN<N>, mut f: impl FnMut($coords, &T)) {
-                <Self as Array<N>>::Indexer::for_each_point_and_stride(
-                    self.extent(),
-                    &extent,
-                    |$p, $stride| f($forward_coords, self.get_unchecked_ref_release($stride)),
-                )
+            fn for_each_ref(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, &T)) {
+                self.for_each_point_and_stride(iter_extent, |$p, $stride| {
+                    f($forward_coords, self.get_unchecked_ref_release($stride))
+                })
             }
         }
 
@@ -706,16 +811,22 @@ macro_rules! impl_array_for_each {
         where
             Self: Sized + GetMut<Stride, Data = T> + GetUncheckedMut<Stride, Data = T>,
             N: ArrayIndexer<N>,
+            PointN<N>: IntegerPoint<N>,
             ExtentN<N>: Copy,
         {
             type Data = T;
 
             #[inline]
-            fn for_each_mut(&mut self, extent: &ExtentN<N>, mut f: impl FnMut($coords, &mut T)) {
+            fn for_each_mut(
+                &mut self,
+                iter_extent: &ExtentN<N>,
+                mut f: impl FnMut($coords, &mut T),
+            ) {
+                // Can't borrow self as mutable and immutable at the same time.
                 let array_extent = *self.extent();
-                <Self as Array<N>>::Indexer::for_each_point_and_stride(
+                <Self as Array<N>>::Indexer::for_each_point_and_stride_global(
                     &array_extent,
-                    &extent,
+                    iter_extent,
                     |$p, $stride| f($forward_coords, self.get_unchecked_mut_release($stride)),
                 )
             }
@@ -826,11 +937,16 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
 {
     let dst_extent = *dst.extent();
     // It shoudn't matter which type we use for the indexer.
-    Dst::Indexer::for_each_stride_parallel(&extent, &dst_extent, src.extent(), |s_dst, s_src| {
-        // The actual copy.
-        // PERF: could be faster with SIMD copy
-        *dst.get_unchecked_mut_release(s_dst) = src.get_unchecked_release(s_src);
-    });
+    Dst::Indexer::for_each_stride_parallel_global_unchecked(
+        &extent,
+        &dst_extent,
+        src.extent(),
+        |s_dst, s_src| {
+            // The actual copy.
+            // PERF: could be faster with SIMD copy
+            *dst.get_unchecked_mut_release(s_dst) = src.get_unchecked_release(s_src);
+        },
+    );
 }
 
 impl<Map, N, T, Store> WriteExtent<N, ChunkCopySrc<Map, N, T>> for ArrayN<N, T, Store>
@@ -903,7 +1019,7 @@ mod tests {
 
     #[test]
     fn fill_and_get_3d() {
-        let extent = Extent3::from_min_and_shape(PointN([1, 1, 1]), PointN([10, 10, 10]));
+        let extent = Extent3::from_min_and_shape(PointN([1; 3]), PointN([10; 3]));
         let mut array = Array3::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 1000);
         *array.get_mut(Stride(0)) = 1;
@@ -913,11 +1029,11 @@ mod tests {
         assert_eq!(unsafe { array.get_unchecked(Stride(0)) }, 1);
         assert_eq!(unsafe { array.get_unchecked_mut(Stride(0)) }, &mut 1);
 
-        assert_eq!(array.get(Local(PointN([0, 0, 0]))), 1);
-        assert_eq!(array.get_mut(Local(PointN([0, 0, 0]))), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(Local(PointN([0, 0, 0]))) }, 1);
+        assert_eq!(array.get(Local(Point3i::ZERO)), 1);
+        assert_eq!(array.get_mut(Local(Point3i::ZERO)), &mut 1);
+        assert_eq!(unsafe { array.get_unchecked(Local(Point3i::ZERO)) }, 1);
         assert_eq!(
-            unsafe { array.get_unchecked_mut(Local(PointN([0, 0, 0]))) },
+            unsafe { array.get_unchecked_mut(Local(Point3i::ZERO)) },
             &mut 1
         );
 
@@ -931,8 +1047,40 @@ mod tests {
     }
 
     #[test]
+    fn fill_and_for_each_2d() {
+        let extent = Extent2::from_min_and_shape(PointN([1; 2]), PointN([10; 2]));
+        let mut array = Array2::fill(extent, 0);
+        assert_eq!(array.extent.num_points(), 100);
+        *array.get_mut(Stride(0)) = 1;
+
+        array.for_each(&extent, |p: Point2i, value| {
+            if p == PointN([1; 2]) {
+                assert_eq!(value, 1);
+            } else {
+                assert_eq!(value, 0);
+            }
+        });
+    }
+
+    #[test]
+    fn fill_and_for_each_3d() {
+        let extent = Extent3::from_min_and_shape(PointN([1; 3]), PointN([10; 3]));
+        let mut array = Array3::fill(extent, 0);
+        assert_eq!(array.extent.num_points(), 1000);
+        *array.get_mut(Stride(0)) = 1;
+
+        array.for_each(&extent, |p: Point3i, value| {
+            if p == PointN([1; 3]) {
+                assert_eq!(value, 1);
+            } else {
+                assert_eq!(value, 0);
+            }
+        });
+    }
+
+    #[test]
     fn uninitialized() {
-        let extent = Extent3::from_min_and_shape(PointN([1, 1, 1]), PointN([10, 10, 10]));
+        let extent = Extent3::from_min_and_shape(PointN([1; 3]), PointN([10; 3]));
         let mut array: Array3<MaybeUninit<i32>> = unsafe { Array3::maybe_uninit(extent) };
 
         for p in extent.iter_points() {

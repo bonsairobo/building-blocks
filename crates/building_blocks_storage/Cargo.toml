@@ -39,6 +39,10 @@ name = "accessors"
 harness = false
 
 [[bench]]
+name = "sampling"
+harness = false
+
+[[bench]]
 name = "compression"
 harness = false
 

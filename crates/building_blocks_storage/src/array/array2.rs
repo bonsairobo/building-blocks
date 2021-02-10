@@ -15,21 +15,19 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
     }
 
     #[inline]
-    fn for_each_point_and_stride(
-        array_extent: &Extent2i,
-        extent: &Extent2i,
+    fn for_each_point_and_stride_unchecked(
+        array_shape: Point2i,
+        index_min: Local2i,
+        iter_min: Point2i,
+        iter_shape: Point2i,
         mut f: impl FnMut(Point2i, Stride),
     ) {
-        // Translate to local coordinates.
-        let global_extent = extent.intersection(array_extent);
-        let global_lub = global_extent.least_upper_bound();
-        let local_extent = global_extent - array_extent.minimum;
-
-        let mut s = Array2ForEachState::new(&array_extent.shape, &Local(local_extent.minimum));
+        let iter_lub = iter_min + iter_shape;
+        let mut s = Array2ForEachState::new(array_shape, index_min);
         s.start_y();
-        for y in global_extent.minimum.y()..global_lub.y() {
+        for y in iter_min.y()..iter_lub.y() {
             s.start_x();
-            for x in global_extent.minimum.x()..global_lub.x() {
+            for x in iter_min.x()..iter_lub.x() {
                 f(PointN([x, y]), s.stride());
                 s.incr_x();
             }
@@ -38,7 +36,7 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
     }
 
     #[inline]
-    fn for_each_stride_parallel(
+    fn for_each_stride_parallel_global_unchecked(
         iter_extent: &Extent2i,
         array1_extent: &Extent2i,
         array2_extent: &Extent2i,
@@ -48,8 +46,8 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
         let min1 = iter_extent.minimum - array1_extent.minimum;
         let min2 = iter_extent.minimum - array2_extent.minimum;
 
-        let mut s1 = Array2ForEachState::new(&array1_extent.shape, &Local(min1));
-        let mut s2 = Array2ForEachState::new(&array2_extent.shape, &Local(min2));
+        let mut s1 = Array2ForEachState::new(array1_extent.shape, Local(min1));
+        let mut s2 = Array2ForEachState::new(array2_extent.shape, Local(min2));
 
         s1.start_y();
         s2.start_y();
@@ -78,11 +76,11 @@ struct Array2ForEachState {
 }
 
 impl Array2ForEachState {
-    fn new(array_shape: &Point2i, iter_min: &Local2i) -> Self {
+    fn new(array_shape: Point2i, index_min: Local2i) -> Self {
         let x_stride = 1usize;
         let y_stride = array_shape.x() as usize;
-        let x_start = x_stride * iter_min.0.x() as usize;
-        let y_start = y_stride * iter_min.0.y() as usize;
+        let x_start = x_stride * index_min.0.x() as usize;
+        let y_start = y_stride * index_min.0.y() as usize;
 
         Self {
             x_stride,

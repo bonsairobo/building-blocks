@@ -89,7 +89,8 @@
 //!
 //! ## Benchmarks
 //!
-//! To run the benchmarks (using the "criterion" crate), go to the root of a crate and run `cargo bench`.
+//! To run the benchmarks (using the "criterion" crate), go to the root of a crate and run `cargo bench`. As of version 0.5.0,
+//! all benchmark results are posted in the release notes.
 //!
 //! # Configuration
 //!
@@ -121,7 +122,7 @@
 //!
 //! ```toml
 //! [dependencies.building-blocks]
-//! version = "0.4.1"
+//! version = "0.5"
 //! default-features = false
 //! features = ["snappy"]
 //! ```

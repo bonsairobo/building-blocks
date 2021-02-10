@@ -1,6 +1,6 @@
 [package]
 name = "building_blocks_core"
-version = "0.4.3"
+version = "0.5.0"
 edition = "2018"
 authors = ["Duncan <bonsairobo@gmail.com>"]
 license = "MIT"
@@ -19,6 +19,6 @@ serde = { version = "1.0", features = ["derive"] }
 
 # Optional, feature-gated.
 glam = { version = "0.12", optional = true }
-mint = { version = "0.5", optional = true }
+mint = { version = "0.5.0", optional = true }
 nalgebra = { version = "0.23", optional = true }
 sdfu = { version = "0.3", optional = true }

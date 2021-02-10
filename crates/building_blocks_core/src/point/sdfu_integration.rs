@@ -1,4 +1,3 @@
-use super::Point3f;
 use super::*;
 
 use mt::MaxMin;

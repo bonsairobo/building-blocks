@@ -94,42 +94,6 @@ where
                 .fill_extent(&dst_extent, src_map.ambient_value());
         }
     }
-
-    pub fn downsample_chunk_all_lods<Samp>(&mut self, sampler: &Samp, lod0_chunk_key: PointN<N>)
-    where
-        Samp: ChunkDownsampler<N, T>,
-    {
-        let mut src_chunk_key = lod0_chunk_key;
-        for dst_lod in 1..self.levels.len() as u8 {
-            let src_lod = dst_lod - 1;
-            self.downsample_chunk(sampler, src_chunk_key, src_lod, dst_lod);
-            src_chunk_key = src_chunk_key >> 1;
-        }
-    }
-
-    pub fn downsample_chunks_for_extent_all_lods<Samp>(
-        &mut self,
-        sampler: &Samp,
-        lod0_extent: &ExtentN<N>,
-    ) where
-        Samp: ChunkDownsampler<N, T>,
-    {
-        let indexer = self.levels[0].indexer.clone();
-
-        for chunk_key in indexer.chunk_keys_for_extent(lod0_extent) {
-            // PERF: It could be more efficient to downsample multiple source chunks with just one lookup of the destination.
-            self.downsample_chunk_all_lods(sampler, chunk_key);
-        }
-    }
-
-    pub fn downsample_entire_map_all_lods<Samp>(&mut self, sampler: &Samp)
-    where
-        Samp: ChunkDownsampler<N, T>,
-        Store: for<'r> IterChunkKeys<'r, N>,
-    {
-        let bounding_extent = self.levels[0].bounding_extent();
-        self.downsample_chunks_for_extent_all_lods(sampler, &bounding_extent);
-    }
 }
 
 /// A `ChunkMap` using `HashMap` as chunk storage.

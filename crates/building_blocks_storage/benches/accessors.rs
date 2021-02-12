@@ -106,6 +106,23 @@ fn chunk_hash_map_point_indexing(c: &mut Criterion) {
     group.finish();
 }
 
+fn chunk_hash_map_visit_chunks_sparse(c: &mut Criterion) {
+    let mut group = c.benchmark_group("chunk_hash_map_visit_chunks_sparse");
+    for size in [128, 256, 512].iter() {
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
+            b.iter_with_setup(
+                || set_up_sparse_chunk_map(FnvHashMap::default(), size, 3),
+                |(chunk_map, iter_extent)| {
+                    chunk_map.visit_occupied_chunks(&iter_extent, |chunk| {
+                        black_box(chunk);
+                    });
+                },
+            );
+        });
+    }
+    group.finish();
+}
+
 fn compressible_chunk_map_point_indexing(c: &mut Criterion) {
     let mut group = c.benchmark_group("compressible_chunk_map_point_indexing");
     for size in ARRAY_SIZES.iter() {
@@ -186,6 +203,7 @@ criterion_group!(
     array_copy,
     chunk_hash_map_for_each_point,
     chunk_hash_map_point_indexing,
+    chunk_hash_map_visit_chunks_sparse,
     chunk_hash_map_copy,
     compressible_chunk_map_point_indexing
 );
@@ -209,6 +227,39 @@ where
     let mut map = DEFAULT_BUILDER.build_with_write_storage(storage);
     let iter_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
     map.fill_extent(&iter_extent, 1);
+
+    (map, iter_extent)
+}
+
+fn set_up_sparse_chunk_map<Store>(
+    storage: Store,
+    size: i32,
+    sparsity: i32,
+) -> (ChunkMap3<i32, (), Store>, Extent3i)
+where
+    Store: ChunkWriteStorage<[i32; 3], i32, ()>,
+{
+    let mut map = DEFAULT_BUILDER.build_with_write_storage(storage);
+    let chunk_key_extent = Extent3i::from_min_and_shape(
+        PointN([0; 3]),
+        PointN([size; 3]) / DEFAULT_BUILDER.chunk_shape,
+    );
+    for chunk_p in chunk_key_extent.iter_points() {
+        if chunk_p % sparsity != Point3i::ZERO {
+            continue;
+        }
+
+        let chunk_key = chunk_p * DEFAULT_BUILDER.chunk_shape;
+        map.write_chunk(
+            chunk_key,
+            Chunk::with_array(Array3::fill(
+                Extent3i::from_min_and_shape(chunk_key, DEFAULT_BUILDER.chunk_shape),
+                1,
+            )),
+        );
+    }
+
+    let iter_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
 
     (map, iter_extent)
 }

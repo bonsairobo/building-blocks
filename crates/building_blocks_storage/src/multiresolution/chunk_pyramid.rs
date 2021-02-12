@@ -33,16 +33,15 @@ impl<N, T, Meta, Store> ChunkPyramid<N, T, Meta, Store> {
         &mut self,
         lod_a: u8,
         lod_b: u8,
-    ) -> (
-        &mut ChunkMap<N, T, Meta, Store>,
-        &mut ChunkMap<N, T, Meta, Store>,
-    ) {
+    ) -> [&mut ChunkMap<N, T, Meta, Store>; 2] {
+        assert!(lod_a < lod_b);
+
         // A trick to borrow mutably two different levels.
         let (head, tail) = self.levels.split_at_mut(lod_b as usize);
         let map_a = &mut head[lod_a as usize];
         let map_b = &mut tail[lod_b as usize - lod_a as usize - 1];
 
-        (map_a, map_b)
+        [map_a, map_b]
     }
 }
 
@@ -66,7 +65,7 @@ where
         PointN<N>: Debug,
     {
         assert!(dst_lod > src_lod);
-        let (src_map, dst_map) = self.two_levels_mut(src_lod, dst_lod);
+        let [src_map, dst_map] = self.two_levels_mut(src_lod, dst_lod);
         let lod_delta = dst_lod - src_lod;
 
         let chunk_shape = src_map.indexer.chunk_shape();

@@ -1,13 +1,13 @@
-use crate::{Array3, ChunkMap3, GetMut, IterChunkKeys, OctreeSet};
+use crate::{Array3, ChunkIndexer, ChunkMap3, GetMut, IterChunkKeys, OctreeSet};
 
 use building_blocks_core::prelude::*;
 
 use fnv::FnvHashMap;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct OctreeChunkIndex {
     octrees: FnvHashMap<Point3i, OctreeSet>,
-    superchunk_shape: Point3i,
+    indexer: ChunkIndexer<[i32; 3]>,
 }
 
 impl OctreeChunkIndex {
@@ -57,7 +57,15 @@ impl OctreeChunkIndex {
 
         Self {
             octrees,
-            superchunk_shape,
+            indexer: ChunkIndexer::new(superchunk_shape),
+        }
+    }
+
+    pub fn visit_octrees(&self, extent: &Extent3i, visitor: &mut impl FnMut(&OctreeSet)) {
+        for superchunk_key in self.indexer.chunk_keys_for_extent(extent) {
+            if let Some(octree) = self.octrees.get(&superchunk_key) {
+                (visitor)(octree);
+            }
         }
     }
 }

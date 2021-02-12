@@ -48,8 +48,8 @@ fn octree_from_array3_full(c: &mut Criterion) {
     group.finish();
 }
 
-fn octree_visit_all_octants_of_sphere(c: &mut Criterion) {
-    let mut group = c.benchmark_group("octree_visit_all_octants_of_sphere");
+fn octree_visit_branches_and_leaves_of_sphere(c: &mut Criterion) {
+    let mut group = c.benchmark_group("octree_visit_branches_and_leaves_of_sphere");
     for power in [4, 5, 6].iter() {
         let edge_len = 1 << *power;
         group.bench_with_input(
@@ -76,8 +76,8 @@ fn octree_visit_all_octants_of_sphere(c: &mut Criterion) {
     group.finish();
 }
 
-fn octree_visit_all_octant_nodes_of_sphere(c: &mut Criterion) {
-    let mut group = c.benchmark_group("octree_visit_all_octant_nodes_of_sphere");
+fn octree_visit_branch_and_leaf_nodes_of_sphere(c: &mut Criterion) {
+    let mut group = c.benchmark_group("octree_visit_branch_and_leaf_nodes_of_sphere");
     for power in [4, 5, 6].iter() {
         let edge_len = 1 << *power;
         group.bench_with_input(
@@ -114,8 +114,8 @@ criterion_group!(
     benches,
     octree_from_array3_sphere,
     octree_from_array3_full,
-    octree_visit_all_octants_of_sphere,
-    octree_visit_all_octant_nodes_of_sphere
+    octree_visit_branches_and_leaves_of_sphere,
+    octree_visit_branch_and_leaf_nodes_of_sphere
 );
 criterion_main!(benches);
 

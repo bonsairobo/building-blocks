@@ -195,19 +195,38 @@ where
     PointN<N>: Hash + IntegerPoint<N>,
     T: Copy,
     Meta: Clone,
-    B: BytesCompression,
+    ChunkMapBuilder<N, T, Meta>: Copy,
+    B: BytesCompression + Copy,
 {
-    pub fn new(builder: ChunkMapBuilder<N, T, Meta>, num_levels: u8, compression: B) -> Self
-    where
-        B: Copy,
-        ChunkMapBuilder<N, T, Meta>: Copy,
-    {
-        let mut levels = Vec::with_capacity(num_levels as usize);
-        levels.resize_with(num_levels as usize, || {
+    pub fn new(builder: ChunkMapBuilder<N, T, Meta>, num_lods: u8, compression: B) -> Self {
+        let mut levels = Vec::with_capacity(num_lods as usize);
+        levels.resize_with(num_lods as usize, || {
             builder.build_with_write_storage(CompressibleChunkStorage::new(compression))
         });
 
         Self { levels }
+    }
+
+    pub fn with_lod0_chunk_map(
+        lod0_chunk_map: CompressibleChunkMap<N, T, Meta, B>,
+        num_lods: u8,
+    ) -> Self
+    where
+        T: Copy,
+        Meta: Clone,
+    {
+        let mut pyramid = Self::new(
+            lod0_chunk_map.builder(),
+            num_lods,
+            lod0_chunk_map
+                .storage()
+                .compression
+                .array_compression
+                .bytes_compression,
+        );
+        *pyramid.level_mut(0) = lod0_chunk_map;
+
+        pyramid
     }
 }
 

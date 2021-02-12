@@ -1,0 +1,50 @@
+use crate::{Array3, ChunkMap3, GetMut, IterChunkKeys, OctreeSet};
+
+use building_blocks_core::prelude::*;
+
+use fnv::FnvHashMap;
+
+#[derive(Clone, Default)]
+pub struct OctreeChunkIndex {
+    octrees: FnvHashMap<Point3i, OctreeSet>,
+    superchunk_shape: Point3i,
+}
+
+impl OctreeChunkIndex {
+    pub fn index_chunk_map<T, Meta, Store>(
+        superchunk_shape: Point3i,
+        chunk_map: &ChunkMap3<T, Meta, Store>,
+    ) -> Self
+    where
+        Store: for<'r> IterChunkKeys<'r, [i32; 3]>,
+    {
+        let chunk_shape = chunk_map.indexer.chunk_shape();
+        let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
+
+        let superchunk_mask = !(superchunk_shape - Point3i::ONES);
+
+        let mut bitsets = FnvHashMap::default();
+        for &chunk_key in chunk_map.storage().chunk_keys() {
+            let chunk_p = chunk_key >> chunk_log2;
+            let lod_key = chunk_p & superchunk_mask;
+            let bitset = bitsets.entry(lod_key).or_insert_with(|| {
+                let lod_chunk_extent = Extent3i::from_min_and_shape(lod_key, superchunk_shape);
+
+                Array3::fill(lod_chunk_extent, false)
+            });
+            *bitset.get_mut(chunk_p) = true;
+        }
+
+        // PERF: could be done in parallel
+        let mut octrees = FnvHashMap::default();
+        for (lod_chunk_key, array) in bitsets.into_iter() {
+            let octree = OctreeSet::from_array3(&array, *array.extent());
+            octrees.insert(lod_chunk_key, octree);
+        }
+
+        Self {
+            octrees,
+            superchunk_shape,
+        }
+    }
+}

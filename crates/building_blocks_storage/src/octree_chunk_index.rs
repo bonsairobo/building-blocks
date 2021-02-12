@@ -19,12 +19,25 @@ impl OctreeChunkIndex {
         Store: for<'r> IterChunkKeys<'r, [i32; 3]>,
     {
         let chunk_shape = chunk_map.indexer.chunk_shape();
+
+        Self::index_chunks(
+            superchunk_shape,
+            chunk_shape,
+            chunk_map.storage().chunk_keys(),
+        )
+    }
+
+    pub fn index_chunks<'a>(
+        superchunk_shape: Point3i,
+        chunk_shape: Point3i,
+        chunk_keys: impl Iterator<Item = &'a Point3i>,
+    ) -> Self {
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
 
         let superchunk_mask = !(superchunk_shape - Point3i::ONES);
 
         let mut bitsets = FnvHashMap::default();
-        for &chunk_key in chunk_map.storage().chunk_keys() {
+        for &chunk_key in chunk_keys {
             let chunk_p = chunk_key >> chunk_log2;
             let lod_key = chunk_p & superchunk_mask;
             let bitset = bitsets.entry(lod_key).or_insert_with(|| {

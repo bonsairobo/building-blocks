@@ -9,7 +9,7 @@
 //!
 //! You might also use an `OctreeSet` as a chunk index, where each point represents a single chunk. This representation is
 //! useful for level of detail algorithms like clipmap traversal because inner nodes may correspond to downsampled chunks stored
-//! in a separate structure.
+//! in a `ChunkPyramid`.
 //!
 //! # Traversal
 //!

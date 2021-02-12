@@ -1,4 +1,4 @@
-use crate::{prelude::*, ArrayIndexer, BytesCompression, ChunkDownsampler};
+use crate::{prelude::*, ArrayIndexer, BytesCompression, ChunkDownsampler, ChunkHashMap};
 
 use building_blocks_core::prelude::*;
 
@@ -28,15 +28,32 @@ impl<N, T, Meta, Store> ChunkPyramid<N, T, Meta, Store> {
     pub fn level_mut(&mut self, lod: u8) -> &mut ChunkMap<N, T, Meta, Store> {
         &mut self.levels[lod as usize]
     }
+
+    pub fn two_levels_mut(
+        &mut self,
+        lod_a: u8,
+        lod_b: u8,
+    ) -> (
+        &mut ChunkMap<N, T, Meta, Store>,
+        &mut ChunkMap<N, T, Meta, Store>,
+    ) {
+        // A trick to borrow mutably two different levels.
+        let (head, tail) = self.levels.split_at_mut(lod_b as usize);
+        let map_a = &mut head[lod_a as usize];
+        let map_b = &mut tail[lod_b as usize - lod_a as usize - 1];
+
+        (map_a, map_b)
+    }
 }
 
 impl<N, T, Meta, Store> ChunkPyramid<N, T, Meta, Store>
 where
     N: ArrayIndexer<N>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: Debug + IntegerPoint<N>,
     T: Copy,
     Meta: Clone,
     Store: ChunkWriteStorage<N, T, Meta>,
+    ChunkIndexer<N>: Clone,
 {
     pub fn downsample_chunk<Samp>(
         &mut self,
@@ -49,19 +66,15 @@ where
         PointN<N>: Debug,
     {
         assert!(dst_lod > src_lod);
+        let (src_map, dst_map) = self.two_levels_mut(src_lod, dst_lod);
         let lod_delta = dst_lod - src_lod;
-
-        // A trick to borrow mutably two different levels.
-        let (head, tail) = self.levels.split_at_mut(dst_lod as usize);
-        let src_map = &mut head[src_lod as usize];
-        let dst_map = &mut tail[dst_lod as usize - src_lod as usize - 1];
 
         let chunk_shape = src_map.indexer.chunk_shape();
 
         let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_key, lod_delta);
         let dst_chunk = dst_map.get_mut_chunk_or_insert_ambient(dst.dst_chunk_key);
 
-        // HACK: only needs get_mut_chunk because of CompressibleChunkStorage
+        // While not strictly necessary to get_mut here, it is much simpler than trying to enforce generic ChunkReadStorage.
         if let Some(src_chunk) = src_map.get_mut_chunk(src_chunk_key) {
             debug_assert_eq!(src_chunk.array.extent().shape, chunk_shape);
 
@@ -81,6 +94,42 @@ where
                 .fill_extent(&dst_extent, src_map.ambient_value());
         }
     }
+
+    pub fn downsample_chunk_all_lods<Samp>(&mut self, sampler: &Samp, lod0_chunk_key: PointN<N>)
+    where
+        Samp: ChunkDownsampler<N, T>,
+    {
+        let mut src_chunk_key = lod0_chunk_key;
+        for dst_lod in 1..self.levels.len() as u8 {
+            let src_lod = dst_lod - 1;
+            self.downsample_chunk(sampler, src_chunk_key, src_lod, dst_lod);
+            src_chunk_key = src_chunk_key >> 1;
+        }
+    }
+
+    pub fn downsample_chunks_for_extent_all_lods<Samp>(
+        &mut self,
+        sampler: &Samp,
+        lod0_extent: &ExtentN<N>,
+    ) where
+        Samp: ChunkDownsampler<N, T>,
+    {
+        let indexer = self.levels[0].indexer.clone();
+
+        for chunk_key in indexer.chunk_keys_for_extent(lod0_extent) {
+            // PERF: It could be more efficient to downsample multiple source chunks with just one lookup of the destination.
+            self.downsample_chunk_all_lods(sampler, chunk_key);
+        }
+    }
+
+    pub fn downsample_entire_map_all_lods<Samp>(&mut self, sampler: &Samp)
+    where
+        Samp: ChunkDownsampler<N, T>,
+        Store: for<'r> IterChunkKeys<'r, N>,
+    {
+        let bounding_extent = self.levels[0].bounding_extent();
+        self.downsample_chunks_for_extent_all_lods(sampler, &bounding_extent);
+    }
 }
 
 /// A `ChunkMap` using `HashMap` as chunk storage.
@@ -91,20 +140,29 @@ pub type ChunkHashMapPyramid2<T, Meta = ()> = ChunkHashMapPyramid<[i32; 2], T, M
 /// A 3-dimensional `ChunkHashMapPyramid`.
 pub type ChunkHashMapPyramid3<T, Meta = ()> = ChunkHashMapPyramid<[i32; 3], T, Meta>;
 
-impl<N, T> ChunkHashMapPyramid<N, T>
+impl<N, T, Meta> ChunkHashMapPyramid<N, T, Meta>
 where
     PointN<N>: Hash + IntegerPoint<N>,
+    ChunkMapBuilder<N, T, Meta>: Copy,
 {
-    pub fn new(builder: ChunkMapBuilder<N, T>, num_levels: u8) -> Self
-    where
-        ChunkMapBuilder<N, T>: Copy,
-    {
-        let mut levels = Vec::with_capacity(num_levels as usize);
-        levels.resize_with(num_levels as usize, || {
+    pub fn new(builder: ChunkMapBuilder<N, T, Meta>, num_lods: u8) -> Self {
+        let mut levels = Vec::with_capacity(num_lods as usize);
+        levels.resize_with(num_lods as usize, || {
             builder.build_with_write_storage(FnvHashMap::default())
         });
 
         Self { levels }
+    }
+
+    pub fn with_lod0_chunk_map(lod0_chunk_map: ChunkHashMap<N, T, Meta>, num_lods: u8) -> Self
+    where
+        T: Copy,
+        Meta: Clone,
+    {
+        let mut pyramid = Self::new(lod0_chunk_map.builder(), num_lods);
+        *pyramid.level_mut(0) = lod0_chunk_map;
+
+        pyramid
     }
 }
 

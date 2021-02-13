@@ -115,9 +115,9 @@ impl OctreeSet {
         let mut nodes = FnvHashMap::default();
         let min_local = Local(extent.minimum - array.extent().minimum);
         let root_minimum = array.stride_from_local_point(min_local);
-        let root_location = LocationCode::ROOT;
+        let root_code = LocationCode::ROOT;
         let (root_exists, _full) = Self::partition_array(
-            root_location,
+            root_code,
             root_minimum,
             edge_length,
             &corner_strides,
@@ -134,7 +134,7 @@ impl OctreeSet {
     }
 
     fn partition_array<A, T>(
-        location: LocationCode,
+        code: LocationCode,
         minimum: Stride,
         edge_length: i32,
         corner_strides: &[Stride],
@@ -162,12 +162,12 @@ impl OctreeSet {
         let half_edge_length = edge_length >> 1;
         let mut child_bitmask = 0;
         let mut all_children_full = true;
-        let extended_location = location.extend();
+        let extended_code = code.extend();
         for (octant, offset) in octant_corner_strides.iter().enumerate() {
             let octant_min = minimum + *offset;
-            let octant_location = extended_location.with_lowest_octant(octant as u16);
+            let octant_code = extended_code.with_lowest_octant(octant as u16);
             let (child_exists, child_full) = Self::partition_array(
-                octant_location,
+                octant_code,
                 octant_min,
                 half_edge_length,
                 &octant_corner_strides,
@@ -181,7 +181,7 @@ impl OctreeSet {
         let exists = child_bitmask != 0;
 
         if exists && !all_children_full {
-            nodes.insert(location, child_bitmask);
+            nodes.insert(code, child_bitmask);
         }
 
         (exists, all_children_full)
@@ -312,7 +312,7 @@ impl OctreeSet {
     pub fn root_node(&self) -> Option<OctreeNode> {
         if self.root_exists {
             Some(OctreeNode {
-                location: LocationCode::ROOT,
+                code: LocationCode::ROOT,
                 octant: self.octant(),
                 child_bitmask: self.nodes.get(&LocationCode::ROOT).cloned().unwrap_or(0),
                 power: self.power,
@@ -337,26 +337,23 @@ impl OctreeSet {
         if child_power == 0 {
             // The child is a leaf, so we don't need to extend the location or look for a child bitmask.
             return Some(OctreeNode {
-                location: LocationCode::LEAF,
+                code: LocationCode::LEAF,
                 octant: child_octant,
                 child_bitmask: 0,
                 power: child_power,
             });
         }
 
-        let child_location = parent
-            .location
-            .extend()
-            .with_lowest_octant(child_index as u16);
+        let child_code = parent.code.extend().with_lowest_octant(child_index as u16);
 
-        let (location, child_bitmask) = if let Some(bitmask) = self.nodes.get(&child_location) {
-            (child_location, *bitmask)
+        let (code, child_bitmask) = if let Some(bitmask) = self.nodes.get(&child_code) {
+            (child_code, *bitmask)
         } else {
             (LocationCode::LEAF, 0)
         };
 
         Some(OctreeNode {
-            location,
+            code,
             octant: child_octant,
             child_bitmask,
             power: child_power,
@@ -376,7 +373,7 @@ impl OctreeSet {
 
     fn _add_extent(
         &mut self,
-        location: LocationCode,
+        code: LocationCode,
         octant: Octant,
         already_exists: bool,
         add_extent: &Extent3i,
@@ -392,13 +389,13 @@ impl OctreeSet {
         if octant_extent == octant_intersection {
             // The octant is a subset of the extent being inserted, so we can make it an implicit leaf.
             if already_exists {
-                self.remove_subtree(&location, octant.power());
+                self.remove_subtree(&code, octant.power());
             }
             return (true, true);
         }
 
         let (mut child_bitmask, already_had_bitmask) =
-            if let Some(&child_bitmask) = self.nodes.get(&location) {
+            if let Some(&child_bitmask) = self.nodes.get(&code) {
                 // Mixed branch node.
                 (child_bitmask, true)
             } else if already_exists {
@@ -415,41 +412,37 @@ impl OctreeSet {
         }
 
         let mut all_children_full = true;
-        let extended_location = location.extend();
+        let extended_code = code.extend();
         for child_index in 0..8 {
-            let child_location = extended_location.with_lowest_octant(child_index as u16);
+            let child_code = extended_code.with_lowest_octant(child_index as u16);
             let child_octant = octant.child(child_index);
             let child_already_exists = child_bitmask & (1 << child_index) != 0;
-            let (child_exists_after_insert, child_full) = self._add_extent(
-                child_location,
-                child_octant,
-                child_already_exists,
-                add_extent,
-            );
+            let (child_exists_after_insert, child_full) =
+                self._add_extent(child_code, child_octant, child_already_exists, add_extent);
             child_bitmask |= (child_exists_after_insert as u8) << child_index;
             all_children_full &= child_full;
         }
 
         if child_bitmask != 0 && !all_children_full {
-            self.nodes.insert(location, child_bitmask);
+            self.nodes.insert(code, child_bitmask);
         } else if already_had_bitmask && all_children_full {
-            self.remove_subtree(&location, octant.power());
+            self.remove_subtree(&code, octant.power());
         }
 
         (true, all_children_full)
     }
 
-    fn remove_subtree(&mut self, location: &LocationCode, level: u8) {
-        if let Some(child_bitmask) = self.nodes.remove(location) {
+    fn remove_subtree(&mut self, code: &LocationCode, level: u8) {
+        if let Some(child_bitmask) = self.nodes.remove(code) {
             if level == 1 {
                 return;
             }
 
-            let extended_location = location.extend();
+            let extended_code = code.extend();
             for child_index in 0..8 {
                 if child_bitmask & (1 << child_index) != 0 {
-                    let child_location = extended_location.with_lowest_octant(child_index);
-                    self.remove_subtree(&child_location, level - 1);
+                    let child_code = extended_code.with_lowest_octant(child_index);
+                    self.remove_subtree(&child_code, level - 1);
                 }
             }
         }
@@ -459,7 +452,7 @@ impl OctreeSet {
 /// Represents a single non-empty octant in the octree. Used for manual traversal by calling `OctreeSet::get_child`.
 #[derive(Clone, Copy, Debug)]
 pub struct OctreeNode {
-    location: LocationCode,
+    code: LocationCode,
     octant: Octant,
     child_bitmask: ChildBitMask,
     power: u8,
@@ -469,7 +462,7 @@ impl OctreeNode {
     /// A leaf node is one whose octant is entirely full.
     #[inline]
     pub fn is_leaf(&self) -> bool {
-        self.location == LocationCode::LEAF
+        self.code == LocationCode::LEAF
     }
 
     #[inline]

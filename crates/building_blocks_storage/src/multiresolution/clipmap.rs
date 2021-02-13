@@ -17,6 +17,8 @@ pub struct ClipMapConfig3 {
 
 impl ClipMapConfig3 {
     pub fn chunk_edge_length_log2(&self) -> i32 {
+        assert!(self.chunk_shape.is_cube());
+
         self.chunk_shape.x().trailing_zeros() as i32
     }
 }
@@ -24,8 +26,8 @@ impl ClipMapConfig3 {
 /// Traverse `octree` to find the `LodChunkKey3`s that are "active" when the clipmap is centered at `lod0_center`.
 pub fn active_clipmap_lod_chunks(
     config: &ClipMapConfig3,
-    lod0_center: Point3i,
     octree: &OctreeSet,
+    lod0_center: Point3i,
     mut init_rx: impl FnMut(LodChunkKey3),
 ) {
     let chunk_log2 = config.chunk_edge_length_log2();

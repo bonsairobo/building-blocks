@@ -35,7 +35,7 @@ pub fn active_clipmap_lod_chunks(
 
     let high_lod_boundary = config.clip_box_radius >> 1;
 
-    octree.visit_all_octants(&mut |location: &Location| {
+    octree.visit_all_octants_in_preorder(&mut |location: &Location, _child_bitmask| {
         let octant = *location.octant();
         let lod = octant.power();
         if lod >= config.num_lods {
@@ -118,7 +118,7 @@ impl ClipMapUpdate3 {
         octree: &OctreeSet,
         mut update_rx: impl FnMut(LodChunkUpdate3),
     ) {
-        octree.visit_all_octants(&mut |location: &Location| {
+        octree.visit_all_octants_in_preorder(&mut |location: &Location, _child_bitmask| {
             let octant = location.octant();
 
             let lod = octant.power();
@@ -195,7 +195,7 @@ fn find_merge_or_split_descendants(
     high_lod_boundary: i32,
 ) -> Vec<LodChunkKey3> {
     let mut matching_chunks = Vec::with_capacity(8);
-    location.visit_all_octants(octree, &mut |location: &Location| {
+    location.visit_all_octants_in_preorder(octree, &mut |location: &Location, _child_bitmask| {
         let lod = location.octant().power();
         let old_offset_from_center = get_offset_from_lod_center(location.octant(), centers);
         if lod == 0 || old_offset_from_center >= high_lod_boundary {

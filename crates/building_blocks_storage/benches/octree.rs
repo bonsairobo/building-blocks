@@ -63,11 +63,13 @@ fn octree_visit_branches_and_leaves_of_sphere(c: &mut Criterion) {
                         OctreeSet::from_array3(&map, *map.extent())
                     },
                     |octree| {
-                        octree.visit_branches_and_leaves(&mut |location: &Location| {
-                            black_box(location);
+                        octree.visit_branches_and_leaves_in_preorder(
+                            &mut |location: &Location, child_bitmask| {
+                                black_box((location, child_bitmask));
 
-                            VisitStatus::Continue
-                        })
+                                VisitStatus::Continue
+                            },
+                        )
                     },
                 );
             },

@@ -55,18 +55,23 @@ impl OctreeChunkIndex {
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
         assert!(superchunk_log2 > chunk_log2);
 
-        let superchunk_mask = !((superchunk_shape >> chunk_log2) - Point3i::ONES);
+        let superchunk_shape_in_chunks = superchunk_shape >> chunk_log2;
+
+        let superchunk_mask = !(superchunk_shape - Point3i::ONES);
 
         let mut bitsets = FnvHashMap::default();
         for &chunk_key in chunk_keys {
-            let chunk_p = chunk_key >> chunk_log2;
-            let lod_key = chunk_p & superchunk_mask;
-            let bitset = bitsets.entry(lod_key).or_insert_with(|| {
-                let lod_chunk_extent = Extent3i::from_min_and_shape(lod_key, superchunk_shape);
-
-                Array3::fill(lod_chunk_extent, false)
+            let superchunk_key = chunk_key & superchunk_mask;
+            let bitset = bitsets.entry(superchunk_key).or_insert_with(|| {
+                Array3::fill(
+                    Extent3i::from_min_and_shape(
+                        superchunk_key >> chunk_log2,
+                        superchunk_shape_in_chunks,
+                    ),
+                    false,
+                )
             });
-            *bitset.get_mut(chunk_p) = true;
+            *bitset.get_mut(chunk_key >> chunk_log2) = true;
         }
 
         // PERF: could be done in parallel

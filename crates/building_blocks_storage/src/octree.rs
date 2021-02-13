@@ -90,8 +90,8 @@ impl OctreeSet {
     // TODO: from_height_map
 
     /// Constructs an `OctreeSet` which contains all of the points in `extent` which are not empty (as defined by the `IsEmpty`
-    /// trait). `extent` must be cube-shaped with edge length being a power of 2. For exponent E where edge length is 2^E, we
-    /// must have `0 < E <= 6`, because there is a maximum fixed depth of the octree.
+    /// trait). `extent` must be cube-shaped with edge length being a power of 2. For power `P` where edge length is `2^P`, we
+    /// must have `0 < P <= 6`, because there is a maximum fixed depth of the octree.
     pub fn from_array3<A, T>(array: &A, extent: Extent3i) -> Self
     where
         A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,

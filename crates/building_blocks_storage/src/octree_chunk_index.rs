@@ -48,9 +48,14 @@ impl OctreeChunkIndex {
         chunk_shape: Point3i,
         chunk_keys: impl Iterator<Item = &'a Point3i>,
     ) -> Self {
-        let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
+        assert!(superchunk_shape.dimensions_are_powers_of_2());
+        assert!(chunk_shape.dimensions_are_powers_of_2());
 
-        let superchunk_mask = !(superchunk_shape - Point3i::ONES);
+        let superchunk_log2 = superchunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
+        let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
+        assert!(superchunk_log2 > chunk_log2);
+
+        let superchunk_mask = !((superchunk_shape >> chunk_log2) - Point3i::ONES);
 
         let mut bitsets = FnvHashMap::default();
         for &chunk_key in chunk_keys {

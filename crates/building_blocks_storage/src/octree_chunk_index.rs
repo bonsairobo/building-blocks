@@ -109,8 +109,8 @@ impl OctreeChunkIndex {
     pub fn active_clipmap_lod_chunks(
         &self,
         extent: &Extent3i,
-        lod0_center: Point3i,
         clip_box_radius: i32,
+        lod0_center: Point3i,
         mut init_rx: impl FnMut(LodChunkKey3),
     ) {
         let config = self.clipmap_config(clip_box_radius);

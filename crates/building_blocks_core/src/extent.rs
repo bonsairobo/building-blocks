@@ -1,6 +1,6 @@
 use crate::{point::point_traits::*, PointN};
 
-use core::ops::{Add, AddAssign, Sub, SubAssign};
+use core::ops::{Add, AddAssign, Mul, Sub, SubAssign};
 use num::Zero;
 use serde::{Deserialize, Serialize};
 
@@ -219,6 +219,21 @@ where
         ExtentN {
             minimum: self.minimum - rhs,
             shape: self.shape,
+        }
+    }
+}
+
+impl<T> Mul<PointN<T>> for ExtentN<T>
+where
+    PointN<T>: Copy + Mul<Output = PointN<T>>,
+{
+    type Output = Self;
+
+    #[inline]
+    fn mul(self, rhs: PointN<T>) -> Self::Output {
+        ExtentN {
+            minimum: self.minimum * rhs,
+            shape: self.shape * rhs,
         }
     }
 }

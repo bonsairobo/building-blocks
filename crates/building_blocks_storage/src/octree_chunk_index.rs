@@ -55,6 +55,11 @@ impl OctreeChunkIndex {
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
         assert!(superchunk_log2 > chunk_log2);
 
+        assert!(
+            superchunk_log2 - chunk_log2 < PointN([6; 3]),
+            "OctreeSet only support 6 levels. Make your superchunk shape smaller"
+        );
+
         let superchunk_shape_in_chunks = superchunk_shape >> chunk_log2;
 
         let superchunk_mask = !(superchunk_shape - Point3i::ONES);

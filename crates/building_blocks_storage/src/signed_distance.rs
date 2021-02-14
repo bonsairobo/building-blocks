@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 pub trait SignedDistance: Into<f32> {
     fn is_negative(self) -> bool;
 }
@@ -10,10 +12,10 @@ impl SignedDistance for f32 {
 }
 
 /// A signed distance value in the range `[-1.0, 1.0]` with 8 bits of precision.
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct Sd8(pub i8);
 /// A signed distance value in the range `[-1.0, 1.0]` with 16 bits of precision.
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct Sd16(pub i16);
 
 impl Sd8 {

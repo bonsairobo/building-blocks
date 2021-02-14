@@ -132,23 +132,26 @@ where
 
         index.visit_octrees(extent, &mut |octree| {
             // Post-order is important to make sure we start downsampling at LOD 0.
-            octree.visit_all_octants_in_postorder(&mut |location: &Location, child_bitmask| {
-                let dst_lod = location.octant().power();
-                if dst_lod > 0 && dst_lod < self.num_lods() {
-                    // Destination LOD > 0, so we should downsample all non-empty children.
-                    let src_lod = dst_lod - 1;
-                    for child_octant_index in 0..8 {
-                        if child_bitmask & (1 << child_octant_index) != 0 {
-                            let child_octant = location.octant().child(child_octant_index);
-                            let src_chunk_key =
-                                (child_octant.minimum() * chunk_shape) >> src_lod as i32;
-                            self.downsample_chunk(sampler, src_chunk_key, src_lod, dst_lod);
+            octree.visit_all_octants_for_extent_in_postorder(
+                extent,
+                &mut |location: &Location, child_bitmask| {
+                    let dst_lod = location.octant().power();
+                    if dst_lod > 0 && dst_lod < self.num_lods() {
+                        // Destination LOD > 0, so we should downsample all non-empty children.
+                        let src_lod = dst_lod - 1;
+                        for child_octant_index in 0..8 {
+                            if child_bitmask & (1 << child_octant_index) != 0 {
+                                let child_octant = location.octant().child(child_octant_index);
+                                let src_chunk_key =
+                                    (child_octant.minimum() * chunk_shape) >> src_lod as i32;
+                                self.downsample_chunk(sampler, src_chunk_key, src_lod, dst_lod);
+                            }
                         }
                     }
-                }
 
-                VisitStatus::Continue
-            });
+                    VisitStatus::Continue
+                },
+            );
         });
     }
 }

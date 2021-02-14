@@ -1,4 +1,7 @@
-use crate::{prelude::*, ArrayIndexer, BytesCompression, ChunkDownsampler, ChunkHashMap};
+use crate::{
+    prelude::*, ArrayIndexer, BytesCompression, ChunkDownsampler, ChunkHashMap, Location,
+    OctreeChunkIndex, VisitStatus,
+};
 
 use building_blocks_core::prelude::*;
 
@@ -16,7 +19,23 @@ pub struct ChunkPyramid<N, T, Meta, Store> {
     levels: Vec<ChunkMap<N, T, Meta, Store>>,
 }
 
+/// A 2-dimensional `ChunkPyramid`.
+pub type ChunkPyramid2<T, Meta, Store> = ChunkPyramid<[i32; 2], T, Meta, Store>;
+/// A 3-dimensional `ChunkPyramid`.
+pub type ChunkPyramid3<T, Meta, Store> = ChunkPyramid<[i32; 3], T, Meta, Store>;
+
 impl<N, T, Meta, Store> ChunkPyramid<N, T, Meta, Store> {
+    pub fn chunk_shape(&self) -> PointN<N>
+    where
+        PointN<N>: IntegerPoint<N>,
+    {
+        self.levels[0].indexer.chunk_shape()
+    }
+
+    pub fn num_lods(&self) -> u8 {
+        self.levels.len() as u8
+    }
+
     pub fn levels_slice(&self) -> &[ChunkMap<N, T, Meta, Store>] {
         &self.levels[..]
     }
@@ -92,6 +111,45 @@ where
                 .array
                 .fill_extent(&dst_extent, src_map.ambient_value());
         }
+    }
+}
+
+impl<T, Meta, Store> ChunkPyramid3<T, Meta, Store>
+where
+    T: Copy,
+    Meta: Clone,
+    Store: ChunkWriteStorage<[i32; 3], T, Meta>,
+{
+    pub fn downsample_chunks_for_extent_all_lods_with_index<Samp>(
+        &mut self,
+        index: &OctreeChunkIndex,
+        sampler: &Samp,
+        extent: &Extent3i,
+    ) where
+        Samp: ChunkDownsampler<[i32; 3], T>,
+    {
+        let chunk_shape = self.chunk_shape();
+
+        index.visit_octrees(extent, &mut |octree| {
+            // Post-order is important to make sure we start downsampling at LOD 0.
+            octree.visit_all_octants_in_postorder(&mut |location: &Location, child_bitmask| {
+                let dst_lod = location.octant().power();
+                if dst_lod > 0 && dst_lod < self.num_lods() {
+                    // Destination LOD > 0, so we should downsample all non-empty children.
+                    let src_lod = dst_lod - 1;
+                    for child_octant_index in 0..8 {
+                        if child_bitmask & (1 << child_octant_index) != 0 {
+                            let child_octant = location.octant().child(child_octant_index);
+                            let src_chunk_key =
+                                (child_octant.minimum() * chunk_shape) >> src_lod as i32;
+                            self.downsample_chunk(sampler, src_chunk_key, src_lod, dst_lod);
+                        }
+                    }
+                }
+
+                VisitStatus::Continue
+            });
+        });
     }
 }
 

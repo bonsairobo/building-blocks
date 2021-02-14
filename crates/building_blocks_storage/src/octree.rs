@@ -412,7 +412,7 @@ impl OctreeSet {
 
             let child_octant = octant.child(child_index);
             let octant_code = extended_code.with_lowest_octant(child_index as u16);
-            if self._visit_branches_and_leaves_in_preorder(octant_code, child_octant, visitor)
+            if self._visit_branches_and_leaves_in_postorder(octant_code, child_octant, visitor)
                 == VisitStatus::ExitEarly
             {
                 return VisitStatus::ExitEarly;

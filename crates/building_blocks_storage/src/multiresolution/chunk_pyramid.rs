@@ -129,11 +129,15 @@ where
         Samp: ChunkDownsampler<[i32; 3], T>,
     {
         let chunk_shape = self.chunk_shape();
+        let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
+
+        let chunk_space_extent =
+            Extent3i::from_min_and_shape(extent.minimum >> chunk_log2, extent.shape >> chunk_log2);
 
         index.visit_octrees(extent, &mut |octree| {
             // Post-order is important to make sure we start downsampling at LOD 0.
             octree.visit_all_octants_for_extent_in_postorder(
-                extent,
+                &chunk_space_extent,
                 &mut |location: &Location, child_bitmask| {
                     let dst_lod = location.octant().power();
                     if dst_lod > 0 && dst_lod < self.num_lods() {
@@ -143,7 +147,7 @@ where
                             if child_bitmask & (1 << child_octant_index) != 0 {
                                 let child_octant = location.octant().child(child_octant_index);
                                 let src_chunk_key =
-                                    (child_octant.minimum() * chunk_shape) >> src_lod as i32;
+                                    (child_octant.minimum() << chunk_log2) >> src_lod as i32;
                                 self.downsample_chunk(sampler, src_chunk_key, src_lod, dst_lod);
                             }
                         }

@@ -27,6 +27,7 @@ impl OctreeChunkIndex {
         self.indexer.chunk_shape()
     }
 
+    /// Same as `index_chunk`, but using the chunk keys and chunk shape from `chunk_map`.
     pub fn index_chunk_map<T, Meta, Store>(
         superchunk_shape: Point3i,
         chunk_map: &ChunkMap3<T, Meta, Store>,
@@ -43,6 +44,12 @@ impl OctreeChunkIndex {
         )
     }
 
+    /// Create a new `OctreeChunkIndex` whose octrees contain exactly the set `chunk_keys`. The number of levels in an octree
+    /// corresponds to the relative sizes of the chunks and superchunks. A superchunk is a chunk of the domain that contains a
+    /// single octree of many smaller chunks. Superchunk shape, like chunk shape, must have all dimensions be powers of 2.
+    /// Because of the static limitations on `OctreeSet` size, you can only have up to 6 levels of detail. This means
+    /// `superchunk_shape / chunk_shape` must be less than `2 ^ [6, 6, 6] = [64, 64, 64]`. For example, if your chunk shape is
+    /// `[16, 16, 16]`, then your superchunk shape can be at most `[512, 512, 512]`.
     pub fn index_chunks<'a>(
         superchunk_shape: Point3i,
         chunk_shape: Point3i,
@@ -54,6 +61,11 @@ impl OctreeChunkIndex {
         let superchunk_log2 = superchunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
         assert!(superchunk_log2 > chunk_log2);
+
+        assert!(
+            superchunk_log2 - chunk_log2 < PointN([6; 3]),
+            "OctreeSet only support 6 levels. Make your superchunk shape smaller"
+        );
 
         let superchunk_shape_in_chunks = superchunk_shape >> chunk_log2;
 

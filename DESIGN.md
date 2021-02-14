@@ -116,6 +116,15 @@ which brought about the current feature set:
     generalized all of the core data types to work in both 2 and 3 dimensions,
     which gives us the `Array2` type, capable of cleanly representing a height
     map. We've also implemented a specialized meshing algorithm for height maps.
+  - For large maps, using a single lattice resolution for meshes will quickly
+    eat up GPU resources. We must have a level of detail solution to solve this
+    problem. This can be a complex issue, but for now we have settled on using
+    multiresolution Surface Nets, which involves downsampling the lattice to
+    conform to a clipmap structure. On LOD boundaries, we will need the higher
+    resolution chunk to be aware of the faces where it borders a chunk of half
+    resolution so that it can create the appropriate boundary mesh. This algorithm
+    is essentially the same as dual contouring of an octree, except we do so
+    on uniform grids for performance reasons.
 - **Accelerated Spatial Queries**
   - Our first voxel game prototypes utilized the ncollide3d crate and it's
     `DBVT` (dynamic bounding volume tree) structure for doing raycasting.

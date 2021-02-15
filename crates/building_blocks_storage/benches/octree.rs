@@ -1,6 +1,6 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{
-    octree::{Location, OctreeSet, VisitStatus},
+    octree::{OctreeNode, OctreeSet, VisitStatus},
     prelude::*,
     IsEmpty,
 };
@@ -63,13 +63,11 @@ fn octree_visit_branches_and_leaves_of_sphere(c: &mut Criterion) {
                         OctreeSet::from_array3(&map, *map.extent())
                     },
                     |octree| {
-                        octree.visit_branches_and_leaves_in_preorder(
-                            &mut |location: &Location, child_bitmask| {
-                                black_box((location, child_bitmask));
+                        octree.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
+                            black_box(node);
 
-                                VisitStatus::Continue
-                            },
-                        )
+                            VisitStatus::Continue
+                        })
                     },
                 );
             },
@@ -97,7 +95,7 @@ fn octree_visit_branch_and_leaf_nodes_of_sphere(c: &mut Criterion) {
                         while !queue.is_empty() {
                             if let Some(node) = queue.pop().unwrap() {
                                 black_box(&node);
-                                if !node.is_leaf() {
+                                if !node.is_full() {
                                     for octant in 0..8 {
                                         queue.push(octree.get_child(&node, octant));
                                     }

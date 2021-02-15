@@ -16,15 +16,21 @@
 //!   - compressed serialization format
 //!   - [`OctreeSet`](crate::storage::octree) bitset structure
 //! - mesh generation
-//!   - isosurface
-//!   - cubic / blocky
-//!   - height map
+//!   - Surface Nets isosurface extraction
+//!   - Minecraft-style greedy meshing
+//!   - height maps
 //! - accelerated spatial queries
-//!   - ray casting and sphere casting
-//!   - range queries
+//!   - sparse iteration and search over octrees
+//!   - ray casting and sphere casting against octrees
+//!   - Amanatides and Woo ray grid traversal
+//! - level of detail
+//!   - `OctreeChunkIndex` as a hierarchical index of chunks
+//!   - algorithms for finding active chunks and updates to a clipmap structure
+//!   - multiresolution Surface Nets (TODO)
+//!   - `ChunkPyramid` for multiresolution voxel data and downsampling
 //! - procedural generation
 //!   - sampling signed distance fields
-//!   - constructive solid geometry
+//!   - constructive solid geometry with [`sdfu`](https://docs.rs/sdfu)
 //! - pathfinding on voxel maps
 //!
 //! # Short Code Example

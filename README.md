@@ -18,15 +18,21 @@ The primary focus is core data structures and algorithms. Features include:
   - compressed serialization format
   - [`OctreeSet`](crate::storage::octree) bitset structure
 - mesh generation
-  - isosurface
-  - cubic / blocky
-  - height map
+  - Surface Nets isosurface extraction
+  - Minecraft-style greedy meshing
+  - height maps
 - accelerated spatial queries
-  - ray casting and sphere casting
-  - range queries
+  - sparse iteration and search over octrees
+  - ray casting and sphere casting against octrees
+  - Amanatides and Woo ray grid traversal
+- level of detail
+  - `OctreeChunkIndex` as a hierarchical index of chunks
+  - algorithms for finding active chunks and updates to a clipmap structure
+  - multiresolution Surface Nets (TODO)
+  - `ChunkPyramid` for multiresolution voxel data and downsampling
 - procedural generation
   - sampling signed distance fields
-  - constructive solid geometry
+  - constructive solid geometry with [`sdfu`](https://docs.rs/sdfu)
 - pathfinding on voxel maps
 
 ## Short Code Example
@@ -91,7 +97,8 @@ To learn the basics about lattice maps, start with these doc pages:
 
 ### Benchmarks
 
-To run the benchmarks (using the "criterion" crate), go to the root of a crate and run `cargo bench`.
+To run the benchmarks (using the "criterion" crate), go to the root of a crate and run `cargo bench`. As of version 0.5.0,
+all benchmark results are posted in the release notes.
 
 ## Configuration
 
@@ -123,7 +130,7 @@ so it can! Just use `default-features = false` and add "snappy" to you `features
 
 ```toml
 [dependencies.building-blocks]
-version = "0.4.1"
+version = "0.5"
 default-features = false
 features = ["snappy"]
 ```

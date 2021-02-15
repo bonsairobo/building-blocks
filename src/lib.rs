@@ -12,26 +12,26 @@
 //!
 //! - memory-efficient storage of voxel maps
 //!   - a [`ChunkMap`](crate::storage::chunk_map) with generic chunk storage
-//!   - LRU-cached storage of compressed chunks
-//!   - compressed serialization format
-//!   - [`OctreeSet`](crate::storage::octree) bitset structure
+//!   - chunk compression and caching
+//!   - [`OctreeSet`](crate::storage::octree) hierarchical set of voxel points
+//!   - all storages are serializable with [`serde`](https://serde.rs/)
 //! - mesh generation
 //!   - Surface Nets isosurface extraction
 //!   - Minecraft-style greedy meshing
 //!   - height maps
-//! - accelerated spatial queries
-//!   - sparse iteration and search over octrees
-//!   - ray casting and sphere casting against octrees
+//! - spatial queries
+//!   - sparse traversal and search over octrees
+//!   - ray casting and sphere casting against octrees with [`ncollide3d`](https://www.ncollide.org/)
 //!   - Amanatides and Woo ray grid traversal
+//!   - pathfinding
 //! - level of detail
-//!   - `OctreeChunkIndex` as a hierarchical index of chunks
-//!   - algorithms for finding active chunks and updates to a clipmap structure
-//!   - multiresolution Surface Nets (TODO)
+//!   - `OctreeChunkIndex` as a hierarchical index of chunk IDs
 //!   - `ChunkPyramid` for multiresolution voxel data and downsampling
+//!   - algorithms for finding active chunks and updates to a 3D clipmap
+//!   - multiresolution Surface Nets (TODO)
 //! - procedural generation
 //!   - sampling signed distance fields
 //!   - constructive solid geometry with [`sdfu`](https://docs.rs/sdfu)
-//! - pathfinding on voxel maps
 //!
 //! # Short Code Example
 //!

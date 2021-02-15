@@ -49,12 +49,13 @@ use crate::{access::GetUncheckedRelease, prelude::*, IsEmpty};
 use building_blocks_core::prelude::*;
 
 use fnv::FnvHashMap;
+use serde::{Deserialize, Serialize};
 
 /// A sparse set of voxel coordinates (3D integer points). Supports spatial queries.
 ///
 /// The octree is a cube shape and the edge lengths can only be a power of 2, at most 64. When an entire octant is full, it will
 /// be stored in a collapsed representation, so the leaves of the tree can be differently sized octants.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct OctreeSet {
     extent: Extent3i,
     power: u8,
@@ -730,7 +731,7 @@ const FULL_CHILD_BIT_MASK: ChildBitMask = 0xFF;
 /// level N-5:
 ///   loc = 0b1000000000000000, ...
 /// ```
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Hash, Eq, PartialEq, Serialize)]
 struct LocationCode(u16);
 
 impl LocationCode {

@@ -1,6 +1,6 @@
 use crate::{
-    prelude::*, ArrayIndexer, BytesCompression, ChunkDownsampler, ChunkHashMap, Location,
-    OctreeChunkIndex, VisitStatus,
+    prelude::*, ArrayIndexer, BytesCompression, ChunkDownsampler, ChunkHashMap, OctreeChunkIndex,
+    OctreeNode, VisitStatus,
 };
 
 use building_blocks_core::prelude::*;
@@ -138,14 +138,14 @@ where
             // Post-order is important to make sure we start downsampling at LOD 0.
             octree.visit_all_octants_for_extent_in_postorder(
                 &chunk_space_extent,
-                &mut |location: &Location, child_bitmask| {
-                    let dst_lod = location.octant().power();
+                &mut |node: &OctreeNode| {
+                    let dst_lod = node.octant().power();
                     if dst_lod > 0 && dst_lod < self.num_lods() {
                         // Destination LOD > 0, so we should downsample all non-empty children.
                         let src_lod = dst_lod - 1;
                         for child_octant_index in 0..8 {
-                            if child_bitmask & (1 << child_octant_index) != 0 {
-                                let child_octant = location.octant().child(child_octant_index);
+                            if node.child_bitmask() & (1 << child_octant_index) != 0 {
+                                let child_octant = node.octant().child(child_octant_index);
                                 let src_chunk_key =
                                     (child_octant.minimum() << chunk_log2) >> src_lod as i32;
                                 self.downsample_chunk(sampler, src_chunk_key, src_lod, dst_lod);

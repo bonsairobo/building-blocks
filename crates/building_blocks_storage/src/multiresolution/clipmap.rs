@@ -1,4 +1,4 @@
-use crate::{Location, LodChunkKey, LodChunkKey3, Octant, OctreeSet, VisitStatus};
+use crate::{LodChunkKey, LodChunkKey3, Octant, OctreeNode, OctreeSet, VisitStatus};
 
 use building_blocks_core::prelude::*;
 
@@ -35,8 +35,8 @@ pub fn active_clipmap_lod_chunks(
 
     let high_lod_boundary = config.clip_box_radius >> 1;
 
-    octree.visit_all_octants_in_preorder(&mut |location: &Location, _child_bitmask| {
-        let octant = *location.octant();
+    octree.visit_all_octants_in_preorder(&mut |node: &OctreeNode| {
+        let octant = node.octant();
         let lod = octant.power();
         if lod >= config.num_lods {
             return VisitStatus::Continue;
@@ -118,27 +118,27 @@ impl ClipMapUpdate3 {
         octree: &OctreeSet,
         mut update_rx: impl FnMut(LodChunkUpdate3),
     ) {
-        octree.visit_all_octants_in_preorder(&mut |location: &Location, _child_bitmask| {
-            let octant = location.octant();
+        octree.visit_all_octants_in_preorder(&mut |node: &OctreeNode| {
+            let octant = node.octant();
 
             let lod = octant.power();
             if lod >= self.num_lods || lod == 0 {
                 return VisitStatus::Continue;
             }
 
-            let old_offset_from_center = get_offset_from_lod_center(octant, &self.old_centers);
-            let offset_from_center = get_offset_from_lod_center(octant, &self.new_centers);
+            let old_offset_from_center = get_offset_from_lod_center(&octant, &self.old_centers);
+            let offset_from_center = get_offset_from_lod_center(&octant, &self.new_centers);
 
             if old_offset_from_center >= self.high_lod_boundary
                 && offset_from_center < self.high_lod_boundary
             {
                 // Increase the detail for this octant.
                 // Create the higher detail meshes in descendant octants.
-                let old_chunk = octant_lod_chunk_key(self.chunk_log2, octant);
+                let old_chunk = octant_lod_chunk_key(self.chunk_log2, &octant);
                 let new_chunks = find_merge_or_split_descendants(
                     self.chunk_log2,
                     octree,
-                    location,
+                    node,
                     &self.new_centers,
                     self.high_lod_boundary,
                 );
@@ -153,11 +153,11 @@ impl ClipMapUpdate3 {
             {
                 // Decrease the detail for this octant.
                 // Delete the higher detail meshes in descendant octants.
-                let new_chunk = octant_lod_chunk_key(self.chunk_log2, octant);
+                let new_chunk = octant_lod_chunk_key(self.chunk_log2, &octant);
                 let old_chunks = find_merge_or_split_descendants(
                     self.chunk_log2,
                     octree,
-                    location,
+                    node,
                     &self.old_centers,
                     self.high_lod_boundary,
                 );
@@ -190,16 +190,16 @@ fn all_lod_centers(lod0_center: Point3i, num_lods: u8) -> Vec<Point3i> {
 fn find_merge_or_split_descendants(
     chunk_log2: i32,
     octree: &OctreeSet,
-    location: &Location,
+    node: &OctreeNode,
     centers: &[Point3i],
     high_lod_boundary: i32,
 ) -> Vec<LodChunkKey3> {
     let mut matching_chunks = Vec::with_capacity(8);
-    location.visit_all_octants_in_preorder(octree, &mut |location: &Location, _child_bitmask| {
-        let lod = location.octant().power();
-        let old_offset_from_center = get_offset_from_lod_center(location.octant(), centers);
+    node.visit_all_octants_in_preorder(octree, &mut |node: &OctreeNode| {
+        let lod = node.octant().power();
+        let old_offset_from_center = get_offset_from_lod_center(node.octant(), centers);
         if lod == 0 || old_offset_from_center >= high_lod_boundary {
-            matching_chunks.push(octant_lod_chunk_key(chunk_log2, location.octant()));
+            matching_chunks.push(octant_lod_chunk_key(chunk_log2, node.octant()));
 
             VisitStatus::Stop
         } else {

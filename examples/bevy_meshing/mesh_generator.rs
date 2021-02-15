@@ -46,7 +46,7 @@ impl Sdf {
     fn get_sdf(&self) -> Box<dyn Fn(Point3i) -> Sd16> {
         match self {
             Sdf::Cube => {
-                let cube = sdfu::Box::new(PointN([20.0; 3]));
+                let cube = sdfu::Box::new(Point3f::fill(20.0));
 
                 Box::new(move |p| Sd16::from(cube.dist(Point3f::from(p))))
             }
@@ -89,11 +89,11 @@ impl Cubic {
         match self {
             Cubic::Terrace => {
                 let extent =
-                    Extent3i::from_min_and_shape(PointN([-20; 3]), PointN([40; 3])).padded(1);
+                    Extent3i::from_min_and_shape(Point3i::fill(-20), Point3i::fill(40)).padded(1);
                 let mut voxels = Array3::fill(extent, CubeVoxel(false));
                 for i in 0..40 {
                     let level = Extent3i::from_min_and_shape(
-                        PointN([i - 20; 3]),
+                        Point3i::fill(i - 20),
                         PointN([40 - i, 1, 40 - i]),
                     );
                     voxels.fill_extent(&level, CubeVoxel(true));
@@ -194,10 +194,11 @@ const CHUNK_SIZE: i32 = 16;
 
 fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNormMesh>> {
     let sdf = sdf.get_sdf();
-    let sample_extent = Extent3i::from_min_and_shape(PointN([-20; 3]), PointN([40; 3])).padded(1);
+    let sample_extent =
+        Extent3i::from_min_and_shape(Point3i::fill(-20), Point3i::fill(40)).padded(1);
 
     let builder = ChunkMapBuilder {
-        chunk_shape: PointN([CHUNK_SIZE; 3]),
+        chunk_shape: Point3i::fill(CHUNK_SIZE),
         ambient_value: Sd16::ONE, // air
         default_chunk_metadata: (),
     };
@@ -244,7 +245,8 @@ fn generate_chunk_meshes_from_height_map(
     pool: &TaskPool,
 ) -> Vec<Option<PosNormMesh>> {
     let height_map = hm.get_height_map();
-    let sample_extent = Extent2i::from_min_and_shape(PointN([-20; 2]), PointN([40; 2])).padded(1);
+    let sample_extent =
+        Extent2i::from_min_and_shape(Point2i::fill(-20), Point2i::fill(40)).padded(1);
 
     let builder = ChunkMapBuilder {
         chunk_shape: PointN([CHUNK_SIZE; 2]),
@@ -295,7 +297,7 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
 
     // Chunk up the voxels just to show that meshing across chunks is consistent.
     let builder = ChunkMapBuilder {
-        chunk_shape: PointN([CHUNK_SIZE; 3]),
+        chunk_shape: Point3i::fill(CHUNK_SIZE),
         ambient_value: CubeVoxel(false),
         default_chunk_metadata: (),
     };

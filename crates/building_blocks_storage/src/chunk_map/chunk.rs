@@ -103,8 +103,8 @@ mod tests {
 
     #[test]
     fn chunk_keys_for_extent_gives_keys_for_chunks_overlapping_extent() {
-        let indexer = ChunkIndexer::new(PointN([16; 3]));
-        let query_extent = Extent3i::from_min_and_shape(PointN([15; 3]), PointN([16; 3]));
+        let indexer = ChunkIndexer::new(Point3i::fill(16));
+        let query_extent = Extent3i::from_min_and_shape(Point3i::fill(15), Point3i::fill(16));
         let chunk_keys: Vec<_> = indexer.chunk_keys_for_extent(&query_extent).collect();
 
         assert_eq!(
@@ -124,9 +124,9 @@ mod tests {
 
     #[test]
     fn chunk_key_for_negative_point_is_negative() {
-        let indexer = ChunkIndexer::new(PointN([16; 3]));
-        let p = PointN([-1; 3]);
+        let indexer = ChunkIndexer::new(Point3i::fill(16));
+        let p = Point3i::fill(-1);
         let key = indexer.chunk_key_containing_point(p);
-        assert_eq!(key, PointN([-16; 3]));
+        assert_eq!(key, Point3i::fill(-16));
     }
 }

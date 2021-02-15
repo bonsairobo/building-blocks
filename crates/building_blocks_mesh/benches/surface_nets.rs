@@ -14,8 +14,10 @@ fn surface_nets_sine_sdf(c: &mut Criterion) {
                 b.iter_with_setup(
                     || {
                         let radius = diameter >> 1;
-                        let sample_extent =
-                            Extent3i::from_min_and_max(PointN([-radius; 3]), PointN([radius; 3]));
+                        let sample_extent = Extent3i::from_min_and_max(
+                            Point3i::fill(-radius),
+                            Point3i::fill(radius),
+                        );
                         let mut samples = Array3::fill(sample_extent, Voxel(0.0));
                         copy_extent(&sample_extent, &sine_sdf, &mut samples);
 

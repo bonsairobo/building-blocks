@@ -26,14 +26,14 @@
 //!
 //! let ambient_value = 0;
 //! let builder = ChunkMapBuilder {
-//!    chunk_shape: PointN([16; 3]), // components must be powers of 2
+//!    chunk_shape: Point3i::fill(16), // components must be powers of 2
 //!    ambient_value,
 //!    default_chunk_metadata: (), // chunk metadata is optional
 //! };
 //! let mut map = builder.build_with_hash_map_storage();
 //!
 //! // Although we only write 3 points, 3 whole dense chunks will be inserted.
-//! let write_points = [PointN([-100; 3]), PointN([0; 3]), PointN([100; 3])];
+//! let write_points = [Point3i::fill(-100), Point3i::ZERO, Point3i::fill(100)];
 //! for &p in write_points.iter() {
 //!     *map.get_mut(p) = 1;
 //! }
@@ -59,13 +59,13 @@
 //! for &p in write_points.iter() {
 //!     assert_eq!(map.get(p), 1);
 //! }
-//! assert_eq!(map.get(PointN([1, 1, 1])), 0);
+//! assert_eq!(map.get(Point3i::fill(1)), 0);
 //!
 //! // Sometimes you need to implement very fast algorithms (like kernel-based methods) that do a
 //! // lot of random access. In this case it's most efficient to use `Stride`s, but `ChunkMap`
 //! // doesn't support random indexing by `Stride`. Instead, assuming that your query spans multiple
 //! // chunks, you should copy the extent into a dense map first. (The copy is fast).
-//! let query_extent = Extent3i::from_min_and_shape(PointN([10; 3]), PointN([32; 3]));
+//! let query_extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(32));
 //! let mut dense_map = Array3::fill(query_extent, ambient_value);
 //! copy_extent(&query_extent, &map, &mut dense_map);
 //! ```
@@ -77,7 +77,7 @@
 //! # use building_blocks_storage::prelude::*;
 //! #
 //! # let builder = ChunkMapBuilder {
-//! #    chunk_shape: PointN([16; 3]), // components must be powers of 2
+//! #    chunk_shape: Point3i::fill(16), // components must be powers of 2
 //! #    ambient_value: 0,
 //! #    default_chunk_metadata: (), // chunk metadata is optional
 //! # };
@@ -85,7 +85,7 @@
 //! let mut map = builder.build_with_write_storage(CompressibleChunkStorage::new(Lz4 { level: 10 }));
 //!
 //! // You can write voxels the same as any other `ChunkMap`. As chunks are created, they will be placed in an LRU cache.
-//! let write_points = [PointN([-100; 3]), PointN([0; 3]), PointN([100; 3])];
+//! let write_points = [Point3i::fill(-100), Point3i::ZERO, Point3i::fill(100)];
 //! for &p in write_points.iter() {
 //!     *map.get_mut(p) = 1;
 //! }
@@ -662,7 +662,7 @@ mod tests {
 
     use crate::{access::Get, copy_extent, Array3};
 
-    use building_blocks_core::Extent3i;
+    use building_blocks_core::prelude::*;
 
     const BUILDER: ChunkMapBuilder3<i32> = ChunkMapBuilder {
         chunk_shape: PointN([16; 3]),
@@ -695,10 +695,10 @@ mod tests {
     fn write_extent_with_for_each_then_read() {
         let mut map = BUILDER.build_with_hash_map_storage();
 
-        let write_extent = Extent3i::from_min_and_shape(PointN([10; 3]), PointN([80; 3]));
+        let write_extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(80));
         map.for_each_mut(&write_extent, |_p, value| *value = 1);
 
-        let read_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
+        let read_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(100));
         for p in read_extent.iter_points() {
             if write_extent.contains(p) {
                 assert_eq!(map.get(p), 1);
@@ -710,14 +710,14 @@ mod tests {
 
     #[test]
     fn copy_extent_from_array_then_read() {
-        let extent_to_copy = Extent3i::from_min_and_shape(PointN([10; 3]), PointN([80; 3]));
+        let extent_to_copy = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(80));
         let array = Array3::fill(extent_to_copy, 1);
 
         let mut map = BUILDER.build_with_hash_map_storage();
 
         copy_extent(&extent_to_copy, &array, &mut map);
 
-        let read_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
+        let read_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(100));
         for p in read_extent.iter_points() {
             if extent_to_copy.contains(p) {
                 assert_eq!(map.get(p), 1);

@@ -133,13 +133,13 @@ mod test {
     }
 
     fn homogeneous_array_compression_rate<B: BytesCompression>(compression: B, side_length: i32) {
-        let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([side_length; 3]));
+        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(side_length));
         let array = Array3::fill_with(extent, |_p| 0u16);
         array_compression_rate(&array, compression);
     }
 
     fn sphere_array_compression_rate<B: BytesCompression>(compression: B, side_length: i32) {
-        let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([side_length; 3]));
+        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(side_length));
         let array = Array3::fill_with(extent, |p| if p.norm() > 50.0 { 0u16 } else { 1u16 });
         array_compression_rate(&array, compression);
     }

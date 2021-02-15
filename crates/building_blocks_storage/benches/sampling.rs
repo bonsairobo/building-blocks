@@ -12,7 +12,7 @@ fn point_downsample3(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
                 || {
-                    let chunk_shape = PointN([size; 3]);
+                    let chunk_shape = Point3i::fill(size);
                     let extent = Extent3i::from_min_and_shape(Point3i::ZERO, chunk_shape);
                     let src = Array3::fill(extent, 1);
                     let dst = Array3::fill(extent, 0);
@@ -39,8 +39,8 @@ fn sdf_mean_downsample_chunk_pyramid(c: &mut Criterion) {
                 b.iter_with_setup(
                     || {
                         let num_lods = 6;
-                        let chunk_shape = PointN([16; 3]);
-                        let superchunk_shape = PointN([(1 << num_lods) * 16; 3]);
+                        let chunk_shape = Point3i::fill(16);
+                        let superchunk_shape = Point3i::fill((1 << num_lods) * 16);
 
                         let builder = ChunkMapBuilder3 {
                             chunk_shape,

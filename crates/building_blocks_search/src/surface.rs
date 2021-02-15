@@ -66,21 +66,21 @@ mod test {
     #[test]
     fn find_surface_points_cube_side_length_3() {
         let mut map = Array3::fill(
-            Extent3i::from_min_and_shape(PointN([0; 3]), PointN([5; 3])),
+            Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(5)),
             Voxel(false),
         );
 
-        let solid_extent = Extent3i::from_min_and_shape(PointN([1; 3]), PointN([3; 3]));
+        let solid_extent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(3));
         map.for_each_mut(&solid_extent, |_s: Stride, value| *value = Voxel(true));
 
         // Also set one point on the boundary for an edge case, since it can't be considered, as not
         // all of its neighbors exist.
-        *map.get_mut(PointN([0; 3])) = Voxel(true);
+        *map.get_mut(Point3i::ZERO) = Voxel(true);
 
         let (surface_points, _surface_strides) = find_surface_points(&map, &solid_extent);
 
         // Should exclude the center point.
-        let center = PointN([2; 3]);
+        let center = Point3i::fill(2);
         let expected_surface_points = solid_extent
             .iter_points()
             .filter(|p| *p != center)

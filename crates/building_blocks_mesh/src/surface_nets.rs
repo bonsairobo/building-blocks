@@ -93,7 +93,7 @@ fn estimate_surface<A, T>(
     sdf.strides_from_local_points(&corner_offsets, &mut corner_offset_strides);
 
     // Avoid accessing out of bounds with a 2x2x2 kernel.
-    let iter_extent = extent.add_to_shape(PointN([-1; 3]));
+    let iter_extent = extent.add_to_shape(Point3i::fill(-1));
 
     sdf.for_each_point_and_stride(&iter_extent, |p, p_stride| {
         // Get the corners of the cube with minimal corner p.
@@ -161,7 +161,7 @@ where
     }
 
     let centroid = centroid_of_edge_intersections(&corner_dists);
-    let position = voxel_size * (Point3f::from(*cube_min_corner) + centroid + PointN([0.5; 3]));
+    let position = voxel_size * (Point3f::from(*cube_min_corner) + centroid + Point3f::fill(0.5));
     let normal = sdf_gradient(&corner_dists, &centroid);
 
     Some((position.0, normal))
@@ -169,7 +169,7 @@ where
 
 fn centroid_of_edge_intersections(dists: &[f32; 8]) -> Point3f {
     let mut count = 0;
-    let mut sum = PointN([0.0; 3]);
+    let mut sum = Point3f::ZERO;
     for [corner1, corner2] in CUBE_EDGES.iter() {
         let d1 = dists[*corner1];
         let d2 = dists[*corner2];

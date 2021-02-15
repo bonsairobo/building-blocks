@@ -163,7 +163,7 @@ mod test {
         B: BytesCompression + Copy + DeserializeOwned + Serialize,
     {
         let mut map = BUILDER.build_with_write_storage(storage);
-        let filled_extent = Extent3i::from_min_and_shape(PointN([-100; 3]), PointN([200; 3]));
+        let filled_extent = Extent3i::from_min_and_shape(Point3i::fill(-100), Point3i::fill(200));
         map.fill_extent(&filled_extent, 1);
         let serializable = futures::executor::block_on(SerializableChunkMap::from_chunk_map(
             BincodeCompression::new(compression),

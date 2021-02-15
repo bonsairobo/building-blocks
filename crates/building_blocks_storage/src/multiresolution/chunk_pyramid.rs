@@ -306,7 +306,7 @@ mod tests {
 
     #[test]
     fn downsample_destination_for_one_level_up() {
-        let chunk_shape = PointN([16; 3]);
+        let chunk_shape = Point3i::fill(16);
         let level_delta = 1;
 
         let src_key = chunk_shape;
@@ -314,7 +314,7 @@ mod tests {
         assert_eq!(
             dst,
             DownsampleDestination3 {
-                dst_chunk_key: PointN([0; 3]),
+                dst_chunk_key: Point3i::ZERO,
                 dst_offset: Local(chunk_shape / 2),
             }
         );
@@ -332,7 +332,7 @@ mod tests {
 
     #[test]
     fn downsample_destination_for_two_levels_up() {
-        let chunk_shape = PointN([16; 3]);
+        let chunk_shape = Point3i::fill(16);
         let level_delta = 2;
 
         let src_key = 3 * chunk_shape;
@@ -340,7 +340,7 @@ mod tests {
         assert_eq!(
             dst,
             DownsampleDestination3 {
-                dst_chunk_key: PointN([0; 3]),
+                dst_chunk_key: Point3i::ZERO,
                 dst_offset: Local(3 * chunk_shape / 4),
             }
         );

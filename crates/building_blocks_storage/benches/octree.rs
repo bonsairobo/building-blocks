@@ -36,7 +36,7 @@ fn octree_from_array3_full(c: &mut Criterion) {
                 b.iter_with_setup(
                     || {
                         Array3::fill(
-                            Extent3i::from_min_and_shape(PointN([0; 3]), PointN([edge_len; 3])),
+                            Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(edge_len)),
                             Voxel(true),
                         )
                     },
@@ -131,11 +131,14 @@ impl IsEmpty for Voxel {
 fn make_sphere_array(edge_length: i32) -> Array3<Voxel> {
     let sphere_radius = edge_length / 2;
     let mut map = Array3::fill(
-        Extent3i::from_min_and_shape(PointN([-sphere_radius; 3]), PointN([2 * sphere_radius; 3])),
+        Extent3i::from_min_and_shape(
+            Point3i::fill(-sphere_radius),
+            Point3i::fill(2 * sphere_radius),
+        ),
         Voxel(false),
     );
 
-    let center = PointN([0; 3]);
+    let center = Point3i::ZERO;
     let map_extent = *map.extent();
     map.for_each_mut(&map_extent, |p: Point3i, value| {
         if p.l2_distance_squared(center) <= sphere_radius * sphere_radius {

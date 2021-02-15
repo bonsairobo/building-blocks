@@ -6,7 +6,7 @@
 //! use building_blocks_core::prelude::*;
 //! use building_blocks_storage::prelude::*;
 //!
-//! let sample_extent = Extent3i::from_min_and_max(PointN([-15; 3]), PointN([15; 3]));
+//! let sample_extent = Extent3i::from_min_and_max(Point3i::fill(-15), Point3i::fill(15));
 //! let mut sampled_sphere = Array3::fill(sample_extent, 0.0);
 //!
 //! copy_extent(&sample_extent, &|p: Point3i| (p.dot(p) - 10) as f32, &mut sampled_sphere);

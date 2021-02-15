@@ -12,7 +12,7 @@
 //!
 //! struct BigData([u8; 9001]);
 //!
-//! let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
+//! let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
 //! let mut index_map = Array3::fill(extent, 0u8);
 //! *index_map.get_mut(PointN([0, 0, 1])) = 1;
 //!
@@ -29,9 +29,9 @@
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
-//! # let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
+//! # let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
 //! let src = Array3::fill(extent, 0);
-//! let builder = ChunkMapBuilder { chunk_shape: PointN([4; 3]), ambient_value: 0, default_chunk_metadata: () };
+//! let builder = ChunkMapBuilder { chunk_shape: Point3i::fill(4), ambient_value: 0, default_chunk_metadata: () };
 //! let mut dst = builder.build_with_hash_map_storage();
 //! let tfm = TransformMap::new(&src, &|value: i32| value + 1);
 //! copy_extent(&extent, &tfm, &mut dst);
@@ -230,13 +230,13 @@ mod tests {
 
     #[test]
     fn transform_accessors() {
-        let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
+        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let inner_map: Array3<usize> = Array3::fill(extent, 0usize);
 
         let palette = vec![1, 2, 3];
         let outer_map = TransformMap::new(&inner_map, |i: usize| palette[i]);
 
-        assert_eq!(outer_map.get(PointN([0; 3])), 1);
+        assert_eq!(outer_map.get(Point3i::ZERO), 1);
 
         outer_map.for_each(&extent, |_s: Stride, value| {
             assert_eq!(value, 1);
@@ -249,13 +249,13 @@ mod tests {
         });
 
         let outer_map = TransformMap::new(&inner_map, |i: usize| palette[i]);
-        assert_eq!(outer_map.get(PointN([0; 3])), 1);
+        assert_eq!(outer_map.get(Point3i::ZERO), 1);
     }
 
     #[cfg(feature = "lz4")]
     #[test]
     fn copy_from_transformed_array() {
-        let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
+        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let src = Array3::fill(extent, 0);
         let mut dst = BUILDER.build_with_hash_map_storage();
         let tfm = TransformMap::new(&src, |value: i32| value + 1);
@@ -265,14 +265,14 @@ mod tests {
     #[cfg(feature = "lz4")]
     #[test]
     fn copy_from_transformed_chunk_map_reader() {
-        let src_extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([16; 3]));
+        let src_extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let src_array = Array3::fill(src_extent, 1);
         let mut src = BUILDER.build_with_hash_map_storage();
         copy_extent(&src_extent, &src_array, &mut src);
 
         let tfm = TransformMap::new(&src, |value: i32| value + 1);
 
-        let dst_extent = Extent3::from_min_and_shape(PointN([-16; 3]), PointN([32; 3]));
+        let dst_extent = Extent3::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
         let mut dst = BUILDER.build_with_hash_map_storage();
         copy_extent(&dst_extent, &tfm, &mut dst);
     }

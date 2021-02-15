@@ -41,11 +41,11 @@ use building_blocks::{
     mesh::{SurfaceNetsBuffer, surface_nets},
 };
 
-let center = PointN([25.0; 3]);
+let center = Point3f::fill(25.0);
 let radius = 10.0;
 let sphere_sdf = Sphere::new(radius).translate(center);
 
-let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([50; 3]));
+let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(50));
 let mut samples = Array3::fill_with(extent, |p| sphere_sdf.dist(Point3f::from(p)));
 
 let mut mesh_buffer = SurfaceNetsBuffer::default();

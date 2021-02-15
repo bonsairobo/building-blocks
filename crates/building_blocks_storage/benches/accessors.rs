@@ -154,7 +154,7 @@ fn array_copy(c: &mut Criterion) {
             b.iter_with_setup(
                 || {
                     let array_extent =
-                        Extent3::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
+                        Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
                     let array_src = Array3::fill(array_extent, 1);
                     let array_dst = Array3::fill(array_extent, 0);
 
@@ -177,7 +177,7 @@ fn chunk_hash_map_copy(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
                 || {
-                    let cp_extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
+                    let cp_extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
                     let mut src = DEFAULT_BUILDER.build_with_rw_storage(FnvHashMap::default());
                     src.fill_extent(&cp_extent, 1);
 
@@ -212,7 +212,7 @@ criterion_main!(benches);
 const ARRAY_SIZES: [i32; 3] = [16, 32, 64];
 
 fn set_up_array(size: i32) -> (Array3<i32>, Extent3i) {
-    let array_extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
+    let array_extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
     let array = Array3::fill(array_extent, 1);
 
     let iter_extent = array_extent.padded(-1);
@@ -225,7 +225,7 @@ where
     Store: ChunkWriteStorage<[i32; 3], i32, ()>,
 {
     let mut map = DEFAULT_BUILDER.build_with_write_storage(storage);
-    let iter_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
+    let iter_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
     map.fill_extent(&iter_extent, 1);
 
     (map, iter_extent)
@@ -241,8 +241,8 @@ where
 {
     let mut map = DEFAULT_BUILDER.build_with_write_storage(storage);
     let chunk_key_extent = Extent3i::from_min_and_shape(
-        PointN([0; 3]),
-        PointN([size; 3]) / DEFAULT_BUILDER.chunk_shape,
+        Point3i::ZERO,
+        Point3i::fill(size) / DEFAULT_BUILDER.chunk_shape,
     );
     for chunk_p in chunk_key_extent.iter_points() {
         if chunk_p % sparsity != Point3i::ZERO {
@@ -259,7 +259,7 @@ where
         );
     }
 
-    let iter_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([size; 3]));
+    let iter_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
 
     (map, iter_extent)
 }

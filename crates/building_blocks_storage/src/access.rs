@@ -5,7 +5,7 @@
 //! use building_blocks_core::prelude::*;
 //! use building_blocks_storage::prelude::*;
 //!
-//! let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
+//! let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(100));
 //! let mut map = Array3::fill(extent, 0);
 //!
 //! for i in 0..extent.num_points() {
@@ -20,9 +20,9 @@
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
-//! # let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
+//! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(100));
 //! # let mut map = Array3::fill(extent, 0);
-//! let subextent = Extent3i::from_min_and_shape(PointN([1; 3]), PointN([98; 3]));
+//! let subextent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(98));
 //! // Use the `ForEachMut<[i32; 3], Stride>` trait.
 //! map.for_each_mut(&subextent, |_s: Stride, value: &mut i32| { *value = 2 });
 //! ```
@@ -35,13 +35,13 @@
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
-//! # let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([100; 3]));
+//! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(100));
 //! # let mut map = Array3::fill(extent, 0);
-//! # let subextent = Extent3i::from_min_and_shape(PointN([1; 3]), PointN([98; 3]));
+//! # let subextent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(98));
 //! // Create another map to copy to/from. We use a `ChunkHashMap`, but any map that implements
 //! // `WriteExtent` can be a copy destination, and any map that implements `ReadExtent` can be a
 //! // copy source.
-//! let builder = ChunkMapBuilder { chunk_shape: PointN([16; 3]), ambient_value: 0, default_chunk_metadata: () };
+//! let builder = ChunkMapBuilder { chunk_shape: Point3i::fill(16), ambient_value: 0, default_chunk_metadata: () };
 //! let mut other_map = builder.build_with_hash_map_storage();
 //! copy_extent(&subextent, &map, &mut other_map);
 //! copy_extent(&subextent, &other_map, &mut map);

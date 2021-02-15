@@ -23,9 +23,9 @@
 //! use building_blocks_core::prelude::*;
 //! use building_blocks_storage::{octree::*, prelude::*};
 //!
-//! let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([32; 3]));
+//! let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
 //! let voxels = Array3::fill(extent, true); // boring example
-//! let octree = OctreeSet::from_array3(&voxels, Extent3i::from_min_and_shape(PointN([8; 3]), PointN([16; 3])));
+//! let octree = OctreeSet::from_array3(&voxels, Extent3i::from_min_and_shape(Point3i::fill(8), Point3i::fill(16)));
 //!
 //! octree.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
 //!     if some_condition(node) {
@@ -840,7 +840,7 @@ impl Octant {
 impl From<Octant> for Extent3i {
     #[inline]
     fn from(octant: Octant) -> Self {
-        Extent3i::from_min_and_shape(octant.minimum, PointN([octant.edge_length; 3]))
+        Extent3i::from_min_and_shape(octant.minimum, Point3i::fill(octant.edge_length))
     }
 }
 
@@ -885,7 +885,7 @@ mod tests {
 
     #[test]
     fn add_extents() {
-        let domain = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([32; 3]));
+        let domain = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
 
         // No overlap, but they touch.
         let mut test = InsertTest::new(domain);
@@ -900,8 +900,14 @@ mod tests {
 
         // With overlap.
         let mut test = InsertTest::new(domain);
-        test.assert_extent_added(Extent3i::from_min_and_max(PointN([8; 3]), PointN([12; 3])));
-        test.assert_extent_added(Extent3i::from_min_and_max(PointN([10; 3]), PointN([15; 3])));
+        test.assert_extent_added(Extent3i::from_min_and_max(
+            Point3i::fill(8),
+            Point3i::fill(12),
+        ));
+        test.assert_extent_added(Extent3i::from_min_and_max(
+            Point3i::fill(10),
+            Point3i::fill(15),
+        ));
     }
 
     struct InsertTest {
@@ -998,7 +1004,7 @@ mod tests {
 
     fn random_voxels() -> Array3<Voxel> {
         let mut rng = rand::thread_rng();
-        let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([64; 3]));
+        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
 
         Array3::fill_with(extent, |_| Voxel(rng.gen()))
     }

@@ -30,7 +30,7 @@ where
     let vox_extent = map_extent - map_extent.minimum;
 
     // VOX coordinates are limited to u8.
-    assert!(shape <= PointN([std::u8::MAX as i32; 3]));
+    assert!(shape <= Point3i::fill(std::u8::MAX as i32));
 
     let size = dot_vox::Size {
         x: shape.x() as u32,

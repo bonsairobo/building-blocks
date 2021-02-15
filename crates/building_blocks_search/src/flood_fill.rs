@@ -194,12 +194,12 @@ mod tests {
         let sphere_radius = 32;
         let map_radius = sphere_radius + 1;
         let mut map = Array3::fill(
-            Extent3i::from_min_and_shape(PointN([-map_radius; 3]), PointN([2 * map_radius; 3])),
+            Extent3i::from_min_and_shape(Point3i::fill(-map_radius), Point3i::fill(2 * map_radius)),
             background_color,
         );
 
         // Initialize the sphere with "old color."
-        let center = PointN([0; 3]);
+        let center = Point3i::ZERO;
         let map_extent = *map.extent();
         map.for_each_mut(&map_extent, |p: Point3i, value| {
             if p.l2_distance_squared(center) < sphere_radius * sphere_radius {

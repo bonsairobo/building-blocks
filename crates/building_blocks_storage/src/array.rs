@@ -19,11 +19,11 @@
 //! use building_blocks_core::prelude::*;
 //! use building_blocks_storage::prelude::*;
 //!
-//! let array_extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([64; 3]));
+//! let array_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
 //! let mut array = Array3::fill(array_extent, 0);
 //!
 //! // Write all points in the extent to the same value.
-//! let write_extent = Extent3i::from_min_and_lub(PointN([10, 10, 10]), PointN([20, 20, 20]));
+//! let write_extent = Extent3i::from_min_and_lub(Point3i::fill(10), Point3i::fill(20));
 //! array.for_each_mut(&write_extent, |_: (), value| *value = 1);
 //!
 //! // Only the points in the extent should have been written.
@@ -41,11 +41,11 @@
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
-//! # let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([64; 3]));
+//! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
 //! // Use a more interesting data set, just to show off this constructor.
 //! let mut array = Array3::fill_with(extent, |p| if p.x() % 2 == 0 { 1 } else { 0 });
 //!
-//! let subextent = Extent3i::from_min_and_shape(PointN([1; 3]), PointN([62; 3]));
+//! let subextent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(62));
 //!
 //! // Some of these offsets include negative coordinates, which would underflow when translated
 //! // into an unsigned index. That's OK though, because Stride is intended to be used with modular
@@ -75,7 +75,7 @@
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
-//! # let extent = Extent3i::from_min_and_shape(PointN([0; 3]), PointN([64; 3]));
+//! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
 //! // Borrow `array`'s values for the lifetime of `other_array`.
 //! let array = Array3::fill(extent, 1);
 //! let other_array = Array3::new(extent, array.values_slice());
@@ -1020,7 +1020,7 @@ mod tests {
 
     #[test]
     fn fill_and_get_3d() {
-        let extent = Extent3::from_min_and_shape(PointN([1; 3]), PointN([10; 3]));
+        let extent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
         let mut array = Array3::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 1000);
         *array.get_mut(Stride(0)) = 1;
@@ -1049,13 +1049,13 @@ mod tests {
 
     #[test]
     fn fill_and_for_each_2d() {
-        let extent = Extent2::from_min_and_shape(PointN([1; 2]), PointN([10; 2]));
+        let extent = Extent2::from_min_and_shape(Point2i::fill(1), Point2i::fill(10));
         let mut array = Array2::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 100);
         *array.get_mut(Stride(0)) = 1;
 
         array.for_each(&extent, |p: Point2i, value| {
-            if p == PointN([1; 2]) {
+            if p == Point2i::fill(1) {
                 assert_eq!(value, 1);
             } else {
                 assert_eq!(value, 0);
@@ -1065,13 +1065,13 @@ mod tests {
 
     #[test]
     fn fill_and_for_each_3d() {
-        let extent = Extent3::from_min_and_shape(PointN([1; 3]), PointN([10; 3]));
+        let extent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
         let mut array = Array3::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 1000);
         *array.get_mut(Stride(0)) = 1;
 
         array.for_each(&extent, |p: Point3i, value| {
-            if p == PointN([1; 3]) {
+            if p == Point3i::fill(1) {
                 assert_eq!(value, 1);
             } else {
                 assert_eq!(value, 0);
@@ -1081,7 +1081,7 @@ mod tests {
 
     #[test]
     fn uninitialized() {
-        let extent = Extent3::from_min_and_shape(PointN([1; 3]), PointN([10; 3]));
+        let extent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
         let mut array: Array3<MaybeUninit<i32>> = unsafe { Array3::maybe_uninit(extent) };
 
         for p in extent.iter_points() {
@@ -1099,10 +1099,10 @@ mod tests {
 
     #[test]
     fn copy() {
-        let extent = Extent3::from_min_and_shape(PointN([0; 3]), PointN([10; 3]));
+        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
         let mut array = Array3::fill(extent, 0);
 
-        let subextent = Extent3::from_min_and_shape(PointN([1; 3]), PointN([5; 3]));
+        let subextent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(5));
         for p in subextent.iter_points() {
             *array.get_mut(p) = p.x() + p.y() + p.z();
         }

@@ -34,7 +34,7 @@ fn setup(
             0.1,
         );
 
-    let extent = Extent3i::from_min_and_max(PointN([-100; 3]), PointN([100; 3]));
+    let extent = Extent3i::from_min_and_max(Point3i::fill(-100), Point3i::fill(100));
     let samples = Array3::fill_with(extent, |p| Sd16::from(sdf.dist(0.01 * Point3f::from(p))));
 
     let mut mesh_buffer = SurfaceNetsBuffer::default();

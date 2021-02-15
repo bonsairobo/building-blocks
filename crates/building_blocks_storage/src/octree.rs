@@ -295,7 +295,7 @@ impl OctreeSet {
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
         self._visit_branches_and_leaves_in_preorder(code, octant, &mut |node: &OctreeNode| {
-            if node.code == LocationCode::LEAF {
+            if node.is_full() {
                 node.octant.visit_self_and_descendants_in_preorder(visitor)
             } else {
                 visitor.visit_octant(node)
@@ -315,7 +315,7 @@ impl OctreeSet {
             octant,
             predicate,
             &mut |node: &OctreeNode| {
-                if node.code == LocationCode::LEAF {
+                if node.is_full() {
                     node.octant.visit_self_and_descendants_in_postorder(visitor)
                 } else {
                     visitor.visit_octant(node)
@@ -638,7 +638,7 @@ impl OctreeNode {
         octree: &OctreeSet,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
-        if self.code == LocationCode::LEAF {
+        if self.is_full() {
             visitor.visit_octant(self)
         } else {
             octree._visit_branches_and_leaves_in_preorder(self.code, self.octant, visitor)
@@ -653,7 +653,7 @@ impl OctreeNode {
         predicate: &impl Fn(&OctreeNode) -> bool,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
-        if self.code == LocationCode::LEAF {
+        if self.is_full() {
             visitor.visit_octant(self)
         } else {
             octree._visit_branches_and_leaves_in_postorder(
@@ -672,7 +672,7 @@ impl OctreeNode {
         octree: &OctreeSet,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
-        if self.code == LocationCode::LEAF {
+        if self.is_full() {
             self.octant.visit_self_and_descendants_in_preorder(visitor)
         } else {
             octree._visit_all_octants_in_preorder(self.code, self.octant, visitor)
@@ -687,7 +687,7 @@ impl OctreeNode {
         predicate: &impl Fn(&OctreeNode) -> bool,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
-        if self.code == LocationCode::LEAF {
+        if self.is_full() {
             self.octant.visit_self_and_descendants_in_postorder(visitor)
         } else {
             octree._visit_all_octants_in_postorder(self.code, self.octant, predicate, visitor)

@@ -44,7 +44,7 @@ where
         map: ChunkMap<N, T, Meta, Store>,
     ) -> Self
     where
-        BincodeCompression<Chunk<N, T, Meta>, B>: Copy, // TODO: this should be inferred
+        B: Copy,
         Store: IntoIterator<Item = (PointN<N>, Chunk<N, T, Meta>)>,
     {
         let builder = map.builder();

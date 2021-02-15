@@ -27,7 +27,7 @@ impl OctreeChunkIndex {
         self.indexer.chunk_shape()
     }
 
-    /// Same as `index_chunk`, but using the chunk keys and chunk shape from `chunk_map`.
+    /// Same as `index_chunks`, but using the chunk keys and chunk shape from `chunk_map`.
     pub fn index_chunk_map<T, Meta, Store>(
         superchunk_shape: Point3i,
         chunk_map: &ChunkMap3<T, Meta, Store>,

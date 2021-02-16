@@ -1,11 +1,15 @@
 //! A sparse lattice map made of up array chunks.
 //!
-//! # Addressing
+//! # Access
 //!
 //! The data can either be addressed by chunk key with the `get_chunk*` methods or by individual points using the `Get*` and
 //! `ForEach*` trait impls. The map of chunks uses `Point3i` keys. The key for a chunk is the minimum point in that chunk, which
 //! is always a multiple of the chunk shape. Chunk shape dimensions must be powers of 2, which allows for efficiently
 //! calculating a chunk key from any point in the chunk.
+//!
+//! If you require iteration over large, but very sparse regions, you might be better off using an `OctreeChunkIndex` to track
+//! the set of occupied chunks. Traversing that index can be faster than doing hash map lookups on all of the possible chunks
+//! in a region.
 //!
 //! # Chunk Storage
 //!

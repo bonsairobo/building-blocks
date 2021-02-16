@@ -7,9 +7,9 @@
 //! is always a multiple of the chunk shape. Chunk shape dimensions must be powers of 2, which allows for efficiently
 //! calculating a chunk key from any point in the chunk.
 //!
-//! If you require iteration over large, but very sparse regions, you might be better off using an `OctreeChunkIndex` to track
-//! the set of occupied chunks. Traversing that index can be faster than doing hash map lookups on all of the possible chunks
-//! in a region.
+//! If you require iteration over large, but very sparse regions, you might want an additional `OctreeChunkIndex` to track the
+//! set of occupied chunks. Traversing that index can be faster than doing hash map lookups on all of the possible chunks in a
+//! region.
 //!
 //! # Chunk Storage
 //!

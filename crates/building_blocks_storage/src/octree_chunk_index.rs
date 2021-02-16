@@ -108,6 +108,21 @@ impl OctreeChunkIndex {
         }
     }
 
+    pub fn add_extent(&mut self, extent: &Extent3i) {
+        let Self {
+            octrees, indexer, ..
+        } = self;
+
+        for superchunk_key in indexer.chunk_keys_for_extent(extent) {
+            let octree = octrees.entry(superchunk_key).or_insert_with(|| {
+                let domain = Extent3i::from_min_and_shape(superchunk_key, indexer.chunk_shape());
+
+                OctreeSet::empty(domain)
+            });
+            octree.add_extent(extent);
+        }
+    }
+
     pub fn clipmap_config(&self, clip_box_radius: i32) -> ClipMapConfig3 {
         assert!(self.indexer.chunk_shape().is_cube());
         assert!(self.chunk_shape().is_cube());

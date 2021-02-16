@@ -117,7 +117,15 @@ lto = true
 ### Cargo Features
 
 Building Blocks is organized into several crates, some of which are hidden behind features, and some have features
-themselves, which get re-exported by the top-level crate.
+themselves, which get re-exported by the top-level crate. By default, most features are enabled. You can avoid taking
+unnecessary dependencies by declaring `default-features = false` in your `Cargo.toml`:
+
+```toml
+[dependencies.building-blocks]
+version = "0.5"
+default-features = false
+features = [$DESIRED_FEATURES...]
+```
 
 #### Math Type Conversions
 
@@ -128,14 +136,7 @@ The `PointN` types have conversions to/from [`glam`](https://docs.rs/glam), [`na
 
 Chunk compression supports two backends out of the box: `Lz4` and `Snappy`. They are enabled with the "lz4" and "snappy"
 features. "lz4" is the default, but it relies on a C++ library, so it's not compatible with WASM. But Snappy is pure Rust,
-so it can! Just use `default-features = false` and add "snappy" to you `features` list, like so:
-
-```toml
-[dependencies.building-blocks]
-version = "0.5"
-default-features = false
-features = ["snappy"]
-```
+so it can! Just use `default-features = false` and add "snappy" to you `features` list.
 
 #### VOX Files
 

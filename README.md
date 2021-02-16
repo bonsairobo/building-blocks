@@ -124,7 +124,7 @@ unnecessary dependencies by declaring `default-features = false` in your `Cargo.
 [dependencies.building-blocks]
 version = "0.5"
 default-features = false
-features = [$DESIRED_FEATURES...]
+features = ["foo", "bar"]
 ```
 
 #### Math Type Conversions

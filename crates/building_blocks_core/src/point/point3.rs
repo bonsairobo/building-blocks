@@ -174,13 +174,17 @@ impl Point3i {
 
 impl Point3f {
     #[inline]
-    pub fn as_3i(self) -> Point3i {
-        PointN([self.x() as i32, self.y() as i32, self.z() as i32])
+    pub fn in_voxel(self) -> Point3i {
+        self.floor_int()
     }
+}
+
+impl AsIntegerPoint for Point3f {
+    type IntPoint = Point3i;
 
     #[inline]
-    pub fn in_voxel(self) -> Point3i {
-        self.floor().as_3i()
+    fn as_int(self) -> Self::IntPoint {
+        PointN([self.x() as i32, self.y() as i32, self.z() as i32])
     }
 }
 
@@ -481,7 +485,6 @@ impl_unary_ops!(Point3i, i32);
 impl_binary_ops!(Point3i, i32);
 impl_binary_ops!(Point3f, f32);
 
-impl_unary_float_ops!(Point3f);
 impl_unary_integer_ops!(Point3i, i32);
 
 impl_binary_integer_ops!(Point3i);

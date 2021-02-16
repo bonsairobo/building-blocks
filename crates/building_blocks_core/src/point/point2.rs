@@ -85,13 +85,17 @@ impl Point2i {
 
 impl Point2f {
     #[inline]
-    pub fn as_2i(self) -> Point2i {
-        PointN([self.x() as i32, self.y() as i32])
+    pub fn in_pixel(self) -> Point2i {
+        self.floor_int()
     }
+}
+
+impl AsIntegerPoint for Point2f {
+    type IntPoint = Point2i;
 
     #[inline]
-    pub fn in_pixel(self) -> Point2i {
-        self.floor().as_2i()
+    fn as_int(self) -> Self::IntPoint {
+        PointN([self.x() as i32, self.y() as i32])
     }
 }
 
@@ -378,7 +382,6 @@ impl_unary_ops!(Point2i, i32);
 impl_binary_ops!(Point2i, i32);
 impl_binary_ops!(Point2f, f32);
 
-impl_unary_float_ops!(Point2f);
 impl_unary_integer_ops!(Point2i, i32);
 
 impl_binary_integer_ops!(Point2i);

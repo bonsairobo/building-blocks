@@ -154,6 +154,53 @@ pub trait LatticeOrder {
     fn meet(self, other: Self) -> Self;
 }
 
+pub trait FloatPoint<N>: AsIntegerPoint + Point<Scalar = f32> {
+    fn round(self) -> Self;
+
+    fn floor(self) -> Self;
+
+    fn ceil(self) -> Self;
+
+    fn fract(self) -> Self;
+
+    /// Ensures that you floor before casting to integers, since this is not the default behavior for negative integers.
+    #[inline]
+    fn floor_int(self) -> Self::IntPoint {
+        self.floor().as_int()
+    }
+}
+
+pub trait AsIntegerPoint {
+    type IntPoint;
+
+    fn as_int(self) -> Self::IntPoint;
+}
+
+impl<N> FloatPoint<N> for PointN<N>
+where
+    Self: AsIntegerPoint + Point<Scalar = f32>,
+{
+    #[inline]
+    fn round(self) -> Self {
+        self.map_components_unary(|c| c.round())
+    }
+
+    #[inline]
+    fn floor(self) -> Self {
+        self.map_components_unary(|c| c.floor())
+    }
+
+    #[inline]
+    fn ceil(self) -> Self {
+        self.map_components_unary(|c| c.ceil())
+    }
+
+    #[inline]
+    fn fract(self) -> Self {
+        self.map_components_unary(|c| c.fract())
+    }
+}
+
 macro_rules! impl_unary_ops {
     ($t:ty, $scalar:ty) => {
         impl Mul<$scalar> for $t {
@@ -196,32 +243,6 @@ macro_rules! impl_binary_ops {
             #[inline]
             fn mul(self, rhs: Self) -> Self {
                 self.map_components_binary(rhs, |c1, c2| c1 * c2)
-            }
-        }
-    };
-}
-
-macro_rules! impl_unary_float_ops {
-    ($t:ty) => {
-        impl $t {
-            #[inline]
-            pub fn round(self) -> Self {
-                self.map_components_unary(|c| c.round())
-            }
-
-            #[inline]
-            pub fn floor(self) -> Self {
-                self.map_components_unary(|c| c.floor())
-            }
-
-            #[inline]
-            pub fn ceil(self) -> Self {
-                self.map_components_unary(|c| c.ceil())
-            }
-
-            #[inline]
-            pub fn fract(self) -> Self {
-                self.map_components_unary(|c| c.fract())
             }
         }
     };

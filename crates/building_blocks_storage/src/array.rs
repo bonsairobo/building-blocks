@@ -12,6 +12,8 @@
 //!
 //! Indexing assumes that the coordinates are in-bounds of the array, panicking otherwise.
 //!
+//! # Iteration
+//!
 //! Arrays also support fast iteration over extents with `ForEach*` trait impls. These methods will only iterate over the
 //! section of the extent which is in-bounds of the array, so it's impossible to index out of bounds.
 //!
@@ -35,6 +37,8 @@
 //!     }
 //! );
 //! ```
+//!
+//! # Strides
 //!
 //! Since `Stride` lookups are fast and linear, they are ideal for kernel-based algorithms (like edge/surface detection). Use
 //! the `ForEach*<N, Stride>` traits to iterate over an extent and use the linearity of `Stride` to access adjacent points.

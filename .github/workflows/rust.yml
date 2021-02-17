@@ -1,4 +1,4 @@
-name: Rust Build
+name: Build and Test
 
 on:
   push:
@@ -14,13 +14,18 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build-and-test:
 
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
-    - name: Get Dependencies
+    - name: Get Latest Stable Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        default: true
+        components: clippy
+    - name: Get SDL2
       run: sudo apt-get update && sudo apt-get install libsdl2-dev
     - name: Lint
       run: cargo clippy --all --all-features

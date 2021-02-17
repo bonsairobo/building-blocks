@@ -530,6 +530,7 @@ impl OctreeSet {
         self.root_exists = root_exists;
     }
 
+    /// Returns `(exists, is_full)` booleans.
     fn _add_extent(
         &mut self,
         code: LocationCode,
@@ -576,9 +577,9 @@ impl OctreeSet {
             let child_code = extended_code.with_lowest_octant(child_index as u16);
             let child_octant = octant.child(child_index);
             let child_already_exists = child_bitmask & (1 << child_index) != 0;
-            let (child_exists_after_insert, child_full) =
+            let (child_exists_after_add, child_full) =
                 self._add_extent(child_code, child_octant, child_already_exists, add_extent);
-            child_bitmask |= (child_exists_after_insert as u8) << child_index;
+            child_bitmask |= (child_exists_after_add as u8) << child_index;
             all_children_full &= child_full;
         }
 
@@ -591,7 +592,72 @@ impl OctreeSet {
         (true, all_children_full)
     }
 
-    // TODO: subtract_extent
+    /// Subtract all points from `extent` from the set.
+    pub fn subtract_extent(&mut self, sub_extent: &Extent3i) {
+        if self.root_exists {
+            self.root_exists =
+                self._subtract_extent(LocationCode::ROOT, self.octant(), true, sub_extent);
+        }
+    }
+
+    /// Returns `true` iff this octant exists after subtraction.
+    fn _subtract_extent(
+        &mut self,
+        code: LocationCode,
+        octant: Octant,
+        already_exists: bool,
+        sub_extent: &Extent3i,
+    ) -> bool {
+        // Precondition: octant is not already empty.
+
+        // Thankfully this is a lot simpler than `add_extent` because it's not possible to turn a partially filled octant into
+        // a full one by removing points.
+
+        if octant.is_single_voxel() {
+            return !sub_extent.contains(octant.minimum);
+        }
+
+        let octant_extent = Extent3i::from(octant);
+        let octant_intersection = sub_extent.intersection(&octant_extent);
+
+        if octant_extent == octant_intersection {
+            // The octant is a subset of the extent being inserted, so we can make it an implicit leaf.
+            self.remove_subtree(&code, octant.power());
+            return false;
+        }
+
+        if octant_intersection.is_empty() {
+            return already_exists;
+        }
+
+        // At this point, we could only remove a proper subset of the children.
+
+        let mut child_bitmask = if let Some(&child_bitmask) = self.nodes.get(&code) {
+            // Mixed branch node.
+            child_bitmask
+        } else {
+            // This was an implicit leaf node, so we don't need to remove anything. Just tell the parent that it's gone now.
+            return false;
+        };
+
+        let extended_code = code.extend();
+        for child_index in 0..8 {
+            let child_code = extended_code.with_lowest_octant(child_index as u16);
+            let child_octant = octant.child(child_index);
+            let child_already_exists = child_bitmask & (1 << child_index) != 0;
+            let child_exists_after_subtraction =
+                self._subtract_extent(child_code, child_octant, child_already_exists, sub_extent);
+            child_bitmask |= (child_exists_after_subtraction as u8) << child_index;
+        }
+
+        if child_bitmask == 0 {
+            self.nodes.remove(&code);
+
+            false
+        } else {
+            true
+        }
+    }
 
     fn remove_subtree(&mut self, code: &LocationCode, level: u8) {
         if let Some(child_bitmask) = self.nodes.remove(code) {

@@ -11,6 +11,8 @@ use serde::{Deserialize, Serialize};
 /// A `ChunkedOctreeSet` that indexes the chunks of a `ChunkMap` or a `ChunkPyramid`. Useful for representing a clipmap.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct OctreeChunkIndex {
+    /// An unbounded set of chunk keys, but scaled down to be contiguous. For example, if the chunk shape is `16^3`, then the
+    /// chunk key `[16, 32, -64]` is represented as point `[1, 2, -4]` in this set.
     pub superchunk_octrees: ChunkedOctreeSet,
     chunk_shape: Point3i,
 }

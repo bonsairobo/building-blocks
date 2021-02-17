@@ -50,5 +50,22 @@ impl ChunkedOctreeSet {
         }
     }
 
-    // TODO: subtract_extent
+    pub fn subtract_extent(&mut self, extent: &Extent3i) {
+        let Self {
+            octrees, indexer, ..
+        } = self;
+
+        let mut remove_chunks = Vec::new();
+        for superchunk_key in indexer.chunk_keys_for_extent(extent) {
+            if let Some(octree) = octrees.get_mut(&superchunk_key) {
+                octree.subtract_extent(extent);
+                if octree.is_empty() {
+                    remove_chunks.push(superchunk_key);
+                }
+            }
+        }
+        for superchunk_key in remove_chunks.into_iter() {
+            octrees.remove(&superchunk_key);
+        }
+    }
 }

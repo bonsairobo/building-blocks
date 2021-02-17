@@ -5,7 +5,7 @@
 //!
 //! # Indexing
 //!
-//! You can index an array with 3 kinds of coordinates, with traits:
+//! You can index an array with 3 kinds of coordinates, with [`Get`](crate::access) traits:
 //!   - `Get*<Stride>`: flat array offset
 //!   - `Get*<&LocalN>`: N-dimensional point in extent-local coordinates (i.e. min = `[0, 0, 0]`)
 //!   - `Get*<PointN>`: N-dimensional point in global (ambient) coordinates

@@ -7,7 +7,7 @@
 //! One possible use case is to construct one using `OctreeSet::from_array3`, then insert it into an `OctreeDBVT` in order to
 //! perform spatial queries like raycasting.
 //!
-//! You might also use an `OctreeSet` as a chunk index, where each point represents a single chunk. This representation is
+//! The `OctreeSet` is also used in the `OctreeChunkIndex`, where each point represents a single chunk. This representation is
 //! useful for level of detail algorithms like clipmap traversal because inner nodes may correspond to downsampled chunks stored
 //! in a `ChunkPyramid`.
 //!

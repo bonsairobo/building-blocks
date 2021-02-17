@@ -198,16 +198,6 @@ impl OctreeSet {
         (exists, all_children_full)
     }
 
-    pub fn fill_bool_array(&self, array: &mut Array3<bool>) {
-        self.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
-            if node.is_full() {
-                array.fill_extent(&Extent3i::from(*node.octant()), true);
-            }
-
-            VisitStatus::Continue
-        });
-    }
-
     /// The exponent P such that `self.edge_length() = 2 ^ P`.
     pub fn power(&self) -> u8 {
         self.power
@@ -1075,7 +1065,7 @@ mod tests {
             set.assert_all_nodes_reachable();
 
             let mut mirror_array_set = Array3::fill(*domain, false);
-            set.fill_bool_array(&mut mirror_array_set);
+            Self::fill_bool_array(&set, &mut mirror_array_set);
 
             assert_eq!(set, &OctreeSet::from_array3(expected_array_set, *domain));
             assert_eq!(&mirror_array_set, expected_array_set);
@@ -1094,10 +1084,20 @@ mod tests {
             set.assert_all_nodes_reachable();
 
             let mut mirror_array_set = Array3::fill(*domain, false);
-            set.fill_bool_array(&mut mirror_array_set);
+            Self::fill_bool_array(&set, &mut mirror_array_set);
 
             assert_eq!(set, &OctreeSet::from_array3(expected_array_set, *domain));
             assert_eq!(&mirror_array_set, expected_array_set);
+        }
+
+        fn fill_bool_array(set: &OctreeSet, array: &mut Array3<bool>) {
+            set.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
+                if node.is_full() {
+                    array.fill_extent(&Extent3i::from(*node.octant()), true);
+                }
+
+                VisitStatus::Continue
+            });
         }
     }
 

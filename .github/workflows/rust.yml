@@ -25,6 +25,7 @@ jobs:
     - name: Get Latest Stable Rust
       uses: actions-rs/toolchain@v1
       with:
+        toolchain: stable
         default: true
         components: clippy
     - name: Get SDL2

@@ -22,8 +22,8 @@ pub mod chunk_map;
 pub mod compression;
 pub mod func;
 pub mod multiresolution;
-pub mod octree;
 pub mod octree_chunk_index;
+pub mod octree_set;
 pub mod signed_distance;
 pub mod transform_map;
 
@@ -32,8 +32,8 @@ pub use array::*;
 pub use chunk_map::*;
 pub use compression::*;
 pub use multiresolution::*;
-pub use octree::*;
 pub use octree_chunk_index::*;
+pub use octree_set::*;
 pub use signed_distance::*;
 pub use transform_map::*;
 
@@ -52,12 +52,13 @@ pub mod prelude {
     pub use super::{
         copy_extent, Array, Array2, Array3, ArrayN, Chunk, Chunk2, Chunk3, ChunkHashMap2,
         ChunkHashMap3, ChunkIndexer, ChunkMap, ChunkMap2, ChunkMap3, ChunkMapBuilder,
-        ChunkMapBuilder2, ChunkMapBuilder3, ChunkReadStorage, ChunkWriteStorage, Compressed,
-        CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
-        CompressibleChunkStorageReader, Compression, FastArrayCompression, FastChunkCompression,
-        ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, IsEmpty, IterChunkKeys, Local,
-        LocalChunkCache, LocalChunkCache2, LocalChunkCache3, OctreeSet, ReadExtent,
-        SerializableChunkMap, SignedDistance, Stride, TransformMap, WriteExtent,
+        ChunkMapBuilder2, ChunkMapBuilder3, ChunkPyramid2, ChunkPyramid3, ChunkReadStorage,
+        ChunkWriteStorage, Compressed, CompressibleChunkMap, CompressibleChunkMapReader,
+        CompressibleChunkStorage, CompressibleChunkStorageReader, Compression,
+        FastArrayCompression, FastChunkCompression, ForEach, ForEachMut, ForEachRef, Get, GetMut,
+        GetRef, IsEmpty, IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
+        OctreeChunkIndex, OctreeNode, OctreeSet, ReadExtent, SerializableChunkMap, SignedDistance,
+        Stride, TransformMap, WriteExtent,
     };
 
     #[cfg(feature = "lz4")]
@@ -71,9 +72,10 @@ pub mod prelude {
     ))]
     pub use super::{
         CompressibleChunkMap2, CompressibleChunkMap3, CompressibleChunkMapReader2,
-        CompressibleChunkMapReader3, CompressibleChunkStorage2, CompressibleChunkStorage3,
-        CompressibleChunkStorageReader2, CompressibleChunkStorageReader3, MaybeCompressedChunk2,
-        MaybeCompressedChunk3, MaybeCompressedChunkRef2, MaybeCompressedChunkRef3,
+        CompressibleChunkMapReader3, CompressibleChunkPyramid2, CompressibleChunkPyramid3,
+        CompressibleChunkStorage2, CompressibleChunkStorage3, CompressibleChunkStorageReader2,
+        CompressibleChunkStorageReader3, MaybeCompressedChunk2, MaybeCompressedChunk3,
+        MaybeCompressedChunkRef2, MaybeCompressedChunkRef3,
     };
 }
 

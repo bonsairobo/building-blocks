@@ -21,7 +21,7 @@
 //! ```
 //! # let some_condition = |_: &OctreeNode| true;
 //! use building_blocks_core::prelude::*;
-//! use building_blocks_storage::{octree::*, prelude::*};
+//! use building_blocks_storage::{octree_set::*, prelude::*};
 //!
 //! let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
 //! let voxels = Array3::fill(extent, true); // boring example

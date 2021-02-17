@@ -47,5 +47,5 @@ name = "compression"
 harness = false
 
 [[bench]]
-name = "octree"
+name = "octree_set"
 harness = false

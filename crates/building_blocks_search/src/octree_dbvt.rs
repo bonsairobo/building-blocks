@@ -4,7 +4,7 @@
 //! placed into the `OctreeDBVT`.
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::octree::{Octant, OctreeNode, OctreeSet, OctreeVisitor, VisitStatus};
+use building_blocks_storage::{Octant, OctreeNode, OctreeSet, OctreeVisitor, VisitStatus};
 
 use core::hash::Hash;
 use fnv::FnvHashMap;

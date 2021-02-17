@@ -1,7 +1,7 @@
 use crate::octree_dbvt::{OctreeDBVT, OctreeDBVTVisitor};
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::octree::{Octant, VisitStatus};
+use building_blocks_storage::{Octant, VisitStatus};
 
 use core::hash::Hash;
 use nalgebra::{self as na, zero, Isometry3, Translation3, UnitQuaternion};
@@ -304,7 +304,7 @@ fn half_extent(shape: Point3i) -> na::Vector3<f32> {
 mod tests {
     use super::*;
 
-    use building_blocks_storage::{octree::OctreeSet, prelude::*, IsEmpty};
+    use building_blocks_storage::{prelude::*, IsEmpty, OctreeSet};
 
     use ncollide3d::na;
 

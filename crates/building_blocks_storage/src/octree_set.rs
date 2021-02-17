@@ -621,7 +621,7 @@ impl OctreeSet {
         let octant_intersection = sub_extent.intersection(&octant_extent);
 
         if octant_extent == octant_intersection {
-            // The octant is a subset of the extent being inserted, so we can make it an implicit leaf.
+            // The octant is a subset of the extent being inserted, so we can remove the entire subtree.
             self.remove_subtree(&code, octant.power());
             return false;
         }

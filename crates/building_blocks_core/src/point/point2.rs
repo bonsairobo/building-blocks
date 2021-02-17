@@ -282,17 +282,17 @@ impl IntegerPoint<[i32; 2]> for Point2i {
 impl Neighborhoods for Point2i {
     #[inline]
     fn corner_offsets() -> Vec<Self> {
-        Self::SQUARE_CORNER_OFFSETS.iter().cloned().collect()
+        Self::SQUARE_CORNER_OFFSETS.to_vec()
     }
 
     #[inline]
     fn von_neumann_offsets() -> Vec<Self> {
-        Self::VON_NEUMANN_OFFSETS.iter().cloned().collect()
+        Self::VON_NEUMANN_OFFSETS.to_vec()
     }
 
     #[inline]
     fn moore_offsets() -> Vec<Self> {
-        Self::MOORE_OFFSETS.iter().cloned().collect()
+        Self::MOORE_OFFSETS.to_vec()
     }
 }
 

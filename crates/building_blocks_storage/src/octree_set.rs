@@ -50,6 +50,7 @@ use building_blocks_core::prelude::*;
 
 use fnv::FnvHashMap;
 use serde::{Deserialize, Serialize};
+use std::fmt::Formatter;
 
 /// A sparse set of voxel coordinates (3D integer points). Supports spatial queries.
 ///
@@ -566,7 +567,7 @@ impl OctreeSet {
         let octant_intersection = add_extent.intersection(&octant_extent);
 
         if octant_extent == octant_intersection {
-            // The octant is a subset of the extent being inserted, so we can make it an implicit leaf.
+            // The octant is a subset of the extent being added, so we can make it an implicit leaf.
             if already_exists {
                 self.remove_subtree(&code, octant.power());
             }
@@ -635,7 +636,7 @@ impl OctreeSet {
         let octant_intersection = sub_extent.intersection(&octant_extent);
 
         if octant_extent == octant_intersection {
-            // The octant is a subset of the extent being inserted, so we can remove the entire subtree.
+            // The octant is a subset of the extent being subtracted, so we can remove the entire subtree.
             self.remove_subtree(&code, octant.power());
             return false;
         }
@@ -646,18 +647,18 @@ impl OctreeSet {
 
         // At this point, we could only remove a proper subset of the children.
 
-        let (mut child_bitmask, already_had_bitmask) =
-            if let Some(&child_bitmask) = self.nodes.get(&code) {
-                // Mixed branch node.
-                (child_bitmask, true)
-            } else {
-                // This is an implicit leaf node, so all children are full.
-                (0xFF, false)
-            };
+        let (child_bitmask_before, was_full) = if let Some(&child_bitmask) = self.nodes.get(&code) {
+            // Mixed branch node.
+            (child_bitmask, false)
+        } else {
+            // This is an implicit leaf node, so all children are full.
+            (0xFF, true)
+        };
 
+        let mut child_bitmask_after = 0;
         let extended_code = code.extend();
         for child_index in 0..8 {
-            let child_already_exists = child_bitmask & (1 << child_index) != 0;
+            let child_already_exists = child_bitmask_before & (1 << child_index) != 0;
             if !child_already_exists {
                 // Don't need to remove anything from this child.
                 continue;
@@ -667,18 +668,18 @@ impl OctreeSet {
             let child_octant = octant.child(child_index);
             let child_exists_after_subtraction =
                 self._subtract_extent(child_code, child_octant, sub_extent);
-            child_bitmask &= (child_exists_after_subtraction as u8) << child_index;
+            child_bitmask_after |= (child_exists_after_subtraction as u8) << child_index;
         }
 
-        if child_bitmask == 0 {
-            if already_had_bitmask {
+        if child_bitmask_after == 0 {
+            if !was_full {
                 self.nodes.remove(&code);
             }
 
             false
         } else {
-            if !already_had_bitmask {
-                self.nodes.insert(code, child_bitmask);
+            if was_full || child_bitmask_before != child_bitmask_after {
+                self.nodes.insert(code, child_bitmask_after);
             }
 
             true
@@ -825,8 +826,14 @@ const FULL_CHILD_BIT_MASK: ChildBitMask = 0xFF;
 /// level N-5:
 ///   loc = 0b1000000000000000, ...
 /// ```
-#[derive(Clone, Copy, Debug, Deserialize, Hash, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Deserialize, Hash, Eq, PartialEq, Serialize)]
 struct LocationCode(u16);
+
+impl std::fmt::Debug for LocationCode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "LocationCode({:#018b})", self.0)
+    }
+}
 
 impl LocationCode {
     const ROOT: Self = Self(1);
@@ -1065,13 +1072,13 @@ mod tests {
             set.add_extent(&add_extent);
             expected_array_set.fill_extent(&add_extent, true);
 
+            set.assert_all_nodes_reachable();
+
             let mut mirror_array_set = Array3::fill(*domain, false);
             set.fill_bool_array(&mut mirror_array_set);
 
             assert_eq!(set, &OctreeSet::from_array3(expected_array_set, *domain));
             assert_eq!(&mirror_array_set, expected_array_set);
-
-            set.assert_all_nodes_reachable();
         }
 
         fn assert_extent_subtracted(&mut self, sub_extent: Extent3i) {
@@ -1084,13 +1091,13 @@ mod tests {
             set.subtract_extent(&sub_extent);
             expected_array_set.fill_extent(&sub_extent, false);
 
+            set.assert_all_nodes_reachable();
+
             let mut mirror_array_set = Array3::fill(*domain, false);
             set.fill_bool_array(&mut mirror_array_set);
 
             assert_eq!(set, &OctreeSet::from_array3(expected_array_set, *domain));
             assert_eq!(&mirror_array_set, expected_array_set);
-
-            set.assert_all_nodes_reachable();
         }
     }
 

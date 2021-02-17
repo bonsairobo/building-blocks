@@ -63,18 +63,21 @@ which brought about the current feature set:
     point in some `Extent3i`. The most common operations on arrays are iteration
     over extents and random access. These operations should be very fast, and we
     have benchmarks for them.
-  - Obviously we can't store an infinite voxel world, so we partition the
-    lattice into chunks, each of which is an `Array3` of the same shape.
-    The container for these chunks is called a `ChunkMap3`.
+  - In most cases, the full extent of a voxel world will be only sparsely populated,
+    and it is desirable to store only voxels close to "volume surfaces," whatever
+    that may mean in a particular application. So we partition the lattice into
+    chunks, each of which is an `Array3` of the same shape. Only chunks that capture
+    some part of the surface are stored. The container for these chunks is called a
+    `ChunkMap3`.
   - With both the `Array3` and `ChunkMap3` serving similar purposes, we've made
     them implement a common set of traits for data access. This includes random
     access, iteration, and copying, using the `Get*`, `ForEach*`, `ReadExtent`,
     and `WriteExtent` traits.
   - When you have large voxel worlds, it's not feasible to store a lot of unique
     data for every voxel. A common strategy is to have each voxel labeled with
-    some "type." If you only want to use a single byte for each voxel's type,
-    then you can have up to 256 types of voxels. Then each type can have a large
-    amount of data associated with it in a "palette" container. But we still
+    some "type" identifier. If you only want to use a single byte for each voxel's
+    type ID, then you can have up to 256 types of voxels. Then each type can have a
+    large amount of data associated with it in a "palette" container. But we still
     want to be able to use our common set of access traits to read the voxel
     type data. Thus, we have a type called `TransformMap` which implements those
     traits. `TransformMap` wraps some other lattice map, referred to as the
@@ -83,22 +86,24 @@ which brought about the current feature set:
     transformation closure is where we can access the palette based on the voxel
     type provided by the delegate map.
   - Even with only a couple bytes per voxel, we can still use up lots of memory
-    on large voxel maps. The simplest way to save memory without changing the
-    underlying array containers was to use compression inside of the `ChunkMap`.
-    To make this optional, we made `ChunkMap` take a new chunk storage type
+    on large voxel maps. One simple way to save memory without changing the
+    underlying array containers is to use compression on chunks. In order to avoid
+    decompressing the same chunks many times, LRU caching is used so that the working
+    set can stay decompressed. This functionality is encapsulated in the
+    `CompressibleChunkStorage`.
+  - To make chunk compression optional, we made `ChunkMap` take a new chunk storage type
     parameter that can implement `ChunkReadStorage` or `ChunkWriteStorage`. This
     makes it so `ChunkMap`s can work with any kind of backing storage, be it a
-    simple hash map or an LRU-cache of chunks that can be compressed.
+    simple hash map or something more complex.
   - Due to the requirement for level of detail, some hierarchical storage types
-    were introduced. The `ChunkPyramid` is very simple, just an array of `ChunkMap`s,
+    were introduced. The `ChunkPyramid` is very simple: just an array of `ChunkMap`s,
     one for each level of detail. It supports some helper functions for
     downsampling chunks. There is also an `OctreeSet` which is a sparse, hierarchical
     set of `Point3i`s. This supports many kinds of traversal, so it can be used
     to efficiently visit large regions of chunk keys. Because the `OctreeSet` has
-    a maximum size, the `OctreeChunkIndex` is a hash map of `OctreeSet`, which
-    lets each set manage a chunk of space that we call a "superchunk," since it
-    is a multitude of chunks. Some algorithms, like clipmap traversal, have been
-    implemented using these octrees.
+    a maximum size, the `OctreeChunkIndex` is a hash map of `OctreeSet`s where
+    each set manages an extent that we call a "superchunk" (a multitude of chunks).
+    Some algorithms, like clipmap traversal, have been implemented using these octrees.
 - **Meshing**
   - There are many ways of generating meshes from voxel data. You can make each
     occupied voxel into a cube, which gives the classis Minecraft aesthetic. Or

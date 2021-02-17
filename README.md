@@ -66,7 +66,7 @@ surface_nets(&samples, samples.extent(), voxel_size, &mut mesh_buffer);
 ### Design and Architecture
 
 There is a terse [design doc](https://github.com/bonsairobo/building-blocks/blob/main/DESIGN.md) that gives an overview of
-design decisions made surrounding the existing architecture. You might find this useful as a high-level summary of the most
+design decisions made concerning the current architecture. You might find this useful as a high-level summary of the most
 important pieces of code.
 
 ### Docs and Examples

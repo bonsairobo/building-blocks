@@ -116,7 +116,7 @@ use building_blocks_core::prelude::*;
 
 use core::iter::{once, Once};
 use core::mem::MaybeUninit;
-use core::ops::{Add, AddAssign, Deref, DerefMut, Index, IndexMut, Mul, Sub, SubAssign};
+use core::ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign};
 use either::Either;
 use num::Zero;
 use serde::{Deserialize, Serialize};
@@ -322,7 +322,7 @@ where
 
 impl<N, T, Store> ArrayN<N, T, Store>
 where
-    Store: AsRef<[T]> + Index<usize, Output = T>,
+    Store: Deref<Target = [T]>,
 {
     /// Returns the entire slice of values.
     #[inline]
@@ -333,7 +333,7 @@ where
 
 impl<N, T, Store> ArrayN<N, T, Store>
 where
-    Store: AsMut<[T]> + IndexMut<usize, Output = T>,
+    Store: DerefMut<Target = [T]>,
 {
     /// Returns the entire slice of values.
     #[inline]
@@ -404,12 +404,12 @@ where
 impl<N, T, Store> ArrayN<N, T, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    Store: AsRef<[T]>,
+    Store: Deref<Target = [T]>,
 {
     /// Create a new `ArrayN` directly from the extent and values. This asserts that the
     /// number of points in the extent matches the length of the values `Vec`.
     pub fn new(extent: ExtentN<N>, values: Store) -> Self {
-        assert_eq!(extent.num_points(), values.as_ref().len());
+        assert_eq!(extent.num_points(), values.len());
 
         Self {
             values,
@@ -447,7 +447,7 @@ where
     Self: ForEachMut<N, Stride, Data = T>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: PartialEq,
-    Store: IndexMut<usize, Output = T>, // TODO: replace with AsMut<[T]>
+    Store: DerefMut<Target = [T]>,
 {
     /// Fill the entire `extent` with the same `value`.
     pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: T)
@@ -455,10 +455,7 @@ where
         T: Clone,
     {
         if self.extent.eq(extent) {
-            // TODO: in rust 1.50, use slice fill
-            for i in 0..self.extent.num_points() {
-                self.values[i] = value.clone();
-            }
+            self.values.fill(value);
         } else {
             self.for_each_mut(extent, |_s: Stride, v| *v = value.clone());
         }
@@ -957,7 +954,7 @@ where
     T: Clone,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: PartialEq,
-    Store: IndexMut<usize, Output = T>,
+    Store: DerefMut<Target = [T]>,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<Map, N, T>) {
         match src {

@@ -363,12 +363,10 @@ fn maybe_make_quad<A, T>(
         } else {
             [v1, v2, v4, v1, v4, v3]
         }
+    } else if negative_face {
+        [v2, v3, v4, v2, v1, v3]
     } else {
-        if negative_face {
-            [v2, v3, v4, v2, v1, v3]
-        } else {
-            [v2, v4, v3, v2, v3, v1]
-        }
+        [v2, v4, v3, v2, v3, v1]
     };
     indices.extend_from_slice(&quad);
 }

@@ -52,8 +52,7 @@ pub fn von_neumann_flood_fill3(
         if l.extend_left {
             // Make a new line segment extending in the -X direction.
             let mut new_x_min = l.x_min;
-            while new_x_min - 1 >= bounds.minimum.x() && visitor(PointN([new_x_min - 1, l.y, l.z]))
-            {
+            while new_x_min > bounds.minimum.x() && visitor(PointN([new_x_min - 1, l.y, l.z])) {
                 new_x_min -= 1;
             }
             if new_x_min < l.x_min {
@@ -63,7 +62,7 @@ pub fn von_neumann_flood_fill3(
         if l.extend_right {
             // Make a new line segment extending in the +X direction.
             let mut new_x_max = l.x_max;
-            while new_x_max + 1 <= bounds_max.x() && visitor(PointN([new_x_max + 1, l.y, l.z])) {
+            while new_x_max < bounds_max.x() && visitor(PointN([new_x_max + 1, l.y, l.z])) {
                 new_x_max += 1;
             }
             if new_x_max > l.x_max {

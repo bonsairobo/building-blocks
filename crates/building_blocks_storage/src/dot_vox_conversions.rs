@@ -14,10 +14,7 @@ pub enum VoxColor {
 
 impl IsEmpty for VoxColor {
     fn is_empty(&self) -> bool {
-        match self {
-            VoxColor::Empty => true,
-            _ => false,
-        }
+        matches!(self, VoxColor::Empty)
     }
 }
 

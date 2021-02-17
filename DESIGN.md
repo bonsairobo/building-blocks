@@ -2,7 +2,7 @@
 
 ## Principles
 
-The architecture of Building Blocks is driven by a few guiding principles:
+The design of Building Blocks is driven by a few guiding principles:
 
 - **Real-Time Performance**
   - The primary use case for Building Blocks is using voxel technology within a

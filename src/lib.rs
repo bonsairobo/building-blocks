@@ -61,6 +61,12 @@
 //!
 //! # Learning
 //!
+//! ## Design and Architecture
+//!
+//! There is a terse [design doc](https://github.com/bonsairobo/building-blocks/blob/main/DESIGN.md) that gives an overview of
+//! design decisions made surrounding the existing architecture. You might find this useful as a high-level summary of the most
+//! important pieces of code.
+//!
 //! ## Docs and Examples
 //!
 //! The current best way to learn about the library is to read the documentation and examples. For the latest stable docs, look
@@ -73,7 +79,7 @@
 //! There is plentiful documentation with examples. Take a look in the `examples/` directory to see how Building Blocks can be
 //! used in real applications.
 //!
-//! ## Getting Started
+//! ### Getting Started
 //!
 //! This library is organized into several crates. The most fundamental are:
 //!

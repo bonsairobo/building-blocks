@@ -64,7 +64,7 @@ which brought about the current feature set:
     over extents and random access. These operations should be very fast, and we
     have benchmarks for them.
   - Obviously we can't store an infinite voxel world, so we partition the
-    lattice into chunks, each of which is an `Array3` of the same cubic shape.
+    lattice into chunks, each of which is an `Array3` of the same shape.
     The container for these chunks is called a `ChunkMap3`.
   - With both the `Array3` and `ChunkMap3` serving similar purposes, we've made
     them implement a common set of traits for data access. This includes random
@@ -89,6 +89,16 @@ which brought about the current feature set:
     parameter that can implement `ChunkReadStorage` or `ChunkWriteStorage`. This
     makes it so `ChunkMap`s can work with any kind of backing storage, be it a
     simple hash map or an LRU-cache of chunks that can be compressed.
+  - Due to the requirement for level of detail, some hierarchical storage types
+    were introduced. The `ChunkPyramid` is very simple, just an array of `ChunkMap`s,
+    one for each level of detail. It supports some helper functions for
+    downsampling chunks. There is also an `OctreeSet` which is a sparse, hierarchical
+    set of `Point3i`s. This supports many kinds of traversal, so it can be used
+    to efficiently visit large regions of chunk keys. Because the `OctreeSet` has
+    a maximum size, the `OctreeChunkIndex` is a hash map of `OctreeSet`, which
+    lets each set manage a chunk of space that we call a "superchunk," since it
+    is a multitude of chunks. Some algorithms, like clipmap traversal, have been
+    implemented using these octrees.
 - **Meshing**
   - There are many ways of generating meshes from voxel data. You can make each
     occupied voxel into a cube, which gives the classis Minecraft aesthetic. Or
@@ -103,12 +113,13 @@ which brought about the current feature set:
     voxel. There are also "dual methods," which place vertices on the interior
     of each voxel and connect them using a subset of the dual graph of the voxel
     lattice. We have found (Naive) Surface Nets, a dual method, to be simpler to
-    implement and just as efficient, if not moreso, as Marching Cubes.
+    implement, just as fast, and it produces meshes with fewer vertices at the
+    same resolution as Marching Cubes.
   - Another dual method, "Dual Contouring of Hermite Data," is essentially the
-    same as Surface Nets, but it works on an octree and optimizes quadratic
-    error functions (QEFs) to place vertices in more accurate locations, which
-    helps with reproducing sharp features. This algorithm is rather difficult to
-    optimize, so we are consciously taking it off the table in the near term.
+    same as Surface Nets, but it optimizes quadratic error functions (QEFs) to
+    place vertices in more accurate locations, which helps with reproducing sharp
+    features. This algorithm is rather difficult to optimize, so we are consciously
+    taking it off the table in the near term.
   - While 3D voxel data is required for meshes with arbitrary topologies, one
     can choose to constrain themselves to a simpler planar topology and reap
     performance benefits, both in terms of space and time. A surface with planar
@@ -117,7 +128,7 @@ which brought about the current feature set:
     where one of the dimensions has size 1, it leads to awkward code. Thus, we
     generalized all of the core data types to work in both 2 and 3 dimensions,
     which gives us the `Array2` type, capable of cleanly representing a height
-    map. We've also implemented a specialized meshing algorithm for height maps.
+    map. We've also implemented a meshing algorithm for height maps.
   - For large maps, using a single lattice resolution for meshes will quickly
     eat up GPU resources. We must have a level of detail solution to solve this
     problem. This can be a complex issue, but for now we have settled on using
@@ -127,18 +138,3 @@ which brought about the current feature set:
     resolution so that it can create the appropriate boundary mesh. This algorithm
     is essentially the same as dual contouring of an octree, except we do so
     on uniform grids for performance reasons.
-- **Accelerated Spatial Queries**
-  - Our first voxel game prototypes utilized the ncollide3d crate and it's
-    `DBVT` (dynamic bounding volume tree) structure for doing raycasting.
-    Unfortunately, storing an `AABB<f32>` for every voxel cost us 6 `f32`s or 24
-    bytes per voxel. That simply doesn't scale. So as a replacement, we
-    implemented the `OctreeSet` and `OctreeDBVT` types. The `OctreeSet` is
-    essentially a hierarchical bitset, making it very memory efficient; it
-    doesn't contain any voxel data, but it can tell you whether a `Point3i` is
-    contained in the set. More importantly, it supports a visitor API that can
-    be used for spatial queries like raycasting. Since the `OctreeSet` has a
-    limited size, we also provide the `OctreeDBVT`, which is essentially a
-    `DBVT` which may contain an arbitrary number of `OctreeSet`s.
-  - `OctreeDBVT` requires taking on the `ncollide3d` dependency. We decided this
-    was acceptable for the time being, since we don't have spare time to
-    implement our own efficient `DBVT`.

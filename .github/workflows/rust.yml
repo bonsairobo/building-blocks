@@ -5,10 +5,12 @@ on:
     branches: [ main ]
     paths:
       - '**/*.rs'
+      - '.github/workflows/*'
   pull_request:
     branches: [ main ]
     paths:
       - '**/*.rs'
+      - '.github/workflows/*'
 
 env:
   CARGO_TERM_COLOR: always

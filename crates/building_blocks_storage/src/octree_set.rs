@@ -68,11 +68,20 @@ pub struct OctreeSet {
 impl OctreeSet {
     /// Make an empty set in the universe (domain) of `extent`.
     pub fn empty(extent: Extent3i) -> Self {
+        Self::new_without_nodes(extent, false)
+    }
+
+    /// Make a full set in the universe (domain) of `extent`.
+    pub fn full(extent: Extent3i) -> Self {
+        Self::new_without_nodes(extent, true)
+    }
+
+    fn new_without_nodes(extent: Extent3i, root_exists: bool) -> Self {
         let power = Self::check_extent(&extent);
 
         Self {
             power,
-            root_exists: false,
+            root_exists,
             extent,
             nodes: FnvHashMap::default(),
         }
@@ -186,6 +195,16 @@ impl OctreeSet {
         }
 
         (exists, all_children_full)
+    }
+
+    pub fn fill_bool_array(&self, array: &mut Array3<bool>) {
+        self.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
+            if node.is_full() {
+                array.fill_extent(&Extent3i::from(*node.octant()), true);
+            }
+
+            VisitStatus::Continue
+        });
     }
 
     /// The exponent P such that `self.edge_length() = 2 ^ P`.
@@ -595,8 +614,7 @@ impl OctreeSet {
     /// Subtract all points from `extent` from the set.
     pub fn subtract_extent(&mut self, sub_extent: &Extent3i) {
         if self.root_exists {
-            self.root_exists =
-                self._subtract_extent(LocationCode::ROOT, self.octant(), true, sub_extent);
+            self.root_exists = self._subtract_extent(LocationCode::ROOT, self.octant(), sub_extent);
         }
     }
 
@@ -605,13 +623,9 @@ impl OctreeSet {
         &mut self,
         code: LocationCode,
         octant: Octant,
-        already_exists: bool,
         sub_extent: &Extent3i,
     ) -> bool {
         // Precondition: octant is not already empty.
-
-        // Thankfully this is a lot simpler than `add_extent` because it's not possible to turn a partially filled octant into
-        // a full one by removing points.
 
         if octant.is_single_voxel() {
             return !sub_extent.contains(octant.minimum);
@@ -627,34 +641,46 @@ impl OctreeSet {
         }
 
         if octant_intersection.is_empty() {
-            return already_exists;
+            return true;
         }
 
         // At this point, we could only remove a proper subset of the children.
 
-        let mut child_bitmask = if let Some(&child_bitmask) = self.nodes.get(&code) {
-            // Mixed branch node.
-            child_bitmask
-        } else {
-            // This was an implicit leaf node, so we don't need to remove anything. Just tell the parent that it's gone now.
-            return false;
-        };
+        let (mut child_bitmask, already_had_bitmask) =
+            if let Some(&child_bitmask) = self.nodes.get(&code) {
+                // Mixed branch node.
+                (child_bitmask, true)
+            } else {
+                // This is an implicit leaf node, so all children are full.
+                (0xFF, false)
+            };
 
         let extended_code = code.extend();
         for child_index in 0..8 {
+            let child_already_exists = child_bitmask & (1 << child_index) != 0;
+            if !child_already_exists {
+                // Don't need to remove anything from this child.
+                continue;
+            }
+
             let child_code = extended_code.with_lowest_octant(child_index as u16);
             let child_octant = octant.child(child_index);
-            let child_already_exists = child_bitmask & (1 << child_index) != 0;
             let child_exists_after_subtraction =
-                self._subtract_extent(child_code, child_octant, child_already_exists, sub_extent);
-            child_bitmask |= (child_exists_after_subtraction as u8) << child_index;
+                self._subtract_extent(child_code, child_octant, sub_extent);
+            child_bitmask &= (child_exists_after_subtraction as u8) << child_index;
         }
 
         if child_bitmask == 0 {
-            self.nodes.remove(&code);
+            if already_had_bitmask {
+                self.nodes.remove(&code);
+            }
 
             false
         } else {
+            if !already_had_bitmask {
+                self.nodes.insert(code, child_bitmask);
+            }
+
             true
         }
     }
@@ -957,7 +983,7 @@ mod tests {
         let domain = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
 
         // No overlap, but they touch.
-        let mut test = AddExtentTest::new(domain);
+        let mut test = UpdateExtentTest::empty(domain);
         test.assert_extent_added(Extent3i::from_min_and_max(
             PointN([5, 0, 0]),
             PointN([9, 5, 5]),
@@ -968,7 +994,7 @@ mod tests {
         ));
 
         // With overlap.
-        let mut test = AddExtentTest::new(domain);
+        let mut test = UpdateExtentTest::empty(domain);
         test.assert_extent_added(Extent3i::from_min_and_max(
             Point3i::fill(8),
             Point3i::fill(12),
@@ -979,20 +1005,53 @@ mod tests {
         ));
     }
 
-    struct AddExtentTest {
+    #[test]
+    fn subtract_extents() {
+        let domain = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
+
+        // No overlap, but they touch.
+        let mut test = UpdateExtentTest::full(domain);
+        test.assert_extent_subtracted(Extent3i::from_min_and_max(
+            PointN([5, 0, 0]),
+            PointN([9, 5, 5]),
+        ));
+        test.assert_extent_subtracted(Extent3i::from_min_and_max(
+            PointN([10, 0, 0]),
+            PointN([14, 5, 5]),
+        ));
+
+        // With overlap.
+        let mut test = UpdateExtentTest::full(domain);
+        test.assert_extent_subtracted(Extent3i::from_min_and_max(
+            Point3i::fill(8),
+            Point3i::fill(12),
+        ));
+        test.assert_extent_subtracted(Extent3i::from_min_and_max(
+            Point3i::fill(10),
+            Point3i::fill(15),
+        ));
+    }
+
+    struct UpdateExtentTest {
         domain: Extent3i,
         set: OctreeSet,
-        mirror_array_set: Array3<bool>,
         expected_array_set: Array3<bool>,
     }
 
-    impl AddExtentTest {
-        fn new(domain: Extent3i) -> Self {
+    impl UpdateExtentTest {
+        fn empty(domain: Extent3i) -> Self {
             Self {
                 domain,
                 set: OctreeSet::empty(domain),
-                mirror_array_set: Array3::fill(domain, false),
                 expected_array_set: Array3::fill(domain, false),
+            }
+        }
+
+        fn full(domain: Extent3i) -> Self {
+            Self {
+                domain,
+                set: OctreeSet::full(domain),
+                expected_array_set: Array3::fill(domain, true),
             }
         }
 
@@ -1000,24 +1059,38 @@ mod tests {
             let Self {
                 domain,
                 set,
-                mirror_array_set,
                 expected_array_set,
             } = self;
 
             set.add_extent(&add_extent);
+            expected_array_set.fill_extent(&add_extent, true);
+
+            let mut mirror_array_set = Array3::fill(*domain, false);
+            set.fill_bool_array(&mut mirror_array_set);
+
+            assert_eq!(set, &OctreeSet::from_array3(expected_array_set, *domain));
+            assert_eq!(&mirror_array_set, expected_array_set);
 
             set.assert_all_nodes_reachable();
+        }
 
-            expected_array_set.fill_extent(&add_extent, true);
-            set.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
-                if node.is_full() {
-                    mirror_array_set.fill_extent(&Extent3i::from(*node.octant()), true);
-                }
+        fn assert_extent_subtracted(&mut self, sub_extent: Extent3i) {
+            let Self {
+                domain,
+                set,
+                expected_array_set,
+            } = self;
 
-                VisitStatus::Continue
-            });
-            assert_eq!(mirror_array_set, expected_array_set);
-            assert_eq!(*set, OctreeSet::from_array3(expected_array_set, *domain));
+            set.subtract_extent(&sub_extent);
+            expected_array_set.fill_extent(&sub_extent, false);
+
+            let mut mirror_array_set = Array3::fill(*domain, false);
+            set.fill_bool_array(&mut mirror_array_set);
+
+            assert_eq!(set, &OctreeSet::from_array3(expected_array_set, *domain));
+            assert_eq!(&mirror_array_set, expected_array_set);
+
+            set.assert_all_nodes_reachable();
         }
     }
 

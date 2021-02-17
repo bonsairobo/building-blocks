@@ -957,7 +957,7 @@ mod tests {
         let domain = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
 
         // No overlap, but they touch.
-        let mut test = InsertTest::new(domain);
+        let mut test = AddExtentTest::new(domain);
         test.assert_extent_added(Extent3i::from_min_and_max(
             PointN([5, 0, 0]),
             PointN([9, 5, 5]),
@@ -968,7 +968,7 @@ mod tests {
         ));
 
         // With overlap.
-        let mut test = InsertTest::new(domain);
+        let mut test = AddExtentTest::new(domain);
         test.assert_extent_added(Extent3i::from_min_and_max(
             Point3i::fill(8),
             Point3i::fill(12),
@@ -979,14 +979,14 @@ mod tests {
         ));
     }
 
-    struct InsertTest {
+    struct AddExtentTest {
         domain: Extent3i,
         set: OctreeSet,
         mirror_array_set: Array3<bool>,
         expected_array_set: Array3<bool>,
     }
 
-    impl InsertTest {
+    impl AddExtentTest {
         fn new(domain: Extent3i) -> Self {
             Self {
                 domain,

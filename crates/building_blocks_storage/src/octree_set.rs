@@ -591,6 +591,8 @@ impl OctreeSet {
         (true, all_children_full)
     }
 
+    // TODO: subtract_extent
+
     fn remove_subtree(&mut self, code: &LocationCode, level: u8) {
         if let Some(child_bitmask) = self.nodes.remove(code) {
             if level == 1 {

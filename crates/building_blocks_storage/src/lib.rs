@@ -19,6 +19,7 @@
 pub mod access;
 pub mod array;
 pub mod chunk_map;
+pub mod chunked_octree_set;
 pub mod compression;
 pub mod func;
 pub mod multiresolution;
@@ -30,6 +31,7 @@ pub mod transform_map;
 pub use access::*;
 pub use array::*;
 pub use chunk_map::*;
+pub use chunked_octree_set::*;
 pub use compression::*;
 pub use multiresolution::*;
 pub use octree_chunk_index::*;

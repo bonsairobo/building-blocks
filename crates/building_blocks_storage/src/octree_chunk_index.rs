@@ -1,30 +1,31 @@
 use crate::{
-    active_clipmap_lod_chunks, Array3, ChunkIndexer, ChunkMap3, ClipMapConfig3, ClipMapUpdate3,
+    active_clipmap_lod_chunks, Array3, ChunkMap3, ChunkedOctreeSet, ClipMapConfig3, ClipMapUpdate3,
     GetMut, IterChunkKeys, LodChunkKey3, LodChunkUpdate3, OctreeSet,
 };
 
 use building_blocks_core::prelude::*;
 
 use fnv::FnvHashMap;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone)]
+/// A `ChunkedOctreeSet` that indexes the chunks of a `ChunkMap` or a `ChunkPyramid`. Useful for representing a clipmap.
+#[derive(Clone, Deserialize, Serialize)]
 pub struct OctreeChunkIndex {
-    /// Indexer used to find the octree for a given superchunk.
-    pub indexer: ChunkIndexer<[i32; 3]>,
-
+    pub superchunk_octrees: ChunkedOctreeSet,
     chunk_shape: Point3i,
-    octrees: FnvHashMap<Point3i, OctreeSet>,
 }
 
 impl OctreeChunkIndex {
     /// The shape of the world extent convered by a single chunk (a leaf of an octree).
+    #[inline]
     pub fn chunk_shape(&self) -> Point3i {
         self.chunk_shape
     }
 
     /// The shape of the world extent covered by a single octree, i.e. all of its chunks when full.
+    #[inline]
     pub fn superchunk_shape(&self) -> Point3i {
-        self.indexer.chunk_shape()
+        self.superchunk_octrees.indexer.chunk_shape()
     }
 
     /// Same as `index_chunks`, but using the chunk keys and chunk shape from `chunk_map`.
@@ -71,10 +72,10 @@ impl OctreeChunkIndex {
 
         let superchunk_mask = !(superchunk_shape - Point3i::ONES);
 
-        let mut bitsets = FnvHashMap::default();
+        let mut superchunk_bitsets = FnvHashMap::default();
         for &chunk_key in chunk_keys {
             let superchunk_key = chunk_key & superchunk_mask;
-            let bitset = bitsets.entry(superchunk_key).or_insert_with(|| {
+            let bitset = superchunk_bitsets.entry(superchunk_key).or_insert_with(|| {
                 Array3::fill(
                     Extent3i::from_min_and_shape(
                         superchunk_key >> chunk_log2,
@@ -87,47 +88,28 @@ impl OctreeChunkIndex {
         }
 
         // PERF: could be done in parallel
-        let mut octrees = FnvHashMap::default();
-        for (lod_chunk_key, array) in bitsets.into_iter() {
+        let mut superchunk_octrees = FnvHashMap::default();
+        for (lod_chunk_key, array) in superchunk_bitsets.into_iter() {
             let octree = OctreeSet::from_array3(&array, *array.extent());
-            octrees.insert(lod_chunk_key, octree);
+            superchunk_octrees.insert(lod_chunk_key, octree);
         }
 
         Self {
-            octrees,
+            superchunk_octrees: ChunkedOctreeSet::new(superchunk_shape, superchunk_octrees),
             chunk_shape,
-            indexer: ChunkIndexer::new(superchunk_shape),
-        }
-    }
-
-    pub fn visit_octrees(&self, extent: &Extent3i, visitor: &mut impl FnMut(&OctreeSet)) {
-        for superchunk_key in self.indexer.chunk_keys_for_extent(extent) {
-            if let Some(octree) = self.octrees.get(&superchunk_key) {
-                (visitor)(octree);
-            }
-        }
-    }
-
-    pub fn add_extent(&mut self, extent: &Extent3i) {
-        let Self {
-            octrees, indexer, ..
-        } = self;
-
-        for superchunk_key in indexer.chunk_keys_for_extent(extent) {
-            let octree = octrees.entry(superchunk_key).or_insert_with(|| {
-                let domain = Extent3i::from_min_and_shape(superchunk_key, indexer.chunk_shape());
-
-                OctreeSet::empty(domain)
-            });
-            octree.add_extent(extent);
         }
     }
 
     pub fn clipmap_config(&self, clip_box_radius: i32) -> ClipMapConfig3 {
-        assert!(self.indexer.chunk_shape().is_cube());
+        assert!(self.superchunk_octrees.indexer.chunk_shape().is_cube());
         assert!(self.chunk_shape().is_cube());
 
-        let superchunk_log2 = self.indexer.chunk_shape().x().trailing_zeros() as u8;
+        let superchunk_log2 = self
+            .superchunk_octrees
+            .indexer
+            .chunk_shape()
+            .x()
+            .trailing_zeros() as u8;
         let chunk_log2 = self.chunk_shape().x().trailing_zeros() as u8;
         let num_lods = superchunk_log2 - chunk_log2;
 
@@ -146,9 +128,10 @@ impl OctreeChunkIndex {
         mut init_rx: impl FnMut(LodChunkKey3),
     ) {
         let config = self.clipmap_config(clip_box_radius);
-        self.visit_octrees(extent, &mut |octree| {
-            active_clipmap_lod_chunks(&config, octree, lod0_center, &mut init_rx)
-        });
+        self.superchunk_octrees
+            .visit_octrees(extent, &mut |octree| {
+                active_clipmap_lod_chunks(&config, octree, lod0_center, &mut init_rx)
+            });
     }
 
     pub fn find_clipmap_chunk_updates(
@@ -164,8 +147,9 @@ impl OctreeChunkIndex {
             old_lod0_center,
             new_lod0_center,
         );
-        self.visit_octrees(extent, &mut |octree| {
-            update.find_chunk_updates(octree, &mut update_rx)
-        });
+        self.superchunk_octrees
+            .visit_octrees(extent, &mut |octree| {
+                update.find_chunk_updates(octree, &mut update_rx)
+            });
     }
 }

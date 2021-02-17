@@ -134,29 +134,31 @@ where
         let chunk_space_extent =
             Extent3i::from_min_and_shape(extent.minimum >> chunk_log2, extent.shape >> chunk_log2);
 
-        index.visit_octrees(extent, &mut |octree| {
-            // Post-order is important to make sure we start downsampling at LOD 0.
-            octree.visit_all_octants_for_extent_in_postorder(
-                &chunk_space_extent,
-                &mut |node: &OctreeNode| {
-                    let dst_lod = node.octant().power();
-                    if dst_lod > 0 && dst_lod < self.num_lods() {
-                        // Destination LOD > 0, so we should downsample all non-empty children.
-                        let src_lod = dst_lod - 1;
-                        for child_octant_index in 0..8 {
-                            if node.child_bitmask() & (1 << child_octant_index) != 0 {
-                                let child_octant = node.octant().child(child_octant_index);
-                                let src_chunk_key =
-                                    (child_octant.minimum() << chunk_log2) >> src_lod as i32;
-                                self.downsample_chunk(sampler, src_chunk_key, src_lod, dst_lod);
+        index
+            .superchunk_octrees
+            .visit_octrees(extent, &mut |octree| {
+                // Post-order is important to make sure we start downsampling at LOD 0.
+                octree.visit_all_octants_for_extent_in_postorder(
+                    &chunk_space_extent,
+                    &mut |node: &OctreeNode| {
+                        let dst_lod = node.octant().power();
+                        if dst_lod > 0 && dst_lod < self.num_lods() {
+                            // Destination LOD > 0, so we should downsample all non-empty children.
+                            let src_lod = dst_lod - 1;
+                            for child_octant_index in 0..8 {
+                                if node.child_bitmask() & (1 << child_octant_index) != 0 {
+                                    let child_octant = node.octant().child(child_octant_index);
+                                    let src_chunk_key =
+                                        (child_octant.minimum() << chunk_log2) >> src_lod as i32;
+                                    self.downsample_chunk(sampler, src_chunk_key, src_lod, dst_lod);
+                                }
                             }
                         }
-                    }
 
-                    VisitStatus::Continue
-                },
-            );
-        });
+                        VisitStatus::Continue
+                    },
+                );
+            });
     }
 }
 

@@ -8,7 +8,7 @@
 //!
 //! ![Meshing](https://i.imgur.com/IZwfRHc.gif)
 //!
-//! ![Noise](https://i.imgur.com/F38sgE1.png)
+//! ![Noise](https://i.imgur.com/56zSvZh.png)
 //!
 //! The primary focus is core data structures and algorithms. Features include:
 //!

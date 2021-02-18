@@ -5,7 +5,6 @@ use crate::{
 
 use building_blocks_core::prelude::*;
 
-use core::hash::Hash;
 use futures::future::join_all;
 use itertools::Itertools;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -23,7 +22,6 @@ where
 
 impl<N, T, Meta, B> SerializableChunks<N, T, Meta, B>
 where
-    PointN<N>: IntegerPoint<N> + Hash + Eq,
     Chunk<N, T, Meta>: DeserializeOwned + Serialize,
     T: Copy,
     Meta: Clone,

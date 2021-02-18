@@ -59,7 +59,7 @@ pub mod prelude {
         CompressibleChunkStorage, CompressibleChunkStorageReader, Compression,
         FastArrayCompression, FastChunkCompression, ForEach, ForEachMut, ForEachRef, Get, GetMut,
         GetRef, IsEmpty, IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
-        OctreeChunkIndex, OctreeNode, OctreeSet, ReadExtent, SerializableChunkMap, SignedDistance,
+        OctreeChunkIndex, OctreeNode, OctreeSet, ReadExtent, SerializableChunks, SignedDistance,
         Stride, TransformMap, WriteExtent,
     };
 

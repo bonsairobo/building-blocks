@@ -1,35 +1,27 @@
 use crate::{
-    BincodeCompressedChunk, BincodeCompression, BytesCompression, Chunk, ChunkMap, ChunkMapBuilder,
-    ChunkWriteStorage, Compression,
+    BincodeCompressedChunk, BincodeCompression, BytesCompression, Chunk, ChunkWriteStorage,
+    Compression,
 };
 
 use building_blocks_core::prelude::*;
 
 use core::hash::Hash;
-use fnv::FnvHashMap;
 use futures::future::join_all;
 use itertools::Itertools;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-/// A simple chunk map format for serialization. All chunks are serialized with `bincode`, then compressed using some
-/// `BytesCompression`. This can be used to:
-///   - serialize any `ChunkMap` whose storage implements `IntoIterator<Item = (PointN<N>, Chunk<N, T, Meta>)>`
-///   - deserialize any `ChunkMap` whose storage implements `ChunkWriteStorage`
-///
-/// This type is provided mostly for convenience. It won't work if your entire `ChunkMap` doesn't fit in memory. That would
-/// require a streaming solution.
+/// A simple format for serializing a collection of chunks. All chunks are serialized with `bincode`, then compressed using some
+/// `BytesCompression`.
 #[derive(Deserialize, Serialize)]
-pub struct SerializableChunkMap<N, T, Meta, B>
+pub struct SerializableChunks<N, T, Meta, B>
 where
-    PointN<N>: Hash + Eq,
     Chunk<N, T, Meta>: DeserializeOwned + Serialize,
     B: BytesCompression,
 {
-    pub builder: ChunkMapBuilder<N, T, Meta>,
-    pub compressed_chunks: FnvHashMap<PointN<N>, BincodeCompressedChunk<N, T, Meta, B>>,
+    pub compressed_chunks: Vec<(PointN<N>, BincodeCompressedChunk<N, T, Meta, B>)>,
 }
 
-impl<N, T, Meta, B> SerializableChunkMap<N, T, Meta, B>
+impl<N, T, Meta, B> SerializableChunks<N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
     Chunk<N, T, Meta>: DeserializeOwned + Serialize,
@@ -39,21 +31,17 @@ where
 {
     /// Returns a serializable version of this map. All chunks are serialized with `bincode`, then compressed using some
     /// `BytesCompression`. This can be used to serialize any kind of `ChunkMap`, regardless of chunk storage.
-    pub async fn from_chunk_map<Store>(
+    pub async fn from_iter(
         compression: BincodeCompression<Chunk<N, T, Meta>, B>,
-        map: ChunkMap<N, T, Meta, Store>,
+        chunks_iter: impl IntoIterator<Item = (PointN<N>, Chunk<N, T, Meta>)>,
     ) -> Self
     where
         B: Copy,
-        Store: IntoIterator<Item = (PointN<N>, Chunk<N, T, Meta>)>,
     {
-        let builder = map.builder();
-        let storage = map.take_storage();
-
         // Only do one parallel batch at a time to avoid decompressing the entire map at once (assuming the underlying storage
         // does compression).
-        let mut compressed_chunks = FnvHashMap::default();
-        for batch_of_chunks in &storage.into_iter().chunks(16) {
+        let mut compressed_chunks = Vec::new();
+        for batch_of_chunks in &chunks_iter.into_iter().chunks(16) {
             for (key, compressed_chunk) in join_all(
                 batch_of_chunks
                     .into_iter()
@@ -62,19 +50,16 @@ where
             .await
             .into_iter()
             {
-                compressed_chunks.insert(key, compressed_chunk);
+                compressed_chunks.push((key, compressed_chunk));
             }
         }
 
-        Self {
-            builder,
-            compressed_chunks,
-        }
+        Self { compressed_chunks }
     }
 
     /// Returns a new map from the serialized, compressed version. This will decompress each chunk and insert it into the given
     /// `storage`.
-    pub async fn into_chunk_map<Store>(self, mut storage: Store) -> ChunkMap<N, T, Meta, Store>
+    pub async fn fill_storage<Store>(self, storage: &mut Store)
     where
         Store: ChunkWriteStorage<N, T, Meta>,
     {
@@ -90,8 +75,6 @@ where
                 storage.write(key, chunk);
             }
         }
-
-        self.builder.build_with_write_storage(storage)
     }
 }
 
@@ -108,11 +91,7 @@ mod test {
 
     use crate::prelude::*;
 
-    const BUILDER: ChunkMapBuilder3<i32> = ChunkMapBuilder {
-        chunk_shape: PointN([16; 3]),
-        ambient_value: 0,
-        default_chunk_metadata: (),
-    };
+    use fnv::FnvHashMap;
 
     #[cfg(feature = "lz4")]
     #[test]
@@ -165,15 +144,23 @@ mod test {
         let mut map = BUILDER.build_with_write_storage(storage);
         let filled_extent = Extent3i::from_min_and_shape(Point3i::fill(-100), Point3i::fill(200));
         map.fill_extent(&filled_extent, 1);
-        let serializable = futures::executor::block_on(SerializableChunkMap::from_chunk_map(
+        let serializable = futures::executor::block_on(SerializableChunks::from_iter(
             BincodeCompression::new(compression),
-            map,
+            map.take_storage(),
         ));
         let serialized: Vec<u8> = bincode::serialize(&serializable).unwrap();
-        let deserialized: SerializableChunkMap<[i32; 3], i32, (), B> =
+        let deserialized: SerializableChunks<[i32; 3], i32, (), B> =
             bincode::deserialize(&serialized).unwrap();
 
-        let map = futures::executor::block_on(deserialized.into_chunk_map(FnvHashMap::default()));
+        let mut storage = FnvHashMap::default();
+        futures::executor::block_on(deserialized.fill_storage(&mut storage));
+        let map = BUILDER.build_with_rw_storage(storage);
         map.for_each(&filled_extent, |_p, val| assert_eq!(val, 1));
     }
+
+    const BUILDER: ChunkMapBuilder3<i32> = ChunkMapBuilder {
+        chunk_shape: PointN([16; 3]),
+        ambient_value: 0,
+        default_chunk_metadata: (),
+    };
 }

@@ -4,7 +4,10 @@
     clippy::too_many_arguments
 )]
 
-//! Various types of storage for "lattice maps," functions defined on N-dimensional integer lattices.
+//! Various types of storage and indexing for voxels in 2 or 3 dimensions.
+//!
+//! If you need to store signed distance values in your voxels, consider using the `Sd8` and `Sd16` fixed-precision types which
+//! implement the `SignedDistance` trait required for smooth meshing.
 //!
 //! The core storage types are:
 //!   - `ArrayN`: N-dimensional, dense array
@@ -14,6 +17,12 @@
 //! Then there are "meta" lattice maps that provide some extra utility:
 //!   - `TransformMap`: a wrapper of any kind of lattice map that performs an arbitrary transformation
 //!   - `Fn(PointN<N>)`: some lattice map traits are implemented for functions (like SDFs)
+//!
+//! For multiresolution voxel data, there is an extension of `ChunkMap` called the `ChunkPyramid` which supports generic chunk
+//! downsampling via the `ChunkDownsampler` trait.
+//!
+//! For spatial indexing, there is the bounded `OctreeSet` and corresponding unbounded `ChunkedOctreeSet`. Specifically for
+//! indexing chunk keys and interacting with clipmaps, there is an `OctreeChunkIndex`.
 
 #[macro_use]
 pub mod access_traits;

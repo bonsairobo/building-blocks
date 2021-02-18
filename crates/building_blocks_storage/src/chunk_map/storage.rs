@@ -1,11 +1,9 @@
-mod caching;
 mod compressible;
 mod compressible_reader;
 mod compression;
 mod hash_map;
 mod serialization;
 
-pub use caching::*;
 pub use compressible::*;
 pub use compressible_reader::*;
 pub use compression::*;

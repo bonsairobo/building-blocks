@@ -18,6 +18,7 @@
 #[macro_use]
 pub mod access;
 pub mod array;
+pub mod caching;
 pub mod chunk_map;
 pub mod chunked_octree_set;
 pub mod compression;
@@ -30,6 +31,7 @@ pub mod transform_map;
 
 pub use access::*;
 pub use array::*;
+pub use caching::*;
 pub use chunk_map::*;
 pub use chunked_octree_set::*;
 pub use compression::*;

@@ -16,10 +16,13 @@
 //!   - `Fn(PointN<N>)`: some lattice map traits are implemented for functions (like SDFs)
 
 #[macro_use]
-pub mod access;
+pub mod access_traits;
 pub mod array;
 pub mod caching;
+pub mod chunk;
+pub mod chunk_indexer;
 pub mod chunk_map;
+pub mod chunk_storage;
 pub mod chunked_octree_set;
 pub mod compression;
 pub mod func;
@@ -29,10 +32,13 @@ pub mod octree_set;
 pub mod signed_distance;
 pub mod transform_map;
 
-pub use access::*;
+pub use access_traits::*;
 pub use array::*;
 pub use caching::*;
+pub use chunk::*;
+pub use chunk_indexer::*;
 pub use chunk_map::*;
+pub use chunk_storage::*;
 pub use chunked_octree_set::*;
 pub use compression::*;
 pub use multiresolution::*;

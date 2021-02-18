@@ -115,18 +115,11 @@
 //! map.storage_mut().flush_local_cache(local_cache);
 //! ```
 
-mod ambient;
-mod chunk;
-mod storage;
-
-pub use ambient::*;
-pub use chunk::*;
-pub use storage::*;
-
 use crate::{
-    array::{ArrayCopySrc, ArrayIndexer, ArrayN},
-    ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, GetUnchecked, GetUncheckedMutRelease,
-    GetUncheckedRef, GetUncheckedRefRelease, ReadExtent, WriteExtent,
+    ArrayCopySrc, ArrayIndexer, ArrayN, Chunk, ChunkHashMap, ChunkIndexer, ChunkReadStorage,
+    ChunkWriteStorage, ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, GetUnchecked,
+    GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRefRelease, IterChunkKeys, ReadExtent,
+    WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
@@ -486,6 +479,43 @@ where
     }
 }
 
+/// An extent that takes the same value everywhere.
+#[derive(Copy, Clone)]
+pub struct AmbientExtent<N, T> {
+    pub value: T,
+    _n: std::marker::PhantomData<N>,
+}
+
+impl<N, T> AmbientExtent<N, T> {
+    pub fn new(value: T) -> Self {
+        Self {
+            value,
+            _n: Default::default(),
+        }
+    }
+
+    pub fn get(&self) -> T
+    where
+        T: Clone,
+    {
+        self.value.clone()
+    }
+}
+
+impl<N, T> ForEach<N, PointN<N>> for AmbientExtent<N, T>
+where
+    T: Clone,
+    PointN<N>: IntegerPoint<N>,
+{
+    type Data = T;
+
+    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
+        for p in extent.iter_points() {
+            f(p, self.value.clone());
+        }
+    }
+}
+
 //  ██████╗ ███████╗████████╗████████╗███████╗██████╗ ███████╗
 // ██╔════╝ ██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗██╔════╝
 // ██║  ███╗█████╗     ██║      ██║   █████╗  ██████╔╝███████╗
@@ -664,7 +694,7 @@ pub type ArrayChunkCopySrc<'a, N, T> = Either<ArrayCopySrc<&'a ArrayN<N, T>>, Am
 mod tests {
     use super::*;
 
-    use crate::{access::Get, copy_extent, Array3};
+    use crate::{copy_extent, Array3, Get};
 
     use building_blocks_core::prelude::*;
 

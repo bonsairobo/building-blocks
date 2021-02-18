@@ -38,10 +38,8 @@
 //! ```
 
 use crate::{
-    access::GetUnchecked,
-    array::{Array, ArrayCopySrc},
-    chunk_map::{AmbientExtent, ArrayChunkCopySrc, ArrayChunkCopySrcIter, ChunkCopySrc, ChunkMap},
-    ArrayN, ForEach, Get, ReadExtent,
+    AmbientExtent, Array, ArrayChunkCopySrc, ArrayChunkCopySrcIter, ArrayCopySrc, ArrayN,
+    ChunkCopySrc, ChunkMap, ForEach, Get, GetUnchecked, ReadExtent,
 };
 
 use building_blocks_core::prelude::*;

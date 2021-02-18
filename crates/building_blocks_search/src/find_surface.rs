@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{access::GetUncheckedRelease, prelude::*, IsEmpty};
+use building_blocks_storage::{prelude::*, GetUncheckedRelease, IsEmpty};
 
 /// Returns the "surface points" i.e. those points that are non-empty and Von-Neumann-adjacent to an
 /// empty point. Since this algorithm does adjacency checks for all points in `extent`, you must

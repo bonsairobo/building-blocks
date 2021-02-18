@@ -1,7 +1,7 @@
 use super::PosNormMesh;
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{access::GetUncheckedRelease, prelude::*};
+use building_blocks_storage::{prelude::*, GetUncheckedRelease};
 
 pub trait Height {
     fn height(&self) -> f32;

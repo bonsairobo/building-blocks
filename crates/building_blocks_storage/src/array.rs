@@ -111,7 +111,7 @@ pub use array3::Array3;
 pub use compression::{FastArrayCompression, FastCompressedArray};
 
 use crate::{
-    chunk_map::ChunkCopySrc, ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, GetUnchecked,
+    ChunkCopySrc, ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, GetUnchecked,
     GetUncheckedMut, GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRefRelease,
     GetUncheckedRelease, ReadExtent, TransformMap, WriteExtent,
 };
@@ -989,7 +989,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{access::GetUnchecked, copy_extent, Array2, Array3, Get};
+    use crate::{copy_extent, Array2, Array3, Get, GetUnchecked};
 
     use building_blocks_core::{Extent2, Extent3};
 

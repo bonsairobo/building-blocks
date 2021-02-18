@@ -1,16 +1,12 @@
 mod compressible;
 mod compressible_reader;
-mod compression;
 mod hash_map;
-mod serialization;
 
 pub use compressible::*;
 pub use compressible_reader::*;
-pub use compression::*;
 pub use hash_map::*;
-pub use serialization::*;
 
-use super::Chunk;
+use crate::Chunk;
 
 use building_blocks_core::prelude::*;
 

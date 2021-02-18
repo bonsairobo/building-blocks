@@ -44,7 +44,7 @@
 //! The other form of traversal is "node-based," which is slightly less efficient and more manual but also more flexible. See
 //! the `OctreeSet::root_node`, `OctreeSet::child_node`, and `OctreeNode` documentation for details.
 
-use crate::{access::GetUncheckedRelease, prelude::*, IsEmpty};
+use crate::{prelude::*, GetUncheckedRelease, IsEmpty};
 
 use building_blocks_core::prelude::*;
 

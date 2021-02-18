@@ -1,7 +1,7 @@
 use super::PosNormMesh;
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{access::GetUncheckedRelease, prelude::*};
+use building_blocks_storage::{prelude::*, GetUncheckedRelease};
 
 /// Pads the given chunk extent with exactly the amount of space required for running the
 /// `surface_nets` algorithm.

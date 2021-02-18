@@ -18,10 +18,9 @@ impl IsEmpty for VoxColor {
     }
 }
 
-// TODO: should take a type parameter that implements a trait to access `VoxColor`
 pub fn encode_vox<Map>(map: &Map, map_extent: Extent3i) -> DotVoxData
 where
-    Map: for<'r> Get<&'r Point3i, Data = VoxColor>,
+    Map: Get<Point3i, Data = VoxColor>,
 {
     let shape = map_extent.shape;
     let vox_extent = map_extent - map_extent.minimum;
@@ -37,7 +36,7 @@ where
 
     let mut voxels = Vec::new();
     for (vox_p, map_p) in vox_extent.iter_points().zip(map_extent.iter_points()) {
-        if let VoxColor::Color(i) = map.get(&map_p) {
+        if let VoxColor::Color(i) = map.get(map_p) {
             voxels.push(dot_vox::Voxel {
                 x: vox_p.x() as u8,
                 y: vox_p.y() as u8,

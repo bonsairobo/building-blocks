@@ -226,7 +226,7 @@ pub trait ForEachMut<N, Coord> {
 /// Some lattice maps, like `ChunkMap`, have nonlinear layouts. This means that, in order for a writer to receive data
 /// efficiently, it must come as an iterator over multiple extents.
 pub trait ReadExtent<'a, N> {
-    type Src: 'a;
+    type Src;
     type SrcIter: Iterator<Item = (ExtentN<N>, Self::Src)>;
 
     /// `SrcIter` must return extents that are subsets of `extent`.
@@ -239,7 +239,7 @@ pub trait WriteExtent<N, Src> {
 }
 
 /// Copy all points in `extent` from the `src` map to the `dst` map.
-pub fn copy_extent<'a, N, Src: 'a, Ms, Md>(extent: &ExtentN<N>, src_map: &'a Ms, dst_map: &mut Md)
+pub fn copy_extent<'a, N, Src, Ms, Md>(extent: &ExtentN<N>, src_map: &'a Ms, dst_map: &mut Md)
 where
     Ms: ReadExtent<'a, N, Src = Src>,
     Md: WriteExtent<N, Src>,

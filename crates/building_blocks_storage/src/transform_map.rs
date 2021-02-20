@@ -159,10 +159,7 @@ where
         Src = ArrayChunkCopySrc<'a, N, In>,
         SrcIter = ArrayChunkCopySrcIter<'a, N, In>,
     >,
-    F: 'a + Copy + Fn(In) -> Out,
-    In: Copy,
-    Out: 'a,
-    Meta: Clone,
+    F: Copy + Fn(In) -> Out,
 {
     type Src = TransformChunkCopySrc<'a, F, In, Out, N>;
     type SrcIter = TransformChunkCopySrcIter<'a, F, In, Out, N>;

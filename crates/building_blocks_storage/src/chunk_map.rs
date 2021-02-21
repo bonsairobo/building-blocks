@@ -632,7 +632,7 @@ where
 impl<'a, N, T, Meta, Store> ReadExtent<'a, N> for ChunkMap<N, T, Meta, Store>
 where
     N: ArrayIndexer<N>,
-    PointN<N>: 'a + IntegerPoint<N>,
+    PointN<N>: IntegerPoint<N>,
     T: 'a + Copy,
     Store: ChunkReadStorage<N, T, Meta>,
 {

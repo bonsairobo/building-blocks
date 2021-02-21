@@ -33,10 +33,10 @@ where
         debug_assert!(lod_delta > 0);
         let lod_delta = lod_delta as i32;
 
-        let sample_shape = src_chunk.extent().shape >> lod_delta;
-        debug_assert!(sample_shape > PointN::ZERO);
+        let dst_shape = src_chunk.extent().shape >> lod_delta;
+        debug_assert!(dst_shape > PointN::ZERO);
 
-        for p in ExtentN::from_min_and_shape(PointN::ZERO, sample_shape).iter_points() {
+        for p in ExtentN::from_min_and_shape(PointN::ZERO, dst_shape).iter_points() {
             *dst_chunk.get_mut(Local(dst_min.0 + p)) = src_chunk.get(Local(p << lod_delta));
         }
     }

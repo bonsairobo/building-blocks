@@ -55,24 +55,3 @@ where
         once((*extent, self))
     }
 }
-
-// ████████╗███████╗███████╗████████╗
-// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
-//    ██║   █████╗  ███████╗   ██║
-//    ██║   ██╔══╝  ╚════██║   ██║
-//    ██║   ███████╗███████║   ██║
-//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::{copy_extent, Array3};
-
-    #[test]
-    fn copy_extent_from_func() {
-        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(5));
-        let mut array = Array3::fill(extent, 0);
-
-        copy_extent(&extent, &|_p| 1, &mut array);
-    }
-}

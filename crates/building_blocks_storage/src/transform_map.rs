@@ -135,8 +135,8 @@ where
 
 impl<'a, F, In, Out, N> ReadExtent<'a, N> for TransformMap<'a, ArrayN<N, In>, F>
 where
-    Self: Array<N> + Copy,
-    F: 'a + Fn(In) -> Out,
+    Self: Array<N> + Clone,
+    F: Fn(In) -> Out,
     PointN<N>: IntegerPoint<N>,
 {
     type Src = ArrayCopySrc<Self>;
@@ -145,7 +145,7 @@ where
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
         let in_bounds_extent = self.extent().intersection(extent);
 
-        once((in_bounds_extent, ArrayCopySrc(*self)))
+        once((in_bounds_extent, ArrayCopySrc(self.clone())))
     }
 }
 

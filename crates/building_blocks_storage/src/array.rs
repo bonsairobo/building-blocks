@@ -100,6 +100,7 @@
 mod array2;
 mod array3;
 mod compression;
+mod coords;
 
 #[cfg(feature = "dot_vox")]
 mod dot_vox_conversions;
@@ -109,6 +110,7 @@ mod image_conversions;
 pub use array2::Array2;
 pub use array3::Array3;
 pub use compression::{FastArrayCompression, FastCompressedArray};
+pub use coords::*;
 
 use crate::{
     ChunkCopySrc, ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, GetUnchecked,
@@ -120,9 +122,8 @@ use building_blocks_core::prelude::*;
 
 use core::iter::{once, Once};
 use core::mem::MaybeUninit;
-use core::ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign};
+use core::ops::{Add, Deref, DerefMut};
 use either::Either;
-use num::Zero;
 use serde::{Deserialize, Serialize};
 
 /// When a lattice map implements `Array`, that means there is some underlying array with the
@@ -506,104 +507,6 @@ where
 // ██║   ██║██╔══╝     ██║      ██║   ██╔══╝  ██╔══██╗╚════██║
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
-
-/// Map-local coordinates.
-///
-/// Most commonly, you will index a lattice map with a `PointN<N>`, which is assumed to be in global
-/// coordinates. `Local<N>` only applies to lattice maps where a point must first be translated from
-/// global coordinates into map-local coordinates before indexing with `Get<Local<N>>`.
-#[derive(Debug, Eq, PartialEq)]
-pub struct Local<N>(pub PointN<N>);
-
-impl<N> Clone for Local<N>
-where
-    PointN<N>: Clone,
-{
-    fn clone(&self) -> Self {
-        Local(self.0.clone())
-    }
-}
-impl<N> Copy for Local<N> where PointN<N>: Copy {}
-
-impl<N> Local<N> {
-    /// Wraps all of the `points` using the `Local` constructor.
-    #[inline]
-    pub fn localize_points(points: &[PointN<N>]) -> Vec<Local<N>>
-    where
-        PointN<N>: Clone,
-    {
-        points.iter().cloned().map(Local).collect()
-    }
-}
-
-impl<N> Deref for Local<N> {
-    type Target = PointN<N>;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-/// The most efficient coordinates for slice-backed lattice maps. A single number that translates
-/// directly to a slice offset.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
-pub struct Stride(pub usize);
-
-impl Zero for Stride {
-    #[inline]
-    fn zero() -> Self {
-        Stride(0)
-    }
-
-    #[inline]
-    fn is_zero(&self) -> bool {
-        self.0 == 0
-    }
-}
-
-impl Add for Stride {
-    type Output = Self;
-
-    #[inline]
-    fn add(self, rhs: Self) -> Self::Output {
-        // Wraps for negative point offsets.
-        Self(self.0.wrapping_add(rhs.0))
-    }
-}
-
-impl Sub for Stride {
-    type Output = Self;
-
-    #[inline]
-    fn sub(self, rhs: Self) -> Self::Output {
-        // Wraps for negative point offsets.
-        Self(self.0.wrapping_sub(rhs.0))
-    }
-}
-
-impl Mul<usize> for Stride {
-    type Output = Self;
-
-    #[inline]
-    fn mul(self, rhs: usize) -> Self::Output {
-        Self(self.0.wrapping_mul(rhs))
-    }
-}
-
-impl AddAssign for Stride {
-    #[inline]
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs;
-    }
-}
-
-impl SubAssign for Stride {
-    #[inline]
-    fn sub_assign(&mut self, rhs: Self) {
-        *self = *self - rhs;
-    }
-}
 
 impl<N, T, Store> GetRef<Stride> for ArrayN<N, T, Store>
 where

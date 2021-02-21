@@ -104,10 +104,10 @@ where
     }
 }
 
-impl<'a, Meta, F, In, Out, N, Coord> ForEach<N, Coord> for TransformMap<'a, Meta, F>
+impl<'a, Delegate, F, In, Out, N, Coord> ForEach<N, Coord> for TransformMap<'a, Delegate, F>
 where
     F: Fn(In) -> Out,
-    Meta: ForEach<N, Coord, Data = In>,
+    Delegate: ForEach<N, Coord, Data = In>,
 {
     type Data = Out;
 

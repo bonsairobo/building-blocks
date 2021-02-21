@@ -778,7 +778,7 @@ macro_rules! impl_array_for_each {
     (coords: $coords:ty; forwarder = |$p:ident, $stride:ident| $forward_coords:expr;) => {
         impl<N, T, Store> ForEach<N, $coords> for ArrayN<N, T, Store>
         where
-            Self: Sized + Get<Stride, Data = T> + GetUnchecked<Stride, Data = T>,
+            Self: Get<Stride, Data = T> + GetUnchecked<Stride, Data = T>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
         {
@@ -794,7 +794,7 @@ macro_rules! impl_array_for_each {
 
         impl<N, T, Store> ForEachRef<N, $coords> for ArrayN<N, T, Store>
         where
-            Self: Sized + GetRef<Stride, Data = T> + GetUncheckedRef<Stride, Data = T>,
+            Self: GetRef<Stride, Data = T> + GetUncheckedRef<Stride, Data = T>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
         {
@@ -810,7 +810,7 @@ macro_rules! impl_array_for_each {
 
         impl<N, T, Store> ForEachMut<N, $coords> for ArrayN<N, T, Store>
         where
-            Self: Sized + GetMut<Stride, Data = T> + GetUncheckedMut<Stride, Data = T>,
+            Self: GetMut<Stride, Data = T> + GetUncheckedMut<Stride, Data = T>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
             ExtentN<N>: Copy,

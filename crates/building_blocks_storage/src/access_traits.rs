@@ -1,5 +1,7 @@
 //! Traits defining different ways to access data from generic lattice maps.
 //!
+//! # Strided Iteration
+//!
 //! The fastest way to iterate over data in an Array is with a simple for loop over array indices, we call them "stride"s:
 //! ```
 //! use building_blocks_core::prelude::*;
@@ -15,6 +17,8 @@
 //! ```
 //! But this may require understanding the array layout.
 //!
+//! # `ForEach` over Extent
+//!
 //! Often, you only want to iterate over a sub-extent of the map. This can also be done at similar speeds using the `ForEach`
 //! and `ForEachMut` traits:
 //! ```
@@ -28,6 +32,8 @@
 //! ```
 //! Arrays also implement `ForEach*<PointN<N>>` and `ForEach*<(PointN<N>, Stride)>`. `ChunkMap` only implements
 //! `ForEach*<PointN<N>>`, because it's ambiguous which chunk a `Stride` would apply to.
+//!
+//! # Copy an Extent
 //!
 //! If you need to copy data between lattice maps, you should use the `copy_extent` function. Copies can be done efficiently
 //! because the `ReadExtent` and `WriteExtent` traits allow lattice maps to define how they would like to be written to or read
@@ -45,6 +51,9 @@
 //! let mut other_map = builder.build_with_hash_map_storage();
 //! copy_extent(&subextent, &map, &mut other_map);
 //! copy_extent(&subextent, &other_map, &mut map);
+//!
+//! // You can even copy from a `Fn(Point3i) -> T`.
+//! copy_extent(&subextent, &|p: Point3i| p.x(), &mut map);
 //!```
 
 use building_blocks_core::ExtentN;

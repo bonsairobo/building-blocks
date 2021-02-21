@@ -448,7 +448,7 @@ where
 
 impl<N, T, Store> ArrayN<N, T, Store>
 where
-    Self: ForEachMut<N, Stride, Data = T>,
+    Self: ForEachMut<N, (), Data = T>,
     PointN<N>: IntegerPoint<N>,
     Store: DerefMut<Target = [T]>,
 {
@@ -460,7 +460,7 @@ where
         if self.extent.eq(extent) {
             self.values.fill(value);
         } else {
-            self.for_each_mut(extent, |_s: Stride, v| *v = value.clone());
+            self.for_each_mut(extent, |_: (), v| *v = value.clone());
         }
     }
 }

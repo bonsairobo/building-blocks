@@ -450,7 +450,6 @@ impl<N, T, Store> ArrayN<N, T, Store>
 where
     Self: ForEachMut<N, Stride, Data = T>,
     PointN<N>: IntegerPoint<N>,
-    ExtentN<N>: PartialEq,
     Store: DerefMut<Target = [T]>,
 {
     /// Fill the entire `extent` with the same `value`.
@@ -957,7 +956,6 @@ where
     N: ArrayIndexer<N>,
     T: Clone,
     PointN<N>: IntegerPoint<N>,
-    ExtentN<N>: PartialEq,
     Store: DerefMut<Target = [T]>,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<Map, N, T>) {

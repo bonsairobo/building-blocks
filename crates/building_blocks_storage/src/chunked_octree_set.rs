@@ -44,7 +44,7 @@ impl ChunkedOctreeSet {
             let octree = octrees.entry(chunk_key).or_insert_with(|| {
                 let domain = Extent3i::from_min_and_shape(chunk_key, indexer.chunk_shape());
 
-                OctreeSet::empty(domain)
+                OctreeSet::new_empty(domain)
             });
             octree.add_extent(extent);
         }

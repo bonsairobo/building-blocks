@@ -68,12 +68,12 @@ pub struct OctreeSet {
 
 impl OctreeSet {
     /// Make an empty set in the universe (domain) of `extent`.
-    pub fn empty(extent: Extent3i) -> Self {
+    pub fn new_empty(extent: Extent3i) -> Self {
         Self::new_without_nodes(extent, false)
     }
 
     /// Make a full set in the universe (domain) of `extent`.
-    pub fn full(extent: Extent3i) -> Self {
+    pub fn new_full(extent: Extent3i) -> Self {
         Self::new_without_nodes(extent, true)
     }
 
@@ -980,7 +980,7 @@ mod tests {
         let domain = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
 
         // No overlap, but they touch.
-        let mut test = UpdateExtentTest::empty(domain);
+        let mut test = UpdateExtentTest::new_empty(domain);
         test.assert_extent_added(Extent3i::from_min_and_max(
             PointN([5, 0, 0]),
             PointN([9, 5, 5]),
@@ -991,7 +991,7 @@ mod tests {
         ));
 
         // With overlap.
-        let mut test = UpdateExtentTest::empty(domain);
+        let mut test = UpdateExtentTest::new_empty(domain);
         test.assert_extent_added(Extent3i::from_min_and_max(
             Point3i::fill(8),
             Point3i::fill(12),
@@ -1007,7 +1007,7 @@ mod tests {
         let domain = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
 
         // No overlap, but they touch.
-        let mut test = UpdateExtentTest::full(domain);
+        let mut test = UpdateExtentTest::new_full(domain);
         test.assert_extent_subtracted(Extent3i::from_min_and_max(
             PointN([5, 0, 0]),
             PointN([9, 5, 5]),
@@ -1018,7 +1018,7 @@ mod tests {
         ));
 
         // With overlap.
-        let mut test = UpdateExtentTest::full(domain);
+        let mut test = UpdateExtentTest::new_full(domain);
         test.assert_extent_subtracted(Extent3i::from_min_and_max(
             Point3i::fill(8),
             Point3i::fill(12),
@@ -1036,18 +1036,18 @@ mod tests {
     }
 
     impl UpdateExtentTest {
-        fn empty(domain: Extent3i) -> Self {
+        fn new_empty(domain: Extent3i) -> Self {
             Self {
                 domain,
-                set: OctreeSet::empty(domain),
+                set: OctreeSet::new_empty(domain),
                 expected_array_set: Array3::fill(domain, false),
             }
         }
 
-        fn full(domain: Extent3i) -> Self {
+        fn new_full(domain: Extent3i) -> Self {
             Self {
                 domain,
-                set: OctreeSet::full(domain),
+                set: OctreeSet::new_full(domain),
                 expected_array_set: Array3::fill(domain, true),
             }
         }

@@ -97,19 +97,17 @@
 //! box_array.for_each(&extent, |p: Point3i, value| assert_eq!(value, 1));
 //! ```
 
-mod array2;
-mod array3;
 mod compression;
 mod coords;
 mod indexer;
+mod indexer2;
+mod indexer3;
 
 #[cfg(feature = "dot_vox")]
 mod dot_vox_conversions;
 #[cfg(feature = "image")]
 mod image_conversions;
 
-pub use array2::Array2;
-pub use array3::Array3;
 pub use compression::{FastArrayCompression, FastCompressedArray};
 pub use coords::*;
 pub use indexer::*;
@@ -128,51 +126,14 @@ use core::ops::{Add, Deref, DerefMut};
 use either::Either;
 use serde::{Deserialize, Serialize};
 
-/// When a lattice map implements `Array`, that means there is some underlying array with the
-/// location and shape dictated by the extent.
+/// When a lattice map implements `Array`, that means there is some underlying array with the location and shape dictated by the
+/// extent.
 ///
-/// For the sake of generic impls, if the same map also implements `Get*<Stride>`, it must use the
-/// same data layout as `ArrayN`.
+/// For the sake of generic impls, if the same map also implements `Get*<Stride>`, it must use the same data layout as `ArrayN`.
 pub trait Array<N> {
     type Indexer: ArrayIndexer<N>;
 
     fn extent(&self) -> &ExtentN<N>;
-
-    #[inline]
-    fn for_each_point_and_stride(&self, extent: &ExtentN<N>, f: impl FnMut(PointN<N>, Stride))
-    where
-        PointN<N>: IntegerPoint<N>,
-    {
-        Self::Indexer::for_each_point_and_stride_global(self.extent(), extent, f);
-    }
-
-    #[inline]
-    unsafe fn for_each_point_and_stride_global_unchecked(
-        &self,
-        iter_extent: &ExtentN<N>,
-        f: impl FnMut(PointN<N>, Stride),
-    ) where
-        PointN<N>: IntegerPoint<N>,
-    {
-        Self::Indexer::for_each_point_and_stride_global_unchecked(self.extent(), iter_extent, f);
-    }
-
-    #[inline]
-    unsafe fn for_each_point_and_stride_local_unchecked(
-        &self,
-        iter_min: Local<N>,
-        iter_shape: PointN<N>,
-        f: impl FnMut(PointN<N>, Stride),
-    ) where
-        PointN<N>: Copy,
-    {
-        Self::Indexer::for_each_point_and_stride_local_unchecked(
-            self.extent().shape,
-            iter_min,
-            iter_shape,
-            f,
-        );
-    }
 
     #[inline]
     fn stride_from_local_point(&self, p: Local<N>) -> Stride
@@ -198,6 +159,11 @@ pub struct ArrayN<N, T, Store = Vec<T>> {
     extent: ExtentN<N>,
     marker: std::marker::PhantomData<T>,
 }
+
+/// A 2-dimensional `Array`.
+pub type Array2<T, Store = Vec<T>> = ArrayN<[i32; 2], T, Store>;
+/// A 3-dimensional `Array`.
+pub type Array3<T, Store = Vec<T>> = ArrayN<[i32; 3], T, Store>;
 
 impl<N, T, Store> ArrayN<N, T, Store> {
     /// Moves the raw extent and values storage out of `self`.
@@ -310,8 +276,8 @@ where
     PointN<N>: IntegerPoint<N>,
     Store: Deref<Target = [T]>,
 {
-    /// Create a new `ArrayN` directly from the extent and values. This asserts that the
-    /// number of points in the extent matches the length of the values `Vec`.
+    /// Create a new `ArrayN` directly from the extent and values. This asserts that the number of points in the extent matches
+    /// the length of the values `Vec`.
     pub fn new(extent: ExtentN<N>, values: Store) -> Self {
         assert_eq!(extent.num_points(), values.len());
 
@@ -588,9 +554,10 @@ macro_rules! impl_array_for_each {
 
             #[inline]
             fn for_each(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, T)) {
-                self.for_each_point_and_stride(iter_extent, |$p, $stride| {
+                let visitor = ArrayExtentVisitor::global(self.extent(), *iter_extent);
+                visitor.for_each_point_and_stride(|$p, $stride| {
                     f($forward_coords, self.get_unchecked_release($stride))
-                })
+                });
             }
         }
 
@@ -604,9 +571,10 @@ macro_rules! impl_array_for_each {
 
             #[inline]
             fn for_each_ref(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, &T)) {
-                self.for_each_point_and_stride(iter_extent, |$p, $stride| {
+                let visitor = ArrayExtentVisitor::global(self.extent(), *iter_extent);
+                visitor.for_each_point_and_stride(|$p, $stride| {
                     f($forward_coords, self.get_unchecked_ref_release($stride))
-                })
+                });
             }
         }
 
@@ -625,13 +593,10 @@ macro_rules! impl_array_for_each {
                 iter_extent: &ExtentN<N>,
                 mut f: impl FnMut($coords, &mut T),
             ) {
-                // Can't borrow self as mutable and immutable at the same time.
-                let array_extent = *self.extent();
-                <Self as Array<N>>::Indexer::for_each_point_and_stride_global(
-                    &array_extent,
-                    iter_extent,
-                    |$p, $stride| f($forward_coords, self.get_unchecked_mut_release($stride)),
-                )
+                let visitor = ArrayExtentVisitor::global(self.extent(), *iter_extent);
+                visitor.for_each_point_and_stride(|$p, $stride| {
+                    f($forward_coords, self.get_unchecked_mut_release($stride))
+                });
             }
         }
     };
@@ -690,8 +655,8 @@ where
     Store: Clone,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src_array: ArrayCopySrc<&'a Self>) {
-        // It is assumed by the interface that extent is a subset of the src array, so we only need
-        // to intersect with the destination.
+        // It is assumed by the interface that extent is a subset of the src array, so we only need to intersect with the
+        // destination.
         let in_bounds_extent = extent.intersection(self.extent());
 
         let copy_entire_array = in_bounds_extent.shape == self.extent().shape
@@ -720,8 +685,8 @@ where
         extent: &ExtentN<N>,
         src_array: ArrayCopySrc<TransformMap<'a, Map, F>>,
     ) {
-        // It is assumed by the interface that extent is a subset of the src array, so we only need
-        // to intersect with the destination.
+        // It is assumed by the interface that extent is a subset of the src array, so we only need to intersect with the
+        // destination.
         let in_bounds_extent = extent.intersection(self.extent());
 
         unchecked_copy_extent_between_arrays(self, &src_array.0, &in_bounds_extent);

@@ -1,7 +1,7 @@
 use super::PosNormMesh;
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{prelude::*, GetUncheckedRelease};
+use building_blocks_storage::{prelude::*, ArrayExtentVisitor, GetUncheckedRelease};
 
 /// Pads the given chunk extent with exactly the amount of space required for running the
 /// `surface_nets` algorithm.
@@ -95,7 +95,8 @@ fn estimate_surface<A, T>(
     // Avoid accessing out of bounds with a 2x2x2 kernel.
     let iter_extent = extent.add_to_shape(Point3i::fill(-1));
 
-    sdf.for_each_point_and_stride(&iter_extent, |p, p_stride| {
+    let visitor = ArrayExtentVisitor::global(sdf.extent(), iter_extent);
+    visitor.for_each_point_and_stride(|p, p_stride| {
         // Get the corners of the cube with minimal corner p.
         let mut corner_strides = [Stride(0); 8];
         for i in 0..8 {

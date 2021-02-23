@@ -1,7 +1,7 @@
 use super::PosNormMesh;
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{prelude::*, GetUncheckedRelease};
+use building_blocks_storage::{prelude::*, ArrayExtentVisitor, GetUncheckedRelease};
 
 pub trait Height {
     fn height(&self) -> f32;
@@ -13,18 +13,15 @@ impl Height for f32 {
     }
 }
 
-/// Pads the given chunk extent with exactly the amount of space required for running the
-/// `triangulate_height_map` algorithm.
+/// Pads the given chunk extent with exactly the amount of space required for running the `triangulate_height_map` algorithm.
 pub fn padded_height_map_chunk_extent(chunk_extent: &Extent2i) -> Extent2i {
     chunk_extent.padded(1).add_to_shape(PointN([1; 2]))
 }
 
-/// The output buffers used by `triangulate_height_map`. These buffers can be reused to avoid
-/// reallocating memory.
+/// The output buffers used by `triangulate_height_map`. These buffers can be reused to avoid reallocating memory.
 #[derive(Default)]
 pub struct HeightMapMeshBuffer {
-    /// The surface positions and normals. The normals are *not* normalized, since that is done most
-    /// efficiently on the GPU.
+    /// The surface positions and normals. The normals are *not* normalized, since that is done most efficiently on the GPU.
     pub mesh: PosNormMesh,
 
     // Used to map back from voxel stride to vertex index.
@@ -41,13 +38,12 @@ impl HeightMapMeshBuffer {
     }
 }
 
-/// Generates a mesh with a vertex at each point on the interior of `extent`. Surface normals are
-/// estimated using central differencing, which requires each vertex to have a complete Von Neumann
-/// neighborhood. This means that points on the boundary of `extent` are not eligible as mesh
-/// vertices, but they are still required.
+/// Generates a mesh with a vertex at each point on the interior of `extent`. Surface normals are estimated using central
+/// differencing, which requires each vertex to have a complete Von Neumann neighborhood. This means that points on the boundary
+/// of `extent` are not eligible as mesh vertices, but they are still required.
 ///
-/// This is illustrated in the ASCII art below, where "b" is a boundary point and "i" is an interior
-/// point. Line segments denote the edges of the mesh.
+/// This is illustrated in the ASCII art below, where "b" is a boundary point and "i" is an interior point. Line segments denote
+/// the edges of the mesh.
 ///
 /// ```text
 /// b   b   b   b
@@ -79,8 +75,8 @@ pub fn triangulate_height_map<A, H>(
     height_map.for_each(
         &interior_extent,
         |(p, stride): (Point2i, Stride), height| {
-            // Note: Although we use (x, y) for the coordinates of the height map, these should be
-            // considered (x, z) in world coordinates, because +Y is the UP vector.
+            // Note: Although we use (x, y) for the coordinates of the height map, these should be considered (x, z) in world
+            // coordinates, because +Y is the UP vector.
             let pz = p.y();
             let y = height.height();
 
@@ -89,9 +85,8 @@ pub fn triangulate_height_map<A, H>(
 
             // Use central differencing to calculate the surface normal.
             //
-            // From calculus, we know that gradients are always orthogonal to a level set. The
-            // surface approximated by the height map h(x, z) happens to be the 0 level set of the
-            // function:
+            // From calculus, we know that gradients are always orthogonal to a level set. The surface approximated by the
+            // height map h(x, z) happens to be the 0 level set of the function:
             //
             // f(x, y, z) = y - h(x, z)
             //
@@ -116,7 +111,8 @@ pub fn triangulate_height_map<A, H>(
     // Only add a quad when p is the bottom-left corner of a quad that fits in the interior.
     let quads_extent = interior_extent.add_to_shape(PointN([-1; 2]));
 
-    height_map.for_each_point_and_stride(&quads_extent, |_p, bl_stride| {
+    let visitor = ArrayExtentVisitor::global(height_map.extent(), quads_extent);
+    visitor.for_each_point_and_stride(|_p, bl_stride| {
         let br_stride = bl_stride + x_stride;
         let tl_stride = bl_stride + y_stride;
         let tr_stride = bl_stride + x_stride + y_stride;

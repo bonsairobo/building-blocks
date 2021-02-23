@@ -1,12 +1,6 @@
-use crate::array::{ArrayIndexer, ArrayN, Local, Stride};
+use crate::array::{ArrayIndexer, Local, Local2i, Stride};
 
 use building_blocks_core::prelude::*;
-
-/// Map-local coordinates, wrapping a `Point2i`.
-pub type Local2i = Local<[i32; 2]>;
-
-/// A 2-dimensional `Array`.
-pub type Array2<T, Store = Vec<T>> = ArrayN<[i32; 2], T, Store>;
 
 impl ArrayIndexer<[i32; 2]> for [i32; 2] {
     #[inline]
@@ -18,16 +12,15 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
     fn for_each_point_and_stride_unchecked(
         array_shape: Point2i,
         index_min: Local2i,
-        iter_min: Point2i,
-        iter_shape: Point2i,
+        iter_extent: Extent2i,
         mut f: impl FnMut(Point2i, Stride),
     ) {
-        let iter_lub = iter_min + iter_shape;
+        let iter_lub = iter_extent.least_upper_bound();
         let mut s = Array2ForEachState::new(array_shape, index_min);
         s.start_y();
-        for y in iter_min.y()..iter_lub.y() {
+        for y in iter_extent.minimum.y()..iter_lub.y() {
             s.start_x();
-            for x in iter_min.x()..iter_lub.x() {
+            for x in iter_extent.minimum.x()..iter_lub.x() {
                 f(PointN([x, y]), s.stride());
                 s.incr_x();
             }

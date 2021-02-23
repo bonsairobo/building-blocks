@@ -11,6 +11,11 @@ use num::Zero;
 #[derive(Debug, Eq, PartialEq)]
 pub struct Local<N>(pub PointN<N>);
 
+/// Map-local coordinates, wrapping a `Point2i`.
+pub type Local2i = Local<[i32; 2]>;
+/// Map-local coordinates, wrapping a `Point3i`.
+pub type Local3i = Local<[i32; 3]>;
+
 impl<N> Clone for Local<N>
 where
     PointN<N>: Clone,

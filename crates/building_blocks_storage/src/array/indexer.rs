@@ -1,4 +1,7 @@
-use crate::{Local, Stride};
+use crate::{
+    for_each_stride_parallel_global_unchecked2, for_each_stride_parallel_global_unchecked3,
+    Array2ForEach, Array3ForEach, ArrayForEach, Local, Local2i, Local3i, Stride,
+};
 
 use building_blocks_core::prelude::*;
 
@@ -6,9 +9,7 @@ pub trait ArrayIndexer<N> {
     fn stride_from_local_point(shape: PointN<N>, point: Local<N>) -> Stride;
 
     fn for_each_point_and_stride_unchecked(
-        array_shape: PointN<N>,
-        index_min: Local<N>,
-        iter_extent: ExtentN<N>,
+        for_each: ArrayForEach<N>,
         f: impl FnMut(PointN<N>, Stride),
     );
 
@@ -30,73 +31,52 @@ pub trait ArrayIndexer<N> {
     }
 }
 
-pub struct ArrayExtentVisitor<N> {
-    /// Shape of the array being indexed.
-    array_shape: PointN<N>,
-    /// Array-local minimum where we start indexing.
-    index_min: Local<N>,
-    /// Extent of the iteration coordinates.
-    iter_extent: ExtentN<N>,
-}
-
-impl<N> ArrayExtentVisitor<N>
-where
-    PointN<N>: IntegerPoint<N>,
-{
+impl ArrayIndexer<[i32; 2]> for [i32; 2] {
     #[inline]
-    pub fn new_local_unchecked(
-        array_shape: PointN<N>,
-        index_min: Local<N>,
-        iter_shape: PointN<N>,
-    ) -> Self {
-        Self {
-            array_shape,
-            index_min,
-            iter_extent: ExtentN::from_min_and_shape(index_min.0, iter_shape),
-        }
+    fn stride_from_local_point(s: Point2i, p: Local2i) -> Stride {
+        Stride((p.y() * s.x() + p.x()) as usize)
     }
 
     #[inline]
-    pub fn new_local(array_shape: PointN<N>, iter_extent: &ExtentN<N>) -> Self {
-        // Make sure we don't index out of array bounds.
-        let iter_extent =
-            iter_extent.intersection(&ExtentN::from_min_and_shape(PointN::ZERO, array_shape));
-
-        Self::new_local_unchecked(array_shape, Local(iter_extent.minimum), iter_extent.shape)
+    fn for_each_point_and_stride_unchecked(
+        for_each: Array2ForEach,
+        mut f: impl FnMut(Point2i, Stride),
+    ) {
+        for_each2!(for_each, x, y, stride, { f(PointN([x, y]), stride) });
     }
 
     #[inline]
-    pub fn new_global_unchecked(array_extent: &ExtentN<N>, iter_extent: ExtentN<N>) -> Self {
-        // Translate to local coordinates.
-        let index_min = Local(iter_extent.minimum - array_extent.minimum);
-
-        Self {
-            array_shape: array_extent.shape,
-            index_min,
-            iter_extent,
-        }
-    }
-
-    #[inline]
-    pub fn new_global(array_extent: &ExtentN<N>, iter_extent: ExtentN<N>) -> Self {
-        // Make sure we don't index out of array bounds.
-        let iter_extent = iter_extent.intersection(array_extent);
-
-        Self::new_global_unchecked(array_extent, iter_extent)
+    fn for_each_stride_parallel_global_unchecked(
+        iter_extent: &Extent2i,
+        array1_extent: &Extent2i,
+        array2_extent: &Extent2i,
+        f: impl FnMut(Stride, Stride),
+    ) {
+        for_each_stride_parallel_global_unchecked2(iter_extent, array1_extent, array2_extent, f)
     }
 }
 
-impl<N> ArrayExtentVisitor<N>
-where
-    N: ArrayIndexer<N>,
-    PointN<N>: Copy,
-{
-    pub fn for_each_point_and_stride(&self, f: impl FnMut(PointN<N>, Stride)) {
-        N::for_each_point_and_stride_unchecked(
-            self.array_shape,
-            self.index_min,
-            self.iter_extent,
-            f,
-        )
+impl ArrayIndexer<[i32; 3]> for [i32; 3] {
+    #[inline]
+    fn stride_from_local_point(s: Point3i, p: Local3i) -> Stride {
+        Stride((p.z() * s.y() * s.x() + p.y() * s.x() + p.x()) as usize)
+    }
+
+    #[inline]
+    fn for_each_point_and_stride_unchecked(
+        for_each: Array3ForEach,
+        mut f: impl FnMut(Point3i, Stride),
+    ) {
+        for_each3!(for_each, x, y, z, stride, { f(PointN([x, y, z]), stride) });
+    }
+
+    #[inline]
+    fn for_each_stride_parallel_global_unchecked(
+        iter_extent: &Extent3i,
+        array1_extent: &Extent3i,
+        array2_extent: &Extent3i,
+        f: impl FnMut(Stride, Stride),
+    ) {
+        for_each_stride_parallel_global_unchecked3(iter_extent, array1_extent, array2_extent, f);
     }
 }

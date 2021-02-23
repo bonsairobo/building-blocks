@@ -99,9 +99,12 @@
 
 mod compression;
 mod coords;
+mod for_each;
+#[macro_use]
+mod for_each2;
+#[macro_use]
+mod for_each3;
 mod indexer;
-mod indexer2;
-mod indexer3;
 
 #[cfg(feature = "dot_vox")]
 mod dot_vox_conversions;
@@ -110,7 +113,11 @@ mod image_conversions;
 
 pub use compression::{FastArrayCompression, FastCompressedArray};
 pub use coords::*;
+pub use for_each::*;
 pub use indexer::*;
+
+pub(crate) use for_each2::{Array2ForEachState, for_each_stride_parallel_global_unchecked2};
+pub(crate) use for_each3::{Array3ForEachState, for_each_stride_parallel_global_unchecked3};
 
 use crate::{
     ChunkCopySrc, ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, GetUnchecked,
@@ -554,7 +561,7 @@ macro_rules! impl_array_for_each {
 
             #[inline]
             fn for_each(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, T)) {
-                let visitor = ArrayExtentVisitor::new_global(self.extent(), *iter_extent);
+                let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
                 visitor.for_each_point_and_stride(|$p, $stride| {
                     f($forward_coords, self.get_unchecked_release($stride))
                 });
@@ -571,7 +578,7 @@ macro_rules! impl_array_for_each {
 
             #[inline]
             fn for_each_ref(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, &T)) {
-                let visitor = ArrayExtentVisitor::new_global(self.extent(), *iter_extent);
+                let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
                 visitor.for_each_point_and_stride(|$p, $stride| {
                     f($forward_coords, self.get_unchecked_ref_release($stride))
                 });
@@ -593,7 +600,7 @@ macro_rules! impl_array_for_each {
                 iter_extent: &ExtentN<N>,
                 mut f: impl FnMut($coords, &mut T),
             ) {
-                let visitor = ArrayExtentVisitor::new_global(self.extent(), *iter_extent);
+                let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
                 visitor.for_each_point_and_stride(|$p, $stride| {
                     f($forward_coords, self.get_unchecked_mut_release($stride))
                 });

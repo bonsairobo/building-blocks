@@ -116,8 +116,8 @@ pub use coords::*;
 pub use for_each::*;
 pub use indexer::*;
 
-pub(crate) use for_each2::{Array2ForEachState, for_each_stride_parallel_global_unchecked2};
-pub(crate) use for_each3::{Array3ForEachState, for_each_stride_parallel_global_unchecked3};
+pub(crate) use for_each2::{for_each_stride_parallel_global_unchecked2, Array2ForEachState};
+pub(crate) use for_each3::{for_each_stride_parallel_global_unchecked3, Array3ForEachState};
 
 use crate::{
     ChunkCopySrc, ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, GetUnchecked,
@@ -590,7 +590,6 @@ macro_rules! impl_array_for_each {
             Self: GetMut<Stride, Data = T> + GetUncheckedMut<Stride, Data = T>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
-            ExtentN<N>: Copy,
         {
             type Data = T;
 

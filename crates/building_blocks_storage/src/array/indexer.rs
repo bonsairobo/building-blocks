@@ -44,7 +44,7 @@ where
     PointN<N>: IntegerPoint<N>,
 {
     #[inline]
-    pub fn local_unchecked(
+    pub fn new_local_unchecked(
         array_shape: PointN<N>,
         index_min: Local<N>,
         iter_shape: PointN<N>,
@@ -57,16 +57,16 @@ where
     }
 
     #[inline]
-    pub fn local(array_shape: PointN<N>, iter_extent: &ExtentN<N>) -> Self {
+    pub fn new_local(array_shape: PointN<N>, iter_extent: &ExtentN<N>) -> Self {
         // Make sure we don't index out of array bounds.
         let iter_extent =
             iter_extent.intersection(&ExtentN::from_min_and_shape(PointN::ZERO, array_shape));
 
-        Self::local_unchecked(array_shape, Local(iter_extent.minimum), iter_extent.shape)
+        Self::new_local_unchecked(array_shape, Local(iter_extent.minimum), iter_extent.shape)
     }
 
     #[inline]
-    pub fn global_unchecked(array_extent: &ExtentN<N>, iter_extent: ExtentN<N>) -> Self {
+    pub fn new_global_unchecked(array_extent: &ExtentN<N>, iter_extent: ExtentN<N>) -> Self {
         // Translate to local coordinates.
         let index_min = Local(iter_extent.minimum - array_extent.minimum);
 
@@ -78,11 +78,11 @@ where
     }
 
     #[inline]
-    pub fn global(array_extent: &ExtentN<N>, iter_extent: ExtentN<N>) -> Self {
+    pub fn new_global(array_extent: &ExtentN<N>, iter_extent: ExtentN<N>) -> Self {
         // Make sure we don't index out of array bounds.
         let iter_extent = iter_extent.intersection(array_extent);
 
-        Self::global_unchecked(array_extent, iter_extent)
+        Self::new_global_unchecked(array_extent, iter_extent)
     }
 }
 

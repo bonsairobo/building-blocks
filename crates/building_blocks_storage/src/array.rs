@@ -554,7 +554,7 @@ macro_rules! impl_array_for_each {
 
             #[inline]
             fn for_each(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, T)) {
-                let visitor = ArrayExtentVisitor::global(self.extent(), *iter_extent);
+                let visitor = ArrayExtentVisitor::new_global(self.extent(), *iter_extent);
                 visitor.for_each_point_and_stride(|$p, $stride| {
                     f($forward_coords, self.get_unchecked_release($stride))
                 });
@@ -571,7 +571,7 @@ macro_rules! impl_array_for_each {
 
             #[inline]
             fn for_each_ref(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, &T)) {
-                let visitor = ArrayExtentVisitor::global(self.extent(), *iter_extent);
+                let visitor = ArrayExtentVisitor::new_global(self.extent(), *iter_extent);
                 visitor.for_each_point_and_stride(|$p, $stride| {
                     f($forward_coords, self.get_unchecked_ref_release($stride))
                 });
@@ -593,7 +593,7 @@ macro_rules! impl_array_for_each {
                 iter_extent: &ExtentN<N>,
                 mut f: impl FnMut($coords, &mut T),
             ) {
-                let visitor = ArrayExtentVisitor::global(self.extent(), *iter_extent);
+                let visitor = ArrayExtentVisitor::new_global(self.extent(), *iter_extent);
                 visitor.for_each_point_and_stride(|$p, $stride| {
                     f($forward_coords, self.get_unchecked_mut_release($stride))
                 });

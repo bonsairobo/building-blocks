@@ -28,7 +28,7 @@
 //! # let mut map = Array3::fill(extent, 0);
 //! let subextent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(98));
 //! // Use the `ForEachMut<[i32; 3], Stride>` trait.
-//! map.for_each_mut(&subextent, |_s: Stride, value: &mut i32| { *value = 2 });
+//! map.for_each_mut(&subextent, |_s: Stride, value| { *value = 2 });
 //! ```
 //! Arrays also implement `ForEach*<PointN<N>>` and `ForEach*<(PointN<N>, Stride)>`. `ChunkMap` only implements
 //! `ForEach*<PointN<N>>`, because it's ambiguous which chunk a `Stride` would apply to.
@@ -208,21 +208,16 @@ macro_rules! impl_get_via_get_ref_and_clone {
 // ╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
 pub trait ForEach<N, Coord> {
-    type Data;
+    type Item;
 
-    fn for_each(&self, extent: &ExtentN<N>, f: impl FnMut(Coord, Self::Data));
+    fn for_each(&self, extent: &ExtentN<N>, f: impl FnMut(Coord, Self::Item));
 }
 
-pub trait ForEachRef<N, Coord> {
-    type Data;
+pub trait ForEachMut<'a, N, Coord> {
+    // TODO: use GAT to remove unsafe lifetime workaround in impls
+    type Item;
 
-    fn for_each_ref(&self, extent: &ExtentN<N>, f: impl FnMut(Coord, &Self::Data));
-}
-
-pub trait ForEachMut<N, Coord> {
-    type Data;
-
-    fn for_each_mut(&mut self, extent: &ExtentN<N>, f: impl FnMut(Coord, &mut Self::Data));
+    fn for_each_mut(&'a mut self, extent: &ExtentN<N>, f: impl FnMut(Coord, Self::Item));
 }
 
 //  ██████╗ ██████╗ ██████╗ ██╗   ██╗

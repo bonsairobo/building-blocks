@@ -9,7 +9,7 @@ pub fn find_surface_points<Map, N, T>(
     extent: &ExtentN<N>,
 ) -> (Vec<PointN<N>>, Vec<Stride>)
 where
-    Map: Array<N> + ForEach<N, (PointN<N>, Stride), Data = T> + GetUncheckedRelease<Stride, T>,
+    Map: Array<N> + ForEach<N, (PointN<N>, Stride), Item = T> + GetUncheckedRelease<Stride, T>,
     T: IsEmpty,
     PointN<N>: IntegerPoint<N>,
     Local<N>: Copy,

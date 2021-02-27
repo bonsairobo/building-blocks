@@ -74,10 +74,10 @@ pub mod prelude {
         ChunkMap2, ChunkMap3, ChunkMapBuilder, ChunkMapBuilder2, ChunkMapBuilder3, ChunkPyramid2,
         ChunkPyramid3, ChunkReadStorage, ChunkWriteStorage, Compressed, CompressibleChunkMap,
         CompressibleChunkMapReader, CompressibleChunkStorage, CompressibleChunkStorageReader,
-        Compression, FastArrayCompression, FastChunkCompression, ForEach, ForEachMut, ForEachRef,
-        Get, GetMut, GetRef, IsEmpty, IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2,
-        LocalChunkCache3, OctreeChunkIndex, OctreeNode, OctreeSet, ReadExtent, SerializableChunks,
-        SignedDistance, Stride, TransformMap, WriteExtent,
+        Compression, FastArrayCompression, FastChunkCompression, ForEach, ForEachMut, Get, GetMut,
+        GetRef, IsEmpty, IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
+        OctreeChunkIndex, OctreeNode, OctreeSet, ReadExtent, SerializableChunks, SignedDistance,
+        Stride, TransformMap, WriteExtent,
     };
 
     #[cfg(feature = "lz4")]

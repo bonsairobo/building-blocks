@@ -68,7 +68,7 @@ impl<N, T, Meta, Store> ChunkPyramid<N, T, Meta, Store>
 where
     N: ArrayIndexer<N>,
     PointN<N>: Debug + IntegerPoint<N>,
-    T: Copy,
+    T: 'static + Copy,
     Meta: Clone,
     Store: ChunkWriteStorage<N, T, Meta>,
     ChunkIndexer<N>: Clone,
@@ -116,7 +116,7 @@ where
 
 impl<T, Meta, Store> ChunkPyramid3<T, Meta, Store>
 where
-    T: Copy,
+    T: 'static + Copy,
     Meta: Clone,
     Store: ChunkWriteStorage<[i32; 3], T, Meta>,
 {

@@ -96,8 +96,8 @@ pub fn padded_greedy_quads_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {
 pub fn greedy_quads<A, T>(voxels: &A, extent: &Extent3i, output: &mut GreedyQuadsBuffer)
 where
     A: Array<[i32; 3]>
-        + GetUncheckedRelease<Stride, T>
-        + ForEach<[i32; 3], (Point3i, Stride), Data = T>,
+        + ForEach<[i32; 3], (Point3i, Stride), Item = T>
+        + GetUncheckedRelease<Stride, T>,
     T: IsEmpty + IsOpaque + MergeVoxel,
 {
     greedy_quads_with_merge_strategy::<_, _, VoxelMerger<T>>(voxels, extent, output)
@@ -110,8 +110,8 @@ pub fn greedy_quads_with_merge_strategy<A, T, Merger>(
     output: &mut GreedyQuadsBuffer,
 ) where
     A: Array<[i32; 3]>
-        + GetUncheckedRelease<Stride, T>
-        + ForEach<[i32; 3], (Point3i, Stride), Data = T>,
+        + ForEach<[i32; 3], (Point3i, Stride), Item = T>
+        + GetUncheckedRelease<Stride, T>,
     T: IsEmpty + IsOpaque,
     Merger: MergeStrategy<Voxel = T>,
 {
@@ -135,8 +135,8 @@ fn greedy_quads_for_group<A, T, Merger>(
     quad_group: &mut QuadGroup,
 ) where
     A: Array<[i32; 3]>
-        + GetUncheckedRelease<Stride, T>
-        + ForEach<[i32; 3], (Point3i, Stride), Data = T>,
+        + ForEach<[i32; 3], (Point3i, Stride), Item = T>
+        + GetUncheckedRelease<Stride, T>,
     T: IsEmpty + IsOpaque,
     Merger: MergeStrategy<Voxel = T>,
 {

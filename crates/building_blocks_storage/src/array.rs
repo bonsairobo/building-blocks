@@ -120,9 +120,9 @@ pub(crate) use for_each2::{for_each_stride_parallel_global_unchecked2, Array2For
 pub(crate) use for_each3::{for_each_stride_parallel_global_unchecked3, Array3ForEachState};
 
 use crate::{
-    ChunkCopySrc, ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, GetUnchecked,
-    GetUncheckedMut, GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRefRelease,
-    GetUncheckedRelease, ReadExtent, TransformMap, WriteExtent,
+    ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked, GetUncheckedMut,
+    GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRelease, ReadExtent, TransformMap,
+    WriteExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -321,7 +321,7 @@ where
 
 impl<N, T, Store> ArrayN<N, T, Store>
 where
-    Self: ForEachMut<N, (), Data = T>,
+    for<'r> Self: ForEachMut<'r, N, (), Item = &'r mut T>,
     PointN<N>: IntegerPoint<N>,
     Store: DerefMut<Target = [T]>,
 {
@@ -557,7 +557,7 @@ macro_rules! impl_array_for_each {
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
         {
-            type Data = T;
+            type Item = T;
 
             #[inline]
             fn for_each(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, T)) {
@@ -568,40 +568,60 @@ macro_rules! impl_array_for_each {
             }
         }
 
-        impl<N, T, Store> ForEachRef<N, $coords> for ArrayN<N, T, Store>
+        impl<'a, N, T, Store> ForEachMut<'a, N, $coords> for ArrayN<N, T, Store>
         where
-            Self: GetRef<Stride, Data = T> + GetUncheckedRef<Stride, Data = T>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
+            T: 'a,
+            Store: DerefMut<Target = [T]>,
         {
-            type Data = T;
+            type Item = &'a mut T;
 
             #[inline]
-            fn for_each_ref(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, &T)) {
+            fn for_each_mut(
+                &'a mut self,
+                iter_extent: &ExtentN<N>,
+                mut f: impl FnMut($coords, &'a mut T),
+            ) {
                 let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
                 visitor.for_each_point_and_stride(|$p, $stride| {
-                    f($forward_coords, self.get_unchecked_ref_release($stride))
+                    // Need to tell the borrow checker that we're handing out non-overlapping borrows.
+                    f($forward_coords, unsafe {
+                        &mut *self.values.as_mut_ptr().add($stride.0)
+                    })
                 });
             }
         }
 
-        impl<N, T, Store> ForEachMut<N, $coords> for ArrayN<N, T, Store>
+        impl<'a, N, T, S, Store1, Store2> ForEachMut<'a, N, $coords>
+            for (&mut ArrayN<N, T, Store1>, &mut ArrayN<N, S, Store2>)
         where
-            Self: GetMut<Stride, Data = T> + GetUncheckedMut<Stride, Data = T>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
+            T: 'a,
+            S: 'a,
+            Store1: DerefMut<Target = [T]>,
+            Store2: DerefMut<Target = [S]>,
         {
-            type Data = T;
+            type Item = (&'a mut T, &'a mut S);
 
             #[inline]
             fn for_each_mut(
                 &mut self,
                 iter_extent: &ExtentN<N>,
-                mut f: impl FnMut($coords, &mut T),
+                mut f: impl FnMut($coords, (&'a mut T, &'a mut S)),
             ) {
-                let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
+                let (s1, s2) = self;
+
+                let visitor = ArrayForEach::new_global(s1.extent(), *iter_extent);
                 visitor.for_each_point_and_stride(|$p, $stride| {
-                    f($forward_coords, self.get_unchecked_mut_release($stride))
+                    // Need to tell the borrow checker that we're handing out non-overlapping borrows.
+                    f($forward_coords, unsafe {
+                        (
+                            &mut *s1.values.as_mut_ptr().add($stride.0),
+                            &mut *s2.values.as_mut_ptr().add($stride.0),
+                        )
+                    })
                 });
             }
         }
@@ -725,9 +745,10 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
 
 impl<Map, N, T, Store> WriteExtent<N, ChunkCopySrc<Map, N, T>> for ArrayN<N, T, Store>
 where
-    Self: ForEachMut<N, Stride, Data = T> + WriteExtent<N, ArrayCopySrc<Map>>,
+    for<'r> Self: ForEachMut<'r, N, Stride, Item = &'r mut T>,
+    Self: WriteExtent<N, ArrayCopySrc<Map>>,
     N: ArrayIndexer<N>,
-    T: Clone,
+    T: 'static + Clone,
     PointN<N>: IntegerPoint<N>,
     Store: DerefMut<Target = [T]>,
 {
@@ -739,11 +760,10 @@ where
     }
 }
 
-impl<'a, N, T: 'a + Clone, Store, F> WriteExtent<N, F> for ArrayN<N, T, Store>
+impl<N, T, Store, F> WriteExtent<N, F> for ArrayN<N, T, Store>
 where
-    Self: ForEachMut<N, PointN<N>, Data = T>,
+    for<'r> Self: ForEachMut<'r, N, PointN<N>, Item = &'r mut T>,
     F: Fn(PointN<N>) -> T,
-    PointN<N>: IntegerPoint<N>,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: F) {
         self.for_each_mut(extent, |p, v| *v = (src)(p));
@@ -883,5 +903,17 @@ mod tests {
         copy_extent(&subextent, &array, &mut other_array);
 
         assert_eq!(array, other_array);
+    }
+
+    #[test]
+    fn multichannel_mut_iter() {
+        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+        let mut array1 = Array3::fill(extent, 0);
+        let mut array2 = Array3::fill(extent, false);
+
+        (&mut array1, &mut array2).for_each_mut(&extent, |_p: Point3i, (val1, val2)| {
+            *val1 = 1;
+            *val2 = true;
+        });
     }
 }

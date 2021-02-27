@@ -117,7 +117,7 @@
 
 use crate::{
     ArrayCopySrc, ArrayIndexer, ArrayN, Chunk, ChunkHashMap, ChunkIndexer, ChunkReadStorage,
-    ChunkWriteStorage, ForEach, ForEachMut, ForEachRef, Get, GetMut, GetRef, GetUnchecked,
+    ChunkWriteStorage, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked,
     GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRefRelease, IterChunkKeys, ReadExtent,
     WriteExtent,
 };
@@ -457,7 +457,7 @@ where
     #[inline]
     pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: T)
     where
-        Self: ForEachMut<N, PointN<N>, Data = T>,
+        for<'r> Self: ForEachMut<'r, N, PointN<N>, Item = &'r mut T>,
         T: Copy,
     {
         self.for_each_mut(extent, |_p, v| *v = value);
@@ -502,14 +502,14 @@ impl<N, T> AmbientExtent<N, T> {
     }
 }
 
-impl<N, T> ForEach<N, PointN<N>> for AmbientExtent<N, T>
+impl<'a, N, T> ForEach<N, PointN<N>> for AmbientExtent<N, T>
 where
     T: Clone,
     PointN<N>: IntegerPoint<N>,
 {
-    type Data = T;
+    type Item = T;
 
-    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
+    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Item)) {
         for p in extent.iter_points() {
             f(p, self.value.clone());
         }
@@ -571,53 +571,42 @@ impl_get_via_get_ref_and_clone!(ChunkMap<N, T, Meta, Store>, N, T, Meta, Store);
 
 impl<N, T, Meta, Store> ForEach<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
-    Self: ForEachRef<N, PointN<N>>,
-    <Self as ForEachRef<N, PointN<N>>>::Data: Clone,
-{
-    type Data = <Self as ForEachRef<N, PointN<N>>>::Data;
-
-    #[inline]
-    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Data)) {
-        self.for_each_ref(extent, |p, data| f(p, data.clone()));
-    }
-}
-
-impl<N, T, Meta, Store> ForEachRef<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
-where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     T: Copy,
     Store: ChunkReadStorage<N, T, Meta>,
 {
-    type Data = T;
+    type Item = T;
 
     #[inline]
-    fn for_each_ref(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &Self::Data)) {
+    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Item)) {
         self.visit_chunks(extent, |chunk| match chunk {
             Either::Left(chunk) => {
-                chunk.array.for_each_ref(extent, |p, value| f(p, value));
+                chunk.array.for_each(extent, |p, value| f(p, value));
             }
             Either::Right((chunk_extent, ambient)) => {
-                ambient.for_each(&extent.intersection(&chunk_extent), |p, value| f(p, &value))
+                ambient.for_each(&extent.intersection(&chunk_extent), |p, value| f(p, value))
             }
         });
     }
 }
 
-impl<N, T, Meta, Store> ForEachMut<N, PointN<N>> for ChunkMap<N, T, Meta, Store>
+impl<'a, N, T, Meta, Store> ForEachMut<'a, N, PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
-    T: Copy,
+    T: 'a + Copy,
     Meta: Clone,
     Store: ChunkWriteStorage<N, T, Meta>,
 {
-    type Data = T;
+    type Item = &'a mut T;
 
     #[inline]
-    fn for_each_mut(&mut self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, &mut Self::Data)) {
+    fn for_each_mut(&'a mut self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Item)) {
         self.visit_mut_chunks(extent, |chunk| {
-            chunk.array.for_each_mut(extent, |p, value| f(p, value))
+            // Tell the borrow checker that we're only giving out non-overlapping references.
+            (unsafe { &mut *(&mut chunk.array as *mut ArrayN<N, T>) })
+                .for_each_mut(extent, |p, value| f(p, value))
         });
     }
 }

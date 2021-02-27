@@ -107,12 +107,12 @@ where
 impl<'a, Delegate, F, In, Out, N, Coord> ForEach<N, Coord> for TransformMap<'a, Delegate, F>
 where
     F: Fn(In) -> Out,
-    Delegate: ForEach<N, Coord, Data = In>,
+    Delegate: ForEach<N, Coord, Item = In>,
 {
-    type Data = Out;
+    type Item = Out;
 
     #[inline]
-    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(Coord, Self::Data)) {
+    fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(Coord, Self::Item)) {
         self.delegate
             .for_each(extent, |c, t| f(c, (self.transform)(t)))
     }

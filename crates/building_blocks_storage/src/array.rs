@@ -605,9 +605,10 @@ macro_rules! impl_array_for_each {
         {
             type Item = (&'a mut T, &'a mut S);
 
+            // XXX: this is slightly weird because we don't actually need `&mut self` for this, but it works, so... ¯\_(ツ)_/¯
             #[inline]
             fn for_each_mut(
-                &mut self,
+                &'a mut self,
                 iter_extent: &ExtentN<N>,
                 mut f: impl FnMut($coords, (&'a mut T, &'a mut S)),
             ) {

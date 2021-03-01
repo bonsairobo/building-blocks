@@ -224,9 +224,7 @@ where
     where
         T: Clone,
     {
-        for v in self.values.as_mut().iter_mut() {
-            *v = value.clone();
-        }
+        self.values.fill(value);
     }
 }
 

@@ -120,9 +120,9 @@ pub(crate) use for_each2::{for_each_stride_parallel_global_unchecked2, Array2For
 pub(crate) use for_each3::{for_each_stride_parallel_global_unchecked3, Array3ForEachState};
 
 use crate::{
-    ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked, GetUncheckedMut,
-    GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRelease, ReadExtent, TransformMap,
-    WriteExtent,
+    AsRawBytes, ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked,
+    GetUncheckedMut, GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRelease, ReadExtent,
+    TransformMap, WriteExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -228,22 +228,15 @@ where
     }
 }
 
-impl<N, T, Store> ArrayN<N, T, Store>
+impl<'a, N, T, Store> AsRawBytes<'a> for ArrayN<N, T, Store>
 where
+    T: 'static + Copy,
     Store: Deref<Target = [T]>,
 {
-    /// Returns the slice of values, reinterpreted as raw bytes.
-    #[inline]
-    pub fn bytes_slice(&self) -> &[u8]
-    where
-        T: Copy, // Copy is important so we don't serialize a vector of non-POD type
-    {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.values.as_ptr() as *const u8,
-                self.values.len() * core::mem::size_of::<T>(),
-            )
-        }
+    type Output = &'a [u8];
+
+    fn as_raw_bytes(&'a self) -> Self::Output {
+        self.values.as_raw_bytes()
     }
 }
 

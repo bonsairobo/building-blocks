@@ -27,7 +27,7 @@ impl<N, T, Meta, B> FastChunkCompression<N, T, Meta, B> {
 #[derive(Clone)]
 pub struct FastCompressedChunk<N, T, Meta, B>
 where
-    T: Copy,
+    T: 'static + Copy,
     B: BytesCompression,
     PointN<N>: IntegerPoint<N>,
 {
@@ -37,7 +37,7 @@ where
 
 impl<N, T, Meta, B> Compression for FastChunkCompression<N, T, Meta, B>
 where
-    T: Copy,
+    T: 'static + Copy,
     Meta: Clone,
     B: BytesCompression,
     PointN<N>: IntegerPoint<N>,

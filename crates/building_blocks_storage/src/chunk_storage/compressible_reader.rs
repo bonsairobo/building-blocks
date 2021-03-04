@@ -14,7 +14,7 @@ use fnv::FnvBuildHasher;
 pub struct CompressibleChunkStorageReader<'a, N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N>,
-    T: Copy,
+    T: 'static + Copy,
     Meta: Clone,
     B: BytesCompression,
 {
@@ -64,7 +64,7 @@ where
 impl<'a, N, T, Meta, B> IntoIterator for &'a CompressibleChunkStorageReader<'a, N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
-    T: Copy,
+    T: 'static + Copy,
     Meta: Clone,
     B: BytesCompression,
 {
@@ -88,7 +88,7 @@ where
 pub struct CompressibleChunkStorageReaderIntoIter<'a, N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N>,
-    T: Copy,
+    T: 'static + Copy,
     Meta: Clone,
     B: BytesCompression,
 {

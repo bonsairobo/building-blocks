@@ -14,7 +14,7 @@ use slab::Slab;
 pub struct CompressibleChunkStorage<N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N>,
-    T: Copy,
+    T: 'static + Copy,
     Meta: Clone,
     B: BytesCompression,
 {
@@ -28,7 +28,7 @@ pub type CompressedChunks<N, T, Meta, B> = Slab<Compressed<FastChunkCompression<
 impl<N, T, Meta, B> CompressibleChunkStorage<N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
-    T: Copy,
+    T: 'static + Copy,
     Meta: Clone,
     B: BytesCompression,
 {
@@ -44,7 +44,7 @@ where
 impl<N, T, Meta, B> CompressibleChunkStorage<N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
-    T: Copy,
+    T: 'static + Copy,
     Meta: Clone,
     B: BytesCompression,
 {
@@ -157,7 +157,7 @@ where
 impl<N, T, Meta, B> ChunkWriteStorage<N, T, Meta> for CompressibleChunkStorage<N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
-    T: Copy,
+    T: 'static + Copy,
     Meta: Clone,
     B: BytesCompression,
 {
@@ -204,7 +204,7 @@ where
 impl<'a, N, T, Meta, B> IterChunkKeys<'a, N> for CompressibleChunkStorage<N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash + Eq,
-    T: Copy,
+    T: 'static + Copy,
     Meta: Clone,
     Chunk<N, T, Meta>: 'a,
     B: BytesCompression,
@@ -247,7 +247,7 @@ pub type CompressibleChunkMap<N, T, Meta, B> =
 impl<N, T, Meta, B> CompressibleChunkMap<N, T, Meta, B>
 where
     PointN<N>: IntegerPoint<N> + Hash,
-    T: Copy,
+    T: 'static + Copy,
     Meta: Clone,
     B: BytesCompression,
 {

@@ -27,6 +27,7 @@
 #[macro_use]
 pub mod access_traits;
 pub mod array;
+pub mod as_raw_bytes;
 pub mod caching;
 pub mod chunk;
 pub mod chunk_indexer;
@@ -43,6 +44,7 @@ pub mod transform_map;
 
 pub use access_traits::*;
 pub use array::*;
+pub use as_raw_bytes::*;
 pub use caching::*;
 pub use chunk::*;
 pub use chunk_indexer::*;

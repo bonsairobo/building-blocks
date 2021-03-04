@@ -43,13 +43,13 @@ impl<N, T, B> FastCompressedArray<N, T, B> {
 impl<N, T, B> Compression for FastArrayCompression<N, T, B>
 where
     B: BytesCompression,
-    T: Copy, // Copy is important so we don't serialize a vector of non-POD type
+    T: Copy,
     PointN<N>: IntegerPoint<N>,
 {
     type Data = ArrayN<N, T>;
     type CompressedData = FastCompressedArray<N, T, B>;
 
-    // Compress the map in-memory using some `A: BytesCompression`.
+    // Compress the map in-memory using some `B: BytesCompression`.
     //
     // WARNING: For performance, this reinterprets the inner vector as a byte slice without
     // accounting for endianness. This is not compatible across platforms.

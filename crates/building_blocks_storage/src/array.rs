@@ -236,7 +236,7 @@ where
     #[inline]
     pub fn bytes_slice(&self) -> &[u8]
     where
-        T: Copy,
+        T: Copy, // Copy is important so we don't serialize a vector of non-POD type
     {
         unsafe {
             std::slice::from_raw_parts(

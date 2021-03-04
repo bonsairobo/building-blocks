@@ -4,8 +4,8 @@ use crate::compression::{BytesCompression, Compressed, Compression};
 
 use building_blocks_core::prelude::*;
 
-/// A compression algorithm for arrays that avoid the overhead of serialization but ignores
-/// endianness and therefore isn't portable.
+/// A compression algorithm for arrays that avoid the overhead of serialization but ignores endianness and therefore isn't
+/// portable.
 #[derive(Clone, Copy, Debug)]
 pub struct FastArrayCompression<N, T, B> {
     pub bytes_compression: B,
@@ -21,8 +21,7 @@ impl<N, T, B> FastArrayCompression<N, T, B> {
     }
 }
 
-/// A compressed `ArrayN` that decompresses quickly but only on the same platform where it was
-/// compressed.
+/// A compressed `ArrayN` that decompresses quickly but only on the same platform where it was compressed.
 #[derive(Clone)]
 pub struct FastCompressedArray<N, T, B> {
     compressed_bytes: Vec<u8>,
@@ -51,8 +50,8 @@ where
 
     // Compress the map in-memory using some `B: BytesCompression`.
     //
-    // WARNING: For performance, this reinterprets the inner vector as a byte slice without
-    // accounting for endianness. This is not compatible across platforms.
+    // WARNING: For performance, this reinterprets the inner vector as a byte slice without accounting for endianness. This is
+    // not compatible across platforms.
     fn compress(&self, data: &Self::Data) -> Compressed<Self> {
         let mut compressed_bytes = Vec::new();
         self.bytes_compression

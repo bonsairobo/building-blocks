@@ -59,7 +59,7 @@ where
     /// `storage`.
     pub async fn fill_storage<Store>(self, storage: &mut Store)
     where
-        Store: ChunkWriteStorage<N, T, Meta>,
+        Store: ChunkWriteStorage<N, Chunk<N, T, Meta>>,
     {
         // Only do one parallel batch at a time to avoid decompressing the entire map at once.
         for batch_of_compressed_chunks in &self.compressed_chunks.into_iter().chunks(16) {
@@ -116,7 +116,7 @@ mod test {
 
         let compression = Lz4 { level: 10 };
         do_serialize_and_deserialize_round_trip_test(
-            CompressibleChunkStorage::new(compression),
+            CompressibleChunkStorage::new(FastChunkCompression::new(compression)),
             compression,
         );
     }
@@ -135,8 +135,8 @@ mod test {
 
     fn do_serialize_and_deserialize_round_trip_test<B, Store>(storage: Store, compression: B)
     where
-        Store:
-            ChunkWriteStorage<[i32; 3], i32, ()> + IntoIterator<Item = (Point3i, Chunk3<i32, ()>)>,
+        Store: ChunkWriteStorage<[i32; 3], Chunk<[i32; 3], i32>>
+            + IntoIterator<Item = (Point3i, Chunk3<i32, ()>)>,
         B: BytesCompression + Copy + DeserializeOwned + Serialize,
     {
         let mut map = BUILDER.build_with_write_storage(storage);

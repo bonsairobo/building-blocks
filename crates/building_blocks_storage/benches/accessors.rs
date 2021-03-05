@@ -129,7 +129,8 @@ fn compressible_chunk_map_point_indexing(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
                 || {
-                    let storage = CompressibleChunkStorage::new(Lz4 { level: 10 });
+                    let storage =
+                        CompressibleChunkStorage::new(FastChunkCompression::new(Lz4 { level: 10 }));
 
                     set_up_chunk_map(storage, size)
                 },
@@ -222,7 +223,7 @@ fn set_up_array(size: i32) -> (Array3<i32>, Extent3i) {
 
 fn set_up_chunk_map<Store>(storage: Store, size: i32) -> (ChunkMap3<i32, (), Store>, Extent3i)
 where
-    Store: ChunkWriteStorage<[i32; 3], i32, ()>,
+    Store: ChunkWriteStorage<[i32; 3], Chunk<[i32; 3], i32>>,
 {
     let mut map = DEFAULT_BUILDER.build_with_write_storage(storage);
     let iter_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
@@ -237,7 +238,7 @@ fn set_up_sparse_chunk_map<Store>(
     sparsity: i32,
 ) -> (ChunkMap3<i32, (), Store>, Extent3i)
 where
-    Store: ChunkWriteStorage<[i32; 3], i32, ()>,
+    Store: ChunkWriteStorage<[i32; 3], Chunk<[i32; 3], i32>>,
 {
     let mut map = DEFAULT_BUILDER.build_with_write_storage(storage);
     let chunk_key_extent = Extent3i::from_min_and_shape(

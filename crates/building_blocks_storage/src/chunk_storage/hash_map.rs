@@ -8,22 +8,22 @@ use core::hash::Hash;
 use fnv::FnvHashMap;
 use std::collections::hash_map;
 
-impl<N, T, Meta> ChunkReadStorage<N, T, Meta> for FnvHashMap<PointN<N>, Chunk<N, T, Meta>>
+impl<N, Ch> ChunkReadStorage<N, Ch> for FnvHashMap<PointN<N>, Ch>
 where
     PointN<N>: Hash + Eq,
 {
     #[inline]
-    fn get(&self, key: PointN<N>) -> Option<&Chunk<N, T, Meta>> {
+    fn get(&self, key: PointN<N>) -> Option<&Ch> {
         self.get(&key)
     }
 }
 
-impl<N, T, Meta> ChunkWriteStorage<N, T, Meta> for FnvHashMap<PointN<N>, Chunk<N, T, Meta>>
+impl<N, Ch> ChunkWriteStorage<N, Ch> for FnvHashMap<PointN<N>, Ch>
 where
     PointN<N>: Hash + Eq,
 {
     #[inline]
-    fn get_mut(&mut self, key: PointN<N>) -> Option<&mut Chunk<N, T, Meta>> {
+    fn get_mut(&mut self, key: PointN<N>) -> Option<&mut Ch> {
         self.get_mut(&key)
     }
 
@@ -31,28 +31,28 @@ where
     fn get_mut_or_insert_with(
         &mut self,
         key: PointN<N>,
-        create_chunk: impl FnOnce() -> Chunk<N, T, Meta>,
-    ) -> &mut Chunk<N, T, Meta> {
+        create_chunk: impl FnOnce() -> Ch,
+    ) -> &mut Ch {
         self.entry(key).or_insert_with(create_chunk)
     }
 
     #[inline]
-    fn replace(&mut self, key: PointN<N>, chunk: Chunk<N, T, Meta>) -> Option<Chunk<N, T, Meta>> {
+    fn replace(&mut self, key: PointN<N>, chunk: Ch) -> Option<Ch> {
         self.insert(key, chunk)
     }
 
     #[inline]
-    fn write(&mut self, key: PointN<N>, chunk: Chunk<N, T, Meta>) {
+    fn write(&mut self, key: PointN<N>, chunk: Ch) {
         self.insert(key, chunk);
     }
 }
 
-impl<'a, N, T, Meta> IterChunkKeys<'a, N> for FnvHashMap<PointN<N>, Chunk<N, T, Meta>>
+impl<'a, N, Ch> IterChunkKeys<'a, N> for FnvHashMap<PointN<N>, Ch>
 where
     PointN<N>: 'a,
-    Chunk<N, T, Meta>: 'a,
+    Ch: 'a,
 {
-    type Iter = hash_map::Keys<'a, PointN<N>, Chunk<N, T, Meta>>;
+    type Iter = hash_map::Keys<'a, PointN<N>, Ch>;
 
     fn chunk_keys(&'a self) -> Self::Iter {
         self.keys()

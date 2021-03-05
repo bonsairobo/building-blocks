@@ -86,7 +86,7 @@
 //! #    default_chunk_metadata: (), // chunk metadata is optional
 //! # };
 //! #
-//! let mut map = builder.build_with_write_storage(CompressibleChunkStorage::new(Lz4 { level: 10 }));
+//! let mut map = builder.build_with_write_storage(CompressibleChunkStorage::new(FastChunkCompression::new(Lz4 { level: 10 })));
 //!
 //! // You can write voxels the same as any other `ChunkMap`. As chunks are created, they will be placed in an LRU cache.
 //! let write_points = [Point3i::fill(-100), Point3i::ZERO, Point3i::fill(100)];
@@ -183,7 +183,7 @@ where
     /// Create a new `ChunkMap` with the given `storage` which must implement both `ChunkReadStorage` and `ChunkWriteStorage`.
     pub fn build_with_rw_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Meta, Store>
     where
-        Store: ChunkReadStorage<N, T, Meta> + ChunkWriteStorage<N, T, Meta>,
+        Store: ChunkReadStorage<N, Chunk<N, T, Meta>> + ChunkWriteStorage<N, Chunk<N, T, Meta>>,
     {
         self.build_with_storage(storage)
     }
@@ -191,7 +191,7 @@ where
     /// Create a new `ChunkMap` with the given `storage` which must implement `ChunkReadStorage`.
     pub fn build_with_read_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Meta, Store>
     where
-        Store: ChunkReadStorage<N, T, Meta>,
+        Store: ChunkReadStorage<N, Chunk<N, T, Meta>>,
     {
         self.build_with_storage(storage)
     }
@@ -199,7 +199,7 @@ where
     /// Create a new `ChunkMap` with the given `storage` which must implement `ChunkWriteStorage`.
     pub fn build_with_write_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Meta, Store>
     where
-        Store: ChunkWriteStorage<N, T, Meta>,
+        Store: ChunkWriteStorage<N, Chunk<N, T, Meta>>,
     {
         self.build_with_storage(storage)
     }
@@ -295,7 +295,7 @@ where
 impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    Store: ChunkReadStorage<N, T, Meta>,
+    Store: ChunkReadStorage<N, Chunk<N, T, Meta>>,
 {
     /// Borrow the chunk at `key`.
     ///
@@ -347,7 +347,7 @@ where
 impl<N, T, Meta, Store> ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    Store: ChunkWriteStorage<N, T, Meta>,
+    Store: ChunkWriteStorage<N, Chunk<N, T, Meta>>,
 {
     /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
     ///
@@ -527,7 +527,7 @@ impl<N, T, Meta, Store> GetRef<PointN<N>> for ChunkMap<N, T, Meta, Store>
 where
     PointN<N>: IntegerPoint<N>,
     N: ArrayIndexer<N>,
-    Store: ChunkReadStorage<N, T, Meta>,
+    Store: ChunkReadStorage<N, Chunk<N, T, Meta>>,
 {
     type Data = T;
 
@@ -547,7 +547,7 @@ where
     N: ArrayIndexer<N>,
     T: Copy,
     Meta: Clone,
-    Store: ChunkWriteStorage<N, T, Meta>,
+    Store: ChunkWriteStorage<N, Chunk<N, T, Meta>>,
 {
     type Data = T;
 
@@ -574,7 +574,7 @@ where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     T: Copy,
-    Store: ChunkReadStorage<N, T, Meta>,
+    Store: ChunkReadStorage<N, Chunk<N, T, Meta>>,
 {
     type Item = T;
 
@@ -597,7 +597,7 @@ where
     PointN<N>: IntegerPoint<N>,
     T: 'a + Copy,
     Meta: Clone,
-    Store: ChunkWriteStorage<N, T, Meta>,
+    Store: ChunkWriteStorage<N, Chunk<N, T, Meta>>,
 {
     type Item = &'a mut T;
 
@@ -623,7 +623,7 @@ where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     T: 'a + Copy,
-    Store: ChunkReadStorage<N, T, Meta>,
+    Store: ChunkReadStorage<N, Chunk<N, T, Meta>>,
 {
     type Src = ArrayChunkCopySrc<'a, N, T>;
     type SrcIter = ArrayChunkCopySrcIter<'a, N, T>;
@@ -656,7 +656,7 @@ where
     ArrayN<N, T>: WriteExtent<N, Src>,
     T: Copy,
     Meta: Clone,
-    Store: ChunkWriteStorage<N, T, Meta>,
+    Store: ChunkWriteStorage<N, Chunk<N, T, Meta>>,
     Src: Copy,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src) {

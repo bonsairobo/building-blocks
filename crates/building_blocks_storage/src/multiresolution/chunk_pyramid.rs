@@ -70,7 +70,7 @@ where
     PointN<N>: Debug + IntegerPoint<N>,
     T: 'static + Copy,
     Meta: Clone,
-    Store: ChunkWriteStorage<N, T, Meta>,
+    Store: ChunkWriteStorage<N, Chunk<N, T, Meta>>,
     ChunkIndexer<N>: Clone,
 {
     pub fn downsample_chunk<Samp>(
@@ -118,7 +118,7 @@ impl<T, Meta, Store> ChunkPyramid3<T, Meta, Store>
 where
     T: 'static + Copy,
     Meta: Clone,
-    Store: ChunkWriteStorage<[i32; 3], T, Meta>,
+    Store: ChunkWriteStorage<[i32; 3], Chunk<[i32; 3], T, Meta>>,
 {
     pub fn downsample_chunks_for_extent_all_lods_with_index<Samp>(
         &mut self,
@@ -198,7 +198,7 @@ where
 
 /// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
 pub type CompressibleChunkPyramid<N, T, Meta, B> =
-    ChunkPyramid<N, T, Meta, CompressibleChunkStorage<N, T, Meta, B>>;
+    ChunkPyramid<N, T, Meta, CompressibleChunkStorage<N, FastChunkCompression<N, T, Meta, B>>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
@@ -223,7 +223,7 @@ define_conditional_aliases!(Snappy);
 impl<N, T, Meta, B> CompressibleChunkPyramid<N, T, Meta, B>
 where
     PointN<N>: Hash + IntegerPoint<N>,
-    T: Copy,
+    T: 'static + Copy,
     Meta: Clone,
     ChunkMapBuilder<N, T, Meta>: Copy,
     B: BytesCompression + Copy,
@@ -231,7 +231,9 @@ where
     pub fn new(builder: ChunkMapBuilder<N, T, Meta>, num_lods: u8, compression: B) -> Self {
         let mut levels = Vec::with_capacity(num_lods as usize);
         levels.resize_with(num_lods as usize, || {
-            builder.build_with_write_storage(CompressibleChunkStorage::new(compression))
+            builder.build_with_write_storage(CompressibleChunkStorage::new(
+                FastChunkCompression::new(compression),
+            ))
         });
 
         Self { levels }

@@ -61,7 +61,8 @@ building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.5.0"
 building_blocks_search = { path = "crates/building_blocks_search", version = "0.5.0", optional = true, default-features = false }
 
 [dev-dependencies]
-bevy = "0.4" # for examples
+# bevy = "0.4" # for examples
+bevy = { git = "https://github.com/bevyengine/bevy", rev = "d9fb61d4" }
 log = "0.4"
 
 [[bin]]

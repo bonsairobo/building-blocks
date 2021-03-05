@@ -120,8 +120,8 @@ pub(crate) use for_each2::{for_each_stride_parallel_global_unchecked2, Array2For
 pub(crate) use for_each3::{for_each_stride_parallel_global_unchecked3, Array3ForEachState};
 
 use crate::{
-    AsRawBytes, ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked,
-    GetUncheckedMut, GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRelease, ReadExtent,
+    ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked, GetUncheckedMut,
+    GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRelease, IntoRawBytes, ReadExtent,
     TransformMap, WriteExtent,
 };
 
@@ -228,15 +228,15 @@ where
     }
 }
 
-impl<'a, N, T, Store> AsRawBytes<'a> for ArrayN<N, T, Store>
+impl<'a, N, T, Store> IntoRawBytes<'a> for ArrayN<N, T, Store>
 where
     T: 'static + Copy,
     Store: Deref<Target = [T]>,
 {
     type Output = &'a [u8];
 
-    fn as_raw_bytes(&'a self) -> Self::Output {
-        self.values.as_raw_bytes()
+    fn into_raw_bytes(&'a self) -> Self::Output {
+        self.values.into_raw_bytes()
     }
 }
 

@@ -2,7 +2,7 @@ use super::ArrayN;
 
 use crate::{
     compression::{BytesCompression, Compressed, Compression},
-    AsRawBytes,
+    IntoRawBytes,
 };
 
 use building_blocks_core::prelude::*;
@@ -58,7 +58,7 @@ where
     fn compress(&self, data: &Self::Data) -> Compressed<Self> {
         let mut compressed_bytes = Vec::new();
         self.bytes_compression
-            .compress_bytes(data.as_raw_bytes(), &mut compressed_bytes);
+            .compress_bytes(data.into_raw_bytes(), &mut compressed_bytes);
 
         Compressed::new(FastCompressedArray {
             extent: data.extent,

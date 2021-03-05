@@ -27,7 +27,6 @@
 #[macro_use]
 pub mod access_traits;
 pub mod array;
-pub mod as_raw_bytes;
 pub mod caching;
 pub mod chunk;
 pub mod chunk_indexer;
@@ -39,12 +38,12 @@ pub mod func;
 pub mod multiresolution;
 pub mod octree_chunk_index;
 pub mod octree_set;
+pub mod raw_bytes;
 pub mod signed_distance;
 pub mod transform_map;
 
 pub use access_traits::*;
 pub use array::*;
-pub use as_raw_bytes::*;
 pub use caching::*;
 pub use chunk::*;
 pub use chunk_indexer::*;
@@ -55,6 +54,7 @@ pub use compression::*;
 pub use multiresolution::*;
 pub use octree_chunk_index::*;
 pub use octree_set::*;
+pub use raw_bytes::*;
 pub use signed_distance::*;
 pub use transform_map::*;
 

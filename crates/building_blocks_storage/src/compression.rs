@@ -91,7 +91,7 @@ impl<A: Compression> MaybeCompressed<A::Data, Compressed<A>> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{Array3, AsRawBytes};
+    use crate::{Array3, IntoRawBytes};
 
     use building_blocks_core::prelude::*;
 
@@ -148,7 +148,7 @@ mod test {
         let source_size_bytes = array.extent().num_points() * 2;
 
         let mut compressed_bytes = Vec::new();
-        compression.compress_bytes(array.as_raw_bytes(), &mut compressed_bytes);
+        compression.compress_bytes(array.into_raw_bytes(), &mut compressed_bytes);
 
         let compressed_size_bytes = compressed_bytes.len();
 

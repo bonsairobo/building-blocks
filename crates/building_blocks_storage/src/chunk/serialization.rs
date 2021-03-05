@@ -105,8 +105,7 @@ mod test {
     fn hash_map_serialize_and_deserialize_round_trip_snappy() {
         use crate::Snappy;
 
-        let compression = Snappy;
-        do_serialize_and_deserialize_round_trip_test(FnvHashMap::default(), compression);
+        do_serialize_and_deserialize_round_trip_test(FnvHashMap::default(), Snappy);
     }
 
     #[cfg(feature = "lz4")]
@@ -126,10 +125,9 @@ mod test {
     fn compressible_map_serialize_and_deserialize_round_trip_snappy() {
         use crate::Snappy;
 
-        let compression = Snappy;
         do_serialize_and_deserialize_round_trip_test(
-            CompressibleChunkStorage::new(compression),
-            compression,
+            CompressibleChunkStorage::new(FastChunkCompression::new(Snappy)),
+            Snappy,
         );
     }
 

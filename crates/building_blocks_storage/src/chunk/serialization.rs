@@ -116,7 +116,7 @@ mod test {
 
         let compression = Lz4 { level: 10 };
         do_serialize_and_deserialize_round_trip_test(
-            CompressibleChunkStorage::new(FastChunkCompression::new(compression)),
+            FastCompressibleChunkStorage::with_bytes_compression(compression),
             compression,
         );
     }
@@ -127,7 +127,7 @@ mod test {
         use crate::Snappy;
 
         do_serialize_and_deserialize_round_trip_test(
-            CompressibleChunkStorage::new(FastChunkCompression::new(Snappy)),
+            FastCompressibleChunkStorage::with_bytes_compression(Snappy),
             Snappy,
         );
     }

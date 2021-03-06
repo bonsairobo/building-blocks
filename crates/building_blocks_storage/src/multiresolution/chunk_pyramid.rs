@@ -216,7 +216,7 @@ where
         levels.resize_with(num_lods as usize, || {
             ChunkMap::build_with_write_storage(
                 chunk_shape,
-                CompressibleChunkStorage::new(FastChunkCompression::new(compression)),
+                FastCompressibleChunkStorage::with_bytes_compression(compression),
             )
         });
 

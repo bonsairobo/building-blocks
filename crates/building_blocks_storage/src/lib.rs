@@ -75,7 +75,7 @@ pub mod prelude {
         ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkIndexer, ChunkMap, ChunkMap2, ChunkMap2x1,
         ChunkMap3, ChunkMap3x1, ChunkPyramid2, ChunkPyramid3, ChunkReadStorage, ChunkWriteStorage,
         Compressed, CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
-        CompressibleChunkStorageReader, Compression, FastArrayCompression, FastChunkCompression,
+        CompressibleChunkStorageReader, Compression, FastArrayCompression,
         FastCompressibleChunkStorage, ForEach, ForEachMut, Get, GetMut, GetRef, IsEmpty,
         IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
         OctreeChunkIndex, OctreeNode, OctreeSet, ReadExtent, SerializableChunks, SignedDistance,
@@ -96,8 +96,8 @@ pub mod prelude {
         CompressibleChunkMapReader3x1, CompressibleChunkPyramid2, CompressibleChunkPyramid3,
         CompressibleChunkStorage2x1, CompressibleChunkStorage3x1,
         CompressibleChunkStorageReader2x1, CompressibleChunkStorageReader3x1,
-        MaybeCompressedChunk2x1, MaybeCompressedChunk3x1, MaybeCompressedChunkRef2x1,
-        MaybeCompressedChunkRef3x1,
+        MaybeCompressedArray2, MaybeCompressedArray3, MaybeCompressedArrayRef2,
+        MaybeCompressedArrayRef3,
     };
 }
 

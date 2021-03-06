@@ -1,7 +1,5 @@
-mod compression;
 mod serialization;
 
-pub use compression::*;
 pub use serialization::*;
 
 use crate::ArrayN;

@@ -183,7 +183,7 @@ where
 
 /// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
 pub type CompressibleChunkPyramid<N, T, B> =
-    ChunkPyramid<N, T, CompressibleChunkStorage<N, FastChunkCompression<N, T, B>>>;
+    ChunkPyramid<N, T, CompressibleChunkStorage<N, FastArrayCompression<N, T, B>>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
@@ -230,11 +230,7 @@ where
         let mut pyramid = Self::new(
             lod0_chunk_map.indexer.chunk_shape(),
             num_lods,
-            lod0_chunk_map
-                .storage()
-                .compression
-                .array_compression
-                .bytes_compression,
+            lod0_chunk_map.storage().compression.bytes_compression,
         );
         *pyramid.level_mut(0) = lod0_chunk_map;
 

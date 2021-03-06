@@ -1,6 +1,6 @@
 use crate::{
     ArrayN, BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkWriteStorage, Compressed,
-    CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression, FastChunkCompression,
+    CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression, FastArrayCompression,
     FnvLruCache, IterChunkKeys, LocalChunkCache, LruCacheEntries, LruCacheIntoIter, LruCacheKeys,
     MaybeCompressed,
 };
@@ -22,7 +22,7 @@ where
 }
 
 pub type FastCompressibleChunkStorage<N, T, B> =
-    CompressibleChunkStorage<N, FastChunkCompression<N, T, B>>;
+    CompressibleChunkStorage<N, FastArrayCompression<N, T, B>>;
 
 impl<N, T, B> FastCompressibleChunkStorage<N, T, B>
 where
@@ -31,7 +31,7 @@ where
     B: BytesCompression,
 {
     pub fn with_bytes_compression(bytes_compression: B) -> Self {
-        Self::new(FastChunkCompression::new(bytes_compression))
+        Self::new(FastArrayCompression::new(bytes_compression))
     }
 }
 
@@ -281,7 +281,7 @@ macro_rules! define_conditional_aliases {
         use crate::$backend;
 
         pub type CompressibleChunkStorageNx1<N, T, B = $backend> =
-            CompressibleChunkStorage<N, FastChunkCompression<N, T, B>>;
+            CompressibleChunkStorage<N, FastArrayCompression<N, T, B>>;
         /// 2-dimensional, single-channel `CompressibleChunkStorage`.
         pub type CompressibleChunkStorage2x1<T, B = $backend> =
             CompressibleChunkStorageNx1<[i32; 2], T, B>;
@@ -291,7 +291,7 @@ macro_rules! define_conditional_aliases {
 
         /// An N-dimensional, single-channel `CompressibleChunkMap`.
         pub type CompressibleChunkMapNx1<N, T, B = $backend> =
-            CompressibleChunkMap<N, T, ArrayN<N, T>, FastChunkCompression<N, T, B>>;
+            CompressibleChunkMap<N, T, ArrayN<N, T>, FastArrayCompression<N, T, B>>;
         /// A 2-dimensional, single-channel `CompressibleChunkMap`.
         pub type CompressibleChunkMap2x1<T, B = $backend> = CompressibleChunkMapNx1<[i32; 2], T, B>;
         /// A 3-dimensional, single-channel `CompressibleChunkMap`.

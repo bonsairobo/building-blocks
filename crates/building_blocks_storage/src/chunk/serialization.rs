@@ -1,6 +1,4 @@
-use crate::{
-    BincodeCompressedChunk, BincodeCompression, BytesCompression, ChunkWriteStorage, Compression,
-};
+use crate::{BincodeCompression, BytesCompression, ChunkWriteStorage, Compressed, Compression};
 
 use building_blocks_core::prelude::*;
 
@@ -19,7 +17,7 @@ where
     Ch: DeserializeOwned + Serialize,
     B: BytesCompression,
 {
-    pub compressed_chunks: Vec<(PointN<N>, BincodeCompressedChunk<Ch, B>)>,
+    pub compressed_chunks: Vec<(PointN<N>, Compressed<BincodeCompression<Ch, B>>)>,
 }
 
 impl<N, Ch, B> SerializableChunks<N, Ch, B>

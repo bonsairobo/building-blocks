@@ -1,8 +1,6 @@
-use super::ArrayN;
-
 use crate::{
-    compression::{BytesCompression, Compressed, Compression},
-    IntoRawBytes,
+    ArrayN, BincodeCompression, BytesCompression, Compressed, Compression, IntoRawBytes,
+    MaybeCompressed,
 };
 
 use building_blocks_core::prelude::*;
@@ -84,3 +82,31 @@ where
         ArrayN::new(compressed.extent, decompressed_values)
     }
 }
+
+pub type BincodeArrayCompression<N, T, B> = BincodeCompression<ArrayN<N, T>, B>;
+pub type BincodeCompressedArray<N, T, B> = Compressed<BincodeArrayCompression<N, T, B>>;
+
+macro_rules! define_conditional_aliases {
+    ($backend:ident) => {
+        use crate::$backend;
+
+        pub type MaybeCompressedArrayN<N, T, B = $backend> =
+            MaybeCompressed<ArrayN<N, T>, Compressed<FastArrayCompression<N, T, B>>>;
+        pub type MaybeCompressedArray2<T, B = $backend> = MaybeCompressedArrayN<[i32; 2], T, B>;
+        pub type MaybeCompressedArray3<T, B = $backend> = MaybeCompressedArrayN<[i32; 3], T, B>;
+
+        pub type MaybeCompressedArrayRefN<'a, N, T, B = $backend> =
+            MaybeCompressed<&'a ArrayN<N, T>, &'a Compressed<FastArrayCompression<N, T, B>>>;
+        pub type MaybeCompressedArrayRef2<'a, T, B = $backend> =
+            MaybeCompressedArrayRefN<'a, [i32; 2], T, B>;
+        pub type MaybeCompressedArrayRef3<'a, T, B = $backend> =
+            MaybeCompressedArrayRefN<'a, [i32; 3], T, B>;
+    };
+}
+
+// LZ4 and Snappy are not mutually exclusive, but if we only use one, then we want to have these aliases refer to the choice we
+// made.
+#[cfg(all(feature = "lz4", not(feature = "snap")))]
+define_conditional_aliases!(Lz4);
+#[cfg(all(not(feature = "lz4"), feature = "snap"))]
+define_conditional_aliases!(Snappy);

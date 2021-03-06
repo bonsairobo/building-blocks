@@ -111,7 +111,7 @@ mod dot_vox_conversions;
 #[cfg(feature = "image")]
 mod image_conversions;
 
-pub use compression::{FastArrayCompression, FastCompressedArray};
+pub use compression::*;
 pub use coords::*;
 pub use for_each::*;
 pub use indexer::*;

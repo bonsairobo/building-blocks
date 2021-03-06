@@ -5,7 +5,7 @@ use crate::{
 
 use building_blocks_core::prelude::*;
 
-/// A `Compression` used for compressing `Chunk`s. It just uses the internal `FastArrayCompression` and clones the metadata.
+/// A `Compression` used for compressing `Chunk`s. It just uses the internal `FastArrayCompression`.
 #[derive(Copy, Clone)]
 pub struct FastChunkCompression<N, T, B> {
     pub array_compression: FastArrayCompression<N, T, B>,
@@ -38,8 +38,6 @@ where
 {
     type Data = ArrayN<N, T>;
     type CompressedData = FastCompressedChunk<N, T, B>;
-
-    // PERF: cloning the metadata is unfortunate
 
     fn compress(&self, chunk: &Self::Data) -> Compressed<Self> {
         Compressed::new(FastCompressedChunk {

@@ -99,9 +99,12 @@
 
 mod compression;
 mod coords;
+mod extent_data;
 #[macro_use]
 mod for_each;
 mod indexer;
+mod provider;
+mod views;
 
 #[cfg(feature = "dot_vox")]
 mod dot_vox_conversions;
@@ -110,8 +113,10 @@ mod image_conversions;
 
 pub use compression::*;
 pub use coords::*;
+pub use extent_data::*;
 pub use for_each::*;
 pub use indexer::*;
+pub use views::*;
 
 use crate::{
     ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked, GetUncheckedMut,

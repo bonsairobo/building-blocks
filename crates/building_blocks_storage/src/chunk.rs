@@ -54,3 +54,40 @@ where
         self
     }
 }
+
+pub struct ChunkWithMeta<N, T, Meta> {
+    pub array: ArrayN<N, T>,
+    pub metadata: Meta,
+}
+
+impl<N, T, Meta> Chunk<N, T> for ChunkWithMeta<N, T, Meta>
+where
+    PointN<N>: IntegerPoint<N>,
+    T: Clone + Default,
+    Meta: Default,
+{
+    type Array = ArrayN<N, T>;
+
+    #[inline]
+    fn ambient_value() -> T {
+        Default::default()
+    }
+
+    #[inline]
+    fn new_ambient(extent: ExtentN<N>) -> Self {
+        Self {
+            array: ArrayN::fill(extent, Self::ambient_value()),
+            metadata: Default::default(),
+        }
+    }
+
+    #[inline]
+    fn array_ref(&self) -> &Self::Array {
+        &self.array
+    }
+
+    #[inline]
+    fn array_mut(&mut self) -> &mut Self::Array {
+        &mut self.array
+    }
+}

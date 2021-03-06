@@ -33,7 +33,7 @@
 //! let src = Array3::fill(extent, 0);
 //! let chunk_shape = Point3i::fill(4);
 //! let mut dst = ChunkMap3x1::build_with_hash_map_storage(chunk_shape);
-//! let tfm = TransformMap::new(&src, &|value: i32| value + 1);
+//! let tfm = TransformMap::new(&src, |value: i32| value + 1);
 //! copy_extent(&extent, &tfm, &mut dst);
 //! ```
 

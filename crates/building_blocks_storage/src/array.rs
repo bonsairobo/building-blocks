@@ -99,12 +99,12 @@
 
 mod compression;
 mod coords;
+mod extent_data;
+#[macro_use]
 mod for_each;
-#[macro_use]
-mod for_each2;
-#[macro_use]
-mod for_each3;
 mod indexer;
+mod provider;
+mod views;
 
 #[cfg(feature = "dot_vox")]
 mod dot_vox_conversions;
@@ -113,11 +113,10 @@ mod image_conversions;
 
 pub use compression::*;
 pub use coords::*;
+pub use extent_data::*;
 pub use for_each::*;
 pub use indexer::*;
-
-pub(crate) use for_each2::{for_each_stride_parallel_global_unchecked2, Array2ForEachState};
-pub(crate) use for_each3::{for_each_stride_parallel_global_unchecked3, Array3ForEachState};
+pub use views::*;
 
 use crate::{
     ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked, GetUncheckedMut,

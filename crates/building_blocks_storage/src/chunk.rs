@@ -74,7 +74,7 @@ where
     #[inline]
     fn new_ambient(extent: ExtentN<N>) -> Self {
         Self {
-            array: ArrayN::fill(extent, Self::ambient_value()),
+            array: ArrayN::new_ambient(extent),
             metadata: Default::default(),
         }
     }

@@ -49,10 +49,8 @@ use core::iter::{once, Once};
 /// A lattice map that delegates look-ups to a different lattice map, then transforms the result
 /// using some `Fn(In) -> Out`.
 pub struct TransformMap<'a, Delegate, F, In> {
-    delegate: &'a Delegate,
+    delegate: DelegateMap<'a, Delegate, In>,
     transform: F,
-    // Needed to avoid unconstrained type parameters in certain trait impls.
-    marker: std::marker::PhantomData<In>,
 }
 
 impl<'a, Delegate, F, In> Clone for TransformMap<'a, Delegate, F, In>
@@ -61,19 +59,17 @@ where
 {
     #[inline]
     fn clone(&self) -> Self {
-        Self::new(self.delegate, self.transform.clone())
+        Self::new(self.delegate.map, self.transform.clone())
     }
 }
-
 impl<'a, Delegate, F, In> Copy for TransformMap<'a, Delegate, F, In> where F: Copy {}
 
 impl<'a, Delegate, F, In> TransformMap<'a, Delegate, F, In> {
     #[inline]
     pub fn new(delegate: &'a Delegate, transform: F) -> Self {
         Self {
-            delegate,
+            delegate: DelegateMap::new(delegate),
             transform,
-            marker: Default::default(),
         }
     }
 }
@@ -198,6 +194,37 @@ where
                     .map_right(|ambient| AmbientExtent::new((self.transform)(ambient.value))),
             )
         })
+    }
+}
+
+pub(crate) struct DelegateMap<'a, Map, T> {
+    map: &'a Map,
+    // Needed to avoid unconstrained type parameters in certain trait impls.
+    marker: std::marker::PhantomData<T>,
+}
+
+impl<'a, Map, T> DelegateMap<'a, Map, T> {
+    pub fn new(map: &'a Map) -> Self {
+        Self {
+            map,
+            marker: Default::default(),
+        }
+    }
+}
+
+impl<'a, Map, T> Clone for DelegateMap<'a, Map, T> {
+    #[inline]
+    fn clone(&self) -> Self {
+        Self::new(self.map)
+    }
+}
+impl<'a, Map, T> Copy for DelegateMap<'a, Map, T> {}
+
+impl<'a, Map, T> std::ops::Deref for DelegateMap<'a, Map, T> {
+    type Target = Map;
+
+    fn deref(&self) -> &Self::Target {
+        self.map
     }
 }
 

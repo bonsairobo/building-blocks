@@ -735,16 +735,16 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
     );
 }
 
-impl<Map, N, T, Store> WriteExtent<N, ChunkCopySrc<Map, N, T>> for ArrayN<N, T, Store>
+impl<N, T, Ch, Store> WriteExtent<N, ChunkCopySrc<N, T, Ch>> for ArrayN<N, T, Store>
 where
     for<'r> Self: ForEachMut<'r, N, Stride, Item = &'r mut T>,
-    Self: WriteExtent<N, ArrayCopySrc<Map>>,
+    Self: WriteExtent<N, ArrayCopySrc<Ch>>,
     N: ArrayIndexer<N>,
     T: 'static + Clone,
     PointN<N>: IntegerPoint<N>,
     Store: DerefMut<Target = [T]>,
 {
-    fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<Map, N, T>) {
+    fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<N, T, Ch>) {
         match src {
             Either::Left(array) => self.write_extent(extent, array),
             Either::Right(ambient) => self.fill_extent(extent, ambient.get()),

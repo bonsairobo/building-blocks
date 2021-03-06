@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{prelude::*, ChunkMapBuilder};
+use building_blocks_storage::prelude::*;
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use fnv::FnvHashMap;
@@ -137,7 +137,7 @@ fn compressible_chunk_map_point_indexing(c: &mut Criterion) {
                 |(chunk_map, iter_extent)| {
                     let local_cache = LocalChunkCache::new();
                     let reader = chunk_map.storage().reader(&local_cache);
-                    let reader_map = DEFAULT_BUILDER.build_with_read_storage(reader);
+                    let reader_map = ChunkMap3x1::build_with_read_storage(CHUNK_SHAPE, reader);
                     for p in iter_extent.iter_points() {
                         black_box(reader_map.get(p));
                     }
@@ -179,10 +179,12 @@ fn chunk_hash_map_copy(c: &mut Criterion) {
             b.iter_with_setup(
                 || {
                     let cp_extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
-                    let mut src = DEFAULT_BUILDER.build_with_rw_storage(FnvHashMap::default());
+                    let mut src =
+                        ChunkMap3x1::build_with_rw_storage(CHUNK_SHAPE, FnvHashMap::default());
                     src.fill_extent(&cp_extent, 1);
 
-                    let dst = DEFAULT_BUILDER.build_with_rw_storage(FnvHashMap::default());
+                    let dst =
+                        ChunkMap3x1::build_with_rw_storage(CHUNK_SHAPE, FnvHashMap::default());
 
                     (src, dst, cp_extent)
                 },
@@ -221,11 +223,11 @@ fn set_up_array(size: i32) -> (Array3<i32>, Extent3i) {
     (array, iter_extent)
 }
 
-fn set_up_chunk_map<Store>(storage: Store, size: i32) -> (ChunkMap3<i32, (), Store>, Extent3i)
+fn set_up_chunk_map<Store>(storage: Store, size: i32) -> (ChunkMap3x1<i32, Store>, Extent3i)
 where
-    Store: ChunkWriteStorage<[i32; 3], Chunk<[i32; 3], i32>>,
+    Store: ChunkWriteStorage<[i32; 3], Array3<i32>>,
 {
-    let mut map = DEFAULT_BUILDER.build_with_write_storage(storage);
+    let mut map = ChunkMap3x1::build_with_write_storage(CHUNK_SHAPE, storage);
     let iter_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
     map.fill_extent(&iter_extent, 1);
 
@@ -236,27 +238,22 @@ fn set_up_sparse_chunk_map<Store>(
     storage: Store,
     size: i32,
     sparsity: i32,
-) -> (ChunkMap3<i32, (), Store>, Extent3i)
+) -> (ChunkMap3x1<i32, Store>, Extent3i)
 where
-    Store: ChunkWriteStorage<[i32; 3], Chunk<[i32; 3], i32>>,
+    Store: ChunkWriteStorage<[i32; 3], Array3<i32>>,
 {
-    let mut map = DEFAULT_BUILDER.build_with_write_storage(storage);
-    let chunk_key_extent = Extent3i::from_min_and_shape(
-        Point3i::ZERO,
-        Point3i::fill(size) / DEFAULT_BUILDER.chunk_shape,
-    );
+    let mut map = ChunkMap3x1::build_with_write_storage(CHUNK_SHAPE, storage);
+    let chunk_key_extent =
+        Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(size) / CHUNK_SHAPE);
     for chunk_p in chunk_key_extent.iter_points() {
         if chunk_p % sparsity != Point3i::ZERO {
             continue;
         }
 
-        let chunk_key = chunk_p * DEFAULT_BUILDER.chunk_shape;
+        let chunk_key = chunk_p * CHUNK_SHAPE;
         map.write_chunk(
             chunk_key,
-            Chunk::with_array(Array3::fill(
-                Extent3i::from_min_and_shape(chunk_key, DEFAULT_BUILDER.chunk_shape),
-                1,
-            )),
+            Array3::fill(Extent3i::from_min_and_shape(chunk_key, CHUNK_SHAPE), 1),
         );
     }
 
@@ -265,8 +262,4 @@ where
     (map, iter_extent)
 }
 
-const DEFAULT_BUILDER: ChunkMapBuilder3<i32> = ChunkMapBuilder {
-    chunk_shape: PointN([16; 3]),
-    ambient_value: 0,
-    default_chunk_metadata: (),
-};
+const CHUNK_SHAPE: Point3i = PointN([16; 3]);

@@ -4,28 +4,53 @@ mod serialization;
 pub use compression::*;
 pub use serialization::*;
 
-use crate::array::ArrayN;
+use crate::ArrayN;
 
-use serde::{Deserialize, Serialize};
+use building_blocks_core::prelude::*;
 
-/// One piece of a chunked lattice map. Contains both some generic metadata and the data for each point in the chunk extent.
-#[derive(Clone, Deserialize, Serialize)]
-pub struct Chunk<N, T, Meta = ()> {
-    pub metadata: Meta,
-    pub array: ArrayN<N, T>,
+/// One piece of a chunked lattice map.
+pub trait Chunk<N, T> {
+    /// The inner array type. This makes it easier for `Chunk` implementations to satisfy access trait bounds by inheriting them
+    /// from existing array types like `ArrayN`.
+    type Array;
+
+    /// The value used for vacant space.
+    fn ambient_value() -> T;
+
+    /// Construct a new chunk with entirely ambient values.
+    fn new_ambient(extent: ExtentN<N>) -> Self;
+
+    /// Borrow the inner array.
+    fn array_ref(&self) -> &Self::Array;
+
+    /// Mutably borrow the inner array.
+    fn array_mut(&mut self) -> &mut Self::Array;
 }
 
-/// A 2-dimensional `Chunk`.
-pub type Chunk2<T, Meta = ()> = Chunk<[i32; 2], T, Meta>;
-/// A 3-dimensional `Chunk`.
-pub type Chunk3<T, Meta = ()> = Chunk<[i32; 3], T, Meta>;
+impl<N, T> Chunk<N, T> for ArrayN<N, T>
+where
+    PointN<N>: IntegerPoint<N>,
+    T: Clone + Default,
+{
+    type Array = Self;
 
-impl<N, T> Chunk<N, T, ()> {
-    /// Constructs a chunk without metadata.
-    pub fn with_array(array: ArrayN<N, T>) -> Self {
-        Chunk {
-            metadata: (),
-            array,
-        }
+    #[inline]
+    fn ambient_value() -> T {
+        Default::default()
+    }
+
+    #[inline]
+    fn new_ambient(extent: ExtentN<N>) -> Self {
+        Self::fill(extent, Self::ambient_value())
+    }
+
+    #[inline]
+    fn array_ref(&self) -> &Self::Array {
+        self
+    }
+
+    #[inline]
+    fn array_mut(&mut self) -> &mut Self::Array {
+        self
     }
 }

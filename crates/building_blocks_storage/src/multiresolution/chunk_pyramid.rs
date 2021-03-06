@@ -1,6 +1,6 @@
 use crate::{
-    prelude::*, ArrayIndexer, BytesCompression, ChunkDownsampler, ChunkHashMap, OctreeChunkIndex,
-    OctreeNode, VisitStatus,
+    prelude::*, ArrayIndexer, ArrayN, BytesCompression, ChunkDownsampler, ChunkHashMap,
+    ChunkMapNx1, OctreeChunkIndex, OctreeNode, VisitStatus,
 };
 
 use building_blocks_core::prelude::*;
@@ -15,16 +15,14 @@ use std::fmt::Debug;
 ///
 /// There is no enforcement of a particular occupancy, allowing you to use this as a cache. Typically you will have some region
 /// of highest detail close to a central point. Then as you get further from the center, the detail drops.
-pub struct ChunkPyramid<N, T, Meta, Store> {
-    levels: Vec<ChunkMap<N, T, Meta, Store>>,
+pub struct ChunkPyramid<N, T, Store> {
+    levels: Vec<ChunkMap<N, T, ArrayN<N, T>, Store>>,
 }
 
-/// A 2-dimensional `ChunkPyramid`.
-pub type ChunkPyramid2<T, Meta, Store> = ChunkPyramid<[i32; 2], T, Meta, Store>;
-/// A 3-dimensional `ChunkPyramid`.
-pub type ChunkPyramid3<T, Meta, Store> = ChunkPyramid<[i32; 3], T, Meta, Store>;
+pub type ChunkPyramid2<T, Store> = ChunkPyramid<[i32; 2], T, Store>;
+pub type ChunkPyramid3<T, Store> = ChunkPyramid<[i32; 3], T, Store>;
 
-impl<N, T, Meta, Store> ChunkPyramid<N, T, Meta, Store> {
+impl<N, T, Store> ChunkPyramid<N, T, Store> {
     pub fn chunk_shape(&self) -> PointN<N>
     where
         PointN<N>: IntegerPoint<N>,
@@ -36,23 +34,19 @@ impl<N, T, Meta, Store> ChunkPyramid<N, T, Meta, Store> {
         self.levels.len() as u8
     }
 
-    pub fn levels_slice(&self) -> &[ChunkMap<N, T, Meta, Store>] {
+    pub fn levels_slice(&self) -> &[ChunkMapNx1<N, T, Store>] {
         &self.levels[..]
     }
 
-    pub fn level(&self, lod: u8) -> &ChunkMap<N, T, Meta, Store> {
+    pub fn level(&self, lod: u8) -> &ChunkMapNx1<N, T, Store> {
         &self.levels[lod as usize]
     }
 
-    pub fn level_mut(&mut self, lod: u8) -> &mut ChunkMap<N, T, Meta, Store> {
+    pub fn level_mut(&mut self, lod: u8) -> &mut ChunkMapNx1<N, T, Store> {
         &mut self.levels[lod as usize]
     }
 
-    pub fn two_levels_mut(
-        &mut self,
-        lod_a: u8,
-        lod_b: u8,
-    ) -> [&mut ChunkMap<N, T, Meta, Store>; 2] {
+    pub fn two_levels_mut(&mut self, lod_a: u8, lod_b: u8) -> [&mut ChunkMapNx1<N, T, Store>; 2] {
         assert!(lod_a < lod_b);
 
         // A trick to borrow mutably two different levels.
@@ -64,13 +58,13 @@ impl<N, T, Meta, Store> ChunkPyramid<N, T, Meta, Store> {
     }
 }
 
-impl<N, T, Meta, Store> ChunkPyramid<N, T, Meta, Store>
+impl<N, T, Store> ChunkPyramid<N, T, Store>
 where
     N: ArrayIndexer<N>,
     PointN<N>: Debug + IntegerPoint<N>,
-    T: 'static + Copy,
-    Meta: Clone,
-    Store: ChunkWriteStorage<N, Chunk<N, T, Meta>>,
+    T: 'static + Clone,
+    ArrayN<N, T>: Chunk<N, T>,
+    Store: ChunkWriteStorage<N, ArrayN<N, T>>,
     ChunkIndexer<N>: Clone,
 {
     pub fn downsample_chunk<Samp>(
@@ -94,31 +88,24 @@ where
 
         // While not strictly necessary to get_mut here, it is much simpler than trying to enforce generic ChunkReadStorage.
         if let Some(src_chunk) = src_map.get_mut_chunk(src_chunk_key) {
-            debug_assert_eq!(src_chunk.array.extent().shape, chunk_shape);
+            debug_assert_eq!(src_chunk.extent().shape, chunk_shape);
 
-            sampler.downsample(
-                &src_chunk.array,
-                &mut dst_chunk.array,
-                dst.dst_offset,
-                lod_delta,
-            );
+            sampler.downsample(&src_chunk, dst_chunk, dst.dst_offset, lod_delta);
         } else {
             let dst_extent = ExtentN::from_min_and_shape(
-                dst_chunk.array.extent().minimum + dst.dst_offset.0,
+                dst_chunk.extent().minimum + dst.dst_offset.0,
                 chunk_shape >> 1,
             );
-            dst_chunk
-                .array
-                .fill_extent(&dst_extent, src_map.ambient_value());
+            dst_chunk.fill_extent(&dst_extent, ArrayN::<_, T>::ambient_value());
         }
     }
 }
 
-impl<T, Meta, Store> ChunkPyramid3<T, Meta, Store>
+impl<T, Store> ChunkPyramid3<T, Store>
 where
-    T: 'static + Copy,
-    Meta: Clone,
-    Store: ChunkWriteStorage<[i32; 3], Chunk<[i32; 3], T, Meta>>,
+    T: 'static + Clone,
+    Array3<T>: Chunk<[i32; 3], T>,
+    Store: ChunkWriteStorage<[i32; 3], Array3<T>>,
 {
     pub fn downsample_chunks_for_extent_all_lods_with_index<Samp>(
         &mut self,
@@ -163,33 +150,31 @@ where
 }
 
 /// A `ChunkMap` using `HashMap` as chunk storage.
-pub type ChunkHashMapPyramid<N, T, Meta = ()> =
-    ChunkPyramid<N, T, Meta, FnvHashMap<PointN<N>, Chunk<N, T, Meta>>>;
+pub type ChunkHashMapPyramid<N, T> = ChunkPyramid<N, T, FnvHashMap<PointN<N>, ArrayN<N, T>>>;
 /// A 2-dimensional `ChunkHashMapPyramid`.
-pub type ChunkHashMapPyramid2<T, Meta = ()> = ChunkHashMapPyramid<[i32; 2], T, Meta>;
+pub type ChunkHashMapPyramid2<T> = ChunkHashMapPyramid<[i32; 2], T>;
 /// A 3-dimensional `ChunkHashMapPyramid`.
-pub type ChunkHashMapPyramid3<T, Meta = ()> = ChunkHashMapPyramid<[i32; 3], T, Meta>;
+pub type ChunkHashMapPyramid3<T> = ChunkHashMapPyramid<[i32; 3], T>;
 
-impl<N, T, Meta> ChunkHashMapPyramid<N, T, Meta>
+impl<N, T> ChunkHashMapPyramid<N, T>
 where
     PointN<N>: Hash + IntegerPoint<N>,
-    ChunkMapBuilder<N, T, Meta>: Copy,
+    T: Clone + Default,
 {
-    pub fn new(builder: ChunkMapBuilder<N, T, Meta>, num_lods: u8) -> Self {
+    pub fn new(chunk_shape: PointN<N>, num_lods: u8) -> Self {
         let mut levels = Vec::with_capacity(num_lods as usize);
         levels.resize_with(num_lods as usize, || {
-            builder.build_with_write_storage(FnvHashMap::default())
+            ChunkMap::build_with_write_storage(chunk_shape, FnvHashMap::default())
         });
 
         Self { levels }
     }
 
-    pub fn with_lod0_chunk_map(lod0_chunk_map: ChunkHashMap<N, T, Meta>, num_lods: u8) -> Self
-    where
-        T: Copy,
-        Meta: Clone,
-    {
-        let mut pyramid = Self::new(lod0_chunk_map.builder(), num_lods);
+    pub fn with_lod0_chunk_map(
+        lod0_chunk_map: ChunkHashMap<N, T, ArrayN<N, T>>,
+        num_lods: u8,
+    ) -> Self {
+        let mut pyramid = Self::new(lod0_chunk_map.indexer.chunk_shape(), num_lods);
         *pyramid.level_mut(0) = lod0_chunk_map;
 
         pyramid
@@ -197,19 +182,19 @@ where
 }
 
 /// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
-pub type CompressibleChunkPyramid<N, T, Meta, B> =
-    ChunkPyramid<N, T, Meta, CompressibleChunkStorage<N, FastChunkCompression<N, T, Meta, B>>>;
+pub type CompressibleChunkPyramid<N, T, B> =
+    ChunkPyramid<N, T, CompressibleChunkStorage<N, FastChunkCompression<N, T, B>>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
         use crate::$backend;
 
         /// 2-dimensional `CompressibleChunkPyramid`.
-        pub type CompressibleChunkPyramid2<T, Meta = (), B = $backend> =
-            CompressibleChunkPyramid<[i32; 2], T, Meta, B>;
+        pub type CompressibleChunkPyramid2<T, B = $backend> =
+            CompressibleChunkPyramid<[i32; 2], T, B>;
         /// 3-dimensional `CompressibleChunkPyramid`.
-        pub type CompressibleChunkPyramid3<T, Meta = (), B = $backend> =
-            CompressibleChunkPyramid<[i32; 3], T, Meta, B>;
+        pub type CompressibleChunkPyramid3<T, B = $backend> =
+            CompressibleChunkPyramid<[i32; 3], T, B>;
     };
 }
 
@@ -220,35 +205,30 @@ define_conditional_aliases!(Lz4);
 #[cfg(all(not(feature = "lz4"), feature = "snap"))]
 define_conditional_aliases!(Snappy);
 
-impl<N, T, Meta, B> CompressibleChunkPyramid<N, T, Meta, B>
+impl<N, T, B> CompressibleChunkPyramid<N, T, B>
 where
     PointN<N>: Hash + IntegerPoint<N>,
-    T: 'static + Copy,
-    Meta: Clone,
-    ChunkMapBuilder<N, T, Meta>: Copy,
+    T: 'static + Copy + Default,
     B: BytesCompression + Copy,
 {
-    pub fn new(builder: ChunkMapBuilder<N, T, Meta>, num_lods: u8, compression: B) -> Self {
+    pub fn new(chunk_shape: PointN<N>, num_lods: u8, compression: B) -> Self {
         let mut levels = Vec::with_capacity(num_lods as usize);
         levels.resize_with(num_lods as usize, || {
-            builder.build_with_write_storage(CompressibleChunkStorage::new(
-                FastChunkCompression::new(compression),
-            ))
+            ChunkMap::build_with_write_storage(
+                chunk_shape,
+                CompressibleChunkStorage::new(FastChunkCompression::new(compression)),
+            )
         });
 
         Self { levels }
     }
 
     pub fn with_lod0_chunk_map(
-        lod0_chunk_map: CompressibleChunkMap<N, T, Meta, B>,
+        lod0_chunk_map: CompressibleChunkMap<N, T, B>,
         num_lods: u8,
-    ) -> Self
-    where
-        T: Copy,
-        Meta: Clone,
-    {
+    ) -> Self {
         let mut pyramid = Self::new(
-            lod0_chunk_map.builder(),
+            lod0_chunk_map.indexer.chunk_shape(),
             num_lods,
             lod0_chunk_map
                 .storage()

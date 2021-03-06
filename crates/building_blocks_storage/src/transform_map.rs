@@ -31,15 +31,15 @@
 //! # use building_blocks_storage::prelude::*;
 //! # let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
 //! let src = Array3::fill(extent, 0);
-//! let builder = ChunkMapBuilder { chunk_shape: Point3i::fill(4), ambient_value: 0, default_chunk_metadata: () };
-//! let mut dst = builder.build_with_hash_map_storage();
+//! let chunk_shape = Point3i::fill(4);
+//! let mut dst = ChunkMap3x1::build_with_hash_map_storage(chunk_shape);
 //! let tfm = TransformMap::new(&src, &|value: i32| value + 1);
 //! copy_extent(&extent, &tfm, &mut dst);
 //! ```
 
 use crate::{
-    AmbientExtent, Array, ArrayChunkCopySrc, ArrayChunkCopySrcIter, ArrayCopySrc, ArrayN,
-    ChunkCopySrc, ChunkMap, ForEach, Get, GetUnchecked, ReadExtent,
+    AmbientExtent, Array, ArrayCopySrc, ArrayN, ChunkCopySrc, ChunkCopySrcIter, ChunkMap, ForEach,
+    Get, GetUnchecked, ReadExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -104,7 +104,7 @@ where
     }
 }
 
-impl<'a, Delegate, F, In, Out, N, Coord> ForEach<N, Coord> for TransformMap<'a, Delegate, F>
+impl<'a, N, Delegate, F, In, Out, Coord> ForEach<N, Coord> for TransformMap<'a, Delegate, F>
 where
     F: Fn(In) -> Out,
     Delegate: ForEach<N, Coord, Item = In>,
@@ -118,7 +118,7 @@ where
     }
 }
 
-impl<'a, Delegate, F, N> Array<N> for TransformMap<'a, Delegate, F>
+impl<'a, N, Delegate, F> Array<N> for TransformMap<'a, Delegate, F>
 where
     Delegate: Array<N>,
 {
@@ -130,10 +130,10 @@ where
     }
 }
 
-// TODO: try to make a generic ReadExtent impl, it's hard because we need a way to define the src
-// types as a function of the delegate src types (kinda hints at a monad or HKT)
+// TODO: try to make a generic ReadExtent impl, it's hard because we need a way to define the src types as a function of the
+// delegate src types (kinda hints at a monad or HKT)
 
-impl<'a, F, In, Out, N> ReadExtent<'a, N> for TransformMap<'a, ArrayN<N, In>, F>
+impl<'a, N, F, In, Out> ReadExtent<'a, N> for TransformMap<'a, ArrayN<N, In>, F>
 where
     Self: Array<N> + Clone,
     F: Fn(In) -> Out,
@@ -149,20 +149,20 @@ where
     }
 }
 
-// Don't worry... just believe in the types and they will show you the way.
-impl<'a, F, In, Out, N, Meta, Store> ReadExtent<'a, N>
-    for TransformMap<'a, ChunkMap<N, In, Meta, Store>, F>
+impl<'a, N, F, In, Out, Ch, Store> ReadExtent<'a, N>
+    for TransformMap<'a, ChunkMap<N, In, Ch, Store>, F>
 where
-    ChunkMap<N, In, Meta, Store>: ReadExtent<
+    F: Copy + Fn(In) -> Out,
+    In: 'a,
+    ChunkMap<N, In, Ch, Store>: ReadExtent<
         'a,
         N,
-        Src = ArrayChunkCopySrc<'a, N, In>,
-        SrcIter = ArrayChunkCopySrcIter<'a, N, In>,
+        Src = ChunkCopySrc<N, In, &'a Ch>,
+        SrcIter = ChunkCopySrcIter<N, In, &'a Ch>,
     >,
-    F: Copy + Fn(In) -> Out,
 {
-    type Src = TransformChunkCopySrc<'a, F, In, Out, N>;
-    type SrcIter = TransformChunkCopySrcIter<'a, F, In, Out, N>;
+    type Src = TransformChunkCopySrc<'a, N, F, Ch, Out>;
+    type SrcIter = TransformChunkCopySrcIter<'a, N, F, In, Ch>;
 
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
         TransformChunkCopySrcIter {
@@ -173,23 +173,22 @@ where
 }
 
 #[doc(hidden)]
-pub type TransformChunkCopySrc<'a, F, In, Out, N> =
-    ChunkCopySrc<TransformMap<'a, ArrayN<N, In>, F>, N, Out>;
+pub type TransformChunkCopySrc<'a, N, F, Ch, Out> = ChunkCopySrc<N, Out, TransformMap<'a, Ch, F>>;
 
 #[doc(hidden)]
-pub struct TransformChunkCopySrcIter<'a, F, In, Out, N>
-where
-    F: Fn(In) -> Out,
-{
-    chunk_iter: ArrayChunkCopySrcIter<'a, N, In>,
+pub struct TransformChunkCopySrcIter<'a, N, F, In, Ch> {
+    chunk_iter: ChunkCopySrcIter<N, In, &'a Ch>,
     transform: F,
 }
 
-impl<'a, F, In, Out, N> Iterator for TransformChunkCopySrcIter<'a, F, In, Out, N>
+impl<'a, N, F, In, Out, Ch> Iterator for TransformChunkCopySrcIter<'a, N, F, In, Ch>
 where
+    N: 'a,
     F: Copy + Fn(In) -> Out,
+    In: 'a,
+    Ch: 'a,
 {
-    type Item = (ExtentN<N>, TransformChunkCopySrc<'a, F, In, Out, N>);
+    type Item = (ExtentN<N>, TransformChunkCopySrc<'a, N, F, Ch, Out>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.chunk_iter.next().map(|(extent, chunk_src)| {
@@ -217,11 +216,7 @@ mod tests {
     use super::*;
     use crate::prelude::*;
 
-    const BUILDER: ChunkMapBuilder3<i32> = ChunkMapBuilder {
-        chunk_shape: PointN([4; 3]),
-        ambient_value: 0,
-        default_chunk_metadata: (),
-    };
+    const CHUNK_SHAPE: Point3i = PointN([4; 3]);
 
     #[test]
     fn transform_accessors() {
@@ -252,7 +247,7 @@ mod tests {
     fn copy_from_transformed_array() {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let src = Array3::fill(extent, 0);
-        let mut dst = BUILDER.build_with_hash_map_storage();
+        let mut dst = ChunkMap3x1::build_with_hash_map_storage(CHUNK_SHAPE);
         let tfm = TransformMap::new(&src, |value: i32| value + 1);
         copy_extent(&extent, &tfm, &mut dst);
     }
@@ -262,13 +257,13 @@ mod tests {
     fn copy_from_transformed_chunk_map_reader() {
         let src_extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let src_array = Array3::fill(src_extent, 1);
-        let mut src = BUILDER.build_with_hash_map_storage();
+        let mut src = ChunkMap3x1::build_with_hash_map_storage(CHUNK_SHAPE);
         copy_extent(&src_extent, &src_array, &mut src);
 
         let tfm = TransformMap::new(&src, |value: i32| value + 1);
 
         let dst_extent = Extent3::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
-        let mut dst = BUILDER.build_with_hash_map_storage();
+        let mut dst = ChunkMap3x1::build_with_hash_map_storage(CHUNK_SHAPE);
         copy_extent(&dst_extent, &tfm, &mut dst);
     }
 }

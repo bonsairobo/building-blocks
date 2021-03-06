@@ -47,8 +47,8 @@
 //! // Create another map to copy to/from. We use a `ChunkHashMap`, but any map that implements
 //! // `WriteExtent` can be a copy destination, and any map that implements `ReadExtent` can be a
 //! // copy source.
-//! let builder = ChunkMapBuilder { chunk_shape: Point3i::fill(16), ambient_value: 0, default_chunk_metadata: () };
-//! let mut other_map = builder.build_with_hash_map_storage();
+//! let chunk_shape = Point3i::fill(16);
+//! let mut other_map = ChunkMap3x1::build_with_hash_map_storage(chunk_shape);
 //! copy_extent(&subextent, &map, &mut other_map);
 //! copy_extent(&subextent, &other_map, &mut map);
 //!

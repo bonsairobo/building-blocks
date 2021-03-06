@@ -71,13 +71,13 @@ impl IsEmpty for bool {
 
 pub mod prelude {
     pub use super::{
-        copy_extent, Array, Array2, Array3, ArrayN, Chunk, Chunk2, Chunk3, ChunkHashMap2,
-        ChunkHashMap3, ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkIndexer, ChunkMap,
-        ChunkMap2, ChunkMap3, ChunkMapBuilder, ChunkMapBuilder2, ChunkMapBuilder3, ChunkPyramid2,
-        ChunkPyramid3, ChunkReadStorage, ChunkWriteStorage, Compressed, CompressibleChunkMap,
-        CompressibleChunkMapReader, CompressibleChunkStorage, CompressibleChunkStorageReader,
-        Compression, FastArrayCompression, FastChunkCompression, ForEach, ForEachMut, Get, GetMut,
-        GetRef, IsEmpty, IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
+        copy_extent, Array, Array2, Array3, ArrayN, Chunk, ChunkHashMap2, ChunkHashMap3,
+        ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkIndexer, ChunkMap, ChunkMap2, ChunkMap2x1,
+        ChunkMap3, ChunkMap3x1, ChunkPyramid2, ChunkPyramid3, ChunkReadStorage, ChunkWriteStorage,
+        Compressed, CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
+        CompressibleChunkStorageReader, Compression, FastArrayCompression, FastChunkCompression,
+        FastCompressibleChunkStorage, ForEach, ForEachMut, Get, GetMut, GetRef, IsEmpty,
+        IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
         OctreeChunkIndex, OctreeNode, OctreeSet, ReadExtent, SerializableChunks, SignedDistance,
         Stride, TransformMap, WriteExtent,
     };
@@ -95,8 +95,8 @@ pub mod prelude {
         CompressibleChunkMap2, CompressibleChunkMap3, CompressibleChunkMapReader2,
         CompressibleChunkMapReader3, CompressibleChunkPyramid2, CompressibleChunkPyramid3,
         CompressibleChunkStorage2, CompressibleChunkStorage3, CompressibleChunkStorageReader2,
-        CompressibleChunkStorageReader3, MaybeCompressedChunk2, MaybeCompressedChunk3,
-        MaybeCompressedChunkRef2, MaybeCompressedChunkRef3,
+        CompressibleChunkStorageReader3, MaybeCompressedChunk2x1, MaybeCompressedChunk3x1,
+        MaybeCompressedChunkRef2x1, MaybeCompressedChunkRef3x1,
     };
 }
 

@@ -1,5 +1,5 @@
 use crate::{
-    BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkWriteStorage, Compressed,
+    ArrayN, BytesCompression, CacheEntry, ChunkMap, ChunkWriteStorage, Compressed,
     CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression, FastChunkCompression,
     FnvLruCache, IterChunkKeys, LocalChunkCache, LruCacheEntries, LruCacheIntoIter, LruCacheKeys,
     MaybeCompressed,
@@ -19,6 +19,20 @@ where
     pub cache: FnvLruCache<PointN<N>, Compr::Data, CompressedLocation>,
     pub compression: Compr,
     pub compressed: CompressedChunks<Compr>,
+}
+
+pub type FastCompressibleChunkStorage<N, T, B> =
+    CompressibleChunkStorage<N, FastChunkCompression<N, T, B>>;
+
+impl<N, T, B> FastCompressibleChunkStorage<N, T, B>
+where
+    PointN<N>: Hash + IntegerPoint<N>,
+    T: 'static + Copy,
+    B: BytesCompression,
+{
+    pub fn with_bytes_compression(bytes_compression: B) -> Self {
+        Self::new(FastChunkCompression::new(bytes_compression))
+    }
 }
 
 pub type CompressedChunks<Compr> = Slab<Compressed<Compr>>;
@@ -233,23 +247,24 @@ where
 }
 
 /// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
-pub type CompressibleChunkMap<N, T, Meta, B> =
-    ChunkMap<N, T, Meta, CompressibleChunkStorage<N, FastChunkCompression<N, T, Meta, B>>>;
+pub type CompressibleChunkMap<N, T, B> =
+    ChunkMap<N, T, ArrayN<N, T>, CompressibleChunkStorage<N, FastChunkCompression<N, T, B>>>;
 
-impl<N, T, Meta, B> CompressibleChunkMap<N, T, Meta, B>
+impl<N, T, B> CompressibleChunkMap<N, T, B>
 where
     PointN<N>: Hash + IntegerPoint<N>,
-    T: 'static + Copy,
-    Meta: Clone,
+    T: 'static + Copy + Default,
     B: BytesCompression,
 {
     /// Construct a reader for this map.
     pub fn reader<'a>(
         &'a self,
-        local_cache: &'a LocalChunkCache<N, Chunk<N, T, Meta>>,
-    ) -> CompressibleChunkMapReader<N, T, Meta, B> {
-        self.builder()
-            .build_with_read_storage(self.storage().reader(local_cache))
+        local_cache: &'a LocalChunkCache<N, ArrayN<N, T>>,
+    ) -> CompressibleChunkMapReader<'a, N, T, B> {
+        CompressibleChunkMapReader::build_with_read_storage(
+            self.indexer.chunk_shape(),
+            self.storage().reader(local_cache),
+        )
     }
 }
 
@@ -266,18 +281,16 @@ macro_rules! define_conditional_aliases {
         use crate::$backend;
 
         /// 2-dimensional `CompressibleChunkStorage`.
-        pub type CompressibleChunkStorage2<T, Meta = (), B = $backend> =
-            CompressibleChunkStorage<[i32; 2], FastChunkCompression<[i32; 2], T, Meta, B>>;
+        pub type CompressibleChunkStorage2<T, B = $backend> =
+            CompressibleChunkStorage<[i32; 2], FastChunkCompression<[i32; 2], T, B>>;
         /// 3-dimensional `CompressibleChunkStorage`.
-        pub type CompressibleChunkStorage3<T, Meta = (), B = $backend> =
-            CompressibleChunkStorage<[i32; 3], FastChunkCompression<[i32; 3], T, Meta, B>>;
+        pub type CompressibleChunkStorage3<T, B = $backend> =
+            CompressibleChunkStorage<[i32; 3], FastChunkCompression<[i32; 3], T, B>>;
 
         /// A 2-dimensional `CompressibleChunkMap`.
-        pub type CompressibleChunkMap2<T, Meta = (), B = $backend> =
-            CompressibleChunkMap<[i32; 2], T, Meta, B>;
+        pub type CompressibleChunkMap2<T, B = $backend> = CompressibleChunkMap<[i32; 2], T, B>;
         /// A 3-dimensional `CompressibleChunkMap`.
-        pub type CompressibleChunkMap3<T, Meta = (), B = $backend> =
-            CompressibleChunkMap<[i32; 3], T, Meta, B>;
+        pub type CompressibleChunkMap3<T, B = $backend> = CompressibleChunkMap<[i32; 3], T, B>;
     };
 }
 

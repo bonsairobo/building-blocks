@@ -31,9 +31,9 @@ impl OctreeChunkIndex {
     }
 
     /// Same as `index_chunks`, but using the chunk keys and chunk shape from `chunk_map`.
-    pub fn index_chunk_map<T, Meta, Store>(
+    pub fn index_chunk_map<T, Ch, Store>(
         superchunk_shape: Point3i,
-        chunk_map: &ChunkMap3<T, Meta, Store>,
+        chunk_map: &ChunkMap3<T, Ch, Store>,
     ) -> Self
     where
         Store: for<'r> IterChunkKeys<'r, [i32; 3]>,

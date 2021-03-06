@@ -1,4 +1,4 @@
-use crate::{Chunk, ChunkMap};
+use crate::ChunkMap;
 
 use super::{ChunkReadStorage, ChunkWriteStorage, IterChunkKeys};
 
@@ -60,9 +60,8 @@ where
 }
 
 /// A `ChunkMap` using `HashMap` as chunk storage.
-pub type ChunkHashMap<N, T, Meta = ()> =
-    ChunkMap<N, T, Meta, FnvHashMap<PointN<N>, Chunk<N, T, Meta>>>;
+pub type ChunkHashMap<N, T, Ch> = ChunkMap<N, T, Ch, FnvHashMap<PointN<N>, Ch>>;
 /// A 2-dimensional `ChunkHashMap`.
-pub type ChunkHashMap2<T, Meta = ()> = ChunkHashMap<[i32; 2], T, Meta>;
+pub type ChunkHashMap2<T, Ch> = ChunkHashMap<[i32; 2], T, Ch>;
 /// A 3-dimensional `ChunkHashMap`.
-pub type ChunkHashMap3<T, Meta = ()> = ChunkHashMap<[i32; 3], T, Meta>;
+pub type ChunkHashMap3<T, Ch> = ChunkHashMap<[i32; 3], T, Ch>;

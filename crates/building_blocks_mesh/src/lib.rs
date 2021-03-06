@@ -29,12 +29,7 @@
 //! use std::collections::HashSet;
 //!
 //! let chunk_shape = PointN([16; 2]);
-//! let builder = ChunkMapBuilder {
-//!     chunk_shape,
-//!     ambient_value: 0.0,
-//!     default_chunk_metadata: (),
-//! };
-//! let mut map = builder.build_with_hash_map_storage();
+//! let mut map = ChunkMap::build_with_hash_map_storage(chunk_shape);
 //!
 //! // ...mutate one or more of the chunks...
 //!

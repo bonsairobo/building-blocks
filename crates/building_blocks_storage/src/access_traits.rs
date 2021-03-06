@@ -67,55 +67,43 @@ use building_blocks_core::ExtentN;
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-pub trait Get<L> {
-    type Data;
-
+pub trait Get<L, T> {
     /// Get an owned value at `location`.
-    fn get(&self, location: L) -> Self::Data;
+    fn get(&self, location: L) -> T;
 }
 
-pub trait GetRef<L> {
-    type Data;
-
+pub trait GetRef<L, T> {
     /// Get an immutable reference to the value at `location`.
-    fn get_ref(&self, location: L) -> &Self::Data;
+    fn get_ref(&self, location: L) -> &T;
 }
 
-pub trait GetMut<L> {
-    type Data;
-
+pub trait GetMut<L, T> {
     /// Get a mutable reference to the value at `location`.
-    fn get_mut(&mut self, location: L) -> &mut Self::Data;
+    fn get_mut(&mut self, location: L) -> &mut T;
 }
 
-pub trait GetUnchecked<L> {
-    type Data;
-
+pub trait GetUnchecked<L, T> {
     /// Get the value at location without doing bounds checking.
     /// # Safety
     /// Don't access out of bounds.
-    unsafe fn get_unchecked(&self, location: L) -> Self::Data;
+    unsafe fn get_unchecked(&self, location: L) -> T;
 }
 
-pub trait GetUncheckedRef<L> {
-    type Data;
-
+pub trait GetUncheckedRef<L, T> {
     /// Get an immutable reference to the value at `location` without doing bounds checking.
     /// # Safety
     /// Don't access out of bounds.
-    unsafe fn get_unchecked_ref(&self, location: L) -> &Self::Data;
+    unsafe fn get_unchecked_ref(&self, location: L) -> &T;
 }
 
-pub trait GetUncheckedMut<L> {
-    type Data;
-
+pub trait GetUncheckedMut<L, T> {
     /// Get a mutable reference to the value at `location` without doing bounds checking.
     /// # Safety
     /// Don't access out of bounds.
-    unsafe fn get_unchecked_mut(&mut self, location: L) -> &mut Self::Data;
+    unsafe fn get_unchecked_mut(&mut self, location: L) -> &mut T;
 }
 
-pub trait GetUncheckedRelease<L, T>: Get<L, Data = T> + GetUnchecked<L, Data = T> {
+pub trait GetUncheckedRelease<L, T>: Get<L, T> + GetUnchecked<L, T> {
     /// Get the value at location. Skips bounds checking in release mode.
     /// # Safety
     /// Don't access out of bounds.
@@ -129,12 +117,9 @@ pub trait GetUncheckedRelease<L, T>: Get<L, Data = T> + GetUnchecked<L, Data = T
     }
 }
 
-impl<Map, L, T> GetUncheckedRelease<L, T> for Map where
-    Map: Get<L, Data = T> + GetUnchecked<L, Data = T>
-{
-}
+impl<Map, L, T> GetUncheckedRelease<L, T> for Map where Map: Get<L, T> + GetUnchecked<L, T> {}
 
-pub trait GetUncheckedRefRelease<L, T>: GetRef<L, Data = T> + GetUncheckedRef<L, Data = T> {
+pub trait GetUncheckedRefRelease<L, T>: GetRef<L, T> + GetUncheckedRef<L, T> {
     /// Get an immutable reference to the value at `location`. Skips bounds checking in release mode.
     /// # Safety
     /// Don't access out of bounds.
@@ -148,12 +133,9 @@ pub trait GetUncheckedRefRelease<L, T>: GetRef<L, Data = T> + GetUncheckedRef<L,
     }
 }
 
-impl<Map, L, T> GetUncheckedRefRelease<L, T> for Map where
-    Map: GetRef<L, Data = T> + GetUncheckedRef<L, Data = T>
-{
-}
+impl<Map, L, T> GetUncheckedRefRelease<L, T> for Map where Map: GetRef<L, T> + GetUncheckedRef<L, T> {}
 
-pub trait GetUncheckedMutRelease<L, T>: GetMut<L, Data = T> + GetUncheckedMut<L, Data = T> {
+pub trait GetUncheckedMutRelease<L, T>: GetMut<L, T> + GetUncheckedMut<L, T> {
     /// Get an mutable reference to the value at `location`. Skips bounds checking in release mode.
     /// # Safety
     /// Don't access out of bounds.
@@ -167,33 +149,28 @@ pub trait GetUncheckedMutRelease<L, T>: GetMut<L, Data = T> + GetUncheckedMut<L,
     }
 }
 
-impl<Map, L, T> GetUncheckedMutRelease<L, T> for Map where
-    Map: GetMut<L, Data = T> + GetUncheckedMut<L, Data = T>
-{
-}
+impl<Map, L, T> GetUncheckedMutRelease<L, T> for Map where Map: GetMut<L, T> + GetUncheckedMut<L, T> {}
 
 // We need this macro because doing a blanket impl causes conflicts due to Rust's orphan rules.
 macro_rules! impl_get_via_get_ref_and_clone {
     ($map:ty, $($type_params:ident),*) => {
-        impl<L, $($type_params),*> Get<L> for $map
+        impl<L, $($type_params),*> Get<L, T> for $map
         where
-            Self: GetRef<L>,
-            <Self as GetRef<L>>::Data: Clone,
+            Self: GetRef<L, T>,
+            T: Clone,
         {
-            type Data = <Self as GetRef<L>>::Data;
             #[inline]
-            fn get(&self, location: L) -> Self::Data {
+            fn get(&self, location: L) -> T {
                 self.get_ref(location).clone()
             }
         }
-        impl<L, $($type_params),*> GetUnchecked<L> for $map
+        impl<L, $($type_params),*> GetUnchecked<L, T> for $map
         where
-            Self: GetUncheckedRef<L>,
-            <Self as GetUncheckedRef<L>>::Data: Clone,
+            Self: GetUncheckedRef<L, T>,
+            T: Clone,
         {
-            type Data = <Self as GetUncheckedRef<L>>::Data;
             #[inline]
-            unsafe fn get_unchecked(&self, location: L) -> Self::Data {
+            unsafe fn get_unchecked(&self, location: L) -> T {
                 self.get_unchecked_ref(location).clone()
             }
         }

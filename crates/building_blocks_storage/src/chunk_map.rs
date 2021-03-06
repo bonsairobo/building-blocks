@@ -444,17 +444,15 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<N, T, Ch, Store> GetRef<PointN<N>> for ChunkMap<N, T, Ch, Store>
+impl<N, T, Ch, Store> GetRef<PointN<N>, T> for ChunkMap<N, T, Ch, Store>
 where
     PointN<N>: IntegerPoint<N>,
     Ch: Chunk<N, T>,
     Ch::Array: GetUncheckedRefRelease<PointN<N>, T>,
     Store: ChunkReadStorage<N, Ch>,
 {
-    type Data = T;
-
     #[inline]
-    fn get_ref(&self, p: PointN<N>) -> &Self::Data {
+    fn get_ref(&self, p: PointN<N>) -> &T {
         let key = self.indexer.chunk_key_containing_point(p);
 
         self.get_chunk(key)
@@ -463,17 +461,15 @@ where
     }
 }
 
-impl<N, T, Ch, Store> GetMut<PointN<N>> for ChunkMap<N, T, Ch, Store>
+impl<N, T, Ch, Store> GetMut<PointN<N>, T> for ChunkMap<N, T, Ch, Store>
 where
     PointN<N>: IntegerPoint<N>,
     Ch: Chunk<N, T>,
     Ch::Array: GetUncheckedMutRelease<PointN<N>, T>,
     Store: ChunkWriteStorage<N, Ch>,
 {
-    type Data = T;
-
     #[inline]
-    fn get_mut(&mut self, p: PointN<N>) -> &mut Self::Data {
+    fn get_mut(&mut self, p: PointN<N>) -> &mut T {
         let key = self.indexer.chunk_key_containing_point(p);
         let chunk = self.get_mut_chunk_or_insert_ambient(key);
 

@@ -21,8 +21,3 @@ where
         }
     }
 }
-
-pub trait FromRawBytes {
-    /// Returns a slice with proper size and alignment so that the raw bytes representation can be written.
-    unsafe fn writeable_slice(&mut self) -> &mut [u8];
-}

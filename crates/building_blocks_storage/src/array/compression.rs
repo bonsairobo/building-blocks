@@ -1,7 +1,4 @@
-use crate::{
-    ArrayN, BincodeCompression, BytesCompression, Compressed, Compression, IntoRawBytes,
-    MaybeCompressed,
-};
+use crate::{ArrayN, BincodeCompression, BytesCompression, Compressed, Compression, IntoRawBytes};
 
 use building_blocks_core::prelude::*;
 
@@ -88,7 +85,7 @@ pub type BincodeCompressedArray<N, T, B> = Compressed<BincodeArrayCompression<N,
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
-        use crate::$backend;
+        use crate::{$backend, MaybeCompressed};
 
         pub type MaybeCompressedArrayN<N, T, B = $backend> =
             MaybeCompressed<ArrayN<N, T>, Compressed<FastArrayCompression<N, T, B>>>;

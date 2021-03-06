@@ -1,7 +1,6 @@
 use crate::{
-    ArrayN, CacheEntry, ChunkMap, ChunkReadStorage, CompressedChunks, CompressibleChunkStorage,
-    Compression, FastArrayCompression, IterChunkKeys, LocalCache, LruChunkCacheEntries,
-    LruChunkCacheKeys,
+    CacheEntry, ChunkMap, ChunkReadStorage, CompressedChunks, CompressibleChunkStorage,
+    Compression, IterChunkKeys, LocalCache, LruChunkCacheEntries, LruChunkCacheKeys,
 };
 
 use building_blocks_core::prelude::*;
@@ -121,7 +120,7 @@ pub type CompressibleChunkMapReader<'a, N, T, Ch, Compr> =
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
-        use crate::$backend;
+        use crate::{$backend, ArrayN, FastArrayCompression};
 
         /// N-dimensional, single-channel `CompressibleChunkStorageReader`.
         pub type CompressibleChunkStorageReaderNx1<'a, N, T, B = $backend> =

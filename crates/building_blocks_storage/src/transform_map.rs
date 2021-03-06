@@ -48,63 +48,59 @@ use core::iter::{once, Once};
 
 /// A lattice map that delegates look-ups to a different lattice map, then transforms the result
 /// using some `Fn(In) -> Out`.
-pub struct TransformMap<'a, Delegate, F> {
+pub struct TransformMap<'a, Delegate, F, In> {
     delegate: &'a Delegate,
     transform: F,
+    // Needed to avoid unconstrained type parameters in certain trait impls.
+    marker: std::marker::PhantomData<In>,
 }
 
-impl<'a, Delegate, F> Clone for TransformMap<'a, Delegate, F>
+impl<'a, Delegate, F, In> Clone for TransformMap<'a, Delegate, F, In>
 where
     F: Clone,
 {
     #[inline]
     fn clone(&self) -> Self {
-        Self {
-            delegate: self.delegate,
-            transform: self.transform.clone(),
-        }
+        Self::new(self.delegate, self.transform.clone())
     }
 }
 
-impl<'a, Delegate, F> Copy for TransformMap<'a, Delegate, F> where F: Copy {}
+impl<'a, Delegate, F, In> Copy for TransformMap<'a, Delegate, F, In> where F: Copy {}
 
-impl<'a, Delegate, F> TransformMap<'a, Delegate, F> {
+impl<'a, Delegate, F, In> TransformMap<'a, Delegate, F, In> {
     #[inline]
     pub fn new(delegate: &'a Delegate, transform: F) -> Self {
         Self {
             delegate,
             transform,
+            marker: Default::default(),
         }
     }
 }
 
-impl<'a, Delegate, F, In, Out, Coord> Get<Coord> for TransformMap<'a, Delegate, F>
+impl<'a, Delegate, F, In, Out, Coord> Get<Coord, Out> for TransformMap<'a, Delegate, F, In>
 where
     F: Fn(In) -> Out,
-    Delegate: Get<Coord, Data = In>,
+    Delegate: Get<Coord, In>,
 {
-    type Data = Out;
-
     #[inline]
-    fn get(&self, c: Coord) -> Self::Data {
+    fn get(&self, c: Coord) -> Out {
         (self.transform)(self.delegate.get(c))
     }
 }
 
-impl<'a, Delegate, F, In, Out, Coord> GetUnchecked<Coord> for TransformMap<'a, Delegate, F>
+impl<'a, Delegate, F, In, Out, Coord> GetUnchecked<Coord, Out> for TransformMap<'a, Delegate, F, In>
 where
     F: Fn(In) -> Out,
-    Delegate: GetUnchecked<Coord, Data = In>,
+    Delegate: GetUnchecked<Coord, In>,
 {
-    type Data = Out;
-
     #[inline]
-    unsafe fn get_unchecked(&self, c: Coord) -> Self::Data {
+    unsafe fn get_unchecked(&self, c: Coord) -> Out {
         (self.transform)(self.delegate.get_unchecked(c))
     }
 }
 
-impl<'a, N, Delegate, F, In, Out, Coord> ForEach<N, Coord> for TransformMap<'a, Delegate, F>
+impl<'a, N, Delegate, F, In, Out, Coord> ForEach<N, Coord> for TransformMap<'a, Delegate, F, In>
 where
     F: Fn(In) -> Out,
     Delegate: ForEach<N, Coord, Item = In>,
@@ -118,7 +114,7 @@ where
     }
 }
 
-impl<'a, N, Delegate, F> Array<N> for TransformMap<'a, Delegate, F>
+impl<'a, N, Delegate, F, In> Array<N> for TransformMap<'a, Delegate, F, In>
 where
     Delegate: Array<N>,
 {
@@ -133,7 +129,7 @@ where
 // TODO: try to make a generic ReadExtent impl, it's hard because we need a way to define the src types as a function of the
 // delegate src types (kinda hints at a monad or HKT)
 
-impl<'a, N, F, In, Out> ReadExtent<'a, N> for TransformMap<'a, ArrayN<N, In>, F>
+impl<'a, N, F, In, Out> ReadExtent<'a, N> for TransformMap<'a, ArrayN<N, In>, F, In>
 where
     Self: Array<N> + Clone,
     F: Fn(In) -> Out,
@@ -150,7 +146,7 @@ where
 }
 
 impl<'a, N, F, In, Out, Ch, Store> ReadExtent<'a, N>
-    for TransformMap<'a, ChunkMap<N, In, Ch, Store>, F>
+    for TransformMap<'a, ChunkMap<N, In, Ch, Store>, F, In>
 where
     F: Copy + Fn(In) -> Out,
     In: 'a,
@@ -161,7 +157,7 @@ where
         SrcIter = ChunkCopySrcIter<N, In, &'a Ch>,
     >,
 {
-    type Src = TransformChunkCopySrc<'a, N, F, Ch, Out>;
+    type Src = TransformChunkCopySrc<'a, N, F, In, Out, Ch>;
     type SrcIter = TransformChunkCopySrcIter<'a, N, F, In, Ch>;
 
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
@@ -173,7 +169,8 @@ where
 }
 
 #[doc(hidden)]
-pub type TransformChunkCopySrc<'a, N, F, Ch, Out> = ChunkCopySrc<N, Out, TransformMap<'a, Ch, F>>;
+pub type TransformChunkCopySrc<'a, N, F, In, Out, Ch> =
+    ChunkCopySrc<N, Out, TransformMap<'a, Ch, F, In>>;
 
 #[doc(hidden)]
 pub struct TransformChunkCopySrcIter<'a, N, F, In, Ch> {
@@ -188,7 +185,7 @@ where
     In: 'a,
     Ch: 'a,
 {
-    type Item = (ExtentN<N>, TransformChunkCopySrc<'a, N, F, Ch, Out>);
+    type Item = (ExtentN<N>, TransformChunkCopySrc<'a, N, F, In, Out, Ch>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.chunk_iter.next().map(|(extent, chunk_src)| {

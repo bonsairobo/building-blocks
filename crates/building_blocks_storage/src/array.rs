@@ -255,7 +255,7 @@ where
     /// Create a new array for `extent` where each point's value is determined by the `filler` function.
     pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> T) -> Self
     where
-        ArrayN<N, MaybeUninit<T>>: GetMut<PointN<N>, Data = MaybeUninit<T>>,
+        ArrayN<N, MaybeUninit<T>>: GetMut<PointN<N>, MaybeUninit<T>>,
     {
         let mut array = unsafe { ArrayN::maybe_uninit(extent) };
 
@@ -371,163 +371,139 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<N, T, Store> GetRef<Stride> for ArrayN<N, T, Store>
+impl<N, T, Store> GetRef<Stride, T> for ArrayN<N, T, Store>
 where
     Store: Deref<Target = [T]>,
 {
-    type Data = T;
-
     #[inline]
-    fn get_ref(&self, stride: Stride) -> &Self::Data {
+    fn get_ref(&self, stride: Stride) -> &T {
         &self.values[stride.0]
     }
 }
 
-impl<N, T, Store> GetUncheckedRef<Stride> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedRef<Stride, T> for ArrayN<N, T, Store>
 where
     Store: Deref<Target = [T]>,
 {
-    type Data = T;
-
     #[inline]
-    unsafe fn get_unchecked_ref(&self, stride: Stride) -> &Self::Data {
+    unsafe fn get_unchecked_ref(&self, stride: Stride) -> &T {
         self.values.get_unchecked(stride.0)
     }
 }
 
-impl<N, T, Store> GetMut<Stride> for ArrayN<N, T, Store>
+impl<N, T, Store> GetMut<Stride, T> for ArrayN<N, T, Store>
 where
     Store: DerefMut<Target = [T]>,
 {
-    type Data = T;
-
     #[inline]
-    fn get_mut(&mut self, stride: Stride) -> &mut Self::Data {
+    fn get_mut(&mut self, stride: Stride) -> &mut T {
         &mut self.values[stride.0]
     }
 }
 
-impl<N, T, Store> GetUncheckedMut<Stride> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedMut<Stride, T> for ArrayN<N, T, Store>
 where
     Store: DerefMut<Target = [T]>,
 {
-    type Data = T;
-
     #[inline]
-    unsafe fn get_unchecked_mut(&mut self, stride: Stride) -> &mut Self::Data {
+    unsafe fn get_unchecked_mut(&mut self, stride: Stride) -> &mut T {
         self.values.get_unchecked_mut(stride.0)
     }
 }
 
-impl<N, T, Store> GetRef<Local<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetRef<Local<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetRef<Stride, Data = T>,
+    Self: Array<N> + GetRef<Stride, T>,
     PointN<N>: Copy,
 {
-    type Data = T;
-
     #[inline]
-    fn get_ref(&self, p: Local<N>) -> &Self::Data {
+    fn get_ref(&self, p: Local<N>) -> &T {
         self.get_ref(self.stride_from_local_point(p))
     }
 }
 
-impl<N, T, Store> GetMut<Local<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetMut<Local<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetMut<Stride, Data = T>,
+    Self: Array<N> + GetMut<Stride, T>,
     PointN<N>: Copy,
 {
-    type Data = T;
-
     #[inline]
-    fn get_mut(&mut self, p: Local<N>) -> &mut Self::Data {
+    fn get_mut(&mut self, p: Local<N>) -> &mut T {
         self.get_mut(self.stride_from_local_point(p))
     }
 }
 
-impl<N, T, Store> GetRef<PointN<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetRef<PointN<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetRef<Local<N>, Data = T>,
+    Self: Array<N> + GetRef<Local<N>, T>,
     PointN<N>: Point,
 {
-    type Data = T;
-
     #[inline]
-    fn get_ref(&self, p: PointN<N>) -> &Self::Data {
+    fn get_ref(&self, p: PointN<N>) -> &T {
         let local_p = p - self.extent().minimum;
 
         self.get_ref(Local(local_p))
     }
 }
 
-impl<N, T, Store> GetMut<PointN<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetMut<PointN<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetMut<Local<N>, Data = T>,
+    Self: Array<N> + GetMut<Local<N>, T>,
     PointN<N>: Point,
 {
-    type Data = T;
-
     #[inline]
-    fn get_mut(&mut self, p: PointN<N>) -> &mut Self::Data {
+    fn get_mut(&mut self, p: PointN<N>) -> &mut T {
         let local_p = p - self.extent().minimum;
 
-        GetMut::<Local<N>>::get_mut(self, Local(local_p))
+        self.get_mut(Local(local_p))
     }
 }
 
-impl<N, T, Store> GetUncheckedRef<Local<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedRef<Local<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetUncheckedRef<Stride, Data = T>,
+    Self: Array<N> + GetUncheckedRef<Stride, T>,
     PointN<N>: Copy,
 {
-    type Data = T;
-
     #[inline]
-    unsafe fn get_unchecked_ref(&self, p: Local<N>) -> &Self::Data {
+    unsafe fn get_unchecked_ref(&self, p: Local<N>) -> &T {
         self.get_unchecked_ref(self.stride_from_local_point(p))
     }
 }
 
-impl<N, T, Store> GetUncheckedMut<Local<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedMut<Local<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetUncheckedMut<Stride, Data = T>,
+    Self: Array<N> + GetUncheckedMut<Stride, T>,
     PointN<N>: Copy,
 {
-    type Data = T;
-
     #[inline]
-    unsafe fn get_unchecked_mut(&mut self, p: Local<N>) -> &mut Self::Data {
+    unsafe fn get_unchecked_mut(&mut self, p: Local<N>) -> &mut T {
         self.get_unchecked_mut(self.stride_from_local_point(p))
     }
 }
 
-impl<N, T, Store> GetUncheckedRef<PointN<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedRef<PointN<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetUncheckedRef<Local<N>, Data = T>,
+    Self: Array<N> + GetUncheckedRef<Local<N>, T>,
     PointN<N>: Point,
 {
-    type Data = T;
-
     #[inline]
-    unsafe fn get_unchecked_ref(&self, p: PointN<N>) -> &Self::Data {
+    unsafe fn get_unchecked_ref(&self, p: PointN<N>) -> &T {
         let local_p = p - self.extent().minimum;
 
         self.get_unchecked_ref(Local(local_p))
     }
 }
 
-impl<N, T, Store> GetUncheckedMut<PointN<N>> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedMut<PointN<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetUncheckedMut<Local<N>, Data = T>,
+    Self: Array<N> + GetUncheckedMut<Local<N>, T>,
     PointN<N>: Point,
 {
-    type Data = T;
-
     #[inline]
-    unsafe fn get_unchecked_mut(&mut self, p: PointN<N>) -> &mut Self::Data {
+    unsafe fn get_unchecked_mut(&mut self, p: PointN<N>) -> &mut T {
         let local_p = p - self.extent().minimum;
 
-        GetUncheckedMut::<Local<N>>::get_unchecked_mut(self, Local(local_p))
+        self.get_unchecked_mut(Local(local_p))
     }
 }
 
@@ -544,7 +520,7 @@ macro_rules! impl_array_for_each {
     (coords: $coords:ty; forwarder = |$p:ident, $stride:ident| $forward_coords:expr;) => {
         impl<N, T, Store> ForEach<N, $coords> for ArrayN<N, T, Store>
         where
-            Self: Get<Stride, Data = T> + GetUnchecked<Stride, Data = T>,
+            Self: Get<Stride, T> + GetUnchecked<Stride, T>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
         {
@@ -689,19 +665,19 @@ where
     }
 }
 
-impl<'a, N, T, Store, Map, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Map, F>>>
+impl<'a, N, T, Store, Map, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Map, F, T>>>
     for ArrayN<N, T, Store>
 where
     Self: Array<N> + GetUncheckedMutRelease<Stride, T>,
     T: Clone,
-    TransformMap<'a, Map, F>: Array<N> + GetUncheckedRelease<Stride, T>,
+    TransformMap<'a, Map, F, T>: Array<N> + GetUncheckedRelease<Stride, T>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
 {
     fn write_extent(
         &mut self,
         extent: &ExtentN<N>,
-        src_array: ArrayCopySrc<TransformMap<'a, Map, F>>,
+        src_array: ArrayCopySrc<TransformMap<'a, Map, F, T>>,
     ) {
         // It is assumed by the interface that extent is a subset of the src array, so we only need to intersect with the
         // destination.

@@ -276,12 +276,17 @@ pub type LruChunkCacheKeys<'a, N, Ch> = LruCacheKeys<'a, PointN<N>, Ch, Compress
 pub type LruChunkCacheEntries<'a, N, Ch> = LruCacheEntries<'a, PointN<N>, Ch, CompressedLocation>;
 pub type LruChunkCacheIntoIter<N, Ch> = LruCacheIntoIter<PointN<N>, Ch, CompressedLocation>;
 
+pub type CompressibleChunkStorageNx1<N, T, B> =
+    CompressibleChunkStorage<N, FastArrayCompression<N, T, B>>;
+
+/// An N-dimensional, single-channel `CompressibleChunkMap`.
+pub type CompressibleChunkMapNx1<N, T, B> =
+    CompressibleChunkMap<N, T, ArrayN<N, T>, FastArrayCompression<N, T, B>>;
+
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
         use crate::$backend;
 
-        pub type CompressibleChunkStorageNx1<N, T, B = $backend> =
-            CompressibleChunkStorage<N, FastArrayCompression<N, T, B>>;
         /// 2-dimensional, single-channel `CompressibleChunkStorage`.
         pub type CompressibleChunkStorage2x1<T, B = $backend> =
             CompressibleChunkStorageNx1<[i32; 2], T, B>;
@@ -289,9 +294,6 @@ macro_rules! define_conditional_aliases {
         pub type CompressibleChunkStorage3x1<T, B = $backend> =
             CompressibleChunkStorageNx1<[i32; 3], T, B>;
 
-        /// An N-dimensional, single-channel `CompressibleChunkMap`.
-        pub type CompressibleChunkMapNx1<N, T, B = $backend> =
-            CompressibleChunkMap<N, T, ArrayN<N, T>, FastArrayCompression<N, T, B>>;
         /// A 2-dimensional, single-channel `CompressibleChunkMap`.
         pub type CompressibleChunkMap2x1<T, B = $backend> = CompressibleChunkMapNx1<[i32; 2], T, B>;
         /// A 3-dimensional, single-channel `CompressibleChunkMap`.

@@ -60,7 +60,7 @@ fn setup(
             transform: Transform::from_translation(Vec3::new(0.0, 100.0, 100.0)),
             ..Default::default()
         })
-        .spawn(Camera3dBundle {
+        .spawn(PerspectiveCameraBundle {
             transform: Transform::from_translation(Vec3::new(0.0, 0.0, 150.0))
                 .looking_at(Vec3::new(0.0, 10.0, 0.0), Vec3::unit_y()),
             ..Default::default()

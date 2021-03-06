@@ -1,6 +1,6 @@
 use crate::{
     prelude::*, ArrayIndexer, ArrayN, BytesCompression, ChunkDownsampler, ChunkHashMap,
-    ChunkMapNx1, OctreeChunkIndex, OctreeNode, VisitStatus,
+    ChunkMapNx1, CompressibleChunkMapNx1, OctreeChunkIndex, OctreeNode, VisitStatus,
 };
 
 use building_blocks_core::prelude::*;
@@ -224,7 +224,7 @@ where
     }
 
     pub fn with_lod0_chunk_map(
-        lod0_chunk_map: CompressibleChunkMap<N, T, B>,
+        lod0_chunk_map: CompressibleChunkMapNx1<N, T, B>,
         num_lods: u8,
     ) -> Self {
         let mut pyramid = Self::new(

@@ -92,11 +92,12 @@ pub mod prelude {
         all(not(feature = "lz4"), feature = "snap"),
     ))]
     pub use super::{
-        CompressibleChunkMap2, CompressibleChunkMap3, CompressibleChunkMapReader2,
-        CompressibleChunkMapReader3, CompressibleChunkPyramid2, CompressibleChunkPyramid3,
-        CompressibleChunkStorage2, CompressibleChunkStorage3, CompressibleChunkStorageReader2,
-        CompressibleChunkStorageReader3, MaybeCompressedChunk2x1, MaybeCompressedChunk3x1,
-        MaybeCompressedChunkRef2x1, MaybeCompressedChunkRef3x1,
+        CompressibleChunkMap2x1, CompressibleChunkMap3x1, CompressibleChunkMapReader2x1,
+        CompressibleChunkMapReader3x1, CompressibleChunkPyramid2, CompressibleChunkPyramid3,
+        CompressibleChunkStorage2x1, CompressibleChunkStorage3x1,
+        CompressibleChunkStorageReader2x1, CompressibleChunkStorageReader3x1,
+        MaybeCompressedChunk2x1, MaybeCompressedChunk3x1, MaybeCompressedChunkRef2x1,
+        MaybeCompressedChunkRef3x1,
     };
 }
 

@@ -116,30 +116,36 @@ pub type LocalChunkCache2<Ch> = LocalChunkCache<[i32; 2], Ch>;
 pub type LocalChunkCache3<Ch> = LocalChunkCache<[i32; 3], Ch>;
 
 /// A `ChunkMap` backed by a `CompressibleChunkStorageReader`.
-pub type CompressibleChunkMapReader<'a, N, T, B> = ChunkMap<
-    N,
-    T,
-    ArrayN<N, T>,
-    CompressibleChunkStorageReader<'a, N, FastChunkCompression<N, T, B>>,
->;
+pub type CompressibleChunkMapReader<'a, N, T, Ch, Compr> =
+    ChunkMap<N, T, Ch, CompressibleChunkStorageReader<'a, N, Compr>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
         use crate::$backend;
 
-        /// 2-dimensional `CompressibleChunkStorageReader`.
-        pub type CompressibleChunkStorageReader2<'a, T, B = $backend> =
-            CompressibleChunkStorageReader<'a, [i32; 2], FastChunkCompression<[i32; 2], T, B>>;
-        /// 3-dimensional `CompressibleChunkStorageReader`.
-        pub type CompressibleChunkStorageReader3<'a, T, B = $backend> =
-            CompressibleChunkStorageReader<'a, [i32; 3], FastChunkCompression<[i32; 3], T, B>>;
+        /// N-dimensional, single-channel `CompressibleChunkStorageReader`.
+        pub type CompressibleChunkStorageReaderNx1<'a, N, T, B = $backend> =
+            CompressibleChunkStorageReader<'a, N, FastChunkCompression<N, T, B>>;
+        /// 2-dimensional, single-channel `CompressibleChunkStorageReader`.
+        pub type CompressibleChunkStorageReader2x1<'a, T, B = $backend> =
+            CompressibleChunkStorageReaderNx1<'a, [i32; 2], T, B>;
+        /// 3-dimensional, single-channel `CompressibleChunkStorageReader`.
+        pub type CompressibleChunkStorageReader3x1<'a, T, B = $backend> =
+            CompressibleChunkStorageReaderNx1<'a, [i32; 3], T, B>;
 
-        /// 2-dimensional `CompressibleChunkMapReader`.
-        pub type CompressibleChunkMapReader2<'a, T, B = $backend> =
-            CompressibleChunkMapReader<'a, [i32; 2], T, B>;
-        /// 3-dimensional `CompressibleChunkMapReader`.
-        pub type CompressibleChunkMapReader3<'a, T, B = $backend> =
-            CompressibleChunkMapReader<'a, [i32; 3], T, B>;
+        /// N-dimensional, single-channel `CompressibleChunkMapReader`.
+        pub type CompressibleChunkMapReaderNx1<'a, N, T, B = $backend> = ChunkMap<
+            N,
+            T,
+            ArrayN<N, T>,
+            CompressibleChunkStorageReader<'a, N, FastChunkCompression<N, T, B>>,
+        >;
+        /// 2-dimensional, single-channel `CompressibleChunkMapReader`.
+        pub type CompressibleChunkMapReader2x1<'a, T, B = $backend> =
+            CompressibleChunkMapReaderNx1<'a, [i32; 2], T, B>;
+        /// 3-dimensional, single-channel `CompressibleChunkMapReader`.
+        pub type CompressibleChunkMapReader3x1<'a, T, B = $backend> =
+            CompressibleChunkMapReaderNx1<'a, [i32; 3], T, B>;
     };
 }
 

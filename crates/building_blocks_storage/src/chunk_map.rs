@@ -378,10 +378,10 @@ where
     #[inline]
     pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: T)
     where
-        for<'r> Self: ForEachMut<'r, N, (), Item = &'r mut T>,
+        for<'r> Self: ForEachMut<'r, N, PointN<N>, Item = &'r mut T>,
         T: Clone,
     {
-        self.for_each_mut(extent, |_, v| *v = value.clone());
+        self.for_each_mut(extent, |_p, v| *v = value.clone());
     }
 }
 

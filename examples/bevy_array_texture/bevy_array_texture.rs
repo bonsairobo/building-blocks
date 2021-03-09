@@ -9,11 +9,11 @@ use bevy::{
         texture::{AddressMode, SamplerDescriptor},
     },
 };
-use building_blocks_core::{Extent3i, PointN};
-use building_blocks_mesh::{
+use building_blocks::core::prelude::*;
+use building_blocks::mesh::{
     greedy_quads, GreedyQuadsBuffer, IsOpaque, MergeVoxel, OrientedCubeFace, UnorientedQuad,
 };
-use building_blocks_storage::{Array3x1, Get, IsEmpty};
+use building_blocks::storage::{Array3x1, Get, IsEmpty};
 use camera_rotation::{camera_rotation_system, CameraRotationState};
 
 const APP_STAGE: &str = "app_stage";
@@ -218,8 +218,9 @@ void main() {
     v_Normal = mat3(Model) * Vertex_Normal;
     v_Position = (Model * vec4(Vertex_Position, 1.0)).xyz;
 
-    // Gets used here and passed to the fragment shader
-    v_Uv = vec3(Vertex_Uv, Vertex_Layer); 
+    // Gets used here and passed to the fragment shader.
+    // Rescale the UVs to make the example look better.
+    v_Uv = vec3(0.1 * Vertex_Uv, Vertex_Layer);
 
     gl_Position = ViewProj * vec4(v_Position, 1.0);
 }

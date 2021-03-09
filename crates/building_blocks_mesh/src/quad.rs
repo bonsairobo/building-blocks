@@ -184,4 +184,37 @@ impl UnorientedQuad {
             [self.width as f32, self.height as f32],
         ]
     }
+
+    /// Returns the UV coordinates of the 4 corners of the quad. Returns in the same order as
+    /// `OrientedCubeFace::quad_corners`.
+    ///
+    /// This returns the UVs so that the texture on all faces of a voxel is upright and not mirrored.
+    /// Assumes that +Y is up.
+    pub fn axis_tex_coords(&self, face: &OrientedCubeFace) -> [[f32; 2]; 4] {
+        let normal = match face.permutation {
+            Axis3Permutation::XYZ | Axis3Permutation::XZY => Axis3::X,
+            Axis3Permutation::YXZ | Axis3Permutation::YZX => Axis3::Y,
+            Axis3Permutation::ZXY | Axis3Permutation::ZYX => Axis3::Z,
+        };
+
+        let flip = match (normal, face.n_sign < 0) {
+            (Axis3::Z, sign) => sign,
+            (_, sign) => !sign,
+        };
+        if flip {
+            [
+                [self.width as f32, self.height as f32],
+                [0.0, self.height as f32],
+                [self.width as f32, 0.0],
+                [0.0, 0.0],
+            ]
+        } else {
+            [
+                [0.0, self.height as f32],
+                [self.width as f32, self.height as f32],
+                [0.0, 0.0],
+                [self.width as f32, 0.0],
+            ]
+        }
+    }
 }

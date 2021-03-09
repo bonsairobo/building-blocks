@@ -79,3 +79,8 @@ required-features = ["mesh", "sdfu"]
 name = "bevy_minimal"
 path = "examples/bevy_minimal/bevy_minimal.rs"
 required-features = ["mesh", "sdfu"]
+
+[[example]]
+name = "bevy_array_texture"
+path = "examples/bevy_array_texture/bevy_array_texture.rs"
+required-features = ["mesh"]

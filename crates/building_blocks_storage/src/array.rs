@@ -135,9 +135,9 @@ pub struct ArrayNx1<N, T, Store = Vec<T>> {
     marker: std::marker::PhantomData<T>,
 }
 
-/// A 2-dimensional `Array`.
+/// A 2-dimensional, 1-channel `Array`.
 pub type Array2x1<T, Store = Vec<T>> = ArrayNx1<[i32; 2], T, Store>;
-/// A 3-dimensional `Array`.
+/// A 3-dimensional, 1-channel `Array`.
 pub type Array3x1<T, Store = Vec<T>> = ArrayNx1<[i32; 3], T, Store>;
 
 impl<N, T, Store> ArrayNx1<N, T, Store> {

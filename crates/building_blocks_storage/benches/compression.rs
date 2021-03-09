@@ -93,9 +93,9 @@ criterion_main!(lz4_benches, snappy_benches);
 
 const ARRAY_SIZES: [i32; 3] = [16, 32, 64];
 
-fn set_up_array(size: i32) -> Array3<i32> {
+fn set_up_array(size: i32) -> Array3x1<i32> {
     let array_extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
 
     // Might be tough to compress this.
-    Array3::fill_with(array_extent, |p: Point3i| p.x() % 3 + p.y() % 3 + p.z() % 3)
+    Array3x1::fill_with(array_extent, |p: Point3i| p.x() % 3 + p.y() % 3 + p.z() % 3)
 }

@@ -52,7 +52,7 @@
 //! let sphere_sdf = Sphere::new(radius).translate(center);
 //!
 //! let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(50));
-//! let mut samples = Array3::fill_with(extent, |p| sphere_sdf.dist(Point3f::from(p)));
+//! let mut samples = Array3x1::fill_with(extent, |p| sphere_sdf.dist(Point3f::from(p)));
 //!
 //! let mut mesh_buffer = SurfaceNetsBuffer::default();
 //! let voxel_size = 2.0; // length of the edge of a voxel
@@ -145,7 +145,7 @@
 //! ### VOX Files
 //!
 //! ".VOX" files are supported via the [`dot_vox`](https://docs.rs/dot_vox/) crate. Enable the `dot_vox` feature to expose the
-//! generic `encode_vox` function and `Array3::decode_vox` constructor.
+//! generic `encode_vox` function and `Array3x1::decode_vox` constructor.
 //!
 //! ### Images
 //!

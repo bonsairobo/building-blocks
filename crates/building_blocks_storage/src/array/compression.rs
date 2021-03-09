@@ -91,8 +91,8 @@ macro_rules! define_conditional_aliases {
 
         pub type MaybeCompressedArrayNx1<N, T, B = $backend> =
             MaybeCompressed<ArrayNx1<N, T>, Compressed<FastArrayCompression<N, T, B>>>;
-        pub type MaybeCompressedArray2<T, B = $backend> = MaybeCompressedArrayNx1<[i32; 2], T, B>;
-        pub type MaybeCompressedArray3<T, B = $backend> = MaybeCompressedArrayNx1<[i32; 3], T, B>;
+        pub type MaybeCompressedArray2x1<T, B = $backend> = MaybeCompressedArrayNx1<[i32; 2], T, B>;
+        pub type MaybeCompressedArray3x1<T, B = $backend> = MaybeCompressedArrayNx1<[i32; 3], T, B>;
 
         pub type MaybeCompressedArrayRefN<'a, N, T, B = $backend> =
             MaybeCompressed<&'a ArrayNx1<N, T>, &'a Compressed<FastArrayCompression<N, T, B>>>;

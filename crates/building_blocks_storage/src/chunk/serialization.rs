@@ -130,8 +130,8 @@ mod test {
 
     fn do_serialize_and_deserialize_round_trip_test<B, Store>(storage: Store, compression: B)
     where
-        Store:
-            ChunkWriteStorage<[i32; 3], Array3<i32>> + IntoIterator<Item = (Point3i, Array3<i32>)>,
+        Store: ChunkWriteStorage<[i32; 3], Array3x1<i32>>
+            + IntoIterator<Item = (Point3i, Array3x1<i32>)>,
         B: BytesCompression + Copy + DeserializeOwned + Serialize,
     {
         let mut map = ChunkMap::build_with_write_storage(CHUNK_SHAPE, storage);
@@ -142,7 +142,7 @@ mod test {
             map.take_storage(),
         ));
         let serialized: Vec<u8> = bincode::serialize(&serializable).unwrap();
-        let deserialized: SerializableChunks<[i32; 3], Array3<i32>, B> =
+        let deserialized: SerializableChunks<[i32; 3], Array3x1<i32>, B> =
             bincode::deserialize(&serialized).unwrap();
 
         let mut storage = SmallKeyHashMap::default();

@@ -18,7 +18,7 @@ fn surface_nets_sine_sdf(c: &mut Criterion) {
                             Point3i::fill(-radius),
                             Point3i::fill(radius),
                         );
-                        let mut samples = Array3::fill(sample_extent, Voxel(0.0));
+                        let mut samples = Array3x1::fill(sample_extent, Voxel(0.0));
                         copy_extent(&sample_extent, &sine_sdf, &mut samples);
 
                         // Do a single run first to allocate the buffer to the right size.

@@ -13,7 +13,7 @@
 //! struct BigData([u8; 9001]);
 //!
 //! let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
-//! let mut index_map = Array3::fill(extent, 0u8);
+//! let mut index_map = Array3x1::fill(extent, 0u8);
 //! *index_map.get_mut(PointN([0, 0, 1])) = 1;
 //!
 //! let palette = vec![BigData([1; 9001]), BigData([2; 9001])];
@@ -30,7 +30,7 @@
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
 //! # let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
-//! let src = Array3::fill(extent, 0);
+//! let src = Array3x1::fill(extent, 0);
 //! let chunk_shape = Point3i::fill(4);
 //! let mut dst = ChunkMap3x1::build_with_hash_map_storage(chunk_shape);
 //! let tfm = TransformMap::new(&src, |value: i32| value + 1);
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn transform_accessors() {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
-        let inner_map: Array3<usize> = Array3::fill(extent, 0usize);
+        let inner_map: Array3x1<usize> = Array3x1::fill(extent, 0usize);
 
         let palette = vec![1, 2, 3];
         let outer_map = TransformMap::new(&inner_map, |i: usize| palette[i]);
@@ -243,7 +243,7 @@ mod tests {
     #[test]
     fn copy_from_transformed_array() {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
-        let src = Array3::fill(extent, 0);
+        let src = Array3x1::fill(extent, 0);
         let mut dst = ChunkMap3x1::build_with_hash_map_storage(CHUNK_SHAPE);
         let tfm = TransformMap::new(&src, |value: i32| value + 1);
         copy_extent(&extent, &tfm, &mut dst);
@@ -253,7 +253,7 @@ mod tests {
     #[test]
     fn copy_from_transformed_chunk_map_reader() {
         let src_extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
-        let src_array = Array3::fill(src_extent, 1);
+        let src_array = Array3x1::fill(src_extent, 1);
         let mut src = ChunkMap3x1::build_with_hash_map_storage(CHUNK_SHAPE);
         copy_extent(&src_extent, &src_array, &mut src);
 

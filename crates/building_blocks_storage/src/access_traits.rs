@@ -8,7 +8,7 @@
 //! use building_blocks_storage::prelude::*;
 //!
 //! let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(100));
-//! let mut map = Array3::fill(extent, 0);
+//! let mut map = Array3x1::fill(extent, 0);
 //!
 //! for i in 0..extent.num_points() {
 //!     // Use the `GetMut<Stride>` trait impl of the map.
@@ -25,7 +25,7 @@
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
 //! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(100));
-//! # let mut map = Array3::fill(extent, 0);
+//! # let mut map = Array3x1::fill(extent, 0);
 //! let subextent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(98));
 //! // Use the `ForEachMut<[i32; 3], Stride>` trait.
 //! map.for_each_mut(&subextent, |_s: Stride, value| { *value = 2 });
@@ -42,7 +42,7 @@
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
 //! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(100));
-//! # let mut map = Array3::fill(extent, 0);
+//! # let mut map = Array3x1::fill(extent, 0);
 //! # let subextent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(98));
 //! // Create another map to copy to/from. We use a `ChunkHashMap`, but any map that implements
 //! // `WriteExtent` can be a copy destination, and any map that implements `ReadExtent` can be a

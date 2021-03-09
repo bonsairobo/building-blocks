@@ -104,8 +104,8 @@ where
 impl<T, Store> ChunkPyramid3<T, Store>
 where
     T: 'static + Clone,
-    Array3<T>: Chunk<[i32; 3], T>,
-    Store: ChunkWriteStorage<[i32; 3], Array3<T>>,
+    Array3x1<T>: Chunk<[i32; 3], T>,
+    Store: ChunkWriteStorage<[i32; 3], Array3x1<T>>,
 {
     pub fn downsample_chunks_for_extent_all_lods_with_index<Samp>(
         &mut self,

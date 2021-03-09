@@ -66,7 +66,7 @@
 //! // doesn't support random indexing by `Stride`. Instead, assuming that your query spans multiple
 //! // chunks, you should copy the extent into a dense map first. (The copy is fast).
 //! let query_extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(32));
-//! let mut dense_map = Array3::fill(query_extent, ambient_value);
+//! let mut dense_map = Array3x1::fill(query_extent, ambient_value);
 //! copy_extent(&query_extent, &map, &mut dense_map);
 //! ```
 //!
@@ -599,7 +599,7 @@ pub type ChunkCopySrcIter<N, T, Ch> = std::vec::IntoIter<(ExtentN<N>, ChunkCopyS
 mod tests {
     use super::*;
 
-    use crate::{copy_extent, Array3, Get};
+    use crate::{copy_extent, Array3x1, Get};
 
     use building_blocks_core::prelude::*;
 
@@ -646,7 +646,7 @@ mod tests {
     #[test]
     fn copy_extent_from_array_then_read() {
         let extent_to_copy = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(80));
-        let array = Array3::fill(extent_to_copy, 1);
+        let array = Array3x1::fill(extent_to_copy, 1);
 
         let mut map = ChunkMap3x1::build_with_hash_map_storage(CHUNK_SHAPE);
 

@@ -16,7 +16,7 @@ pub struct GreedyQuadsBuffer {
 
     // A single array is used for the visited mask because it allows us to index by the same strides as the voxels array. It
     // also only requires a single allocation.
-    visited: Array3<bool>,
+    visited: Array3x1<bool>,
 }
 
 /// A set of quads that share an orientation.
@@ -52,7 +52,7 @@ impl GreedyQuadsBuffer {
 
         Self {
             quad_groups,
-            visited: Array3::fill(extent, false),
+            visited: Array3x1::fill(extent, false),
         }
     }
 
@@ -62,7 +62,7 @@ impl GreedyQuadsBuffer {
         }
 
         if extent.shape != self.visited.extent().shape {
-            self.visited = Array3::fill(extent, false);
+            self.visited = Array3x1::fill(extent, false);
         }
         self.visited.set_minimum(extent.minimum);
     }
@@ -131,7 +131,7 @@ pub fn greedy_quads_with_merge_strategy<A, T, Merger>(
 fn greedy_quads_for_group<A, T, Merger>(
     voxels: &A,
     interior: Extent3i,
-    visited: &mut Array3<bool>,
+    visited: &mut Array3x1<bool>,
     quad_group: &mut QuadGroup,
 ) where
     A: IndexedArray<[i32; 3]>
@@ -242,7 +242,7 @@ fn face_needs_mesh<A, T>(
     voxel_stride: Stride,
     visibility_offset: Stride,
     voxels: &A,
-    visited: &Array3<bool>,
+    visited: &Array3x1<bool>,
 ) -> bool
 where
     A: GetUncheckedRelease<Stride, T>,
@@ -303,7 +303,7 @@ pub trait MergeStrategy {
         max_height: i32,
         face_strides: &FaceStrides,
         voxels: &A,
-        visited: &Array3<bool>,
+        visited: &Array3x1<bool>,
     ) -> (i32, i32)
     where
         A: IndexedArray<[i32; 3]> + GetUncheckedRelease<Stride, Self::Voxel>,
@@ -343,7 +343,7 @@ where
         max_height: i32,
         face_strides: &FaceStrides,
         voxels: &A,
-        visited: &Array3<bool>,
+        visited: &Array3x1<bool>,
     ) -> (i32, i32)
     where
         A: GetUncheckedRelease<Stride, T>,
@@ -391,7 +391,7 @@ where
 impl<T> VoxelMerger<T> {
     fn get_row_width<A>(
         voxels: &A,
-        visited: &Array3<bool>,
+        visited: &Array3x1<bool>,
         quad_merge_voxel_value: &T::VoxelValue,
         visibility_offset: Stride,
         start_stride: Stride,

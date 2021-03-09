@@ -22,7 +22,7 @@
 //! use building_blocks_storage::prelude::*;
 //!
 //! let array_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
-//! let mut array = Array3::fill(array_extent, 0);
+//! let mut array = Array3x1::fill(array_extent, 0);
 //!
 //! // Write all points in the extent to the same value.
 //! let write_extent = Extent3i::from_min_and_lub(Point3i::fill(10), Point3i::fill(20));
@@ -47,7 +47,7 @@
 //! # use building_blocks_storage::prelude::*;
 //! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
 //! // Use a more interesting data set, just to show off this constructor.
-//! let mut array = Array3::fill_with(extent, |p| if p.x() % 2 == 0 { 1 } else { 0 });
+//! let mut array = Array3x1::fill_with(extent, |p| if p.x() % 2 == 0 { 1 } else { 0 });
 //!
 //! let subextent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(62));
 //!
@@ -81,19 +81,19 @@
 //! # use building_blocks_storage::prelude::*;
 //! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
 //! // Borrow `array`'s values for the lifetime of `other_array`.
-//! let array = Array3::fill(extent, 1);
-//! let other_array = Array3::new(extent, array.values_slice());
+//! let array = Array3x1::fill(extent, 1);
+//! let other_array = Array3x1::new(extent, array.values_slice());
 //! assert_eq!(other_array.get(Stride(0)), 1);
 //!
 //! // A stack-allocated array.
 //! let mut data = [1; 64 * 64 * 64];
-//! let mut stack_array = Array3::new(extent, &mut data[..]);
+//! let mut stack_array = Array3x1::new(extent, &mut data[..]);
 //! *stack_array.get_mut(Stride(0)) = 2;
 //! assert_eq!(data[0], 2);
 //!
 //! // A boxed array.
 //! let data: Box<[u32]> = Box::new([1; 64 * 64 * 64]); // must forget the size
-//! let box_array = Array3::new(extent, data);
+//! let box_array = Array3x1::new(extent, data);
 //! box_array.for_each(&extent, |p: Point3i, value| assert_eq!(value, 1));
 //! ```
 
@@ -136,9 +136,9 @@ pub struct ArrayNx1<N, T, Store = Vec<T>> {
 }
 
 /// A 2-dimensional `Array`.
-pub type Array2<T, Store = Vec<T>> = ArrayNx1<[i32; 2], T, Store>;
+pub type Array2x1<T, Store = Vec<T>> = ArrayNx1<[i32; 2], T, Store>;
 /// A 3-dimensional `Array`.
-pub type Array3<T, Store = Vec<T>> = ArrayNx1<[i32; 3], T, Store>;
+pub type Array3x1<T, Store = Vec<T>> = ArrayNx1<[i32; 3], T, Store>;
 
 impl<N, T, Store> ArrayNx1<N, T, Store> {
     /// Moves the raw extent and values storage out of `self`.
@@ -716,14 +716,14 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{copy_extent, Array2, Array3, Get, GetUnchecked};
+    use crate::{copy_extent, Array2x1, Array3x1, Get, GetUnchecked};
 
     use building_blocks_core::{Extent2, Extent3};
 
     #[test]
     fn fill_and_get_2d() {
         let extent = Extent2::from_min_and_shape(PointN([1, 1]), PointN([10, 10]));
-        let mut array = Array2::fill(extent, 0);
+        let mut array = Array2x1::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 100);
         *array.get_mut(Stride(0)) = 1;
 
@@ -749,7 +749,7 @@ mod tests {
     #[test]
     fn fill_and_get_3d() {
         let extent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
-        let mut array = Array3::fill(extent, 0);
+        let mut array = Array3x1::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 1000);
         *array.get_mut(Stride(0)) = 1;
 
@@ -778,7 +778,7 @@ mod tests {
     #[test]
     fn fill_and_for_each_2d() {
         let extent = Extent2::from_min_and_shape(Point2i::fill(1), Point2i::fill(10));
-        let mut array = Array2::fill(extent, 0);
+        let mut array = Array2x1::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 100);
         *array.get_mut(Stride(0)) = 1;
 
@@ -794,7 +794,7 @@ mod tests {
     #[test]
     fn fill_and_for_each_3d() {
         let extent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
-        let mut array = Array3::fill(extent, 0);
+        let mut array = Array3x1::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 1000);
         *array.get_mut(Stride(0)) = 1;
 
@@ -810,7 +810,7 @@ mod tests {
     #[test]
     fn uninitialized() {
         let extent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
-        let mut array: Array3<MaybeUninit<i32>> = unsafe { Array3::maybe_uninit(extent) };
+        let mut array: Array3x1<MaybeUninit<i32>> = unsafe { Array3x1::maybe_uninit(extent) };
 
         for p in extent.iter_points() {
             unsafe {
@@ -828,14 +828,14 @@ mod tests {
     #[test]
     fn copy() {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
-        let mut array = Array3::fill(extent, 0);
+        let mut array = Array3x1::fill(extent, 0);
 
         let subextent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(5));
         for p in subextent.iter_points() {
             *array.get_mut(p) = p.x() + p.y() + p.z();
         }
 
-        let mut other_array = Array3::fill(extent, 0);
+        let mut other_array = Array3x1::fill(extent, 0);
         copy_extent(&subextent, &array, &mut other_array);
 
         assert_eq!(array, other_array);
@@ -844,8 +844,8 @@ mod tests {
     #[test]
     fn multichannel_mut_iter() {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
-        let mut array1 = Array3::fill(extent, 0);
-        let mut array2 = Array3::fill(extent, false);
+        let mut array1 = Array3x1::fill(extent, 0);
+        let mut array2 = Array3x1::fill(extent, false);
 
         (&mut array1, &mut array2).for_each_mut(&extent, |_p: Point3i, (val1, val2)| {
             *val1 = 1;

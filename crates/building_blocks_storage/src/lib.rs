@@ -75,7 +75,7 @@ pub type SmallKeyBuildHasher = ahash::RandomState;
 
 pub mod prelude {
     pub use super::{
-        copy_extent, Array2, Array3, ArrayNx1, Chunk, ChunkHashMap2, ChunkHashMap3,
+        copy_extent, Array2x1, Array3x1, ArrayNx1, Chunk, ChunkHashMap2, ChunkHashMap3,
         ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkIndexer, ChunkMap, ChunkMap2, ChunkMap2x1,
         ChunkMap3, ChunkMap3x1, ChunkPyramid2, ChunkPyramid3, ChunkReadStorage, ChunkWriteStorage,
         Compressed, CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
@@ -100,7 +100,7 @@ pub mod prelude {
         CompressibleChunkMapReader3x1, CompressibleChunkPyramid2, CompressibleChunkPyramid3,
         CompressibleChunkStorage2x1, CompressibleChunkStorage3x1,
         CompressibleChunkStorageReader2x1, CompressibleChunkStorageReader3x1,
-        MaybeCompressedArray2, MaybeCompressedArray3, MaybeCompressedArrayRef2,
+        MaybeCompressedArray2x1, MaybeCompressedArray3x1, MaybeCompressedArrayRef2,
         MaybeCompressedArrayRef3,
     };
 }

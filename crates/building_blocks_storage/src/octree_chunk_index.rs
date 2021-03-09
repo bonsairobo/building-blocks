@@ -1,6 +1,7 @@
 use crate::{
-    active_clipmap_lod_chunks, Array3, ChunkMap3, ChunkedOctreeSet, ClipMapConfig3, ClipMapUpdate3,
-    GetMut, IterChunkKeys, LodChunkKey3, LodChunkUpdate3, OctreeSet, SmallKeyHashMap,
+    active_clipmap_lod_chunks, Array3x1, ChunkMap3, ChunkedOctreeSet, ClipMapConfig3,
+    ClipMapUpdate3, GetMut, IterChunkKeys, LodChunkKey3, LodChunkUpdate3, OctreeSet,
+    SmallKeyHashMap,
 };
 
 use building_blocks_core::prelude::*;
@@ -77,7 +78,7 @@ impl OctreeChunkIndex {
         for &chunk_key in chunk_keys {
             let superchunk_key = chunk_key & superchunk_mask;
             let bitset = superchunk_bitsets.entry(superchunk_key).or_insert_with(|| {
-                Array3::fill(
+                Array3x1::fill(
                     Extent3i::from_min_and_shape(
                         superchunk_key >> chunk_log2,
                         superchunk_shape_in_chunks,

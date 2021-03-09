@@ -67,7 +67,7 @@ mod test {
 
     #[test]
     fn find_surface_points_cube_side_length_3() {
-        let mut map = Array3::fill(
+        let mut map = Array3x1::fill(
             Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(5)),
             Voxel(false),
         );

@@ -12,7 +12,7 @@ fn greedy_quads_terrace(c: &mut Criterion) {
                 || {
                     let extent =
                         Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(size)).padded(1);
-                    let mut voxels = Array3::fill(extent, CubeVoxel(false));
+                    let mut voxels = Array3x1::fill(extent, CubeVoxel(false));
                     for i in 0..size {
                         let level = Extent3i::from_min_and_shape(
                             Point3i::fill(i),

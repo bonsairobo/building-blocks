@@ -24,7 +24,7 @@
 //! use building_blocks_storage::{octree_set::*, prelude::*};
 //!
 //! let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
-//! let voxels = Array3::fill(extent, true); // boring example
+//! let voxels = Array3x1::fill(extent, true); // boring example
 //! let octree = OctreeSet::from_array3(&voxels, Extent3i::from_min_and_shape(Point3i::fill(8), Point3i::fill(16)));
 //!
 //! octree.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
@@ -1031,7 +1031,7 @@ mod tests {
     struct UpdateExtentTest {
         domain: Extent3i,
         set: OctreeSet,
-        expected_array_set: Array3<bool>,
+        expected_array_set: Array3x1<bool>,
     }
 
     impl UpdateExtentTest {
@@ -1039,7 +1039,7 @@ mod tests {
             Self {
                 domain,
                 set: OctreeSet::new_empty(domain),
-                expected_array_set: Array3::fill(domain, false),
+                expected_array_set: Array3x1::fill(domain, false),
             }
         }
 
@@ -1047,7 +1047,7 @@ mod tests {
             Self {
                 domain,
                 set: OctreeSet::new_full(domain),
-                expected_array_set: Array3::fill(domain, true),
+                expected_array_set: Array3x1::fill(domain, true),
             }
         }
 
@@ -1063,7 +1063,7 @@ mod tests {
 
             set.assert_all_nodes_reachable();
 
-            let mut mirror_array_set = Array3::fill(*domain, false);
+            let mut mirror_array_set = Array3x1::fill(*domain, false);
             Self::fill_bool_array(&set, &mut mirror_array_set);
 
             assert_eq!(set, &OctreeSet::from_array3(expected_array_set, *domain));
@@ -1082,14 +1082,14 @@ mod tests {
 
             set.assert_all_nodes_reachable();
 
-            let mut mirror_array_set = Array3::fill(*domain, false);
+            let mut mirror_array_set = Array3x1::fill(*domain, false);
             Self::fill_bool_array(&set, &mut mirror_array_set);
 
             assert_eq!(set, &OctreeSet::from_array3(expected_array_set, *domain));
             assert_eq!(&mirror_array_set, expected_array_set);
         }
 
-        fn fill_bool_array(set: &OctreeSet, array: &mut Array3<bool>) {
+        fn fill_bool_array(set: &OctreeSet, array: &mut Array3x1<bool>) {
             set.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
                 if node.is_full() {
                     array.fill_extent(&Extent3i::from(*node.octant()), true);
@@ -1150,11 +1150,11 @@ mod tests {
         assert_eq!(non_empty_voxels, octant_voxels);
     }
 
-    fn random_voxels() -> Array3<Voxel> {
+    fn random_voxels() -> Array3x1<Voxel> {
         let mut rng = rand::thread_rng();
         let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
 
-        Array3::fill_with(extent, |_| Voxel(rng.gen()))
+        Array3x1::fill_with(extent, |_| Voxel(rng.gen()))
     }
 
     #[derive(Clone)]

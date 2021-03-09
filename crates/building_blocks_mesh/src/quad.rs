@@ -106,8 +106,8 @@ impl OrientedCubeFace {
         [self.mesh_normal().0; 4]
     }
 
-    /// Returns the 6 vertex indices for the quad in order to make two triangles in a mesh. Winding
-    /// order depends on both the sign of the surface normal and the permutation of the UVs.
+    /// Returns the 6 vertex indices for the quad in order to make two triangles in a mesh. Winding order depends on both the
+    /// sign of the surface normal and the permutation of the UVs.
     pub fn quad_mesh_indices(&self, start: u32) -> [u32; 6] {
         quad_indices(start, self.n_sign * self.permutation.sign() > 0)
     }
@@ -122,7 +122,7 @@ impl OrientedCubeFace {
             .extend_from_slice(&self.quad_mesh_indices(start_index));
     }
 
-    /// Extends `mesh` with the given `quad` that belongs to this group.
+    /// Extends `mesh` with the given `quad` that belongs to this face.
     ///
     /// The texture coordinates come from `Quad::simple_tex_coords`.
     pub fn add_quad_to_pos_norm_tex_mesh(&self, quad: &UnorientedQuad, mesh: &mut PosNormTexMesh) {
@@ -136,8 +136,8 @@ impl OrientedCubeFace {
     }
 }
 
-/// Returns the vertex indices for a single quad (two triangles). The triangles may have either
-/// clockwise or counter-clockwise winding. `start` is the first index.
+/// Returns the vertex indices for a single quad (two triangles). The triangles may have either clockwise or counter-clockwise
+/// winding. `start` is the first index.
 pub fn quad_indices(start: u32, counter_clockwise: bool) -> [u32; 6] {
     if counter_clockwise {
         [start, start + 1, start + 2, start + 1, start + 3, start + 2]
@@ -167,13 +167,11 @@ impl UnorientedQuad {
         }
     }
 
-    /// Returns the UV coordinates of the 4 corners of the quad. Returns in the same order as
-    /// `OrientedCubeFace::quad_corners`.
+    /// Returns the UV coordinates of the 4 corners of the quad. Returns in the same order as `OrientedCubeFace::quad_corners`.
     ///
-    /// This is just one way of assigning UVs to voxel quads. It assumes that each material has a
-    /// single tile texture with wrapping coordinates, and each voxel face should show the entire
-    /// texture. It also assumes a particular orientation for the texture. This should be sufficient
-    /// for minecraft-style meshing.
+    /// This is just one way of assigning UVs to voxel quads. It assumes that each material has a single tile texture with
+    /// wrapping coordinates, and each voxel face should show the entire texture. It also assumes a particular orientation for
+    /// the texture. This should be sufficient for minecraft-style meshing.
     ///
     /// If you need to use a texture atlas, you must calculate your own coordinates from the `Quad`.
     pub fn simple_tex_coords(&self) -> [[f32; 2]; 4] {
@@ -185,17 +183,11 @@ impl UnorientedQuad {
         ]
     }
 
-    /// Returns the UV coordinates of the 4 corners of the quad. Returns in the same order as
-    /// `OrientedCubeFace::quad_corners`.
+    /// Returns the UV coordinates of the 4 corners of the quad. Returns in the same order as `OrientedCubeFace::quad_corners`.
     ///
-    /// This returns the UVs so that the texture on all faces of a voxel is upright and not mirrored.
-    /// Assumes that +Y is up.
+    /// This returns the UVs so that the texture on all faces of a voxel is upright and not mirrored. Assumes that +Y is up.
     pub fn axis_tex_coords(&self, face: &OrientedCubeFace) -> [[f32; 2]; 4] {
-        let normal = match face.permutation {
-            Axis3Permutation::XYZ | Axis3Permutation::XZY => Axis3::X,
-            Axis3Permutation::YXZ | Axis3Permutation::YZX => Axis3::Y,
-            Axis3Permutation::ZXY | Axis3Permutation::ZYX => Axis3::Z,
-        };
+        let normal = face.permutation.axes()[0];
 
         let flip = match (normal, face.n_sign < 0) {
             (Axis3::Z, sign) => sign,

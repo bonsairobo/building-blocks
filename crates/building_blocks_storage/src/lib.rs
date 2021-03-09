@@ -58,6 +58,8 @@ pub use raw_bytes::*;
 pub use signed_distance::*;
 pub use transform_map::*;
 
+use ahash::{AHashMap, RandomState};
+
 /// Used in many generic algorithms to check if a voxel is considered empty.
 pub trait IsEmpty {
     fn is_empty(&self) -> bool;
@@ -68,6 +70,10 @@ impl IsEmpty for bool {
         !*self
     }
 }
+
+// Hashers to use for small keys like `PointN`.
+pub type SmallKeyHashMap<K, V> = AHashMap<K, V>;
+pub type SmallKeyBuildHasher = RandomState;
 
 pub mod prelude {
     pub use super::{

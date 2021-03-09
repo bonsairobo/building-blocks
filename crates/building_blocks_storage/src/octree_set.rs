@@ -44,11 +44,10 @@
 //! The other form of traversal is "node-based," which is slightly less efficient and more manual but also more flexible. See
 //! the `OctreeSet::root_node`, `OctreeSet::child_node`, and `OctreeNode` documentation for details.
 
-use crate::{prelude::*, GetUncheckedRelease, IsEmpty};
+use crate::{prelude::*, GetUncheckedRelease, IsEmpty, SmallKeyHashMap};
 
 use building_blocks_core::prelude::*;
 
-use fnv::FnvHashMap;
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 
@@ -63,7 +62,7 @@ pub struct OctreeSet {
     root_exists: bool,
     // Save memory by using 2-byte OctreeNode codes as hash map keys instead of 64-bit node pointers. The total memory usage can
     // be approximated as 4 bytes per node, assuming the hashbrown table has 1 byte of overhead per entry.
-    nodes: FnvHashMap<LocationCode, ChildBitMask>,
+    nodes: SmallKeyHashMap<LocationCode, ChildBitMask>,
 }
 
 impl OctreeSet {
@@ -84,7 +83,7 @@ impl OctreeSet {
             power,
             root_exists,
             extent,
-            nodes: FnvHashMap::default(),
+            nodes: SmallKeyHashMap::default(),
         }
     }
 
@@ -123,7 +122,7 @@ impl OctreeSet {
         let mut corner_strides = [Stride(0); 8];
         array.strides_from_local_points(&corner_offsets, &mut corner_strides);
 
-        let mut nodes = FnvHashMap::default();
+        let mut nodes = SmallKeyHashMap::default();
         let min_local = Local(extent.minimum - array.extent().minimum);
         let root_minimum = array.stride_from_local_point(min_local);
         let root_code = LocationCode::ROOT;
@@ -150,7 +149,7 @@ impl OctreeSet {
         edge_length: i32,
         corner_strides: &[Stride],
         array: &A,
-        nodes: &mut FnvHashMap<LocationCode, ChildBitMask>,
+        nodes: &mut SmallKeyHashMap<LocationCode, ChildBitMask>,
     ) -> (bool, bool)
     where
         A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,

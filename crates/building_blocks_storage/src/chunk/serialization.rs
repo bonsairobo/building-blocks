@@ -86,9 +86,7 @@ where
 mod test {
     use super::*;
 
-    use crate::prelude::*;
-
-    use fnv::FnvHashMap;
+    use crate::{prelude::*, SmallKeyHashMap};
 
     #[cfg(feature = "lz4")]
     #[test]
@@ -96,7 +94,7 @@ mod test {
         use crate::Lz4;
 
         let compression = Lz4 { level: 10 };
-        do_serialize_and_deserialize_round_trip_test(FnvHashMap::default(), compression);
+        do_serialize_and_deserialize_round_trip_test(SmallKeyHashMap::default(), compression);
     }
 
     #[cfg(feature = "snap")]
@@ -104,7 +102,7 @@ mod test {
     fn hash_map_serialize_and_deserialize_round_trip_snappy() {
         use crate::Snappy;
 
-        do_serialize_and_deserialize_round_trip_test(FnvHashMap::default(), Snappy);
+        do_serialize_and_deserialize_round_trip_test(SmallKeyHashMap::default(), Snappy);
     }
 
     #[cfg(feature = "lz4")]
@@ -147,7 +145,7 @@ mod test {
         let deserialized: SerializableChunks<[i32; 3], Array3<i32>, B> =
             bincode::deserialize(&serialized).unwrap();
 
-        let mut storage = FnvHashMap::default();
+        let mut storage = SmallKeyHashMap::default();
         futures::executor::block_on(deserialized.fill_storage(&mut storage));
         let map = ChunkMap::build_with_rw_storage(CHUNK_SHAPE, storage);
         map.for_each(&filled_extent, |_p, val| assert_eq!(val, 1));

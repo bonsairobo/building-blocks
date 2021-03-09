@@ -1,12 +1,12 @@
 use crate::{
     CacheEntry, ChunkMap, ChunkReadStorage, CompressedChunks, CompressibleChunkStorage,
     Compression, IterChunkKeys, LocalCache, LruChunkCacheEntries, LruChunkCacheKeys,
+    SmallKeyBuildHasher,
 };
 
 use building_blocks_core::prelude::*;
 
 use core::hash::Hash;
-use fnv::FnvBuildHasher;
 
 /// An object for reading from `CompressibleChunkStorage` with only `&self`. Easily construct one of these using the
 /// `CompressibleChunkStorage::reader` method.
@@ -108,7 +108,7 @@ where
 }
 
 /// A `LocalCache` of chunks.
-pub type LocalChunkCache<N, Ch> = LocalCache<PointN<N>, Ch, FnvBuildHasher>;
+pub type LocalChunkCache<N, Ch> = LocalCache<PointN<N>, Ch, SmallKeyBuildHasher>;
 /// A `LocalCache` of 2D chunks.
 pub type LocalChunkCache2<Ch> = LocalChunkCache<[i32; 2], Ch>;
 /// A `LocalCache` of 3D chunks.

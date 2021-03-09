@@ -4,10 +4,11 @@
 //! placed into the `OctreeDBVT`.
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{Octant, OctreeNode, OctreeSet, OctreeVisitor, VisitStatus};
+use building_blocks_storage::{
+    Octant, OctreeNode, OctreeSet, OctreeVisitor, SmallKeyHashMap, VisitStatus,
+};
 
 use core::hash::Hash;
-use fnv::FnvHashMap;
 use ncollide3d::{
     bounding_volume::AABB,
     partitioning::{self as nc_part, DBVTLeaf, DBVTLeafId, BVH, DBVT},
@@ -17,7 +18,7 @@ use ncollide3d::{
 /// may use whatever key type `K` to uniquely identify the octrees.
 pub struct OctreeDBVT<K> {
     dbvt: DBVT<f32, OctreeSet, AABB<f32>>,
-    leaf_ids: FnvHashMap<K, DBVTLeafId>,
+    leaf_ids: SmallKeyHashMap<K, DBVTLeafId>,
 }
 
 impl<K> Default for OctreeDBVT<K> {

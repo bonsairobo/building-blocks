@@ -114,14 +114,13 @@ use crate::{
     ArrayCopySrc, ArrayIndexer, ArrayN, Chunk, ChunkHashMap, ChunkIndexer, ChunkReadStorage,
     ChunkWriteStorage, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked,
     GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRefRelease, IterChunkKeys, ReadExtent,
-    WriteExtent,
+    SmallKeyHashMap, WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
 
 use core::hash::Hash;
 use either::Either;
-use fnv::FnvHashMap;
 
 /// A lattice map made up of same-shaped `ArrayN` chunks. It takes a value at every possible `PointN`, because accesses made
 /// outside of the stored chunks will return some ambient value specified on creation.
@@ -195,9 +194,9 @@ where
     PointN<N>: Hash + IntegerPoint<N>,
     Ch: Chunk<N, T>,
 {
-    /// Create a new `ChunkMap` using a `FnvHashMap` as the chunk storage.
+    /// Create a new `ChunkMap` using a `SmallKeyHashMap` as the chunk storage.
     pub fn build_with_hash_map_storage(chunk_shape: PointN<N>) -> Self {
-        Self::build_with_rw_storage(chunk_shape, FnvHashMap::default())
+        Self::build_with_rw_storage(chunk_shape, SmallKeyHashMap::default())
     }
 }
 

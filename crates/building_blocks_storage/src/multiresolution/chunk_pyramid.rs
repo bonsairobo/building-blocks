@@ -1,12 +1,12 @@
 use crate::{
     prelude::*, ArrayIndexer, ArrayN, BytesCompression, ChunkDownsampler, ChunkHashMap,
-    ChunkMapNx1, CompressibleChunkMapNx1, OctreeChunkIndex, OctreeNode, VisitStatus,
+    ChunkMapNx1, CompressibleChunkMapNx1, OctreeChunkIndex, OctreeNode, SmallKeyHashMap,
+    VisitStatus,
 };
 
 use building_blocks_core::prelude::*;
 
 use core::hash::Hash;
-use fnv::FnvHashMap;
 use std::fmt::Debug;
 
 /// A set of `ChunkMap`s used as storage for voxels with variable level of detail (LOD).
@@ -150,7 +150,7 @@ where
 }
 
 /// A `ChunkMap` using `HashMap` as chunk storage.
-pub type ChunkHashMapPyramid<N, T> = ChunkPyramid<N, T, FnvHashMap<PointN<N>, ArrayN<N, T>>>;
+pub type ChunkHashMapPyramid<N, T> = ChunkPyramid<N, T, SmallKeyHashMap<PointN<N>, ArrayN<N, T>>>;
 /// A 2-dimensional `ChunkHashMapPyramid`.
 pub type ChunkHashMapPyramid2<T> = ChunkHashMapPyramid<[i32; 2], T>;
 /// A 3-dimensional `ChunkHashMapPyramid`.
@@ -164,7 +164,7 @@ where
     pub fn new(chunk_shape: PointN<N>, num_lods: u8) -> Self {
         let mut levels = Vec::with_capacity(num_lods as usize);
         levels.resize_with(num_lods as usize, || {
-            ChunkMap::build_with_write_storage(chunk_shape, FnvHashMap::default())
+            ChunkMap::build_with_write_storage(chunk_shape, SmallKeyHashMap::default())
         });
 
         Self { levels }

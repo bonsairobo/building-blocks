@@ -1,8 +1,8 @@
 use crate::{
-    ArrayN, BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkWriteStorage, Compressed,
-    CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression, FastArrayCompression,
-    FnvLruCache, IterChunkKeys, LocalChunkCache, LruCacheEntries, LruCacheIntoIter, LruCacheKeys,
-    MaybeCompressed,
+    AHashLruCache, ArrayN, BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkWriteStorage,
+    Compressed, CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression,
+    FastArrayCompression, IterChunkKeys, LocalChunkCache, LruCacheEntries, LruCacheIntoIter,
+    LruCacheKeys, MaybeCompressed,
 };
 
 use building_blocks_core::prelude::*;
@@ -16,7 +16,7 @@ pub struct CompressibleChunkStorage<N, Compr>
 where
     Compr: Compression,
 {
-    pub cache: FnvLruCache<PointN<N>, Compr::Data, CompressedLocation>,
+    pub cache: AHashLruCache<PointN<N>, Compr::Data, CompressedLocation>,
     pub compression: Compr,
     pub compressed: CompressedChunks<Compr>,
 }
@@ -44,7 +44,7 @@ where
 {
     pub fn new(compression: Compr) -> Self {
         Self {
-            cache: FnvLruCache::default(),
+            cache: AHashLruCache::default(),
             compression,
             compressed: Slab::new(),
         }

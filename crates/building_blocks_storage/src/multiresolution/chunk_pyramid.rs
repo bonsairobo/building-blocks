@@ -1,12 +1,12 @@
 use crate::{
-    prelude::*, ArrayIndexer, ArrayN, BytesCompression, ChunkDownsampler, ChunkHashMap,
-    ChunkMapNx1, CompressibleChunkMapNx1, OctreeChunkIndex, OctreeNode, VisitStatus,
+    prelude::*, ArrayIndexer, ArrayNx1, BytesCompression, ChunkDownsampler, ChunkHashMap,
+    ChunkMapNx1, CompressibleChunkMapNx1, OctreeChunkIndex, OctreeNode, SmallKeyHashMap,
+    VisitStatus,
 };
 
 use building_blocks_core::prelude::*;
 
 use core::hash::Hash;
-use fnv::FnvHashMap;
 use std::fmt::Debug;
 
 /// A set of `ChunkMap`s used as storage for voxels with variable level of detail (LOD).
@@ -16,7 +16,7 @@ use std::fmt::Debug;
 /// There is no enforcement of a particular occupancy, allowing you to use this as a cache. Typically you will have some region
 /// of highest detail close to a central point. Then as you get further from the center, the detail drops.
 pub struct ChunkPyramid<N, T, Store> {
-    levels: Vec<ChunkMap<N, T, ArrayN<N, T>, Store>>,
+    levels: Vec<ChunkMap<N, T, ArrayNx1<N, T>, Store>>,
 }
 
 pub type ChunkPyramid2<T, Store> = ChunkPyramid<[i32; 2], T, Store>;
@@ -63,8 +63,8 @@ where
     N: ArrayIndexer<N>,
     PointN<N>: Debug + IntegerPoint<N>,
     T: 'static + Clone,
-    ArrayN<N, T>: Chunk<N, T>,
-    Store: ChunkWriteStorage<N, ArrayN<N, T>>,
+    ArrayNx1<N, T>: Chunk<N, T>,
+    Store: ChunkWriteStorage<N, ArrayNx1<N, T>>,
     ChunkIndexer<N>: Clone,
 {
     pub fn downsample_chunk<Samp>(
@@ -96,7 +96,7 @@ where
                 dst_chunk.extent().minimum + dst.dst_offset.0,
                 chunk_shape >> 1,
             );
-            dst_chunk.fill_extent(&dst_extent, ArrayN::<_, T>::ambient_value());
+            dst_chunk.fill_extent(&dst_extent, ArrayNx1::<_, T>::ambient_value());
         }
     }
 }
@@ -104,8 +104,8 @@ where
 impl<T, Store> ChunkPyramid3<T, Store>
 where
     T: 'static + Clone,
-    Array3<T>: Chunk<[i32; 3], T>,
-    Store: ChunkWriteStorage<[i32; 3], Array3<T>>,
+    Array3x1<T>: Chunk<[i32; 3], T>,
+    Store: ChunkWriteStorage<[i32; 3], Array3x1<T>>,
 {
     pub fn downsample_chunks_for_extent_all_lods_with_index<Samp>(
         &mut self,
@@ -150,7 +150,7 @@ where
 }
 
 /// A `ChunkMap` using `HashMap` as chunk storage.
-pub type ChunkHashMapPyramid<N, T> = ChunkPyramid<N, T, FnvHashMap<PointN<N>, ArrayN<N, T>>>;
+pub type ChunkHashMapPyramid<N, T> = ChunkPyramid<N, T, SmallKeyHashMap<PointN<N>, ArrayNx1<N, T>>>;
 /// A 2-dimensional `ChunkHashMapPyramid`.
 pub type ChunkHashMapPyramid2<T> = ChunkHashMapPyramid<[i32; 2], T>;
 /// A 3-dimensional `ChunkHashMapPyramid`.
@@ -164,14 +164,14 @@ where
     pub fn new(chunk_shape: PointN<N>, num_lods: u8) -> Self {
         let mut levels = Vec::with_capacity(num_lods as usize);
         levels.resize_with(num_lods as usize, || {
-            ChunkMap::build_with_write_storage(chunk_shape, FnvHashMap::default())
+            ChunkMap::build_with_write_storage(chunk_shape, SmallKeyHashMap::default())
         });
 
         Self { levels }
     }
 
     pub fn with_lod0_chunk_map(
-        lod0_chunk_map: ChunkHashMap<N, T, ArrayN<N, T>>,
+        lod0_chunk_map: ChunkHashMap<N, T, ArrayNx1<N, T>>,
         num_lods: u8,
     ) -> Self {
         let mut pyramid = Self::new(lod0_chunk_map.indexer.chunk_shape(), num_lods);

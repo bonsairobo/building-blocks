@@ -1,5 +1,5 @@
 use building_blocks::storage::{
-    dot_vox::load, Array3, BytesCompression, Compression, FastArrayCompression, Lz4, Snappy,
+    dot_vox::load, Array3x1, BytesCompression, Compression, FastArrayCompression, Lz4, Snappy,
     VoxColor,
 };
 
@@ -10,7 +10,7 @@ fn main() {
     println!("Loading {}", vox_path);
 
     let vox_data = load(vox_path).unwrap();
-    let vox_array = Array3::decode_vox(&vox_data, 0);
+    let vox_array = Array3x1::decode_vox(&vox_data, 0);
 
     println!("Compressing with Snappy: \n");
     measure_compression_rate(Snappy, &vox_array);
@@ -21,7 +21,7 @@ fn main() {
 
 fn measure_compression_rate<B: BytesCompression>(
     bytes_compression: B,
-    vox_array: &Array3<VoxColor>,
+    vox_array: &Array3x1<VoxColor>,
 ) {
     let source_size_bytes = vox_array.extent().num_points() * std::mem::size_of::<VoxColor>();
 

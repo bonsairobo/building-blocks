@@ -91,7 +91,7 @@ impl<A: Compression> MaybeCompressed<A::Data, Compressed<A>> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{Array3, IntoRawBytes};
+    use crate::{Array3x1, IntoRawBytes};
 
     use building_blocks_core::prelude::*;
 
@@ -134,17 +134,17 @@ mod test {
 
     fn homogeneous_array_compression_rate<B: BytesCompression>(compression: B, side_length: i32) {
         let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(side_length));
-        let array = Array3::fill_with(extent, |_p| 0u16);
+        let array = Array3x1::fill_with(extent, |_p| 0u16);
         array_compression_rate(&array, compression);
     }
 
     fn sphere_array_compression_rate<B: BytesCompression>(compression: B, side_length: i32) {
         let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(side_length));
-        let array = Array3::fill_with(extent, |p| if p.norm() > 50.0 { 0u16 } else { 1u16 });
+        let array = Array3x1::fill_with(extent, |p| if p.norm() > 50.0 { 0u16 } else { 1u16 });
         array_compression_rate(&array, compression);
     }
 
-    fn array_compression_rate<B: BytesCompression>(array: &Array3<u16>, compression: B) {
+    fn array_compression_rate<B: BytesCompression>(array: &Array3x1<u16>, compression: B) {
         let source_size_bytes = array.extent().num_points() * 2;
 
         let mut compressed_bytes = Vec::new();

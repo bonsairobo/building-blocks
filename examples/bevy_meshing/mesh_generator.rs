@@ -85,12 +85,12 @@ enum Cubic {
 }
 
 impl Cubic {
-    fn get_voxels(&self) -> Array3<CubeVoxel> {
+    fn get_voxels(&self) -> Array3x1<CubeVoxel> {
         match self {
             Cubic::Terrace => {
                 let extent =
                     Extent3i::from_min_and_shape(Point3i::fill(-20), Point3i::fill(40)).padded(1);
-                let mut voxels = Array3::fill(extent, CubeVoxel(false));
+                let mut voxels = Array3x1::fill(extent, CubeVoxel(false));
                 for i in 0..40 {
                     let level = Extent3i::from_min_and_shape(
                         Point3i::fill(i - 20),
@@ -199,7 +199,7 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
         Extent3i::from_min_and_shape(Point3i::fill(-20), Point3i::fill(40)).padded(1);
 
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
-    // Array3 here instead of a ChunkMap3, but we use chunks for educational purposes.
+    // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
     let mut map = ChunkMap::build_with_hash_map_storage(CHUNK_SHAPE3);
     copy_extent(&sample_extent, &sdf, &mut map);
 
@@ -212,7 +212,7 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
                 let padded_chunk_extent = padded_surface_nets_chunk_extent(
                     &map_ref.indexer.extent_for_chunk_at_key(*chunk_key),
                 );
-                let mut padded_chunk = Array3::fill(padded_chunk_extent, Sd16(0));
+                let mut padded_chunk = Array3x1::fill(padded_chunk_extent, Sd16(0));
                 copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
 
                 // TODO bevy: we could avoid re-allocating the buffers on every call if we had
@@ -245,7 +245,7 @@ fn generate_chunk_meshes_from_height_map(
         Extent2i::from_min_and_shape(Point2i::fill(-20), Point2i::fill(40)).padded(1);
 
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
-    // Array3 here instead of a ChunkMap3, but we use chunks for educational purposes.
+    // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
     let mut map = ChunkMap::build_with_hash_map_storage(CHUNK_SHAPE2);
     copy_extent(&sample_extent, &height_map, &mut map);
 
@@ -261,7 +261,7 @@ fn generate_chunk_meshes_from_height_map(
                 // Ignore the ambient values outside the sample extent.
                 .intersection(&sample_extent);
 
-                let mut padded_chunk = Array2::fill(padded_chunk_extent, 0.0);
+                let mut padded_chunk = Array2x1::fill(padded_chunk_extent, 0.0);
                 copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
 
                 // TODO bevy: we could avoid re-allocating the buffers on every call if we had
@@ -288,7 +288,7 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
 
     // Chunk up the voxels just to show that meshing across chunks is consistent.
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
-    // Array3 here instead of a ChunkMap3, but we use chunks for educational purposes.
+    // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
     let mut map = ChunkMap::build_with_hash_map_storage(CHUNK_SHAPE3);
     copy_extent(voxels.extent(), &voxels, &mut map);
 
@@ -302,7 +302,7 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
                     &map_ref.indexer.extent_for_chunk_at_key(*chunk_key),
                 );
 
-                let mut padded_chunk = Array3::fill(padded_chunk_extent, CubeVoxel(false));
+                let mut padded_chunk = Array3x1::fill(padded_chunk_extent, CubeVoxel(false));
                 copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
 
                 // TODO bevy: we could avoid re-allocating the buffers on every call if we had

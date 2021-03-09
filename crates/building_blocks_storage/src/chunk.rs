@@ -2,14 +2,14 @@ mod serialization;
 
 pub use serialization::*;
 
-use crate::ArrayN;
+use crate::ArrayNx1;
 
 use building_blocks_core::prelude::*;
 
 /// One piece of a chunked lattice map.
 pub trait Chunk<N, T> {
     /// The inner array type. This makes it easier for `Chunk` implementations to satisfy access trait bounds by inheriting them
-    /// from existing array types like `ArrayN`.
+    /// from existing array types like `ArrayNx1`.
     type Array;
 
     /// The value used for vacant space.
@@ -25,7 +25,7 @@ pub trait Chunk<N, T> {
     fn array_mut(&mut self) -> &mut Self::Array;
 }
 
-impl<N, T> Chunk<N, T> for ArrayN<N, T>
+impl<N, T> Chunk<N, T> for ArrayNx1<N, T>
 where
     PointN<N>: IntegerPoint<N>,
     T: Clone + Default,
@@ -54,7 +54,7 @@ where
 }
 
 pub struct ChunkWithMeta<N, T, Meta> {
-    pub array: ArrayN<N, T>,
+    pub array: ArrayNx1<N, T>,
     pub metadata: Meta,
 }
 
@@ -64,7 +64,7 @@ where
     T: Clone + Default,
     Meta: Default,
 {
-    type Array = ArrayN<N, T>;
+    type Array = ArrayNx1<N, T>;
 
     #[inline]
     fn ambient_value() -> T {
@@ -74,7 +74,7 @@ where
     #[inline]
     fn new_ambient(extent: ExtentN<N>) -> Self {
         Self {
-            array: ArrayN::new_ambient(extent),
+            array: ArrayNx1::new_ambient(extent),
             metadata: Default::default(),
         }
     }

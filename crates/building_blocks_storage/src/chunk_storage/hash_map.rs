@@ -1,14 +1,13 @@
-use crate::ChunkMap;
+use crate::{ChunkMap, SmallKeyHashMap};
 
 use super::{ChunkReadStorage, ChunkWriteStorage, IterChunkKeys};
 
 use building_blocks_core::prelude::*;
 
 use core::hash::Hash;
-use fnv::FnvHashMap;
 use std::collections::hash_map;
 
-impl<N, Ch> ChunkReadStorage<N, Ch> for FnvHashMap<PointN<N>, Ch>
+impl<N, Ch> ChunkReadStorage<N, Ch> for SmallKeyHashMap<PointN<N>, Ch>
 where
     PointN<N>: Hash + Eq,
 {
@@ -18,7 +17,7 @@ where
     }
 }
 
-impl<N, Ch> ChunkWriteStorage<N, Ch> for FnvHashMap<PointN<N>, Ch>
+impl<N, Ch> ChunkWriteStorage<N, Ch> for SmallKeyHashMap<PointN<N>, Ch>
 where
     PointN<N>: Hash + Eq,
 {
@@ -47,7 +46,7 @@ where
     }
 }
 
-impl<'a, N, Ch> IterChunkKeys<'a, N> for FnvHashMap<PointN<N>, Ch>
+impl<'a, N, Ch> IterChunkKeys<'a, N> for SmallKeyHashMap<PointN<N>, Ch>
 where
     PointN<N>: 'a,
     Ch: 'a,
@@ -60,7 +59,7 @@ where
 }
 
 /// A `ChunkMap` using `HashMap` as chunk storage.
-pub type ChunkHashMap<N, T, Ch> = ChunkMap<N, T, Ch, FnvHashMap<PointN<N>, Ch>>;
+pub type ChunkHashMap<N, T, Ch> = ChunkMap<N, T, Ch, SmallKeyHashMap<PointN<N>, Ch>>;
 /// A 2-dimensional `ChunkHashMap`.
 pub type ChunkHashMap2<T, Ch> = ChunkHashMap<[i32; 2], T, Ch>;
 /// A 3-dimensional `ChunkHashMap`.

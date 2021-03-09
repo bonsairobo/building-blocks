@@ -24,7 +24,7 @@
 //! use building_blocks_storage::{octree_set::*, prelude::*};
 //!
 //! let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
-//! let voxels = Array3::fill(extent, true); // boring example
+//! let voxels = Array3x1::fill(extent, true); // boring example
 //! let octree = OctreeSet::from_array3(&voxels, Extent3i::from_min_and_shape(Point3i::fill(8), Point3i::fill(16)));
 //!
 //! octree.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
@@ -44,11 +44,10 @@
 //! The other form of traversal is "node-based," which is slightly less efficient and more manual but also more flexible. See
 //! the `OctreeSet::root_node`, `OctreeSet::child_node`, and `OctreeNode` documentation for details.
 
-use crate::{prelude::*, GetUncheckedRelease, IsEmpty};
+use crate::{prelude::*, IsEmpty, SmallKeyHashMap};
 
 use building_blocks_core::prelude::*;
 
-use fnv::FnvHashMap;
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 
@@ -63,7 +62,7 @@ pub struct OctreeSet {
     root_exists: bool,
     // Save memory by using 2-byte OctreeNode codes as hash map keys instead of 64-bit node pointers. The total memory usage can
     // be approximated as 4 bytes per node, assuming the hashbrown table has 1 byte of overhead per entry.
-    nodes: FnvHashMap<LocationCode, ChildBitMask>,
+    nodes: SmallKeyHashMap<LocationCode, ChildBitMask>,
 }
 
 impl OctreeSet {
@@ -84,7 +83,7 @@ impl OctreeSet {
             power,
             root_exists,
             extent,
-            nodes: FnvHashMap::default(),
+            nodes: SmallKeyHashMap::default(),
         }
     }
 
@@ -105,7 +104,7 @@ impl OctreeSet {
     /// must have `0 < P <= 6`, because there is a maximum fixed depth of the octree.
     pub fn from_array3<A, T>(array: &A, extent: Extent3i) -> Self
     where
-        A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+        A: IndexedArray<[i32; 3]> + Get<Stride, T>,
         T: Clone + IsEmpty,
     {
         let power = Self::check_extent(&extent);
@@ -123,7 +122,7 @@ impl OctreeSet {
         let mut corner_strides = [Stride(0); 8];
         array.strides_from_local_points(&corner_offsets, &mut corner_strides);
 
-        let mut nodes = FnvHashMap::default();
+        let mut nodes = SmallKeyHashMap::default();
         let min_local = Local(extent.minimum - array.extent().minimum);
         let root_minimum = array.stride_from_local_point(min_local);
         let root_code = LocationCode::ROOT;
@@ -150,16 +149,16 @@ impl OctreeSet {
         edge_length: i32,
         corner_strides: &[Stride],
         array: &A,
-        nodes: &mut FnvHashMap<LocationCode, ChildBitMask>,
+        nodes: &mut SmallKeyHashMap<LocationCode, ChildBitMask>,
     ) -> (bool, bool)
     where
-        A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+        A: IndexedArray<[i32; 3]> + Get<Stride, T>,
         T: Clone + IsEmpty,
     {
         // Base case where the octant is a single voxel. The `OctreeNode` is invalid and unnecessary in this case; we avoid using
         // it by returning early.
         if edge_length == 1 {
-            let exists = !array.get_unchecked_release(minimum).is_empty();
+            let exists = !array.get(minimum).is_empty();
             return (exists, exists);
         }
 
@@ -1032,7 +1031,7 @@ mod tests {
     struct UpdateExtentTest {
         domain: Extent3i,
         set: OctreeSet,
-        expected_array_set: Array3<bool>,
+        expected_array_set: Array3x1<bool>,
     }
 
     impl UpdateExtentTest {
@@ -1040,7 +1039,7 @@ mod tests {
             Self {
                 domain,
                 set: OctreeSet::new_empty(domain),
-                expected_array_set: Array3::fill(domain, false),
+                expected_array_set: Array3x1::fill(domain, false),
             }
         }
 
@@ -1048,7 +1047,7 @@ mod tests {
             Self {
                 domain,
                 set: OctreeSet::new_full(domain),
-                expected_array_set: Array3::fill(domain, true),
+                expected_array_set: Array3x1::fill(domain, true),
             }
         }
 
@@ -1064,7 +1063,7 @@ mod tests {
 
             set.assert_all_nodes_reachable();
 
-            let mut mirror_array_set = Array3::fill(*domain, false);
+            let mut mirror_array_set = Array3x1::fill(*domain, false);
             Self::fill_bool_array(&set, &mut mirror_array_set);
 
             assert_eq!(set, &OctreeSet::from_array3(expected_array_set, *domain));
@@ -1083,14 +1082,14 @@ mod tests {
 
             set.assert_all_nodes_reachable();
 
-            let mut mirror_array_set = Array3::fill(*domain, false);
+            let mut mirror_array_set = Array3x1::fill(*domain, false);
             Self::fill_bool_array(&set, &mut mirror_array_set);
 
             assert_eq!(set, &OctreeSet::from_array3(expected_array_set, *domain));
             assert_eq!(&mirror_array_set, expected_array_set);
         }
 
-        fn fill_bool_array(set: &OctreeSet, array: &mut Array3<bool>) {
+        fn fill_bool_array(set: &OctreeSet, array: &mut Array3x1<bool>) {
             set.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
                 if node.is_full() {
                     array.fill_extent(&Extent3i::from(*node.octant()), true);
@@ -1151,11 +1150,11 @@ mod tests {
         assert_eq!(non_empty_voxels, octant_voxels);
     }
 
-    fn random_voxels() -> Array3<Voxel> {
+    fn random_voxels() -> Array3x1<Voxel> {
         let mut rng = rand::thread_rng();
         let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
 
-        Array3::fill_with(extent, |_| Voxel(rng.gen()))
+        Array3x1::fill_with(extent, |_| Voxel(rng.gen()))
     }
 
     #[derive(Clone)]

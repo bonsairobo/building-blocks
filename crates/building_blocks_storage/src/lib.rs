@@ -10,7 +10,7 @@
 //! implement the `SignedDistance` trait required for smooth meshing.
 //!
 //! The core storage types are:
-//!   - `ArrayN`: N-dimensional, dense array
+//!   - `ArrayNx1`: N-dimensional, dense array
 //!   - `ChunkHashMap`: N-dimensional, sparse array
 //!   - `CompressibleChunkMap`: N-dimensional, sparse array with chunk compression
 //!
@@ -69,15 +69,19 @@ impl IsEmpty for bool {
     }
 }
 
+// Hash types to use for small keys like `PointN`.
+pub type SmallKeyHashMap<K, V> = ahash::AHashMap<K, V>;
+pub type SmallKeyBuildHasher = ahash::RandomState;
+
 pub mod prelude {
     pub use super::{
-        copy_extent, Array, Array2, Array3, ArrayN, Chunk, ChunkHashMap2, ChunkHashMap3,
+        copy_extent, Array2x1, Array3x1, ArrayNx1, Chunk, ChunkHashMap2, ChunkHashMap3,
         ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkIndexer, ChunkMap, ChunkMap2, ChunkMap2x1,
         ChunkMap3, ChunkMap3x1, ChunkPyramid2, ChunkPyramid3, ChunkReadStorage, ChunkWriteStorage,
         Compressed, CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
         CompressibleChunkStorageReader, Compression, FastArrayCompression,
-        FastCompressibleChunkStorage, ForEach, ForEachMut, Get, GetMut, GetRef, IsEmpty,
-        IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
+        FastCompressibleChunkStorage, ForEach, ForEachMut, Get, GetMut, GetRef, IndexedArray,
+        IsEmpty, IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
         OctreeChunkIndex, OctreeNode, OctreeSet, ReadExtent, SerializableChunks, SignedDistance,
         Stride, TransformMap, WriteExtent,
     };
@@ -96,7 +100,7 @@ pub mod prelude {
         CompressibleChunkMapReader3x1, CompressibleChunkPyramid2, CompressibleChunkPyramid3,
         CompressibleChunkStorage2x1, CompressibleChunkStorage3x1,
         CompressibleChunkStorageReader2x1, CompressibleChunkStorageReader3x1,
-        MaybeCompressedArray2, MaybeCompressedArray3, MaybeCompressedArrayRef2,
+        MaybeCompressedArray2x1, MaybeCompressedArray3x1, MaybeCompressedArrayRef2,
         MaybeCompressedArrayRef3,
     };
 }

@@ -1,8 +1,7 @@
-use crate::{ChunkIndexer, OctreeSet};
+use crate::{ChunkIndexer, OctreeSet, SmallKeyHashMap};
 
 use building_blocks_core::prelude::*;
 
-use fnv::FnvHashMap;
 use serde::{Deserialize, Serialize};
 
 /// A hash map of `OctreeSet`s which, unlike the vanilla `OctreeSet`, supports an unbounded set of points (within the bounds of
@@ -12,11 +11,11 @@ pub struct ChunkedOctreeSet {
     /// Indexer used to find the octree for a given chunk.
     pub indexer: ChunkIndexer<[i32; 3]>,
 
-    octrees: FnvHashMap<Point3i, OctreeSet>,
+    octrees: SmallKeyHashMap<Point3i, OctreeSet>,
 }
 
 impl ChunkedOctreeSet {
-    pub fn new(chunk_shape: Point3i, octrees: FnvHashMap<Point3i, OctreeSet>) -> Self {
+    pub fn new(chunk_shape: Point3i, octrees: SmallKeyHashMap<Point3i, OctreeSet>) -> Self {
         Self {
             indexer: ChunkIndexer::new(chunk_shape),
             octrees,
@@ -24,7 +23,7 @@ impl ChunkedOctreeSet {
     }
 
     pub fn empty(chunk_shape: Point3i) -> Self {
-        Self::new(chunk_shape, FnvHashMap::default())
+        Self::new(chunk_shape, SmallKeyHashMap::default())
     }
 
     pub fn visit_octrees(&self, extent: &Extent3i, visitor: &mut impl FnMut(&OctreeSet)) {

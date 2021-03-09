@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{prelude::*, GetUncheckedRelease, IsEmpty};
+use building_blocks_storage::{prelude::*, IsEmpty};
 
 /// Returns the "surface points" i.e. those points that are non-empty and Von-Neumann-adjacent to an
 /// empty point. Since this algorithm does adjacency checks for all points in `extent`, you must
@@ -9,7 +9,7 @@ pub fn find_surface_points<Map, N, T>(
     extent: &ExtentN<N>,
 ) -> (Vec<PointN<N>>, Vec<Stride>)
 where
-    Map: Array<N> + ForEach<N, (PointN<N>, Stride), Item = T> + GetUncheckedRelease<Stride, T>,
+    Map: IndexedArray<N> + ForEach<N, (PointN<N>, Stride), Item = T> + Get<Stride, T>,
     T: IsEmpty,
     PointN<N>: IntegerPoint<N>,
     Local<N>: Copy,
@@ -27,7 +27,7 @@ where
         }
 
         for vn_stride in vn_strides.iter() {
-            if map.get_unchecked_release(s + *vn_stride).is_empty() {
+            if map.get(s + *vn_stride).is_empty() {
                 surface_points.push(p);
                 surface_strides.push(s);
                 break;
@@ -65,7 +65,7 @@ mod test {
 
     #[test]
     fn find_surface_points_cube_side_length_3() {
-        let mut map = Array3::fill(
+        let mut map = Array3x1::fill(
             Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(5)),
             Voxel(false),
         );

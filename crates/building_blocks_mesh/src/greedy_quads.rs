@@ -4,7 +4,7 @@ use super::{
 };
 
 use building_blocks_core::{prelude::*, Axis3Permutation};
-use building_blocks_storage::{prelude::*, GetUncheckedRelease};
+use building_blocks_storage::prelude::*;
 
 /// Contains the output from the `greedy_quads` algorithm. The quads can be used to generate a mesh. See the methods on
 /// `OrientedCubeFace` and `UnorientedQuad` for details.
@@ -16,7 +16,7 @@ pub struct GreedyQuadsBuffer {
 
     // A single array is used for the visited mask because it allows us to index by the same strides as the voxels array. It
     // also only requires a single allocation.
-    visited: Array3<bool>,
+    visited: Array3x1<bool>,
 }
 
 /// A set of quads that share an orientation.
@@ -52,7 +52,7 @@ impl GreedyQuadsBuffer {
 
         Self {
             quad_groups,
-            visited: Array3::fill(extent, false),
+            visited: Array3x1::fill(extent, false),
         }
     }
 
@@ -62,7 +62,7 @@ impl GreedyQuadsBuffer {
         }
 
         if extent.shape != self.visited.extent().shape {
-            self.visited = Array3::fill(extent, false);
+            self.visited = Array3x1::fill(extent, false);
         }
         self.visited.set_minimum(extent.minimum);
     }
@@ -95,9 +95,7 @@ pub fn padded_greedy_quads_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {
 /// into meshes as the user sees fit.
 pub fn greedy_quads<A, T>(voxels: &A, extent: &Extent3i, output: &mut GreedyQuadsBuffer)
 where
-    A: Array<[i32; 3]>
-        + ForEach<[i32; 3], (Point3i, Stride), Item = T>
-        + GetUncheckedRelease<Stride, T>,
+    A: IndexedArray<[i32; 3]> + ForEach<[i32; 3], (Point3i, Stride), Item = T> + Get<Stride, T>,
     T: IsEmpty + IsOpaque + MergeVoxel,
 {
     greedy_quads_with_merge_strategy::<_, _, VoxelMerger<T>>(voxels, extent, output)
@@ -109,9 +107,7 @@ pub fn greedy_quads_with_merge_strategy<A, T, Merger>(
     extent: &Extent3i,
     output: &mut GreedyQuadsBuffer,
 ) where
-    A: Array<[i32; 3]>
-        + ForEach<[i32; 3], (Point3i, Stride), Item = T>
-        + GetUncheckedRelease<Stride, T>,
+    A: IndexedArray<[i32; 3]> + ForEach<[i32; 3], (Point3i, Stride), Item = T> + Get<Stride, T>,
     T: IsEmpty + IsOpaque,
     Merger: MergeStrategy<Voxel = T>,
 {
@@ -131,12 +127,10 @@ pub fn greedy_quads_with_merge_strategy<A, T, Merger>(
 fn greedy_quads_for_group<A, T, Merger>(
     voxels: &A,
     interior: Extent3i,
-    visited: &mut Array3<bool>,
+    visited: &mut Array3x1<bool>,
     quad_group: &mut QuadGroup,
 ) where
-    A: Array<[i32; 3]>
-        + ForEach<[i32; 3], (Point3i, Stride), Item = T>
-        + GetUncheckedRelease<Stride, T>,
+    A: IndexedArray<[i32; 3]> + ForEach<[i32; 3], (Point3i, Stride), Item = T> + Get<Stride, T>,
     T: IsEmpty + IsOpaque,
     Merger: MergeStrategy<Voxel = T>,
 {
@@ -242,17 +236,17 @@ fn face_needs_mesh<A, T>(
     voxel_stride: Stride,
     visibility_offset: Stride,
     voxels: &A,
-    visited: &Array3<bool>,
+    visited: &Array3x1<bool>,
 ) -> bool
 where
-    A: GetUncheckedRelease<Stride, T>,
+    A: Get<Stride, T>,
     T: IsEmpty + IsOpaque,
 {
-    if voxel.is_empty() || visited.get_unchecked_release(voxel_stride) {
+    if voxel.is_empty() || visited.get(voxel_stride) {
         return false;
     }
 
-    let adjacent_voxel = voxels.get_unchecked_release(voxel_stride + visibility_offset);
+    let adjacent_voxel = voxels.get(voxel_stride + visibility_offset);
 
     if adjacent_voxel.is_empty() {
         // Must be visible, opaque or transparent.
@@ -303,10 +297,10 @@ pub trait MergeStrategy {
         max_height: i32,
         face_strides: &FaceStrides,
         voxels: &A,
-        visited: &Array3<bool>,
+        visited: &Array3x1<bool>,
     ) -> (i32, i32)
     where
-        A: Array<[i32; 3]> + GetUncheckedRelease<Stride, Self::Voxel>,
+        A: IndexedArray<[i32; 3]> + Get<Stride, Self::Voxel>,
         Self::Voxel: IsEmpty + IsOpaque;
 }
 
@@ -343,10 +337,10 @@ where
         max_height: i32,
         face_strides: &FaceStrides,
         voxels: &A,
-        visited: &Array3<bool>,
+        visited: &Array3x1<bool>,
     ) -> (i32, i32)
     where
-        A: GetUncheckedRelease<Stride, T>,
+        A: Get<Stride, T>,
     {
         // Greedily search for the biggest visible quad where all merge values are the same.
         let quad_value = min_value.voxel_merge_value();
@@ -391,7 +385,7 @@ where
 impl<T> VoxelMerger<T> {
     fn get_row_width<A>(
         voxels: &A,
-        visited: &Array3<bool>,
+        visited: &Array3x1<bool>,
         quad_merge_voxel_value: &T::VoxelValue,
         visibility_offset: Stride,
         start_stride: Stride,
@@ -399,18 +393,18 @@ impl<T> VoxelMerger<T> {
         max_width: i32,
     ) -> i32
     where
-        A: GetUncheckedRelease<Stride, T>,
+        A: Get<Stride, T>,
         T: IsEmpty + IsOpaque + MergeVoxel,
     {
         let mut quad_width = 0;
         let mut row_stride = start_stride;
         while quad_width < max_width {
-            if visited.get_unchecked_release(row_stride) {
+            if visited.get(row_stride) {
                 // Already have a quad for this voxel face.
                 break;
             }
 
-            let voxel = voxels.get_unchecked_release(row_stride);
+            let voxel = voxels.get(row_stride);
 
             if !face_needs_mesh(&voxel, row_stride, visibility_offset, voxels, visited) {
                 break;

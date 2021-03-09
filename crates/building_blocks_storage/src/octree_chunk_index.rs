@@ -1,11 +1,11 @@
 use crate::{
-    active_clipmap_lod_chunks, Array3, ChunkMap3, ChunkedOctreeSet, ClipMapConfig3, ClipMapUpdate3,
-    GetMut, IterChunkKeys, LodChunkKey3, LodChunkUpdate3, OctreeSet,
+    active_clipmap_lod_chunks, Array3x1, ChunkMap3, ChunkedOctreeSet, ClipMapConfig3,
+    ClipMapUpdate3, GetMut, IterChunkKeys, LodChunkKey3, LodChunkUpdate3, OctreeSet,
+    SmallKeyHashMap,
 };
 
 use building_blocks_core::prelude::*;
 
-use fnv::FnvHashMap;
 use serde::{Deserialize, Serialize};
 
 /// A `ChunkedOctreeSet` that indexes the chunks of a `ChunkMap` or a `ChunkPyramid`. Useful for representing a clipmap.
@@ -74,11 +74,11 @@ impl OctreeChunkIndex {
 
         let superchunk_mask = !(superchunk_shape - Point3i::ONES);
 
-        let mut superchunk_bitsets = FnvHashMap::default();
+        let mut superchunk_bitsets = SmallKeyHashMap::default();
         for &chunk_key in chunk_keys {
             let superchunk_key = chunk_key & superchunk_mask;
             let bitset = superchunk_bitsets.entry(superchunk_key).or_insert_with(|| {
-                Array3::fill(
+                Array3x1::fill(
                     Extent3i::from_min_and_shape(
                         superchunk_key >> chunk_log2,
                         superchunk_shape_in_chunks,
@@ -90,7 +90,7 @@ impl OctreeChunkIndex {
         }
 
         // PERF: could be done in parallel
-        let mut superchunk_octrees = FnvHashMap::default();
+        let mut superchunk_octrees = SmallKeyHashMap::default();
         for (lod_chunk_key, array) in superchunk_bitsets.into_iter() {
             let octree = OctreeSet::from_array3(&array, *array.extent());
             superchunk_octrees.insert(lod_chunk_key, octree);

@@ -20,7 +20,7 @@ use building_blocks_core::prelude::*;
 /// Visits the Von-Neumann-connected region, starting at `seed`, where all points in the region satisfy `visitor` (i.e.
 /// `visitor` returns `true`). The search space is bounded by `bounds`. `visitor` may be called multiple times on the same
 /// point, so it must remember which points have been visited already. This is usually accomplished by setting values in an
-/// `Array3` that covers the same region as `bounds`.
+/// `Array3x1` that covers the same region as `bounds`.
 pub fn von_neumann_flood_fill3(
     bounds: Extent3i,
     seed: Point3i,
@@ -192,7 +192,7 @@ mod tests {
 
         let sphere_radius = 32;
         let map_radius = sphere_radius + 1;
-        let mut map = Array3::fill(
+        let mut map = Array3x1::fill(
             Extent3i::from_min_and_shape(Point3i::fill(-map_radius), Point3i::fill(2 * map_radius)),
             background_color,
         );

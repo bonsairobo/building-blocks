@@ -51,7 +51,7 @@
 //!     let padded_chunk_extent = padded_height_map_chunk_extent(
 //!         &map.indexer.extent_for_chunk_at_key(chunk_key)
 //!     );
-//!     let mut padded_chunk = Array2::fill(padded_chunk_extent, 0.0);
+//!     let mut padded_chunk = Array2x1::fill(padded_chunk_extent, 0.0);
 //!     copy_extent(&padded_chunk_extent, &map, &mut padded_chunk);
 //!
 //!     let mut hm_buffer = HeightMapMeshBuffer::default();
@@ -74,7 +74,7 @@
 //! }
 //!
 //! let extent = Extent2i::from_min_and_shape(PointN([0; 2]), PointN([50; 2]));
-//! let array = Array2::fill(extent, 0.0);
+//! let array = Array2x1::fill(extent, 0.0);
 //! let tfm_array = TransformMap::new(&array, |h: f32| OtherHeight(h));
 //! let mut hm_buffer = HeightMapMeshBuffer::default();
 //! triangulate_height_map(&tfm_array, &extent, &mut hm_buffer);

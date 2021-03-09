@@ -1,9 +1,35 @@
 use crate::{
     for_each_stride_parallel_global_unchecked2, for_each_stride_parallel_global_unchecked3,
-    Array2ForEach, Array3ForEach, ArrayForEach, Local, Local2i, Local3i, Stride,
+    Array2x1ForEach, Array3x1ForEach, ArrayForEach, Local, Local2i, Local3i, Stride,
 };
 
 use building_blocks_core::prelude::*;
+
+/// When a lattice map implements `Array`, that means there is some underlying array with the location and shape dictated by the
+/// extent.
+///
+/// For the sake of generic impls, if the same map also implements `Get*<Stride>`, it must use the same data layout as `ArrayNx1`.
+pub trait IndexedArray<N> {
+    type Indexer: ArrayIndexer<N>;
+
+    fn extent(&self) -> &ExtentN<N>;
+
+    #[inline]
+    fn stride_from_local_point(&self, p: Local<N>) -> Stride
+    where
+        PointN<N>: Copy,
+    {
+        Self::Indexer::stride_from_local_point(self.extent().shape, p)
+    }
+
+    #[inline]
+    fn strides_from_local_points(&self, points: &[Local<N>], strides: &mut [Stride])
+    where
+        PointN<N>: Copy,
+    {
+        Self::Indexer::strides_from_local_points(self.extent().shape, points, strides)
+    }
+}
 
 pub trait ArrayIndexer<N> {
     fn stride_from_local_point(shape: PointN<N>, point: Local<N>) -> Stride;
@@ -39,7 +65,7 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
 
     #[inline]
     fn for_each_point_and_stride_unchecked(
-        for_each: Array2ForEach,
+        for_each: Array2x1ForEach,
         mut f: impl FnMut(Point2i, Stride),
     ) {
         for_each2!(for_each, x, y, stride, { f(PointN([x, y]), stride) });
@@ -64,7 +90,7 @@ impl ArrayIndexer<[i32; 3]> for [i32; 3] {
 
     #[inline]
     fn for_each_point_and_stride_unchecked(
-        for_each: Array3ForEach,
+        for_each: Array3x1ForEach,
         mut f: impl FnMut(Point3i, Stride),
     ) {
         for_each3!(for_each, x, y, z, stride, { f(PointN([x, y, z]), stride) });

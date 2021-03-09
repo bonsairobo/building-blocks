@@ -18,7 +18,7 @@ fn flood_fill_sphere(c: &mut Criterion) {
                 b.iter_with_setup(
                     || {
                         let map_radius = sphere_radius + 1;
-                        let mut map = Array3::fill(
+                        let mut map = Array3x1::fill(
                             Extent3i::from_min_and_shape(
                                 Point3i::fill(-map_radius),
                                 Point3i::fill(2 * map_radius),

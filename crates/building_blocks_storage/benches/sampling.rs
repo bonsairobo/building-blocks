@@ -1,6 +1,6 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{
-    Array3, ChunkDownsampler, ChunkHashMapPyramid3, ChunkMap3x1, Local, OctreeChunkIndex,
+    Array3x1, ChunkDownsampler, ChunkHashMapPyramid3, ChunkMap3x1, Local, OctreeChunkIndex,
     PointDownsampler, Sd8, SdfMeanDownsampler,
 };
 
@@ -14,8 +14,8 @@ fn point_downsample3(c: &mut Criterion) {
                 || {
                     let chunk_shape = Point3i::fill(size);
                     let extent = Extent3i::from_min_and_shape(Point3i::ZERO, chunk_shape);
-                    let src = Array3::fill(extent, 1);
-                    let dst = Array3::fill(extent, 0);
+                    let src = Array3x1::fill(extent, 1);
+                    let dst = Array3x1::fill(extent, 0);
 
                     (src, dst, chunk_shape)
                 },

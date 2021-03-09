@@ -54,7 +54,7 @@
 //!     }
 //! });
 //!
-//! // You can also access individual points like you can with a `ArrayN`. This is
+//! // You can also access individual points like you can with a `ArrayNx1`. This is
 //! // slower than iterating, because it hashes the chunk coordinates for every access.
 //! for &p in write_points.iter() {
 //!     assert_eq!(map.get(p), 1);
@@ -66,7 +66,7 @@
 //! // doesn't support random indexing by `Stride`. Instead, assuming that your query spans multiple
 //! // chunks, you should copy the extent into a dense map first. (The copy is fast).
 //! let query_extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(32));
-//! let mut dense_map = Array3::fill(query_extent, ambient_value);
+//! let mut dense_map = Array3x1::fill(query_extent, ambient_value);
 //! copy_extent(&query_extent, &map, &mut dense_map);
 //! ```
 //!
@@ -111,19 +111,17 @@
 //! ```
 
 use crate::{
-    ArrayCopySrc, ArrayIndexer, ArrayN, Chunk, ChunkHashMap, ChunkIndexer, ChunkReadStorage,
-    ChunkWriteStorage, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked,
-    GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRefRelease, IterChunkKeys, ReadExtent,
-    WriteExtent,
+    ArrayCopySrc, ArrayIndexer, ArrayNx1, Chunk, ChunkHashMap, ChunkIndexer, ChunkReadStorage,
+    ChunkWriteStorage, ForEach, ForEachMut, GetMut, GetRef, IterChunkKeys, ReadExtent,
+    SmallKeyHashMap, WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
 
 use core::hash::Hash;
 use either::Either;
-use fnv::FnvHashMap;
 
-/// A lattice map made up of same-shaped `ArrayN` chunks. It takes a value at every possible `PointN`, because accesses made
+/// A lattice map made up of same-shaped `ArrayNx1` chunks. It takes a value at every possible `PointN`, because accesses made
 /// outside of the stored chunks will return some ambient value specified on creation.
 ///
 /// `ChunkMap` is generic over the type used to actually store the `Chunk`s. You can use any storage that implements
@@ -154,7 +152,7 @@ pub type ChunkMap2<T, Ch, Store> = ChunkMap<[i32; 2], T, Ch, Store>;
 pub type ChunkMap3<T, Ch, Store> = ChunkMap<[i32; 3], T, Ch, Store>;
 
 /// An N-dimensional, single-channel `ChunkMap`.
-pub type ChunkMapNx1<N, T, Store> = ChunkMap<N, T, ArrayN<N, T>, Store>;
+pub type ChunkMapNx1<N, T, Store> = ChunkMap<N, T, ArrayNx1<N, T>, Store>;
 /// A 2-dimensional, single-channel `ChunkMap`.
 pub type ChunkMap2x1<T, Store> = ChunkMapNx1<[i32; 2], T, Store>;
 /// A 3-dimensional, single-channel `ChunkMap`.
@@ -195,9 +193,9 @@ where
     PointN<N>: Hash + IntegerPoint<N>,
     Ch: Chunk<N, T>,
 {
-    /// Create a new `ChunkMap` using a `FnvHashMap` as the chunk storage.
+    /// Create a new `ChunkMap` using a `SmallKeyHashMap` as the chunk storage.
     pub fn build_with_hash_map_storage(chunk_shape: PointN<N>) -> Self {
-        Self::build_with_rw_storage(chunk_shape, FnvHashMap::default())
+        Self::build_with_rw_storage(chunk_shape, SmallKeyHashMap::default())
     }
 }
 
@@ -448,7 +446,7 @@ impl<N, T, Ch, Store> GetRef<PointN<N>, T> for ChunkMap<N, T, Ch, Store>
 where
     PointN<N>: IntegerPoint<N>,
     Ch: Chunk<N, T>,
-    Ch::Array: GetUncheckedRefRelease<PointN<N>, T>,
+    Ch::Array: GetRef<PointN<N>, T>,
     Store: ChunkReadStorage<N, Ch>,
 {
     #[inline]
@@ -456,7 +454,7 @@ where
         let key = self.indexer.chunk_key_containing_point(p);
 
         self.get_chunk(key)
-            .map(|chunk| chunk.array_ref().get_unchecked_ref_release(p))
+            .map(|chunk| chunk.array_ref().get_ref(p))
             .unwrap_or(&self.ambient_value)
     }
 }
@@ -465,7 +463,7 @@ impl<N, T, Ch, Store> GetMut<PointN<N>, T> for ChunkMap<N, T, Ch, Store>
 where
     PointN<N>: IntegerPoint<N>,
     Ch: Chunk<N, T>,
-    Ch::Array: GetUncheckedMutRelease<PointN<N>, T>,
+    Ch::Array: GetMut<PointN<N>, T>,
     Store: ChunkWriteStorage<N, Ch>,
 {
     #[inline]
@@ -473,7 +471,7 @@ where
         let key = self.indexer.chunk_key_containing_point(p);
         let chunk = self.get_mut_chunk_or_insert_ambient(key);
 
-        chunk.array_mut().get_unchecked_mut_release(p)
+        chunk.array_mut().get_mut(p)
     }
 }
 
@@ -570,7 +568,7 @@ where
     }
 }
 
-// If ArrayN supports writing from type Src, then so does ChunkMap.
+// If ArrayNx1 supports writing from type Src, then so does ChunkMap.
 impl<N, T, Ch, Store, Src> WriteExtent<N, Src> for ChunkMap<N, T, Ch, Store>
 where
     PointN<N>: IntegerPoint<N>,
@@ -600,7 +598,7 @@ pub type ChunkCopySrcIter<N, T, Ch> = std::vec::IntoIter<(ExtentN<N>, ChunkCopyS
 mod tests {
     use super::*;
 
-    use crate::{copy_extent, Array3, Get};
+    use crate::{copy_extent, Array3x1, Get};
 
     use building_blocks_core::prelude::*;
 
@@ -647,7 +645,7 @@ mod tests {
     #[test]
     fn copy_extent_from_array_then_read() {
         let extent_to_copy = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(80));
-        let array = Array3::fill(extent_to_copy, 1);
+        let array = Array3x1::fill(extent_to_copy, 1);
 
         let mut map = ChunkMap3x1::build_with_hash_map_storage(CHUNK_SHAPE);
 

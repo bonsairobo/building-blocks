@@ -13,9 +13,9 @@ description = "Efficient storage for maps on sparse or dense, 2D and 3D integer 
 default = ["lz4"]
 
 [dependencies]
+ahash = { version = "0.7", features = ["serde"] }
 bincode = "1.3"
 either = "1.6"
-fnv = "1.0"
 futures = "0.3"
 itertools = "0.9"
 num = "0.3"

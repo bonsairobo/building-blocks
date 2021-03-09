@@ -6,8 +6,8 @@ pub trait ChunkDownsampler<N, T> {
     /// Samples `src_chunk` in order to write out just a portion of `dst_chunk`, starting at `dst_min`.
     fn downsample(
         &self,
-        src_chunk: &ArrayN<N, T>,
-        dst_chunk: &mut ArrayN<N, T>,
+        src_chunk: &ArrayNx1<N, T>,
+        dst_chunk: &mut ArrayNx1<N, T>,
         dst_min: Local<N>,
         level_delta: u8,
     );
@@ -23,8 +23,8 @@ where
 {
     fn downsample(
         &self,
-        src_chunk: &ArrayN<N, T>,
-        dst_chunk: &mut ArrayN<N, T>,
+        src_chunk: &ArrayNx1<N, T>,
+        dst_chunk: &mut ArrayNx1<N, T>,
         dst_min: Local<N>,
         lod_delta: u8,
     ) {
@@ -53,8 +53,8 @@ where
 {
     fn downsample(
         &self,
-        src_chunk: &ArrayN<N, T>,
-        dst_chunk: &mut ArrayN<N, T>,
+        src_chunk: &ArrayNx1<N, T>,
+        dst_chunk: &mut ArrayNx1<N, T>,
         dst_min: Local<N>,
         lod_delta: u8,
     ) {

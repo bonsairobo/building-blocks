@@ -1,12 +1,12 @@
 use crate::{
     CacheEntry, ChunkMap, ChunkReadStorage, CompressedChunks, CompressibleChunkStorage,
     Compression, IterChunkKeys, LocalCache, LruChunkCacheEntries, LruChunkCacheKeys,
+    SmallKeyBuildHasher,
 };
 
 use building_blocks_core::prelude::*;
 
 use core::hash::Hash;
-use fnv::FnvBuildHasher;
 
 /// An object for reading from `CompressibleChunkStorage` with only `&self`. Easily construct one of these using the
 /// `CompressibleChunkStorage::reader` method.
@@ -108,7 +108,7 @@ where
 }
 
 /// A `LocalCache` of chunks.
-pub type LocalChunkCache<N, Ch> = LocalCache<PointN<N>, Ch, FnvBuildHasher>;
+pub type LocalChunkCache<N, Ch> = LocalCache<PointN<N>, Ch, SmallKeyBuildHasher>;
 /// A `LocalCache` of 2D chunks.
 pub type LocalChunkCache2<Ch> = LocalChunkCache<[i32; 2], Ch>;
 /// A `LocalCache` of 3D chunks.
@@ -120,7 +120,7 @@ pub type CompressibleChunkMapReader<'a, N, T, Ch, Compr> =
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
-        use crate::{$backend, ArrayN, FastArrayCompression};
+        use crate::{$backend, ArrayNx1, FastArrayCompression};
 
         /// N-dimensional, single-channel `CompressibleChunkStorageReader`.
         pub type CompressibleChunkStorageReaderNx1<'a, N, T, B = $backend> =
@@ -136,7 +136,7 @@ macro_rules! define_conditional_aliases {
         pub type CompressibleChunkMapReaderNx1<'a, N, T, B = $backend> = ChunkMap<
             N,
             T,
-            ArrayN<N, T>,
+            ArrayNx1<N, T>,
             CompressibleChunkStorageReader<'a, N, FastArrayCompression<N, T, B>>,
         >;
         /// 2-dimensional, single-channel `CompressibleChunkMapReader`.

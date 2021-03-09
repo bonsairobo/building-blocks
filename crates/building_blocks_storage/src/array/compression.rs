@@ -1,4 +1,6 @@
-use crate::{ArrayN, BincodeCompression, BytesCompression, Compressed, Compression, IntoRawBytes};
+use crate::{
+    ArrayNx1, BincodeCompression, BytesCompression, Compressed, Compression, IntoRawBytes,
+};
 
 use building_blocks_core::prelude::*;
 
@@ -19,7 +21,7 @@ impl<N, T, B> FastArrayCompression<N, T, B> {
     }
 }
 
-/// A compressed `ArrayN` that decompresses quickly but only on the same platform where it was compressed.
+/// A compressed `ArrayNx1` that decompresses quickly but only on the same platform where it was compressed.
 #[derive(Clone)]
 pub struct FastCompressedArray<N, T, B> {
     compressed_bytes: Vec<u8>,
@@ -43,7 +45,7 @@ where
     T: 'static + Copy,
     PointN<N>: IntegerPoint<N>,
 {
-    type Data = ArrayN<N, T>;
+    type Data = ArrayNx1<N, T>;
     type CompressedData = FastCompressedArray<N, T, B>;
 
     // Compress the map in-memory using some `B: BytesCompression`.
@@ -76,24 +78,24 @@ where
         };
         B::decompress_bytes(&compressed.compressed_bytes, &mut decompressed_bytes);
 
-        ArrayN::new(compressed.extent, decompressed_values)
+        ArrayNx1::new(compressed.extent, decompressed_values)
     }
 }
 
-pub type BincodeArrayCompression<N, T, B> = BincodeCompression<ArrayN<N, T>, B>;
+pub type BincodeArrayCompression<N, T, B> = BincodeCompression<ArrayNx1<N, T>, B>;
 pub type BincodeCompressedArray<N, T, B> = Compressed<BincodeArrayCompression<N, T, B>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
         use crate::{$backend, MaybeCompressed};
 
-        pub type MaybeCompressedArrayN<N, T, B = $backend> =
-            MaybeCompressed<ArrayN<N, T>, Compressed<FastArrayCompression<N, T, B>>>;
-        pub type MaybeCompressedArray2<T, B = $backend> = MaybeCompressedArrayN<[i32; 2], T, B>;
-        pub type MaybeCompressedArray3<T, B = $backend> = MaybeCompressedArrayN<[i32; 3], T, B>;
+        pub type MaybeCompressedArrayNx1<N, T, B = $backend> =
+            MaybeCompressed<ArrayNx1<N, T>, Compressed<FastArrayCompression<N, T, B>>>;
+        pub type MaybeCompressedArray2x1<T, B = $backend> = MaybeCompressedArrayNx1<[i32; 2], T, B>;
+        pub type MaybeCompressedArray3x1<T, B = $backend> = MaybeCompressedArrayNx1<[i32; 3], T, B>;
 
         pub type MaybeCompressedArrayRefN<'a, N, T, B = $backend> =
-            MaybeCompressed<&'a ArrayN<N, T>, &'a Compressed<FastArrayCompression<N, T, B>>>;
+            MaybeCompressed<&'a ArrayNx1<N, T>, &'a Compressed<FastArrayCompression<N, T, B>>>;
         pub type MaybeCompressedArrayRef2<'a, T, B = $backend> =
             MaybeCompressedArrayRefN<'a, [i32; 2], T, B>;
         pub type MaybeCompressedArrayRef3<'a, T, B = $backend> =

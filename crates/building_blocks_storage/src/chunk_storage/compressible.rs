@@ -1,8 +1,8 @@
 use crate::{
-    ArrayN, BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkWriteStorage, Compressed,
-    CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression, FastArrayCompression,
-    FnvLruCache, IterChunkKeys, LocalChunkCache, LruCacheEntries, LruCacheIntoIter, LruCacheKeys,
-    MaybeCompressed,
+    AHashLruCache, ArrayNx1, BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkWriteStorage,
+    Compressed, CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression,
+    FastArrayCompression, IterChunkKeys, LocalChunkCache, LruCacheEntries, LruCacheIntoIter,
+    LruCacheKeys, MaybeCompressed,
 };
 
 use building_blocks_core::prelude::*;
@@ -16,7 +16,7 @@ pub struct CompressibleChunkStorage<N, Compr>
 where
     Compr: Compression,
 {
-    pub cache: FnvLruCache<PointN<N>, Compr::Data, CompressedLocation>,
+    pub cache: AHashLruCache<PointN<N>, Compr::Data, CompressedLocation>,
     pub compression: Compr,
     pub compressed: CompressedChunks<Compr>,
 }
@@ -44,7 +44,7 @@ where
 {
     pub fn new(compression: Compr) -> Self {
         Self {
-            cache: FnvLruCache::default(),
+            cache: AHashLruCache::default(),
             compression,
             compressed: Slab::new(),
         }
@@ -281,7 +281,7 @@ pub type CompressibleChunkStorageNx1<N, T, B> =
 
 /// An N-dimensional, single-channel `CompressibleChunkMap`.
 pub type CompressibleChunkMapNx1<N, T, B> =
-    CompressibleChunkMap<N, T, ArrayN<N, T>, FastArrayCompression<N, T, B>>;
+    CompressibleChunkMap<N, T, ArrayNx1<N, T>, FastArrayCompression<N, T, B>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {

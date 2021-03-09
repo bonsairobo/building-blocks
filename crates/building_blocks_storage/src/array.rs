@@ -22,7 +22,7 @@
 //! use building_blocks_storage::prelude::*;
 //!
 //! let array_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
-//! let mut array = Array3::fill(array_extent, 0);
+//! let mut array = Array3x1::fill(array_extent, 0);
 //!
 //! // Write all points in the extent to the same value.
 //! let write_extent = Extent3i::from_min_and_lub(Point3i::fill(10), Point3i::fill(20));
@@ -47,7 +47,7 @@
 //! # use building_blocks_storage::prelude::*;
 //! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
 //! // Use a more interesting data set, just to show off this constructor.
-//! let mut array = Array3::fill_with(extent, |p| if p.x() % 2 == 0 { 1 } else { 0 });
+//! let mut array = Array3x1::fill_with(extent, |p| if p.x() % 2 == 0 { 1 } else { 0 });
 //!
 //! let subextent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(62));
 //!
@@ -73,7 +73,7 @@
 //!
 //! # Storage
 //!
-//! By default, `ArrayN` uses a `Vec` to store elements. But any type that implements `Deref<Target = [T]>` or `DerefMut<Target
+//! By default, `ArrayNx1` uses a `Vec` to store elements. But any type that implements `Deref<Target = [T]>` or `DerefMut<Target
 //! = [T]>` should be usable. This means you can construct an array with most pointer types.
 //!
 //! ```
@@ -81,19 +81,19 @@
 //! # use building_blocks_storage::prelude::*;
 //! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
 //! // Borrow `array`'s values for the lifetime of `other_array`.
-//! let array = Array3::fill(extent, 1);
-//! let other_array = Array3::new(extent, array.values_slice());
+//! let array = Array3x1::fill(extent, 1);
+//! let other_array = Array3x1::new(extent, array.values_slice());
 //! assert_eq!(other_array.get(Stride(0)), 1);
 //!
 //! // A stack-allocated array.
 //! let mut data = [1; 64 * 64 * 64];
-//! let mut stack_array = Array3::new(extent, &mut data[..]);
+//! let mut stack_array = Array3x1::new(extent, &mut data[..]);
 //! *stack_array.get_mut(Stride(0)) = 2;
 //! assert_eq!(data[0], 2);
 //!
 //! // A boxed array.
 //! let data: Box<[u32]> = Box::new([1; 64 * 64 * 64]); // must forget the size
-//! let box_array = Array3::new(extent, data);
+//! let box_array = Array3x1::new(extent, data);
 //! box_array.for_each(&extent, |p: Point3i, value| assert_eq!(value, 1));
 //! ```
 
@@ -114,9 +114,8 @@ pub use for_each::*;
 pub use indexer::*;
 
 use crate::{
-    ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked, GetUncheckedMut,
-    GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRelease, IntoRawBytes, ReadExtent,
-    TransformMap, WriteExtent,
+    ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetRef, IntoRawBytes, ReadExtent, TransformMap,
+    WriteExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -127,46 +126,20 @@ use core::ops::{Add, Deref, DerefMut};
 use either::Either;
 use serde::{Deserialize, Serialize};
 
-/// When a lattice map implements `Array`, that means there is some underlying array with the location and shape dictated by the
-/// extent.
-///
-/// For the sake of generic impls, if the same map also implements `Get*<Stride>`, it must use the same data layout as `ArrayN`.
-pub trait Array<N> {
-    type Indexer: ArrayIndexer<N>;
-
-    fn extent(&self) -> &ExtentN<N>;
-
-    #[inline]
-    fn stride_from_local_point(&self, p: Local<N>) -> Stride
-    where
-        PointN<N>: Copy,
-    {
-        Self::Indexer::stride_from_local_point(self.extent().shape, p)
-    }
-
-    #[inline]
-    fn strides_from_local_points(&self, points: &[Local<N>], strides: &mut [Stride])
-    where
-        PointN<N>: Copy,
-    {
-        Self::Indexer::strides_from_local_points(self.extent().shape, points, strides)
-    }
-}
-
 /// A map from lattice location `PointN<N>` to data `T`, stored as a flat array on the heap.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct ArrayN<N, T, Store = Vec<T>> {
+pub struct ArrayNx1<N, T, Store = Vec<T>> {
     values: Store,
     extent: ExtentN<N>,
     marker: std::marker::PhantomData<T>,
 }
 
-/// A 2-dimensional `Array`.
-pub type Array2<T, Store = Vec<T>> = ArrayN<[i32; 2], T, Store>;
-/// A 3-dimensional `Array`.
-pub type Array3<T, Store = Vec<T>> = ArrayN<[i32; 3], T, Store>;
+/// A 2-dimensional, 1-channel `Array`.
+pub type Array2x1<T, Store = Vec<T>> = ArrayNx1<[i32; 2], T, Store>;
+/// A 3-dimensional, 1-channel `Array`.
+pub type Array3x1<T, Store = Vec<T>> = ArrayNx1<[i32; 3], T, Store>;
 
-impl<N, T, Store> ArrayN<N, T, Store> {
+impl<N, T, Store> ArrayNx1<N, T, Store> {
     /// Moves the raw extent and values storage out of `self`.
     #[inline]
     pub fn into_parts(self) -> (ExtentN<N>, Store) {
@@ -179,7 +152,7 @@ impl<N, T, Store> ArrayN<N, T, Store> {
     }
 }
 
-impl<N, T, Store> Array<N> for ArrayN<N, T, Store>
+impl<N, T, Store> IndexedArray<N> for ArrayNx1<N, T, Store>
 where
     N: ArrayIndexer<N>,
 {
@@ -191,7 +164,7 @@ where
     }
 }
 
-impl<N, T, Store> ArrayN<N, T, Store>
+impl<N, T, Store> ArrayNx1<N, T, Store>
 where
     Store: Deref<Target = [T]>,
 {
@@ -202,7 +175,7 @@ where
     }
 }
 
-impl<N, T, Store> ArrayN<N, T, Store>
+impl<N, T, Store> ArrayNx1<N, T, Store>
 where
     Store: DerefMut<Target = [T]>,
 {
@@ -222,7 +195,7 @@ where
     }
 }
 
-impl<'a, N, T, Store> IntoRawBytes<'a> for ArrayN<N, T, Store>
+impl<'a, N, T, Store> IntoRawBytes<'a> for ArrayNx1<N, T, Store>
 where
     T: 'static + Copy,
     Store: Deref<Target = [T]>,
@@ -234,7 +207,7 @@ where
     }
 }
 
-impl<N, T> ArrayN<N, T, Vec<T>>
+impl<N, T> ArrayNx1<N, T, Vec<T>>
 where
     PointN<N>: IntegerPoint<N>,
 {
@@ -249,9 +222,9 @@ where
     /// Create a new array for `extent` where each point's value is determined by the `filler` function.
     pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> T) -> Self
     where
-        ArrayN<N, MaybeUninit<T>>: GetMut<PointN<N>, MaybeUninit<T>>,
+        ArrayNx1<N, MaybeUninit<T>>: GetMut<PointN<N>, MaybeUninit<T>>,
     {
-        let mut array = unsafe { ArrayN::maybe_uninit(extent) };
+        let mut array = unsafe { ArrayNx1::maybe_uninit(extent) };
 
         for p in extent.iter_points() {
             unsafe {
@@ -263,12 +236,12 @@ where
     }
 }
 
-impl<N, T, Store> ArrayN<N, T, Store>
+impl<N, T, Store> ArrayNx1<N, T, Store>
 where
     PointN<N>: IntegerPoint<N>,
     Store: Deref<Target = [T]>,
 {
-    /// Create a new `ArrayN` directly from the extent and values. This asserts that the number of points in the extent matches
+    /// Create a new `ArrayNx1` directly from the extent and values. This asserts that the number of points in the extent matches
     /// the length of the values `Vec`.
     pub fn new(extent: ExtentN<N>, values: Store) -> Self {
         assert_eq!(extent.num_points(), values.len());
@@ -293,7 +266,7 @@ where
     }
 }
 
-impl<N, T, Store> ArrayN<N, T, Store>
+impl<N, T, Store> ArrayNx1<N, T, Store>
 where
     PointN<N>: Point,
 {
@@ -304,7 +277,7 @@ where
     }
 }
 
-impl<N, T, Store> ArrayN<N, T, Store>
+impl<N, T, Store> ArrayNx1<N, T, Store>
 where
     for<'r> Self: ForEachMut<'r, N, (), Item = &'r mut T>,
     PointN<N>: IntegerPoint<N>,
@@ -323,7 +296,7 @@ where
     }
 }
 
-impl<N, T> ArrayN<N, MaybeUninit<T>>
+impl<N, T> ArrayNx1<N, MaybeUninit<T>>
 where
     PointN<N>: IntegerPoint<N>,
 {
@@ -342,7 +315,7 @@ where
     /// the internal `Vec` after transmuting the data pointer, so the overhead is minimal.
     /// # Safety
     /// All elements of the map must be initialized.
-    pub unsafe fn assume_init(self) -> ArrayN<N, T> {
+    pub unsafe fn assume_init(self) -> ArrayNx1<N, T> {
         let transmuted_values = {
             // Ensure the original vector is not dropped.
             let mut v_clone = core::mem::ManuallyDrop::new(self.values);
@@ -354,7 +327,7 @@ where
             )
         };
 
-        ArrayN::new(self.extent, transmuted_values)
+        ArrayNx1::new(self.extent, transmuted_values)
     }
 }
 
@@ -365,49 +338,37 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<N, T, Store> GetRef<Stride, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetRef<Stride, T> for ArrayNx1<N, T, Store>
 where
     Store: Deref<Target = [T]>,
 {
     #[inline]
     fn get_ref(&self, stride: Stride) -> &T {
-        &self.values[stride.0]
+        if cfg!(debug_assertions) {
+            &self.values[stride.0]
+        } else {
+            unsafe { self.values.get_unchecked(stride.0) }
+        }
     }
 }
 
-impl<N, T, Store> GetUncheckedRef<Stride, T> for ArrayN<N, T, Store>
-where
-    Store: Deref<Target = [T]>,
-{
-    #[inline]
-    unsafe fn get_unchecked_ref(&self, stride: Stride) -> &T {
-        self.values.get_unchecked(stride.0)
-    }
-}
-
-impl<N, T, Store> GetMut<Stride, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetMut<Stride, T> for ArrayNx1<N, T, Store>
 where
     Store: DerefMut<Target = [T]>,
 {
     #[inline]
     fn get_mut(&mut self, stride: Stride) -> &mut T {
-        &mut self.values[stride.0]
+        if cfg!(debug_assertions) {
+            &mut self.values[stride.0]
+        } else {
+            unsafe { self.values.get_unchecked_mut(stride.0) }
+        }
     }
 }
 
-impl<N, T, Store> GetUncheckedMut<Stride, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetRef<Local<N>, T> for ArrayNx1<N, T, Store>
 where
-    Store: DerefMut<Target = [T]>,
-{
-    #[inline]
-    unsafe fn get_unchecked_mut(&mut self, stride: Stride) -> &mut T {
-        self.values.get_unchecked_mut(stride.0)
-    }
-}
-
-impl<N, T, Store> GetRef<Local<N>, T> for ArrayN<N, T, Store>
-where
-    Self: Array<N> + GetRef<Stride, T>,
+    Self: IndexedArray<N> + GetRef<Stride, T>,
     PointN<N>: Copy,
 {
     #[inline]
@@ -416,9 +377,9 @@ where
     }
 }
 
-impl<N, T, Store> GetMut<Local<N>, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetMut<Local<N>, T> for ArrayNx1<N, T, Store>
 where
-    Self: Array<N> + GetMut<Stride, T>,
+    Self: IndexedArray<N> + GetMut<Stride, T>,
     PointN<N>: Copy,
 {
     #[inline]
@@ -427,9 +388,9 @@ where
     }
 }
 
-impl<N, T, Store> GetRef<PointN<N>, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetRef<PointN<N>, T> for ArrayNx1<N, T, Store>
 where
-    Self: Array<N> + GetRef<Local<N>, T>,
+    Self: IndexedArray<N> + GetRef<Local<N>, T>,
     PointN<N>: Point,
 {
     #[inline]
@@ -440,9 +401,9 @@ where
     }
 }
 
-impl<N, T, Store> GetMut<PointN<N>, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetMut<PointN<N>, T> for ArrayNx1<N, T, Store>
 where
-    Self: Array<N> + GetMut<Local<N>, T>,
+    Self: IndexedArray<N> + GetMut<Local<N>, T>,
     PointN<N>: Point,
 {
     #[inline]
@@ -453,55 +414,7 @@ where
     }
 }
 
-impl<N, T, Store> GetUncheckedRef<Local<N>, T> for ArrayN<N, T, Store>
-where
-    Self: Array<N> + GetUncheckedRef<Stride, T>,
-    PointN<N>: Copy,
-{
-    #[inline]
-    unsafe fn get_unchecked_ref(&self, p: Local<N>) -> &T {
-        self.get_unchecked_ref(self.stride_from_local_point(p))
-    }
-}
-
-impl<N, T, Store> GetUncheckedMut<Local<N>, T> for ArrayN<N, T, Store>
-where
-    Self: Array<N> + GetUncheckedMut<Stride, T>,
-    PointN<N>: Copy,
-{
-    #[inline]
-    unsafe fn get_unchecked_mut(&mut self, p: Local<N>) -> &mut T {
-        self.get_unchecked_mut(self.stride_from_local_point(p))
-    }
-}
-
-impl<N, T, Store> GetUncheckedRef<PointN<N>, T> for ArrayN<N, T, Store>
-where
-    Self: Array<N> + GetUncheckedRef<Local<N>, T>,
-    PointN<N>: Point,
-{
-    #[inline]
-    unsafe fn get_unchecked_ref(&self, p: PointN<N>) -> &T {
-        let local_p = p - self.extent().minimum;
-
-        self.get_unchecked_ref(Local(local_p))
-    }
-}
-
-impl<N, T, Store> GetUncheckedMut<PointN<N>, T> for ArrayN<N, T, Store>
-where
-    Self: Array<N> + GetUncheckedMut<Local<N>, T>,
-    PointN<N>: Point,
-{
-    #[inline]
-    unsafe fn get_unchecked_mut(&mut self, p: PointN<N>) -> &mut T {
-        let local_p = p - self.extent().minimum;
-
-        self.get_unchecked_mut(Local(local_p))
-    }
-}
-
-impl_get_via_get_ref_and_clone!(ArrayN<N, T, Store>, N, T, Store);
+impl_get_via_get_ref_and_clone!(ArrayNx1<N, T, Store>, N, T, Store);
 
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║
@@ -512,9 +425,9 @@ impl_get_via_get_ref_and_clone!(ArrayN<N, T, Store>, N, T, Store);
 
 macro_rules! impl_array_for_each {
     (coords: $coords:ty; forwarder = |$p:ident, $stride:ident| $forward_coords:expr;) => {
-        impl<N, T, Store> ForEach<N, $coords> for ArrayN<N, T, Store>
+        impl<N, T, Store> ForEach<N, $coords> for ArrayNx1<N, T, Store>
         where
-            Self: Get<Stride, T> + GetUnchecked<Stride, T>,
+            Self: Get<Stride, T>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
         {
@@ -523,13 +436,12 @@ macro_rules! impl_array_for_each {
             #[inline]
             fn for_each(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, T)) {
                 let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
-                visitor.for_each_point_and_stride(|$p, $stride| {
-                    f($forward_coords, self.get_unchecked_release($stride))
-                });
+                visitor
+                    .for_each_point_and_stride(|$p, $stride| f($forward_coords, self.get($stride)));
             }
         }
 
-        impl<'a, N, T, Store> ForEachMut<'a, N, $coords> for ArrayN<N, T, Store>
+        impl<'a, N, T, Store> ForEachMut<'a, N, $coords> for ArrayNx1<N, T, Store>
         where
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
@@ -555,7 +467,7 @@ macro_rules! impl_array_for_each {
         }
 
         impl<'a, N, T, S, Store1, Store2> ForEachMut<'a, N, $coords>
-            for (&mut ArrayN<N, T, Store1>, &mut ArrayN<N, S, Store2>)
+            for (&mut ArrayNx1<N, T, Store1>, &mut ArrayNx1<N, S, Store2>)
         where
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
@@ -619,11 +531,11 @@ impl_array_for_each!(
 #[derive(Copy, Clone)]
 pub struct ArrayCopySrc<Map>(pub Map);
 
-impl<'a, N: 'a, T: 'a, Store: 'a> ReadExtent<'a, N> for ArrayN<N, T, Store>
+impl<'a, N: 'a, T: 'a, Store: 'a> ReadExtent<'a, N> for ArrayNx1<N, T, Store>
 where
     PointN<N>: IntegerPoint<N>,
 {
-    type Src = ArrayCopySrc<&'a ArrayN<N, T, Store>>;
+    type Src = ArrayCopySrc<&'a ArrayNx1<N, T, Store>>;
     type SrcIter = Once<(ExtentN<N>, Self::Src)>;
 
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
@@ -633,9 +545,9 @@ where
     }
 }
 
-impl<'a, N, T, Store> WriteExtent<N, ArrayCopySrc<&'a Self>> for ArrayN<N, T, Store>
+impl<'a, N, T, Store> WriteExtent<N, ArrayCopySrc<&'a Self>> for ArrayNx1<N, T, Store>
 where
-    Self: GetUncheckedRelease<Stride, T> + GetUncheckedMutRelease<Stride, T>,
+    Self: Get<Stride, T> + GetMut<Stride, T>,
     N: ArrayIndexer<N>,
     T: Clone,
     PointN<N>: IntegerPoint<N>,
@@ -660,11 +572,11 @@ where
 }
 
 impl<'a, N, T, Store, Map, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Map, F, T>>>
-    for ArrayN<N, T, Store>
+    for ArrayNx1<N, T, Store>
 where
-    Self: Array<N> + GetUncheckedMutRelease<Stride, T>,
+    Self: IndexedArray<N> + GetMut<Stride, T>,
     T: Clone,
-    TransformMap<'a, Map, F, T>: Array<N> + GetUncheckedRelease<Stride, T>,
+    TransformMap<'a, Map, F, T>: IndexedArray<N> + Get<Stride, T>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
 {
@@ -687,8 +599,8 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
     src: &Src,
     extent: &ExtentN<N>,
 ) where
-    Dst: Array<N> + GetUncheckedMutRelease<Stride, T>,
-    Src: Array<N> + GetUncheckedRelease<Stride, T>,
+    Dst: IndexedArray<N> + GetMut<Stride, T>,
+    Src: IndexedArray<N> + Get<Stride, T>,
     ExtentN<N>: Copy,
 {
     let dst_extent = *dst.extent();
@@ -700,12 +612,12 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
         |s_dst, s_src| {
             // The actual copy.
             // PERF: could be faster with SIMD copy
-            *dst.get_unchecked_mut_release(s_dst) = src.get_unchecked_release(s_src);
+            *dst.get_mut(s_dst) = src.get(s_src);
         },
     );
 }
 
-impl<N, T, Ch, Store> WriteExtent<N, ChunkCopySrc<N, T, Ch>> for ArrayN<N, T, Store>
+impl<N, T, Ch, Store> WriteExtent<N, ChunkCopySrc<N, T, Ch>> for ArrayNx1<N, T, Store>
 where
     for<'r> Self: ForEachMut<'r, N, Stride, Item = &'r mut T>,
     Self: WriteExtent<N, ArrayCopySrc<Ch>>,
@@ -722,7 +634,7 @@ where
     }
 }
 
-impl<N, T, Store, F> WriteExtent<N, F> for ArrayN<N, T, Store>
+impl<N, T, Store, F> WriteExtent<N, F> for ArrayNx1<N, T, Store>
 where
     for<'r> Self: ForEachMut<'r, N, PointN<N>, Item = &'r mut T>,
     F: Fn(PointN<N>) -> T,
@@ -742,69 +654,48 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{copy_extent, Array2, Array3, Get, GetUnchecked};
+    use crate::{copy_extent, Array2x1, Array3x1, Get};
 
     use building_blocks_core::{Extent2, Extent3};
 
     #[test]
     fn fill_and_get_2d() {
         let extent = Extent2::from_min_and_shape(PointN([1, 1]), PointN([10, 10]));
-        let mut array = Array2::fill(extent, 0);
+        let mut array = Array2x1::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 100);
         *array.get_mut(Stride(0)) = 1;
 
         assert_eq!(array.get(Stride(0)), 1);
         assert_eq!(array.get_mut(Stride(0)), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(Stride(0)) }, 1);
-        assert_eq!(unsafe { array.get_unchecked_mut(Stride(0)) }, &mut 1);
 
         assert_eq!(array.get(Local(PointN([0, 0]))), 1);
         assert_eq!(array.get_mut(Local(PointN([0, 0]))), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(Local(PointN([0, 0]))) }, 1);
-        assert_eq!(
-            unsafe { array.get_unchecked_mut(Local(PointN([0, 0]))) },
-            &mut 1
-        );
 
         assert_eq!(array.get(PointN([1, 1])), 1);
         assert_eq!(array.get_mut(PointN([1, 1])), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(PointN([1, 1])) }, 1);
-        assert_eq!(unsafe { array.get_unchecked_mut(PointN([1, 1])) }, &mut 1);
     }
 
     #[test]
     fn fill_and_get_3d() {
         let extent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
-        let mut array = Array3::fill(extent, 0);
+        let mut array = Array3x1::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 1000);
         *array.get_mut(Stride(0)) = 1;
 
         assert_eq!(array.get(Stride(0)), 1);
         assert_eq!(array.get_mut(Stride(0)), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(Stride(0)) }, 1);
-        assert_eq!(unsafe { array.get_unchecked_mut(Stride(0)) }, &mut 1);
 
         assert_eq!(array.get(Local(Point3i::ZERO)), 1);
         assert_eq!(array.get_mut(Local(Point3i::ZERO)), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(Local(Point3i::ZERO)) }, 1);
-        assert_eq!(
-            unsafe { array.get_unchecked_mut(Local(Point3i::ZERO)) },
-            &mut 1
-        );
 
         assert_eq!(array.get(PointN([1, 1, 1])), 1);
         assert_eq!(array.get_mut(PointN([1, 1, 1])), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(PointN([1, 1, 1])) }, 1);
-        assert_eq!(
-            unsafe { array.get_unchecked_mut(PointN([1, 1, 1])) },
-            &mut 1
-        );
     }
 
     #[test]
     fn fill_and_for_each_2d() {
         let extent = Extent2::from_min_and_shape(Point2i::fill(1), Point2i::fill(10));
-        let mut array = Array2::fill(extent, 0);
+        let mut array = Array2x1::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 100);
         *array.get_mut(Stride(0)) = 1;
 
@@ -820,7 +711,7 @@ mod tests {
     #[test]
     fn fill_and_for_each_3d() {
         let extent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
-        let mut array = Array3::fill(extent, 0);
+        let mut array = Array3x1::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 1000);
         *array.get_mut(Stride(0)) = 1;
 
@@ -836,7 +727,7 @@ mod tests {
     #[test]
     fn uninitialized() {
         let extent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
-        let mut array: Array3<MaybeUninit<i32>> = unsafe { Array3::maybe_uninit(extent) };
+        let mut array: Array3x1<MaybeUninit<i32>> = unsafe { Array3x1::maybe_uninit(extent) };
 
         for p in extent.iter_points() {
             unsafe {
@@ -854,14 +745,14 @@ mod tests {
     #[test]
     fn copy() {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
-        let mut array = Array3::fill(extent, 0);
+        let mut array = Array3x1::fill(extent, 0);
 
         let subextent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(5));
         for p in subextent.iter_points() {
             *array.get_mut(p) = p.x() + p.y() + p.z();
         }
 
-        let mut other_array = Array3::fill(extent, 0);
+        let mut other_array = Array3x1::fill(extent, 0);
         copy_extent(&subextent, &array, &mut other_array);
 
         assert_eq!(array, other_array);
@@ -870,8 +761,8 @@ mod tests {
     #[test]
     fn multichannel_mut_iter() {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
-        let mut array1 = Array3::fill(extent, 0);
-        let mut array2 = Array3::fill(extent, false);
+        let mut array1 = Array3x1::fill(extent, 0);
+        let mut array2 = Array3x1::fill(extent, false);
 
         (&mut array1, &mut array2).for_each_mut(&extent, |_p: Point3i, (val1, val2)| {
             *val1 = 1;

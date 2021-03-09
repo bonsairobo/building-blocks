@@ -44,7 +44,7 @@
 //! The other form of traversal is "node-based," which is slightly less efficient and more manual but also more flexible. See
 //! the `OctreeSet::root_node`, `OctreeSet::child_node`, and `OctreeNode` documentation for details.
 
-use crate::{prelude::*, GetUncheckedRelease, IsEmpty, SmallKeyHashMap};
+use crate::{prelude::*, IsEmpty, SmallKeyHashMap};
 
 use building_blocks_core::prelude::*;
 
@@ -104,7 +104,7 @@ impl OctreeSet {
     /// must have `0 < P <= 6`, because there is a maximum fixed depth of the octree.
     pub fn from_array3<A, T>(array: &A, extent: Extent3i) -> Self
     where
-        A: IndexedArray<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+        A: IndexedArray<[i32; 3]> + Get<Stride, T>,
         T: Clone + IsEmpty,
     {
         let power = Self::check_extent(&extent);
@@ -152,13 +152,13 @@ impl OctreeSet {
         nodes: &mut SmallKeyHashMap<LocationCode, ChildBitMask>,
     ) -> (bool, bool)
     where
-        A: IndexedArray<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+        A: IndexedArray<[i32; 3]> + Get<Stride, T>,
         T: Clone + IsEmpty,
     {
         // Base case where the octant is a single voxel. The `OctreeNode` is invalid and unnecessary in this case; we avoid using
         // it by returning early.
         if edge_length == 1 {
-            let exists = !array.get_unchecked_release(minimum).is_empty();
+            let exists = !array.get(minimum).is_empty();
             return (exists, exists);
         }
 

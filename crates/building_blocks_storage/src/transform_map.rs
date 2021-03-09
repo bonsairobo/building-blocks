@@ -39,7 +39,7 @@
 
 use crate::{
     AmbientExtent, ArrayCopySrc, ArrayNx1, ChunkCopySrc, ChunkCopySrcIter, ChunkMap, ForEach, Get,
-    GetUnchecked, IndexedArray, ReadExtent,
+    IndexedArray, ReadExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -86,17 +86,6 @@ where
     #[inline]
     fn get(&self, c: Coord) -> Out {
         (self.transform)(self.delegate.get(c))
-    }
-}
-
-impl<'a, Delegate, F, In, Out, Coord> GetUnchecked<Coord, Out> for TransformMap<'a, Delegate, F, In>
-where
-    F: Fn(In) -> Out,
-    Delegate: GetUnchecked<Coord, In>,
-{
-    #[inline]
-    unsafe fn get_unchecked(&self, c: Coord) -> Out {
-        (self.transform)(self.delegate.get_unchecked(c))
     }
 }
 

@@ -1,7 +1,7 @@
 use super::PosNormMesh;
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{prelude::*, ArrayForEach, GetUncheckedRelease};
+use building_blocks_storage::{prelude::*, ArrayForEach};
 
 pub trait Height {
     fn height(&self) -> f32;
@@ -59,9 +59,7 @@ pub fn triangulate_height_map<A, H>(
     extent: &Extent2i,
     output: &mut HeightMapMeshBuffer,
 ) where
-    A: IndexedArray<[i32; 2]>
-        + ForEach<[i32; 2], (Point2i, Stride), Item = H>
-        + GetUncheckedRelease<Stride, H>,
+    A: IndexedArray<[i32; 2]> + ForEach<[i32; 2], (Point2i, Stride), Item = H> + Get<Stride, H>,
     H: Height,
 {
     output.reset(height_map.extent().num_points());
@@ -97,10 +95,10 @@ pub fn triangulate_height_map<A, H>(
             let r_stride = stride + x_stride;
             let b_stride = stride - y_stride;
             let t_stride = stride + y_stride;
-            let l_y = height_map.get_unchecked_release(l_stride).height();
-            let r_y = height_map.get_unchecked_release(r_stride).height();
-            let b_y = height_map.get_unchecked_release(b_stride).height();
-            let t_y = height_map.get_unchecked_release(t_stride).height();
+            let l_y = height_map.get(l_stride).height();
+            let r_y = height_map.get(r_stride).height();
+            let b_y = height_map.get(b_stride).height();
+            let t_y = height_map.get(t_stride).height();
             let dy_dx = (r_y - l_y) / 2.0;
             let dy_dz = (t_y - b_y) / 2.0;
             // Not normalized, because that's done more efficiently on the GPU.

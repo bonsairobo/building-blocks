@@ -82,96 +82,17 @@ pub trait GetMut<L, T> {
     fn get_mut(&mut self, location: L) -> &mut T;
 }
 
-pub trait GetUnchecked<L, T> {
-    /// Get the value at location without doing bounds checking.
-    /// # Safety
-    /// Don't access out of bounds.
-    unsafe fn get_unchecked(&self, location: L) -> T;
-}
-
-pub trait GetUncheckedRef<L, T> {
-    /// Get an immutable reference to the value at `location` without doing bounds checking.
-    /// # Safety
-    /// Don't access out of bounds.
-    unsafe fn get_unchecked_ref(&self, location: L) -> &T;
-}
-
-pub trait GetUncheckedMut<L, T> {
-    /// Get a mutable reference to the value at `location` without doing bounds checking.
-    /// # Safety
-    /// Don't access out of bounds.
-    unsafe fn get_unchecked_mut(&mut self, location: L) -> &mut T;
-}
-
-pub trait GetUncheckedRelease<L, T>: Get<L, T> + GetUnchecked<L, T> {
-    /// Get the value at location. Skips bounds checking in release mode.
-    /// # Safety
-    /// Don't access out of bounds.
-    #[inline]
-    fn get_unchecked_release(&self, location: L) -> T {
-        if cfg!(debug_assertions) {
-            self.get(location)
-        } else {
-            unsafe { self.get_unchecked(location) }
-        }
-    }
-}
-
-impl<Map, L, T> GetUncheckedRelease<L, T> for Map where Map: Get<L, T> + GetUnchecked<L, T> {}
-
-pub trait GetUncheckedRefRelease<L, T>: GetRef<L, T> + GetUncheckedRef<L, T> {
-    /// Get an immutable reference to the value at `location`. Skips bounds checking in release mode.
-    /// # Safety
-    /// Don't access out of bounds.
-    #[inline]
-    fn get_unchecked_ref_release(&self, location: L) -> &T {
-        if cfg!(debug_assertions) {
-            self.get_ref(location)
-        } else {
-            unsafe { self.get_unchecked_ref(location) }
-        }
-    }
-}
-
-impl<Map, L, T> GetUncheckedRefRelease<L, T> for Map where Map: GetRef<L, T> + GetUncheckedRef<L, T> {}
-
-pub trait GetUncheckedMutRelease<L, T>: GetMut<L, T> + GetUncheckedMut<L, T> {
-    /// Get an mutable reference to the value at `location`. Skips bounds checking in release mode.
-    /// # Safety
-    /// Don't access out of bounds.
-    #[inline]
-    fn get_unchecked_mut_release(&mut self, location: L) -> &mut T {
-        if cfg!(debug_assertions) {
-            self.get_mut(location)
-        } else {
-            unsafe { self.get_unchecked_mut(location) }
-        }
-    }
-}
-
-impl<Map, L, T> GetUncheckedMutRelease<L, T> for Map where Map: GetMut<L, T> + GetUncheckedMut<L, T> {}
-
 // We need this macro because doing a blanket impl causes conflicts due to Rust's orphan rules.
 macro_rules! impl_get_via_get_ref_and_clone {
     ($map:ty, $($type_params:ident),*) => {
-        impl<L, $($type_params),*> Get<L, T> for $map
+        impl<L, $($type_params),*> $crate::Get<L, T> for $map
         where
-            Self: GetRef<L, T>,
+            Self: $crate::GetRef<L, T>,
             T: Clone,
         {
             #[inline]
             fn get(&self, location: L) -> T {
                 self.get_ref(location).clone()
-            }
-        }
-        impl<L, $($type_params),*> GetUnchecked<L, T> for $map
-        where
-            Self: GetUncheckedRef<L, T>,
-            T: Clone,
-        {
-            #[inline]
-            unsafe fn get_unchecked(&self, location: L) -> T {
-                self.get_unchecked_ref(location).clone()
             }
         }
     };

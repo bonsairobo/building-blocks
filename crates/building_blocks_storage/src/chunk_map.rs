@@ -112,8 +112,7 @@
 
 use crate::{
     ArrayCopySrc, ArrayIndexer, ArrayNx1, Chunk, ChunkHashMap, ChunkIndexer, ChunkReadStorage,
-    ChunkWriteStorage, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked,
-    GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRefRelease, IterChunkKeys, ReadExtent,
+    ChunkWriteStorage, ForEach, ForEachMut, GetMut, GetRef, IterChunkKeys, ReadExtent,
     SmallKeyHashMap, WriteExtent,
 };
 
@@ -447,7 +446,7 @@ impl<N, T, Ch, Store> GetRef<PointN<N>, T> for ChunkMap<N, T, Ch, Store>
 where
     PointN<N>: IntegerPoint<N>,
     Ch: Chunk<N, T>,
-    Ch::Array: GetUncheckedRefRelease<PointN<N>, T>,
+    Ch::Array: GetRef<PointN<N>, T>,
     Store: ChunkReadStorage<N, Ch>,
 {
     #[inline]
@@ -455,7 +454,7 @@ where
         let key = self.indexer.chunk_key_containing_point(p);
 
         self.get_chunk(key)
-            .map(|chunk| chunk.array_ref().get_unchecked_ref_release(p))
+            .map(|chunk| chunk.array_ref().get_ref(p))
             .unwrap_or(&self.ambient_value)
     }
 }
@@ -464,7 +463,7 @@ impl<N, T, Ch, Store> GetMut<PointN<N>, T> for ChunkMap<N, T, Ch, Store>
 where
     PointN<N>: IntegerPoint<N>,
     Ch: Chunk<N, T>,
-    Ch::Array: GetUncheckedMutRelease<PointN<N>, T>,
+    Ch::Array: GetMut<PointN<N>, T>,
     Store: ChunkWriteStorage<N, Ch>,
 {
     #[inline]
@@ -472,7 +471,7 @@ where
         let key = self.indexer.chunk_key_containing_point(p);
         let chunk = self.get_mut_chunk_or_insert_ambient(key);
 
-        chunk.array_mut().get_unchecked_mut_release(p)
+        chunk.array_mut().get_mut(p)
     }
 }
 

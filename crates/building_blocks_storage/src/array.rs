@@ -114,9 +114,8 @@ pub use for_each::*;
 pub use indexer::*;
 
 use crate::{
-    ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked, GetUncheckedMut,
-    GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRelease, IntoRawBytes, ReadExtent,
-    TransformMap, WriteExtent,
+    ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetRef, IntoRawBytes, ReadExtent, TransformMap,
+    WriteExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -345,17 +344,11 @@ where
 {
     #[inline]
     fn get_ref(&self, stride: Stride) -> &T {
-        &self.values[stride.0]
-    }
-}
-
-impl<N, T, Store> GetUncheckedRef<Stride, T> for ArrayNx1<N, T, Store>
-where
-    Store: Deref<Target = [T]>,
-{
-    #[inline]
-    unsafe fn get_unchecked_ref(&self, stride: Stride) -> &T {
-        self.values.get_unchecked(stride.0)
+        if cfg!(debug_assertions) {
+            &self.values[stride.0]
+        } else {
+            unsafe { self.values.get_unchecked(stride.0) }
+        }
     }
 }
 
@@ -365,17 +358,11 @@ where
 {
     #[inline]
     fn get_mut(&mut self, stride: Stride) -> &mut T {
-        &mut self.values[stride.0]
-    }
-}
-
-impl<N, T, Store> GetUncheckedMut<Stride, T> for ArrayNx1<N, T, Store>
-where
-    Store: DerefMut<Target = [T]>,
-{
-    #[inline]
-    unsafe fn get_unchecked_mut(&mut self, stride: Stride) -> &mut T {
-        self.values.get_unchecked_mut(stride.0)
+        if cfg!(debug_assertions) {
+            &mut self.values[stride.0]
+        } else {
+            unsafe { self.values.get_unchecked_mut(stride.0) }
+        }
     }
 }
 
@@ -427,54 +414,6 @@ where
     }
 }
 
-impl<N, T, Store> GetUncheckedRef<Local<N>, T> for ArrayNx1<N, T, Store>
-where
-    Self: IndexedArray<N> + GetUncheckedRef<Stride, T>,
-    PointN<N>: Copy,
-{
-    #[inline]
-    unsafe fn get_unchecked_ref(&self, p: Local<N>) -> &T {
-        self.get_unchecked_ref(self.stride_from_local_point(p))
-    }
-}
-
-impl<N, T, Store> GetUncheckedMut<Local<N>, T> for ArrayNx1<N, T, Store>
-where
-    Self: IndexedArray<N> + GetUncheckedMut<Stride, T>,
-    PointN<N>: Copy,
-{
-    #[inline]
-    unsafe fn get_unchecked_mut(&mut self, p: Local<N>) -> &mut T {
-        self.get_unchecked_mut(self.stride_from_local_point(p))
-    }
-}
-
-impl<N, T, Store> GetUncheckedRef<PointN<N>, T> for ArrayNx1<N, T, Store>
-where
-    Self: IndexedArray<N> + GetUncheckedRef<Local<N>, T>,
-    PointN<N>: Point,
-{
-    #[inline]
-    unsafe fn get_unchecked_ref(&self, p: PointN<N>) -> &T {
-        let local_p = p - self.extent().minimum;
-
-        self.get_unchecked_ref(Local(local_p))
-    }
-}
-
-impl<N, T, Store> GetUncheckedMut<PointN<N>, T> for ArrayNx1<N, T, Store>
-where
-    Self: IndexedArray<N> + GetUncheckedMut<Local<N>, T>,
-    PointN<N>: Point,
-{
-    #[inline]
-    unsafe fn get_unchecked_mut(&mut self, p: PointN<N>) -> &mut T {
-        let local_p = p - self.extent().minimum;
-
-        self.get_unchecked_mut(Local(local_p))
-    }
-}
-
 impl_get_via_get_ref_and_clone!(ArrayNx1<N, T, Store>, N, T, Store);
 
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
@@ -488,7 +427,7 @@ macro_rules! impl_array_for_each {
     (coords: $coords:ty; forwarder = |$p:ident, $stride:ident| $forward_coords:expr;) => {
         impl<N, T, Store> ForEach<N, $coords> for ArrayNx1<N, T, Store>
         where
-            Self: Get<Stride, T> + GetUnchecked<Stride, T>,
+            Self: Get<Stride, T>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
         {
@@ -497,9 +436,8 @@ macro_rules! impl_array_for_each {
             #[inline]
             fn for_each(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, T)) {
                 let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
-                visitor.for_each_point_and_stride(|$p, $stride| {
-                    f($forward_coords, self.get_unchecked_release($stride))
-                });
+                visitor
+                    .for_each_point_and_stride(|$p, $stride| f($forward_coords, self.get($stride)));
             }
         }
 
@@ -609,7 +547,7 @@ where
 
 impl<'a, N, T, Store> WriteExtent<N, ArrayCopySrc<&'a Self>> for ArrayNx1<N, T, Store>
 where
-    Self: GetUncheckedRelease<Stride, T> + GetUncheckedMutRelease<Stride, T>,
+    Self: Get<Stride, T> + GetMut<Stride, T>,
     N: ArrayIndexer<N>,
     T: Clone,
     PointN<N>: IntegerPoint<N>,
@@ -636,9 +574,9 @@ where
 impl<'a, N, T, Store, Map, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Map, F, T>>>
     for ArrayNx1<N, T, Store>
 where
-    Self: IndexedArray<N> + GetUncheckedMutRelease<Stride, T>,
+    Self: IndexedArray<N> + GetMut<Stride, T>,
     T: Clone,
-    TransformMap<'a, Map, F, T>: IndexedArray<N> + GetUncheckedRelease<Stride, T>,
+    TransformMap<'a, Map, F, T>: IndexedArray<N> + Get<Stride, T>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
 {
@@ -661,8 +599,8 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
     src: &Src,
     extent: &ExtentN<N>,
 ) where
-    Dst: IndexedArray<N> + GetUncheckedMutRelease<Stride, T>,
-    Src: IndexedArray<N> + GetUncheckedRelease<Stride, T>,
+    Dst: IndexedArray<N> + GetMut<Stride, T>,
+    Src: IndexedArray<N> + Get<Stride, T>,
     ExtentN<N>: Copy,
 {
     let dst_extent = *dst.extent();
@@ -674,7 +612,7 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
         |s_dst, s_src| {
             // The actual copy.
             // PERF: could be faster with SIMD copy
-            *dst.get_unchecked_mut_release(s_dst) = src.get_unchecked_release(s_src);
+            *dst.get_mut(s_dst) = src.get(s_src);
         },
     );
 }
@@ -716,7 +654,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{copy_extent, Array2x1, Array3x1, Get, GetUnchecked};
+    use crate::{copy_extent, Array2x1, Array3x1, Get};
 
     use building_blocks_core::{Extent2, Extent3};
 
@@ -729,21 +667,12 @@ mod tests {
 
         assert_eq!(array.get(Stride(0)), 1);
         assert_eq!(array.get_mut(Stride(0)), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(Stride(0)) }, 1);
-        assert_eq!(unsafe { array.get_unchecked_mut(Stride(0)) }, &mut 1);
 
         assert_eq!(array.get(Local(PointN([0, 0]))), 1);
         assert_eq!(array.get_mut(Local(PointN([0, 0]))), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(Local(PointN([0, 0]))) }, 1);
-        assert_eq!(
-            unsafe { array.get_unchecked_mut(Local(PointN([0, 0]))) },
-            &mut 1
-        );
 
         assert_eq!(array.get(PointN([1, 1])), 1);
         assert_eq!(array.get_mut(PointN([1, 1])), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(PointN([1, 1])) }, 1);
-        assert_eq!(unsafe { array.get_unchecked_mut(PointN([1, 1])) }, &mut 1);
     }
 
     #[test]
@@ -755,24 +684,12 @@ mod tests {
 
         assert_eq!(array.get(Stride(0)), 1);
         assert_eq!(array.get_mut(Stride(0)), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(Stride(0)) }, 1);
-        assert_eq!(unsafe { array.get_unchecked_mut(Stride(0)) }, &mut 1);
 
         assert_eq!(array.get(Local(Point3i::ZERO)), 1);
         assert_eq!(array.get_mut(Local(Point3i::ZERO)), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(Local(Point3i::ZERO)) }, 1);
-        assert_eq!(
-            unsafe { array.get_unchecked_mut(Local(Point3i::ZERO)) },
-            &mut 1
-        );
 
         assert_eq!(array.get(PointN([1, 1, 1])), 1);
         assert_eq!(array.get_mut(PointN([1, 1, 1])), &mut 1);
-        assert_eq!(unsafe { array.get_unchecked(PointN([1, 1, 1])) }, 1);
-        assert_eq!(
-            unsafe { array.get_unchecked_mut(PointN([1, 1, 1])) },
-            &mut 1
-        );
     }
 
     #[test]

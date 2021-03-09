@@ -1,5 +1,5 @@
 use crate::{
-    AHashLruCache, ArrayN, BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkWriteStorage,
+    AHashLruCache, ArrayNx1, BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkWriteStorage,
     Compressed, CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression,
     FastArrayCompression, IterChunkKeys, LocalChunkCache, LruCacheEntries, LruCacheIntoIter,
     LruCacheKeys, MaybeCompressed,
@@ -281,7 +281,7 @@ pub type CompressibleChunkStorageNx1<N, T, B> =
 
 /// An N-dimensional, single-channel `CompressibleChunkMap`.
 pub type CompressibleChunkMapNx1<N, T, B> =
-    CompressibleChunkMap<N, T, ArrayN<N, T>, FastArrayCompression<N, T, B>>;
+    CompressibleChunkMap<N, T, ArrayNx1<N, T>, FastArrayCompression<N, T, B>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {

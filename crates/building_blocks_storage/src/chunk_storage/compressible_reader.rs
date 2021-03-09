@@ -120,7 +120,7 @@ pub type CompressibleChunkMapReader<'a, N, T, Ch, Compr> =
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
-        use crate::{$backend, ArrayN, FastArrayCompression};
+        use crate::{$backend, ArrayNx1, FastArrayCompression};
 
         /// N-dimensional, single-channel `CompressibleChunkStorageReader`.
         pub type CompressibleChunkStorageReaderNx1<'a, N, T, B = $backend> =
@@ -136,7 +136,7 @@ macro_rules! define_conditional_aliases {
         pub type CompressibleChunkMapReaderNx1<'a, N, T, B = $backend> = ChunkMap<
             N,
             T,
-            ArrayN<N, T>,
+            ArrayNx1<N, T>,
             CompressibleChunkStorageReader<'a, N, FastArrayCompression<N, T, B>>,
         >;
         /// 2-dimensional, single-channel `CompressibleChunkMapReader`.

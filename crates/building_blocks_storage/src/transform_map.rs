@@ -38,7 +38,7 @@
 //! ```
 
 use crate::{
-    AmbientExtent, ArrayCopySrc, ArrayN, ChunkCopySrc, ChunkCopySrcIter, ChunkMap, ForEach, Get,
+    AmbientExtent, ArrayCopySrc, ArrayNx1, ChunkCopySrc, ChunkCopySrcIter, ChunkMap, ForEach, Get,
     GetUnchecked, IndexedArray, ReadExtent,
 };
 
@@ -129,7 +129,7 @@ where
 // TODO: try to make a generic ReadExtent impl, it's hard because we need a way to define the src types as a function of the
 // delegate src types (kinda hints at a monad or HKT)
 
-impl<'a, N, F, In, Out> ReadExtent<'a, N> for TransformMap<'a, ArrayN<N, In>, F, In>
+impl<'a, N, F, In, Out> ReadExtent<'a, N> for TransformMap<'a, ArrayNx1<N, In>, F, In>
 where
     Self: IndexedArray<N> + Clone,
     F: Fn(In) -> Out,

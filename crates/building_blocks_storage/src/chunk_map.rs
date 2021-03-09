@@ -54,7 +54,7 @@
 //!     }
 //! });
 //!
-//! // You can also access individual points like you can with a `ArrayN`. This is
+//! // You can also access individual points like you can with a `ArrayNx1`. This is
 //! // slower than iterating, because it hashes the chunk coordinates for every access.
 //! for &p in write_points.iter() {
 //!     assert_eq!(map.get(p), 1);
@@ -111,7 +111,7 @@
 //! ```
 
 use crate::{
-    ArrayCopySrc, ArrayIndexer, ArrayN, Chunk, ChunkHashMap, ChunkIndexer, ChunkReadStorage,
+    ArrayCopySrc, ArrayIndexer, ArrayNx1, Chunk, ChunkHashMap, ChunkIndexer, ChunkReadStorage,
     ChunkWriteStorage, ForEach, ForEachMut, Get, GetMut, GetRef, GetUnchecked,
     GetUncheckedMutRelease, GetUncheckedRef, GetUncheckedRefRelease, IterChunkKeys, ReadExtent,
     SmallKeyHashMap, WriteExtent,
@@ -122,7 +122,7 @@ use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
 use core::hash::Hash;
 use either::Either;
 
-/// A lattice map made up of same-shaped `ArrayN` chunks. It takes a value at every possible `PointN`, because accesses made
+/// A lattice map made up of same-shaped `ArrayNx1` chunks. It takes a value at every possible `PointN`, because accesses made
 /// outside of the stored chunks will return some ambient value specified on creation.
 ///
 /// `ChunkMap` is generic over the type used to actually store the `Chunk`s. You can use any storage that implements
@@ -153,7 +153,7 @@ pub type ChunkMap2<T, Ch, Store> = ChunkMap<[i32; 2], T, Ch, Store>;
 pub type ChunkMap3<T, Ch, Store> = ChunkMap<[i32; 3], T, Ch, Store>;
 
 /// An N-dimensional, single-channel `ChunkMap`.
-pub type ChunkMapNx1<N, T, Store> = ChunkMap<N, T, ArrayN<N, T>, Store>;
+pub type ChunkMapNx1<N, T, Store> = ChunkMap<N, T, ArrayNx1<N, T>, Store>;
 /// A 2-dimensional, single-channel `ChunkMap`.
 pub type ChunkMap2x1<T, Store> = ChunkMapNx1<[i32; 2], T, Store>;
 /// A 3-dimensional, single-channel `ChunkMap`.
@@ -569,7 +569,7 @@ where
     }
 }
 
-// If ArrayN supports writing from type Src, then so does ChunkMap.
+// If ArrayNx1 supports writing from type Src, then so does ChunkMap.
 impl<N, T, Ch, Store, Src> WriteExtent<N, Src> for ChunkMap<N, T, Ch, Store>
 where
     PointN<N>: IntegerPoint<N>,

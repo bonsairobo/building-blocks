@@ -10,7 +10,7 @@
 //! implement the `SignedDistance` trait required for smooth meshing.
 //!
 //! The core storage types are:
-//!   - `ArrayN`: N-dimensional, dense array
+//!   - `ArrayNx1`: N-dimensional, dense array
 //!   - `ChunkHashMap`: N-dimensional, sparse array
 //!   - `CompressibleChunkMap`: N-dimensional, sparse array with chunk compression
 //!
@@ -75,7 +75,7 @@ pub type SmallKeyBuildHasher = ahash::RandomState;
 
 pub mod prelude {
     pub use super::{
-        copy_extent, Array2, Array3, ArrayN, Chunk, ChunkHashMap2, ChunkHashMap3,
+        copy_extent, Array2, Array3, ArrayNx1, Chunk, ChunkHashMap2, ChunkHashMap3,
         ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkIndexer, ChunkMap, ChunkMap2, ChunkMap2x1,
         ChunkMap3, ChunkMap3x1, ChunkPyramid2, ChunkPyramid3, ChunkReadStorage, ChunkWriteStorage,
         Compressed, CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,

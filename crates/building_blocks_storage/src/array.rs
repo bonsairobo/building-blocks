@@ -73,7 +73,7 @@
 //!
 //! # Storage
 //!
-//! By default, `ArrayN` uses a `Vec` to store elements. But any type that implements `Deref<Target = [T]>` or `DerefMut<Target
+//! By default, `ArrayNx1` uses a `Vec` to store elements. But any type that implements `Deref<Target = [T]>` or `DerefMut<Target
 //! = [T]>` should be usable. This means you can construct an array with most pointer types.
 //!
 //! ```
@@ -129,18 +129,18 @@ use serde::{Deserialize, Serialize};
 
 /// A map from lattice location `PointN<N>` to data `T`, stored as a flat array on the heap.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct ArrayN<N, T, Store = Vec<T>> {
+pub struct ArrayNx1<N, T, Store = Vec<T>> {
     values: Store,
     extent: ExtentN<N>,
     marker: std::marker::PhantomData<T>,
 }
 
 /// A 2-dimensional `Array`.
-pub type Array2<T, Store = Vec<T>> = ArrayN<[i32; 2], T, Store>;
+pub type Array2<T, Store = Vec<T>> = ArrayNx1<[i32; 2], T, Store>;
 /// A 3-dimensional `Array`.
-pub type Array3<T, Store = Vec<T>> = ArrayN<[i32; 3], T, Store>;
+pub type Array3<T, Store = Vec<T>> = ArrayNx1<[i32; 3], T, Store>;
 
-impl<N, T, Store> ArrayN<N, T, Store> {
+impl<N, T, Store> ArrayNx1<N, T, Store> {
     /// Moves the raw extent and values storage out of `self`.
     #[inline]
     pub fn into_parts(self) -> (ExtentN<N>, Store) {
@@ -153,7 +153,7 @@ impl<N, T, Store> ArrayN<N, T, Store> {
     }
 }
 
-impl<N, T, Store> IndexedArray<N> for ArrayN<N, T, Store>
+impl<N, T, Store> IndexedArray<N> for ArrayNx1<N, T, Store>
 where
     N: ArrayIndexer<N>,
 {
@@ -165,7 +165,7 @@ where
     }
 }
 
-impl<N, T, Store> ArrayN<N, T, Store>
+impl<N, T, Store> ArrayNx1<N, T, Store>
 where
     Store: Deref<Target = [T]>,
 {
@@ -176,7 +176,7 @@ where
     }
 }
 
-impl<N, T, Store> ArrayN<N, T, Store>
+impl<N, T, Store> ArrayNx1<N, T, Store>
 where
     Store: DerefMut<Target = [T]>,
 {
@@ -196,7 +196,7 @@ where
     }
 }
 
-impl<'a, N, T, Store> IntoRawBytes<'a> for ArrayN<N, T, Store>
+impl<'a, N, T, Store> IntoRawBytes<'a> for ArrayNx1<N, T, Store>
 where
     T: 'static + Copy,
     Store: Deref<Target = [T]>,
@@ -208,7 +208,7 @@ where
     }
 }
 
-impl<N, T> ArrayN<N, T, Vec<T>>
+impl<N, T> ArrayNx1<N, T, Vec<T>>
 where
     PointN<N>: IntegerPoint<N>,
 {
@@ -223,9 +223,9 @@ where
     /// Create a new array for `extent` where each point's value is determined by the `filler` function.
     pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> T) -> Self
     where
-        ArrayN<N, MaybeUninit<T>>: GetMut<PointN<N>, MaybeUninit<T>>,
+        ArrayNx1<N, MaybeUninit<T>>: GetMut<PointN<N>, MaybeUninit<T>>,
     {
-        let mut array = unsafe { ArrayN::maybe_uninit(extent) };
+        let mut array = unsafe { ArrayNx1::maybe_uninit(extent) };
 
         for p in extent.iter_points() {
             unsafe {
@@ -237,12 +237,12 @@ where
     }
 }
 
-impl<N, T, Store> ArrayN<N, T, Store>
+impl<N, T, Store> ArrayNx1<N, T, Store>
 where
     PointN<N>: IntegerPoint<N>,
     Store: Deref<Target = [T]>,
 {
-    /// Create a new `ArrayN` directly from the extent and values. This asserts that the number of points in the extent matches
+    /// Create a new `ArrayNx1` directly from the extent and values. This asserts that the number of points in the extent matches
     /// the length of the values `Vec`.
     pub fn new(extent: ExtentN<N>, values: Store) -> Self {
         assert_eq!(extent.num_points(), values.len());
@@ -267,7 +267,7 @@ where
     }
 }
 
-impl<N, T, Store> ArrayN<N, T, Store>
+impl<N, T, Store> ArrayNx1<N, T, Store>
 where
     PointN<N>: Point,
 {
@@ -278,7 +278,7 @@ where
     }
 }
 
-impl<N, T, Store> ArrayN<N, T, Store>
+impl<N, T, Store> ArrayNx1<N, T, Store>
 where
     for<'r> Self: ForEachMut<'r, N, (), Item = &'r mut T>,
     PointN<N>: IntegerPoint<N>,
@@ -297,7 +297,7 @@ where
     }
 }
 
-impl<N, T> ArrayN<N, MaybeUninit<T>>
+impl<N, T> ArrayNx1<N, MaybeUninit<T>>
 where
     PointN<N>: IntegerPoint<N>,
 {
@@ -316,7 +316,7 @@ where
     /// the internal `Vec` after transmuting the data pointer, so the overhead is minimal.
     /// # Safety
     /// All elements of the map must be initialized.
-    pub unsafe fn assume_init(self) -> ArrayN<N, T> {
+    pub unsafe fn assume_init(self) -> ArrayNx1<N, T> {
         let transmuted_values = {
             // Ensure the original vector is not dropped.
             let mut v_clone = core::mem::ManuallyDrop::new(self.values);
@@ -328,7 +328,7 @@ where
             )
         };
 
-        ArrayN::new(self.extent, transmuted_values)
+        ArrayNx1::new(self.extent, transmuted_values)
     }
 }
 
@@ -339,7 +339,7 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<N, T, Store> GetRef<Stride, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetRef<Stride, T> for ArrayNx1<N, T, Store>
 where
     Store: Deref<Target = [T]>,
 {
@@ -349,7 +349,7 @@ where
     }
 }
 
-impl<N, T, Store> GetUncheckedRef<Stride, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedRef<Stride, T> for ArrayNx1<N, T, Store>
 where
     Store: Deref<Target = [T]>,
 {
@@ -359,7 +359,7 @@ where
     }
 }
 
-impl<N, T, Store> GetMut<Stride, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetMut<Stride, T> for ArrayNx1<N, T, Store>
 where
     Store: DerefMut<Target = [T]>,
 {
@@ -369,7 +369,7 @@ where
     }
 }
 
-impl<N, T, Store> GetUncheckedMut<Stride, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedMut<Stride, T> for ArrayNx1<N, T, Store>
 where
     Store: DerefMut<Target = [T]>,
 {
@@ -379,7 +379,7 @@ where
     }
 }
 
-impl<N, T, Store> GetRef<Local<N>, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetRef<Local<N>, T> for ArrayNx1<N, T, Store>
 where
     Self: IndexedArray<N> + GetRef<Stride, T>,
     PointN<N>: Copy,
@@ -390,7 +390,7 @@ where
     }
 }
 
-impl<N, T, Store> GetMut<Local<N>, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetMut<Local<N>, T> for ArrayNx1<N, T, Store>
 where
     Self: IndexedArray<N> + GetMut<Stride, T>,
     PointN<N>: Copy,
@@ -401,7 +401,7 @@ where
     }
 }
 
-impl<N, T, Store> GetRef<PointN<N>, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetRef<PointN<N>, T> for ArrayNx1<N, T, Store>
 where
     Self: IndexedArray<N> + GetRef<Local<N>, T>,
     PointN<N>: Point,
@@ -414,7 +414,7 @@ where
     }
 }
 
-impl<N, T, Store> GetMut<PointN<N>, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetMut<PointN<N>, T> for ArrayNx1<N, T, Store>
 where
     Self: IndexedArray<N> + GetMut<Local<N>, T>,
     PointN<N>: Point,
@@ -427,7 +427,7 @@ where
     }
 }
 
-impl<N, T, Store> GetUncheckedRef<Local<N>, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedRef<Local<N>, T> for ArrayNx1<N, T, Store>
 where
     Self: IndexedArray<N> + GetUncheckedRef<Stride, T>,
     PointN<N>: Copy,
@@ -438,7 +438,7 @@ where
     }
 }
 
-impl<N, T, Store> GetUncheckedMut<Local<N>, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedMut<Local<N>, T> for ArrayNx1<N, T, Store>
 where
     Self: IndexedArray<N> + GetUncheckedMut<Stride, T>,
     PointN<N>: Copy,
@@ -449,7 +449,7 @@ where
     }
 }
 
-impl<N, T, Store> GetUncheckedRef<PointN<N>, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedRef<PointN<N>, T> for ArrayNx1<N, T, Store>
 where
     Self: IndexedArray<N> + GetUncheckedRef<Local<N>, T>,
     PointN<N>: Point,
@@ -462,7 +462,7 @@ where
     }
 }
 
-impl<N, T, Store> GetUncheckedMut<PointN<N>, T> for ArrayN<N, T, Store>
+impl<N, T, Store> GetUncheckedMut<PointN<N>, T> for ArrayNx1<N, T, Store>
 where
     Self: IndexedArray<N> + GetUncheckedMut<Local<N>, T>,
     PointN<N>: Point,
@@ -475,7 +475,7 @@ where
     }
 }
 
-impl_get_via_get_ref_and_clone!(ArrayN<N, T, Store>, N, T, Store);
+impl_get_via_get_ref_and_clone!(ArrayNx1<N, T, Store>, N, T, Store);
 
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║
@@ -486,7 +486,7 @@ impl_get_via_get_ref_and_clone!(ArrayN<N, T, Store>, N, T, Store);
 
 macro_rules! impl_array_for_each {
     (coords: $coords:ty; forwarder = |$p:ident, $stride:ident| $forward_coords:expr;) => {
-        impl<N, T, Store> ForEach<N, $coords> for ArrayN<N, T, Store>
+        impl<N, T, Store> ForEach<N, $coords> for ArrayNx1<N, T, Store>
         where
             Self: Get<Stride, T> + GetUnchecked<Stride, T>,
             N: ArrayIndexer<N>,
@@ -503,7 +503,7 @@ macro_rules! impl_array_for_each {
             }
         }
 
-        impl<'a, N, T, Store> ForEachMut<'a, N, $coords> for ArrayN<N, T, Store>
+        impl<'a, N, T, Store> ForEachMut<'a, N, $coords> for ArrayNx1<N, T, Store>
         where
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
@@ -529,7 +529,7 @@ macro_rules! impl_array_for_each {
         }
 
         impl<'a, N, T, S, Store1, Store2> ForEachMut<'a, N, $coords>
-            for (&mut ArrayN<N, T, Store1>, &mut ArrayN<N, S, Store2>)
+            for (&mut ArrayNx1<N, T, Store1>, &mut ArrayNx1<N, S, Store2>)
         where
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
@@ -593,11 +593,11 @@ impl_array_for_each!(
 #[derive(Copy, Clone)]
 pub struct ArrayCopySrc<Map>(pub Map);
 
-impl<'a, N: 'a, T: 'a, Store: 'a> ReadExtent<'a, N> for ArrayN<N, T, Store>
+impl<'a, N: 'a, T: 'a, Store: 'a> ReadExtent<'a, N> for ArrayNx1<N, T, Store>
 where
     PointN<N>: IntegerPoint<N>,
 {
-    type Src = ArrayCopySrc<&'a ArrayN<N, T, Store>>;
+    type Src = ArrayCopySrc<&'a ArrayNx1<N, T, Store>>;
     type SrcIter = Once<(ExtentN<N>, Self::Src)>;
 
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
@@ -607,7 +607,7 @@ where
     }
 }
 
-impl<'a, N, T, Store> WriteExtent<N, ArrayCopySrc<&'a Self>> for ArrayN<N, T, Store>
+impl<'a, N, T, Store> WriteExtent<N, ArrayCopySrc<&'a Self>> for ArrayNx1<N, T, Store>
 where
     Self: GetUncheckedRelease<Stride, T> + GetUncheckedMutRelease<Stride, T>,
     N: ArrayIndexer<N>,
@@ -634,7 +634,7 @@ where
 }
 
 impl<'a, N, T, Store, Map, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Map, F, T>>>
-    for ArrayN<N, T, Store>
+    for ArrayNx1<N, T, Store>
 where
     Self: IndexedArray<N> + GetUncheckedMutRelease<Stride, T>,
     T: Clone,
@@ -679,7 +679,7 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
     );
 }
 
-impl<N, T, Ch, Store> WriteExtent<N, ChunkCopySrc<N, T, Ch>> for ArrayN<N, T, Store>
+impl<N, T, Ch, Store> WriteExtent<N, ChunkCopySrc<N, T, Ch>> for ArrayNx1<N, T, Store>
 where
     for<'r> Self: ForEachMut<'r, N, Stride, Item = &'r mut T>,
     Self: WriteExtent<N, ArrayCopySrc<Ch>>,
@@ -696,7 +696,7 @@ where
     }
 }
 
-impl<N, T, Store, F> WriteExtent<N, F> for ArrayN<N, T, Store>
+impl<N, T, Store, F> WriteExtent<N, F> for ArrayNx1<N, T, Store>
 where
     for<'r> Self: ForEachMut<'r, N, PointN<N>, Item = &'r mut T>,
     F: Fn(PointN<N>) -> T,

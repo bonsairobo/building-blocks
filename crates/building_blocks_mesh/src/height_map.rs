@@ -59,7 +59,7 @@ pub fn triangulate_height_map<A, H>(
     extent: &Extent2i,
     output: &mut HeightMapMeshBuffer,
 ) where
-    A: Array<[i32; 2]>
+    A: IndexedArray<[i32; 2]>
         + ForEach<[i32; 2], (Point2i, Stride), Item = H>
         + GetUncheckedRelease<Stride, H>,
     H: Height,

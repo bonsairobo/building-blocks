@@ -58,8 +58,6 @@ pub use raw_bytes::*;
 pub use signed_distance::*;
 pub use transform_map::*;
 
-use ahash::{AHashMap, RandomState};
-
 /// Used in many generic algorithms to check if a voxel is considered empty.
 pub trait IsEmpty {
     fn is_empty(&self) -> bool;
@@ -71,19 +69,19 @@ impl IsEmpty for bool {
     }
 }
 
-// Hashers to use for small keys like `PointN`.
-pub type SmallKeyHashMap<K, V> = AHashMap<K, V>;
-pub type SmallKeyBuildHasher = RandomState;
+// Hash types to use for small keys like `PointN`.
+pub type SmallKeyHashMap<K, V> = ahash::AHashMap<K, V>;
+pub type SmallKeyBuildHasher = ahash::RandomState;
 
 pub mod prelude {
     pub use super::{
-        copy_extent, Array, Array2, Array3, ArrayN, Chunk, ChunkHashMap2, ChunkHashMap3,
+        copy_extent, Array2, Array3, ArrayN, Chunk, ChunkHashMap2, ChunkHashMap3,
         ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkIndexer, ChunkMap, ChunkMap2, ChunkMap2x1,
         ChunkMap3, ChunkMap3x1, ChunkPyramid2, ChunkPyramid3, ChunkReadStorage, ChunkWriteStorage,
         Compressed, CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
         CompressibleChunkStorageReader, Compression, FastArrayCompression,
-        FastCompressibleChunkStorage, ForEach, ForEachMut, Get, GetMut, GetRef, IsEmpty,
-        IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
+        FastCompressibleChunkStorage, ForEach, ForEachMut, Get, GetMut, GetRef, IndexedArray,
+        IsEmpty, IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
         OctreeChunkIndex, OctreeNode, OctreeSet, ReadExtent, SerializableChunks, SignedDistance,
         Stride, TransformMap, WriteExtent,
     };

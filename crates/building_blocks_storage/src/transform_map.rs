@@ -38,8 +38,8 @@
 //! ```
 
 use crate::{
-    AmbientExtent, Array, ArrayCopySrc, ArrayN, ChunkCopySrc, ChunkCopySrcIter, ChunkMap, ForEach,
-    Get, GetUnchecked, ReadExtent,
+    AmbientExtent, ArrayCopySrc, ArrayN, ChunkCopySrc, ChunkCopySrcIter, ChunkMap, ForEach, Get,
+    GetUnchecked, IndexedArray, ReadExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -114,9 +114,9 @@ where
     }
 }
 
-impl<'a, N, Delegate, F, In> Array<N> for TransformMap<'a, Delegate, F, In>
+impl<'a, N, Delegate, F, In> IndexedArray<N> for TransformMap<'a, Delegate, F, In>
 where
-    Delegate: Array<N>,
+    Delegate: IndexedArray<N>,
 {
     type Indexer = Delegate::Indexer;
 
@@ -131,7 +131,7 @@ where
 
 impl<'a, N, F, In, Out> ReadExtent<'a, N> for TransformMap<'a, ArrayN<N, In>, F, In>
 where
-    Self: Array<N> + Clone,
+    Self: IndexedArray<N> + Clone,
     F: Fn(In) -> Out,
     PointN<N>: IntegerPoint<N>,
 {

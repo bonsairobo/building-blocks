@@ -67,7 +67,7 @@ pub fn surface_nets<A, T>(
     voxel_size: f32,
     output: &mut SurfaceNetsBuffer,
 ) where
-    A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+    A: IndexedArray<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     output.reset(sdf.extent().num_points());
@@ -84,7 +84,7 @@ fn estimate_surface<A, T>(
     voxel_size: f32,
     output: &mut SurfaceNetsBuffer,
 ) where
-    A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+    A: IndexedArray<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     // Precalculate these offsets to do faster linear indexing.
@@ -231,7 +231,7 @@ fn sdf_gradient(dists: &[f32; 8], s: &Point3f) -> [f32; 3] {
 // with understanding the indexing.
 fn make_all_quads<A, T>(sdf: &A, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    A: Array<[i32; 3]> + GetUncheckedRelease<Stride, T>,
+    A: IndexedArray<[i32; 3]> + GetUncheckedRelease<Stride, T>,
     T: SignedDistance,
 {
     let mut xyz_strides = [Stride(0); 3];

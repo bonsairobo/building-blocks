@@ -127,32 +127,6 @@ use core::ops::{Add, Deref, DerefMut};
 use either::Either;
 use serde::{Deserialize, Serialize};
 
-/// When a lattice map implements `Array`, that means there is some underlying array with the location and shape dictated by the
-/// extent.
-///
-/// For the sake of generic impls, if the same map also implements `Get*<Stride>`, it must use the same data layout as `ArrayN`.
-pub trait Array<N> {
-    type Indexer: ArrayIndexer<N>;
-
-    fn extent(&self) -> &ExtentN<N>;
-
-    #[inline]
-    fn stride_from_local_point(&self, p: Local<N>) -> Stride
-    where
-        PointN<N>: Copy,
-    {
-        Self::Indexer::stride_from_local_point(self.extent().shape, p)
-    }
-
-    #[inline]
-    fn strides_from_local_points(&self, points: &[Local<N>], strides: &mut [Stride])
-    where
-        PointN<N>: Copy,
-    {
-        Self::Indexer::strides_from_local_points(self.extent().shape, points, strides)
-    }
-}
-
 /// A map from lattice location `PointN<N>` to data `T`, stored as a flat array on the heap.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ArrayN<N, T, Store = Vec<T>> {
@@ -179,7 +153,7 @@ impl<N, T, Store> ArrayN<N, T, Store> {
     }
 }
 
-impl<N, T, Store> Array<N> for ArrayN<N, T, Store>
+impl<N, T, Store> IndexedArray<N> for ArrayN<N, T, Store>
 where
     N: ArrayIndexer<N>,
 {
@@ -407,7 +381,7 @@ where
 
 impl<N, T, Store> GetRef<Local<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetRef<Stride, T>,
+    Self: IndexedArray<N> + GetRef<Stride, T>,
     PointN<N>: Copy,
 {
     #[inline]
@@ -418,7 +392,7 @@ where
 
 impl<N, T, Store> GetMut<Local<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetMut<Stride, T>,
+    Self: IndexedArray<N> + GetMut<Stride, T>,
     PointN<N>: Copy,
 {
     #[inline]
@@ -429,7 +403,7 @@ where
 
 impl<N, T, Store> GetRef<PointN<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetRef<Local<N>, T>,
+    Self: IndexedArray<N> + GetRef<Local<N>, T>,
     PointN<N>: Point,
 {
     #[inline]
@@ -442,7 +416,7 @@ where
 
 impl<N, T, Store> GetMut<PointN<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetMut<Local<N>, T>,
+    Self: IndexedArray<N> + GetMut<Local<N>, T>,
     PointN<N>: Point,
 {
     #[inline]
@@ -455,7 +429,7 @@ where
 
 impl<N, T, Store> GetUncheckedRef<Local<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetUncheckedRef<Stride, T>,
+    Self: IndexedArray<N> + GetUncheckedRef<Stride, T>,
     PointN<N>: Copy,
 {
     #[inline]
@@ -466,7 +440,7 @@ where
 
 impl<N, T, Store> GetUncheckedMut<Local<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetUncheckedMut<Stride, T>,
+    Self: IndexedArray<N> + GetUncheckedMut<Stride, T>,
     PointN<N>: Copy,
 {
     #[inline]
@@ -477,7 +451,7 @@ where
 
 impl<N, T, Store> GetUncheckedRef<PointN<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetUncheckedRef<Local<N>, T>,
+    Self: IndexedArray<N> + GetUncheckedRef<Local<N>, T>,
     PointN<N>: Point,
 {
     #[inline]
@@ -490,7 +464,7 @@ where
 
 impl<N, T, Store> GetUncheckedMut<PointN<N>, T> for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetUncheckedMut<Local<N>, T>,
+    Self: IndexedArray<N> + GetUncheckedMut<Local<N>, T>,
     PointN<N>: Point,
 {
     #[inline]
@@ -662,9 +636,9 @@ where
 impl<'a, N, T, Store, Map, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Map, F, T>>>
     for ArrayN<N, T, Store>
 where
-    Self: Array<N> + GetUncheckedMutRelease<Stride, T>,
+    Self: IndexedArray<N> + GetUncheckedMutRelease<Stride, T>,
     T: Clone,
-    TransformMap<'a, Map, F, T>: Array<N> + GetUncheckedRelease<Stride, T>,
+    TransformMap<'a, Map, F, T>: IndexedArray<N> + GetUncheckedRelease<Stride, T>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
 {
@@ -687,8 +661,8 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
     src: &Src,
     extent: &ExtentN<N>,
 ) where
-    Dst: Array<N> + GetUncheckedMutRelease<Stride, T>,
-    Src: Array<N> + GetUncheckedRelease<Stride, T>,
+    Dst: IndexedArray<N> + GetUncheckedMutRelease<Stride, T>,
+    Src: IndexedArray<N> + GetUncheckedRelease<Stride, T>,
     ExtentN<N>: Copy,
 {
     let dst_extent = *dst.extent();

@@ -5,6 +5,32 @@ use crate::{
 
 use building_blocks_core::prelude::*;
 
+/// When a lattice map implements `Array`, that means there is some underlying array with the location and shape dictated by the
+/// extent.
+///
+/// For the sake of generic impls, if the same map also implements `Get*<Stride>`, it must use the same data layout as `ArrayN`.
+pub trait IndexedArray<N> {
+    type Indexer: ArrayIndexer<N>;
+
+    fn extent(&self) -> &ExtentN<N>;
+
+    #[inline]
+    fn stride_from_local_point(&self, p: Local<N>) -> Stride
+    where
+        PointN<N>: Copy,
+    {
+        Self::Indexer::stride_from_local_point(self.extent().shape, p)
+    }
+
+    #[inline]
+    fn strides_from_local_points(&self, points: &[Local<N>], strides: &mut [Stride])
+    where
+        PointN<N>: Copy,
+    {
+        Self::Indexer::strides_from_local_points(self.extent().shape, points, strides)
+    }
+}
+
 pub trait ArrayIndexer<N> {
     fn stride_from_local_point(shape: PointN<N>, point: Local<N>) -> Stride;
 

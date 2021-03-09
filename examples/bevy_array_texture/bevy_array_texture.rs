@@ -13,7 +13,7 @@ use building_blocks_core::{Extent3i, PointN};
 use building_blocks_mesh::{
     greedy_quads, GreedyQuadsBuffer, IsOpaque, MergeVoxel, OrientedCubeFace, UnorientedQuad,
 };
-use building_blocks_storage::{Array3, Get, IsEmpty};
+use building_blocks_storage::{Array3x1, Get, IsEmpty};
 use camera_rotation::{camera_rotation_system, CameraRotationState};
 
 const APP_STAGE: &str = "app_stage";
@@ -130,7 +130,7 @@ fn setup(
 
     // Generate some voxel terrain
     let extent = Extent3i::from_min_and_shape(PointN([-20; 3]), PointN([40; 3])).padded(1);
-    let mut voxels = Array3::fill(extent, Voxel::default());
+    let mut voxels = Array3x1::fill(extent, Voxel::default());
     for i in 0..40 {
         let level = Extent3i::from_min_and_shape(PointN([i - 20; 3]), PointN([40 - i, 1, 40 - i]));
         voxels.fill_extent(&level, Voxel((i % 4) as u8 + 1));

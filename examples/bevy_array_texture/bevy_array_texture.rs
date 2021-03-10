@@ -24,7 +24,7 @@ enum AppState {
     Run,
 }
 
-const TEXTURE_LAYERS: u32 = 4;
+const TEXTURE_LAYERS: u32 = 16;
 
 struct Loading(Handle<Texture>);
 
@@ -45,7 +45,7 @@ fn main() {
 }
 
 fn load_assets(commands: &mut Commands, asset_server: Res<AssetServer>) {
-    let handle = asset_server.load("array_texture.png");
+    let handle = asset_server.load("uv_checker.png");
     commands.insert_resource(Loading(handle));
 }
 
@@ -100,8 +100,14 @@ impl MeshBuf {
         self.positions
             .extend_from_slice(&face.quad_mesh_positions(quad));
         self.normals.extend_from_slice(&face.quad_mesh_normals());
-        self.tex_coords
-            .extend_from_slice(&quad.axis_tex_coords(face));
+
+        let mut uvs = face.simple_tex_coords(true, quad);
+        // Adjust these for the number of tiles in a row of the texture.
+        for uv in uvs.iter_mut() {
+            uv[0] /= 16.0;
+        }
+        self.tex_coords.extend_from_slice(&uvs);
+
         self.layer.extend_from_slice(&[layer; 4]);
         self.indices
             .extend_from_slice(&face.quad_mesh_indices(start_index));
@@ -136,7 +142,7 @@ fn setup(
         voxels.fill_extent(&level, Voxel((i % 4) as u8 + 1));
     }
 
-    let mut greedy_buffer = GreedyQuadsBuffer::new(extent);
+    let mut greedy_buffer = GreedyQuadsBuffer::new_with_y_up(extent);
     greedy_quads(&voxels, &extent, &mut greedy_buffer);
 
     let mut mesh_buf = MeshBuf::default();
@@ -219,8 +225,7 @@ void main() {
     v_Position = (Model * vec4(Vertex_Position, 1.0)).xyz;
 
     // Gets used here and passed to the fragment shader.
-    // Rescale the UVs to make the example look better.
-    v_Uv = vec3(0.1 * Vertex_Uv, Vertex_Layer);
+    v_Uv = vec3(Vertex_Uv, Vertex_Layer);
 
     gl_Position = ViewProj * vec4(v_Position, 1.0);
 }

@@ -39,21 +39,32 @@ impl QuadGroup {
     }
 }
 
-impl GreedyQuadsBuffer {
-    pub fn new(extent: Extent3i) -> Self {
-        let quad_groups = [
-            QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::XZY)),
-            QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::YXZ)),
-            QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::ZXY)),
-            QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::XZY)),
-            QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::YXZ)),
-            QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::ZXY)),
-        ];
+pub const Y_UP_UV_PERMUTATIONS: [Axis3Permutation; 3] = [
+    Axis3Permutation::XZY,
+    Axis3Permutation::YXZ,
+    Axis3Permutation::ZXY,
+];
 
+impl GreedyQuadsBuffer {
+    pub fn new_with_quad_groups(extent: Extent3i, quad_groups: [QuadGroup; 6]) -> Self {
         Self {
             quad_groups,
             visited: Array3x1::fill(extent, false),
         }
+    }
+
+    pub fn new_with_y_up(extent: Extent3i) -> Self {
+        Self::new_with_quad_groups(
+            extent,
+            [
+                QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::XZY, false)),
+                QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::YXZ, false)),
+                QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::ZXY, true)),
+                QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::XZY, false)),
+                QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::YXZ, false)),
+                QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::ZXY, true)),
+            ],
+        )
     }
 
     pub fn reset(&mut self, extent: Extent3i) {

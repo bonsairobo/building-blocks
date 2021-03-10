@@ -1,9 +1,6 @@
 use super::{PosNormMesh, PosNormTexMesh};
 
-use building_blocks_core::{
-    axis::{Axis3Permutation, SignedAxis3},
-    prelude::*,
-};
+use building_blocks_core::{axis::Axis3Permutation, prelude::*};
 
 /// Metadata that's used to aid in the geometric calculations for one of the 6 possible cube faces.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -20,10 +17,14 @@ pub struct OrientedCubeFace {
     pub u: Point3i,
     /// Third in the `permutation` of +X, +Y, and +Z.
     pub v: Point3i,
+
+    /// Depending on the UP direction, one of the faces will need to have its U coordinates flipped to avoid mirroring the
+    /// texture.
+    pub flip_u: bool,
 }
 
 impl OrientedCubeFace {
-    pub fn new(n_sign: i32, permutation: Axis3Permutation) -> Self {
+    pub fn new(n_sign: i32, permutation: Axis3Permutation, flip_u: bool) -> Self {
         let [n_axis, u_axis, v_axis] = permutation.axes();
 
         Self {
@@ -32,15 +33,8 @@ impl OrientedCubeFace {
             n: n_axis.get_unit_vector(),
             u: u_axis.get_unit_vector(),
             v: v_axis.get_unit_vector(),
+            flip_u,
         }
-    }
-
-    /// A cube face, using axes with an even permutation.
-    pub fn canonical(normal: SignedAxis3) -> Self {
-        Self::new(
-            normal.sign,
-            Axis3Permutation::even_with_normal_axis(normal.axis),
-        )
     }
 
     pub fn quad_from_extent(&self, extent: &Extent3i) -> UnorientedQuad {
@@ -75,6 +69,9 @@ impl OrientedCubeFace {
     ///      -------->
     ///        +u
     /// ```
+    ///
+    /// Note that this is natural for OpenGL, where UV coordinates have (0,0) at the bottom left, but in Vulkan and DirectX,
+    /// (0,0) is at the top left, requiring that V is flipped.
     pub fn quad_corners(&self, quad: &UnorientedQuad) -> [Point3i; 4] {
         let w_vec = self.u * quad.width;
         let h_vec = self.v * quad.height;
@@ -112,6 +109,87 @@ impl OrientedCubeFace {
         quad_indices(start, self.n_sign * self.permutation.sign() > 0)
     }
 
+    /// Returns the UV coordinates of the 4 corners of the quad. Returns vertices in the same order as
+    /// `OrientedCubeFace::quad_corners`. When using OpenGL, `flip_v` should be false. When using Vulkan or DirectX, `flip_v`
+    /// should be true.
+    ///
+    /// This is just one way of assigning UVs to voxel quads. It assumes that each material has a single tile texture with
+    /// wrapping coordinates, and each voxel face should show the entire texture. It also assumes a particular orientation for
+    /// the texture. This should be sufficient for minecraft-style meshing.
+    ///
+    /// If you need to use a texture atlas, you must calculate your own coordinates from the `Quad`.
+    pub fn simple_tex_coords(&self, flip_v: bool, quad: &UnorientedQuad) -> [[f32; 2]; 4] {
+        if flip_v {
+            if self.flip_u {
+                if self.n_sign < 0 {
+                    [
+                        [quad.width as f32, quad.height as f32],
+                        [0.0, quad.height as f32],
+                        [quad.width as f32, 0.0],
+                        [0.0, 0.0],
+                    ]
+                } else {
+                    [
+                        [0.0, quad.height as f32],
+                        [quad.width as f32, quad.height as f32],
+                        [0.0, 0.0],
+                        [quad.width as f32, 0.0],
+                    ]
+                }
+            } else {
+                if self.n_sign < 0 {
+                    [
+                        [0.0, quad.height as f32],
+                        [quad.width as f32, quad.height as f32],
+                        [0.0, 0.0],
+                        [quad.width as f32, 0.0],
+                    ]
+                } else {
+                    [
+                        [quad.width as f32, quad.height as f32],
+                        [0.0, quad.height as f32],
+                        [quad.width as f32, 0.0],
+                        [0.0, 0.0],
+                    ]
+                }
+            }
+        } else {
+            if self.flip_u {
+                if self.n_sign < 0 {
+                    [
+                        [quad.width as f32, 0.0],
+                        [0.0, 0.0],
+                        [quad.width as f32, quad.height as f32],
+                        [0.0, quad.height as f32],
+                    ]
+                } else {
+                    [
+                        [0.0, 0.0],
+                        [quad.width as f32, 0.0],
+                        [0.0, quad.height as f32],
+                        [quad.width as f32, quad.height as f32],
+                    ]
+                }
+            } else {
+                if self.n_sign < 0 {
+                    [
+                        [0.0, 0.0],
+                        [quad.width as f32, 0.0],
+                        [0.0, quad.height as f32],
+                        [quad.width as f32, quad.height as f32],
+                    ]
+                } else {
+                    [
+                        [quad.width as f32, 0.0],
+                        [0.0, 0.0],
+                        [quad.width as f32, quad.height as f32],
+                        [0.0, quad.height as f32],
+                    ]
+                }
+            }
+        }
+    }
+
     /// Extends `mesh` with the given `quad` that belongs to this face.
     pub fn add_quad_to_pos_norm_mesh(&self, quad: &UnorientedQuad, mesh: &mut PosNormMesh) {
         let start_index = mesh.positions.len() as u32;
@@ -125,12 +203,18 @@ impl OrientedCubeFace {
     /// Extends `mesh` with the given `quad` that belongs to this face.
     ///
     /// The texture coordinates come from `Quad::simple_tex_coords`.
-    pub fn add_quad_to_pos_norm_tex_mesh(&self, quad: &UnorientedQuad, mesh: &mut PosNormTexMesh) {
+    pub fn add_quad_to_pos_norm_tex_mesh(
+        &self,
+        flip_v: bool,
+        quad: &UnorientedQuad,
+        mesh: &mut PosNormTexMesh,
+    ) {
         let start_index = mesh.positions.len() as u32;
         mesh.positions
             .extend_from_slice(&self.quad_mesh_positions(quad));
         mesh.normals.extend_from_slice(&self.quad_mesh_normals());
-        mesh.tex_coords.extend_from_slice(&quad.simple_tex_coords());
+        mesh.tex_coords
+            .extend_from_slice(&self.simple_tex_coords(flip_v, quad));
         mesh.indices
             .extend_from_slice(&self.quad_mesh_indices(start_index));
     }
@@ -164,49 +248,6 @@ impl UnorientedQuad {
             minimum: voxel_point,
             width: 1,
             height: 1,
-        }
-    }
-
-    /// Returns the UV coordinates of the 4 corners of the quad. Returns in the same order as `OrientedCubeFace::quad_corners`.
-    ///
-    /// This is just one way of assigning UVs to voxel quads. It assumes that each material has a single tile texture with
-    /// wrapping coordinates, and each voxel face should show the entire texture. It also assumes a particular orientation for
-    /// the texture. This should be sufficient for minecraft-style meshing.
-    ///
-    /// If you need to use a texture atlas, you must calculate your own coordinates from the `Quad`.
-    pub fn simple_tex_coords(&self) -> [[f32; 2]; 4] {
-        [
-            [0.0, 0.0],
-            [self.width as f32, 0.0],
-            [0.0, self.height as f32],
-            [self.width as f32, self.height as f32],
-        ]
-    }
-
-    /// Returns the UV coordinates of the 4 corners of the quad. Returns in the same order as `OrientedCubeFace::quad_corners`.
-    ///
-    /// This returns the UVs so that the texture on all faces of a voxel is upright and not mirrored. Assumes that +Y is up.
-    pub fn axis_tex_coords(&self, face: &OrientedCubeFace) -> [[f32; 2]; 4] {
-        let normal = face.permutation.axes()[0];
-
-        let flip = match (normal, face.n_sign < 0) {
-            (Axis3::Z, sign) => sign,
-            (_, sign) => !sign,
-        };
-        if flip {
-            [
-                [self.width as f32, self.height as f32],
-                [0.0, self.height as f32],
-                [self.width as f32, 0.0],
-                [0.0, 0.0],
-            ]
-        } else {
-            [
-                [0.0, self.height as f32],
-                [self.width as f32, self.height as f32],
-                [0.0, 0.0],
-                [self.width as f32, 0.0],
-            ]
         }
     }
 }

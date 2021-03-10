@@ -15,7 +15,7 @@
 //! - memory-efficient storage of voxel maps
 //!   - a [`ChunkMap`](crate::storage::chunk_map) with generic chunk storage
 //!   - chunk compression and caching
-//!   - [`OctreeSet`](crate::storage::octree) hierarchical set of voxel points
+//!   - [`OctreeSet`](crate::storage::octree_set) hierarchical set of voxel points
 //!   - all storages are serializable with [`serde`](https://serde.rs/)
 //! - mesh generation
 //!   - Surface Nets isosurface extraction

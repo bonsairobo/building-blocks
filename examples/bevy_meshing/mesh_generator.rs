@@ -307,7 +307,7 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
 
                 // TODO bevy: we could avoid re-allocating the buffers on every call if we had
                 // thread-local storage accessible from this task
-                let mut buffer = GreedyQuadsBuffer::new(padded_chunk_extent);
+                let mut buffer = GreedyQuadsBuffer::new_with_y_up(padded_chunk_extent);
                 greedy_quads(&padded_chunk, &padded_chunk_extent, &mut buffer);
 
                 let mut mesh = PosNormMesh::default();

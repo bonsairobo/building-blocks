@@ -39,12 +39,6 @@ impl QuadGroup {
     }
 }
 
-pub const Y_UP_UV_PERMUTATIONS: [Axis3Permutation; 3] = [
-    Axis3Permutation::XZY,
-    Axis3Permutation::YXZ,
-    Axis3Permutation::ZXY,
-];
-
 impl GreedyQuadsBuffer {
     pub fn new_with_quad_groups(extent: Extent3i, quad_groups: [QuadGroup; 6]) -> Self {
         Self {

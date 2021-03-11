@@ -1,6 +1,6 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{
-    Array3x1, ArrayChunkBuilder3x1, ChunkBuilder, ChunkDownsampler, ChunkHashMapPyramid3, Local,
+    Array3x1, ArrayChunkBuilder3x1, ChunkDownsampler, ChunkHashMapPyramid3, ChunkMapBuilder, Local,
     OctreeChunkIndex, PointDownsampler, Sd8, SdfMeanDownsampler,
 };
 

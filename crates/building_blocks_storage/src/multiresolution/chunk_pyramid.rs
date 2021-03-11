@@ -1,6 +1,6 @@
 use crate::{
-    prelude::*, ArrayChunkBuilderNx1, ArrayIndexer, ArrayNx1, BytesCompression, ChunkBuilder,
-    ChunkDownsampler, ChunkHashMapNx1, ChunkMapNx1, CompressibleChunkMapNx1, OctreeChunkIndex,
+    prelude::*, ArrayIndexer, ArrayNx1, BytesCompression, ChunkDownsampler, ChunkHashMapNx1,
+    ChunkMapBuilder, ChunkMapBuilderNx1, ChunkMapNx1, CompressibleChunkMapNx1, OctreeChunkIndex,
     OctreeNode, SmallKeyHashMap, VisitStatus,
 };
 
@@ -16,7 +16,7 @@ use std::fmt::Debug;
 /// There is no enforcement of a particular occupancy, allowing you to use this as a cache. Typically you will have some region
 /// of highest detail close to a central point. Then as you get further from the center, the detail drops.
 pub struct ChunkPyramid<N, T, Store> {
-    levels: Vec<ChunkMap<N, T, ArrayChunkBuilderNx1<N, T>, Store>>,
+    levels: Vec<ChunkMap<N, T, ChunkMapBuilderNx1<N, T>, Store>>,
 }
 
 pub type ChunkPyramid2<T, Store> = ChunkPyramid<[i32; 2], T, Store>;
@@ -161,9 +161,9 @@ impl<N, T> ChunkHashMapPyramid<N, T>
 where
     PointN<N>: Hash + IntegerPoint<N>,
     T: Clone,
-    ArrayChunkBuilderNx1<N, T>: Clone,
+    ChunkMapBuilderNx1<N, T>: Clone,
 {
-    pub fn new(builder: ArrayChunkBuilderNx1<N, T>, num_lods: u8) -> Self {
+    pub fn new(builder: ChunkMapBuilderNx1<N, T>, num_lods: u8) -> Self {
         let mut levels = Vec::with_capacity(num_lods as usize);
         levels.resize_with(num_lods as usize, || {
             builder
@@ -211,9 +211,9 @@ where
     PointN<N>: Hash + IntegerPoint<N>,
     T: 'static + Copy,
     B: BytesCompression + Copy,
-    ArrayChunkBuilderNx1<N, T>: Clone,
+    ChunkMapBuilderNx1<N, T>: Clone,
 {
-    pub fn new(builder: ArrayChunkBuilderNx1<N, T>, num_lods: u8, compression: B) -> Self {
+    pub fn new(builder: ChunkMapBuilderNx1<N, T>, num_lods: u8, compression: B) -> Self {
         let mut levels = Vec::with_capacity(num_lods as usize);
         levels.resize_with(num_lods as usize, || {
             builder.clone().build_with_write_storage(

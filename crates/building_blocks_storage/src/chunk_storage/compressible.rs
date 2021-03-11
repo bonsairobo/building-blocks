@@ -1,5 +1,5 @@
 use crate::{
-    AHashLruCache, ArrayChunkBuilderNx1, BytesCompression, CacheEntry, ChunkBuilder, ChunkMap,
+    AHashLruCache, BytesCompression, CacheEntry, ChunkMap, ChunkMapBuilder, ChunkMapBuilderNx1,
     ChunkWriteStorage, Compressed, CompressibleChunkMapReader, CompressibleChunkStorageReader,
     Compression, FastArrayCompression, IterChunkKeys, LocalChunkCache, LruCacheEntries,
     LruCacheIntoIter, LruCacheKeys, MaybeCompressed,
@@ -253,7 +253,7 @@ pub type CompressibleChunkMap<N, T, B, Compr> =
 impl<N, T, B, Compr> CompressibleChunkMap<N, T, B, Compr>
 where
     PointN<N>: Hash + IntegerPoint<N>,
-    B: ChunkBuilder<N, T> + Clone,
+    B: ChunkMapBuilder<N, T> + Clone,
     Compr: Compression<Data = B::Chunk>,
 {
     /// Construct a reader for this map.
@@ -280,7 +280,7 @@ pub type CompressibleChunkStorageNx1<N, T, B> =
 
 /// An N-dimensional, single-channel `CompressibleChunkMap`.
 pub type CompressibleChunkMapNx1<N, T, B> =
-    CompressibleChunkMap<N, T, ArrayChunkBuilderNx1<N, T>, FastArrayCompression<N, T, B>>;
+    CompressibleChunkMap<N, T, ChunkMapBuilderNx1<N, T>, FastArrayCompression<N, T, B>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {

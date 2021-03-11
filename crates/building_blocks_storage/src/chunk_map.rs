@@ -152,14 +152,14 @@ pub type ChunkMap2<T, B, Store> = ChunkMap<[i32; 2], T, B, Store>;
 pub type ChunkMap3<T, B, Store> = ChunkMap<[i32; 3], T, B, Store>;
 
 /// An N-dimensional, single-channel `ChunkMap`.
-pub type ChunkMapNx1<N, T, Store> = ChunkMap<N, T, ArrayChunkBuilderNx1<N, T>, Store>;
+pub type ChunkMapNx1<N, T, Store> = ChunkMap<N, T, ChunkMapBuilderNx1<N, T>, Store>;
 /// A 2-dimensional, single-channel `ChunkMap`.
 pub type ChunkMap2x1<T, Store> = ChunkMapNx1<[i32; 2], T, Store>;
 /// A 3-dimensional, single-channel `ChunkMap`.
 pub type ChunkMap3x1<T, Store> = ChunkMapNx1<[i32; 3], T, Store>;
 
 /// An object that knows how to construct chunks for a `ChunkMap`.
-pub trait ChunkBuilder<N, T>: Sized {
+pub trait ChunkMapBuilder<N, T>: Sized {
     type Chunk: Chunk;
 
     fn chunk_shape(&self) -> PointN<N>;
@@ -205,27 +205,27 @@ pub trait ChunkBuilder<N, T>: Sized {
     }
 }
 
-/// A `ChunkBuilder` for `ArrayNx1` chunks.
+/// A `ChunkMapBuilder` for `ArrayNx1` chunks.
 #[derive(Clone, Copy)]
-pub struct ArrayChunkBuilderNx1<N, T> {
+pub struct ChunkMapBuilderNx1<N, T> {
     pub chunk_shape: PointN<N>,
     pub ambient_value: T,
 }
 
-/// A `ChunkBuilder` for `Array2x1` chunks.
-pub type ArrayChunkBuilder2x1<T> = ArrayChunkBuilderNx1<[i32; 2], T>;
-/// A `ChunkBuilder` for `Array3x1` chunks.
-pub type ArrayChunkBuilder3x1<T> = ArrayChunkBuilderNx1<[i32; 3], T>;
+/// A `ChunkMapBuilder` for `Array2x1` chunks.
+pub type ArrayChunkBuilder2x1<T> = ChunkMapBuilderNx1<[i32; 2], T>;
+/// A `ChunkMapBuilder` for `Array3x1` chunks.
+pub type ArrayChunkBuilder3x1<T> = ChunkMapBuilderNx1<[i32; 3], T>;
 
-impl<N, T> ChunkBuilder<N, T> for ArrayChunkBuilderNx1<N, T>
+impl<N, T> ChunkMapBuilder<N, T> for ChunkMapBuilderNx1<N, T>
 where
-    PointN<N>: Copy + IntegerPoint<N>,
+    PointN<N>: Clone + IntegerPoint<N>,
     T: Clone,
 {
     type Chunk = ArrayNx1<N, T>;
 
     fn chunk_shape(&self) -> PointN<N> {
-        self.chunk_shape
+        self.chunk_shape.clone()
     }
 
     fn ambient_value(&self) -> T {
@@ -233,14 +233,14 @@ where
     }
 
     fn new_ambient(&self, extent: ExtentN<N>) -> Self::Chunk {
-        ArrayNx1::fill(extent, self.ambient_value.clone())
+        ArrayNx1::fill(extent, self.ambient_value())
     }
 }
 
 impl<N, T, B, Store> ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkBuilder<N, T>,
+    B: ChunkMapBuilder<N, T>,
 {
     /// Creates a map using the given `storage`.
     ///
@@ -286,7 +286,7 @@ impl<N, T, B, Store> ChunkMap<N, T, B, Store> {
 impl<N, T, B, Store> ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkBuilder<N, T>,
+    B: ChunkMapBuilder<N, T>,
     Store: ChunkReadStorage<N, B::Chunk>,
 {
     /// Borrow the chunk at `key`.
@@ -333,7 +333,7 @@ where
 impl<N, T, B, Store> ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkBuilder<N, T>,
+    B: ChunkMapBuilder<N, T>,
     Store: ChunkWriteStorage<N, B::Chunk>,
 {
     /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
@@ -498,7 +498,7 @@ where
 impl<N, T, B, Store> GetRef<PointN<N>, T> for ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkBuilder<N, T>,
+    B: ChunkMapBuilder<N, T>,
     <B::Chunk as Chunk>::Array: GetRef<PointN<N>, T>,
     Store: ChunkReadStorage<N, B::Chunk>,
 {
@@ -515,7 +515,7 @@ where
 impl<N, T, B, Store> GetMut<PointN<N>, T> for ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkBuilder<N, T>,
+    B: ChunkMapBuilder<N, T>,
     <B::Chunk as Chunk>::Array: GetMut<PointN<N>, T>,
     Store: ChunkWriteStorage<N, B::Chunk>,
 {
@@ -540,7 +540,7 @@ impl_get_via_get_ref_and_clone!(ChunkMap<N, T, B, Store>, N, T, B, Store);
 impl<N, T, B, Store> ForEach<N, PointN<N>> for ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkBuilder<N, T>,
+    B: ChunkMapBuilder<N, T>,
     <B::Chunk as Chunk>::Array: ForEach<N, PointN<N>, Item = T>,
     T: Copy,
     Store: ChunkReadStorage<N, B::Chunk>,
@@ -564,7 +564,7 @@ impl<'a, N, T, B, Store> ForEachMut<'a, N, PointN<N>> for ChunkMap<N, T, B, Stor
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
-    B: ChunkBuilder<N, T>,
+    B: ChunkMapBuilder<N, T>,
     <B::Chunk as Chunk>::Array: ForEachMut<'a, N, PointN<N>, Item = &'a mut T>,
     T: 'a,
     Store: ChunkWriteStorage<N, B::Chunk>,
@@ -593,7 +593,7 @@ impl<'a, N, T, B, Store> ReadExtent<'a, N> for ChunkMap<N, T, B, Store>
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
-    B: ChunkBuilder<N, T>,
+    B: ChunkMapBuilder<N, T>,
     B::Chunk: 'a,
     T: 'a + Copy,
     Store: ChunkReadStorage<N, B::Chunk>,
@@ -628,7 +628,7 @@ where
 impl<N, T, B, Store, Src> WriteExtent<N, Src> for ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkBuilder<N, T>,
+    B: ChunkMapBuilder<N, T>,
     <B::Chunk as Chunk>::Array: WriteExtent<N, Src>,
     Store: ChunkWriteStorage<N, B::Chunk>,
     Src: Copy,

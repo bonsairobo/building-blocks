@@ -39,8 +39,8 @@
 //! ```
 
 use crate::{
-    AmbientExtent, ArrayCopySrc, ArrayNx1, ChunkBuilder, ChunkCopySrc, ChunkCopySrcIter, ChunkMap,
-    ForEach, Get, IndexedArray, ReadExtent,
+    AmbientExtent, ArrayCopySrc, ArrayNx1, ChunkCopySrc, ChunkCopySrcIter, ChunkMap,
+    ChunkMapBuilder, ForEach, Get, IndexedArray, ReadExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -140,7 +140,7 @@ impl<'a, N, F, In, Out, B, Store> ReadExtent<'a, N>
 where
     F: Copy + Fn(In) -> Out,
     In: 'a,
-    B: ChunkBuilder<N, In>,
+    B: ChunkMapBuilder<N, In>,
     ChunkMap<N, In, B, Store>: ReadExtent<
         'a,
         N,

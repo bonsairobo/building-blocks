@@ -222,15 +222,14 @@ where
     /// Create a new array for `extent` where each point's value is determined by the `filler` function.
     pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> T) -> Self
     where
-        ArrayNx1<N, MaybeUninit<T>>: GetMut<PointN<N>, MaybeUninit<T>>,
+        ArrayNx1<N, MaybeUninit<T>>:
+            for<'r> ForEachMut<'r, N, PointN<N>, Item = &'r mut MaybeUninit<T>>,
     {
         let mut array = unsafe { ArrayNx1::maybe_uninit(extent) };
 
-        for p in extent.iter_points() {
-            unsafe {
-                array.get_mut(p).as_mut_ptr().write(filler(p));
-            }
-        }
+        array.for_each_mut(&extent, |p, x| unsafe {
+            x.as_mut_ptr().write(filler(p));
+        });
 
         unsafe { array.assume_init() }
     }

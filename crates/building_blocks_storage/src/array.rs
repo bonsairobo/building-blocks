@@ -97,6 +97,7 @@
 //! box_array.for_each(&extent, |p: Point3i, value| assert_eq!(value, 1));
 //! ```
 
+mod channels;
 mod compression;
 mod coords;
 #[macro_use]
@@ -108,6 +109,7 @@ mod dot_vox_conversions;
 #[cfg(feature = "image")]
 mod image_conversions;
 
+pub use channels::*;
 pub use compression::*;
 pub use coords::*;
 pub use for_each::*;
@@ -126,29 +128,41 @@ use core::ops::{Add, Deref, DerefMut};
 use either::Either;
 use serde::{Deserialize, Serialize};
 
-/// A map from lattice location `PointN<N>` to data `T`, stored as a flat array on the heap.
+/// A map from lattice location `PointN<N>` to data `T`, stored as a flat array.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct ArrayNx1<N, T, Store = Vec<T>> {
-    values: Store,
+pub struct Array<N, Chan> {
+    channels: Chan,
     extent: ExtentN<N>,
-    marker: std::marker::PhantomData<T>,
 }
+
+/// An N-dimensional, 1-channel `Array`.
+pub type ArrayNx1<N, T, Store = Vec<T>> = Array<N, Channel<T, Store>>;
 
 /// A 2-dimensional, 1-channel `Array`.
 pub type Array2x1<T, Store = Vec<T>> = ArrayNx1<[i32; 2], T, Store>;
 /// A 3-dimensional, 1-channel `Array`.
 pub type Array3x1<T, Store = Vec<T>> = ArrayNx1<[i32; 3], T, Store>;
 
-impl<N, T, Store> ArrayNx1<N, T, Store> {
+impl<N, Chan> Array<N, Chan> {
     /// Moves the raw extent and values storage out of `self`.
     #[inline]
-    pub fn into_parts(self) -> (ExtentN<N>, Store) {
-        (self.extent, self.values)
+    pub fn into_parts(self) -> (ExtentN<N>, Chan) {
+        (self.extent, self.channels)
     }
 
     #[inline]
     pub fn extent(&self) -> &ExtentN<N> {
         &self.extent
+    }
+
+    #[inline]
+    pub fn channels(&self) -> &Chan {
+        &self.channels
+    }
+
+    #[inline]
+    pub fn channels_mut(&mut self) -> &mut Chan {
+        &mut self.channels
     }
 }
 
@@ -166,32 +180,15 @@ where
 
 impl<N, T, Store> ArrayNx1<N, T, Store>
 where
-    Store: Deref<Target = [T]>,
-{
-    /// Returns the entire slice of values.
-    #[inline]
-    pub fn values_slice(&self) -> &[T] {
-        self.values.as_ref()
-    }
-}
-
-impl<N, T, Store> ArrayNx1<N, T, Store>
-where
     Store: DerefMut<Target = [T]>,
 {
-    /// Returns the entire slice of values.
-    #[inline]
-    pub fn values_mut_slice(&mut self) -> &mut [T] {
-        self.values.as_mut()
-    }
-
     /// Set all points to the same value.
     #[inline]
     pub fn reset_values(&mut self, value: T)
     where
         T: Clone,
     {
-        self.values.fill(value);
+        self.channels.fill(value);
     }
 }
 
@@ -203,7 +200,7 @@ where
     type Output = &'a [u8];
 
     fn into_raw_bytes(&'a self) -> Self::Output {
-        self.values.into_raw_bytes()
+        self.channels.into_raw_bytes()
     }
 }
 
@@ -247,9 +244,8 @@ where
         assert_eq!(extent.num_points(), values.len());
 
         Self {
-            values,
+            channels: Channel::new(values),
             extent,
-            marker: Default::default(),
         }
     }
 

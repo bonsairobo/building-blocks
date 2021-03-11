@@ -190,9 +190,6 @@ pub fn mesh_generator_system(
     }
 }
 
-const CHUNK_SHAPE2: Point2i = PointN([16; 2]);
-const CHUNK_SHAPE3: Point3i = PointN([16; 3]);
-
 fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNormMesh>> {
     let sdf = sdf.get_sdf();
     let sample_extent =
@@ -200,7 +197,11 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
 
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
     // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
-    let mut map = ChunkMap::build_with_hash_map_storage(CHUNK_SHAPE3);
+    let builder = ArrayChunkBuilder3x1 {
+        chunk_shape: PointN([16; 3]),
+        ambient_value: Sd16::ONE,
+    };
+    let mut map = builder.build_with_hash_map_storage();
     copy_extent(&sample_extent, &sdf, &mut map);
 
     // Generate the chunk meshes.
@@ -246,7 +247,11 @@ fn generate_chunk_meshes_from_height_map(
 
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
     // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
-    let mut map = ChunkMap::build_with_hash_map_storage(CHUNK_SHAPE2);
+    let builder = ArrayChunkBuilder2x1 {
+        chunk_shape: PointN([16; 2]),
+        ambient_value: 0.0,
+    };
+    let mut map = builder.build_with_hash_map_storage();
     copy_extent(&sample_extent, &height_map, &mut map);
 
     // Generate the chunk meshes.
@@ -289,7 +294,11 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
     // Chunk up the voxels just to show that meshing across chunks is consistent.
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
     // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
-    let mut map = ChunkMap::build_with_hash_map_storage(CHUNK_SHAPE3);
+    let builder = ArrayChunkBuilder3x1 {
+        chunk_shape: PointN([16; 3]),
+        ambient_value: CubeVoxel::default(),
+    };
+    let mut map = builder.build_with_hash_map_storage();
     copy_extent(voxels.extent(), &voxels, &mut map);
 
     // Generate the chunk meshes.

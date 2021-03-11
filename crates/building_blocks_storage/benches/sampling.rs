@@ -1,7 +1,7 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{
-    Array3x1, ChunkDownsampler, ChunkHashMapPyramid3, ChunkMap3x1, Local, OctreeChunkIndex,
-    PointDownsampler, Sd8, SdfMeanDownsampler,
+    Array3x1, ArrayChunkBuilder3x1, ChunkBuilder, ChunkDownsampler, ChunkHashMapPyramid3, Local,
+    OctreeChunkIndex, PointDownsampler, Sd8, SdfMeanDownsampler,
 };
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
@@ -42,7 +42,11 @@ fn sdf_mean_downsample_chunk_pyramid(c: &mut Criterion) {
                         let chunk_shape = Point3i::fill(16);
                         let superchunk_shape = Point3i::fill((1 << num_lods) * 16);
 
-                        let mut lod0_map = ChunkMap3x1::build_with_hash_map_storage(chunk_shape);
+                        let builder = ArrayChunkBuilder3x1 {
+                            chunk_shape,
+                            ambient_value: Sd8::ONE,
+                        };
+                        let mut lod0_map = builder.build_with_hash_map_storage();
 
                         let map_extent =
                             Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(map_chunks))

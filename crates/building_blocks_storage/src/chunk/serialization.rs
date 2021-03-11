@@ -86,7 +86,7 @@ where
 mod test {
     use super::*;
 
-    use crate::{prelude::*, SmallKeyHashMap};
+    use crate::{prelude::*, ArrayChunkBuilder3x1, SmallKeyHashMap};
 
     #[cfg(feature = "lz4")]
     #[test]
@@ -134,7 +134,7 @@ mod test {
             + IntoIterator<Item = (Point3i, Array3x1<i32>)>,
         B: BytesCompression + Copy + DeserializeOwned + Serialize,
     {
-        let mut map = ChunkMap::build_with_write_storage(CHUNK_SHAPE, storage);
+        let mut map = BUILDER.build_with_write_storage(storage);
         let filled_extent = Extent3i::from_min_and_shape(Point3i::fill(-100), Point3i::fill(200));
         map.fill_extent(&filled_extent, 1);
         let serializable = futures::executor::block_on(SerializableChunks::from_iter(
@@ -147,9 +147,12 @@ mod test {
 
         let mut storage = SmallKeyHashMap::default();
         futures::executor::block_on(deserialized.fill_storage(&mut storage));
-        let map = ChunkMap::build_with_rw_storage(CHUNK_SHAPE, storage);
+        let map = BUILDER.build_with_rw_storage(storage);
         map.for_each(&filled_extent, |_p, val| assert_eq!(val, 1));
     }
 
-    const CHUNK_SHAPE: Point3i = PointN([16; 3]);
+    const BUILDER: ArrayChunkBuilder3x1<i32> = ArrayChunkBuilder3x1 {
+        chunk_shape: PointN([16; 3]),
+        ambient_value: 0,
+    };
 }

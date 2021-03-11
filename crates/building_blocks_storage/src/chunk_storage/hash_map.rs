@@ -1,4 +1,4 @@
-use crate::{ChunkMap, SmallKeyHashMap};
+use crate::{ArrayChunkBuilderNx1, ChunkBuilder, ChunkMap, SmallKeyHashMap};
 
 use super::{ChunkReadStorage, ChunkWriteStorage, IterChunkKeys};
 
@@ -59,8 +59,16 @@ where
 }
 
 /// A `ChunkMap` using `HashMap` as chunk storage.
-pub type ChunkHashMap<N, T, Ch> = ChunkMap<N, T, Ch, SmallKeyHashMap<PointN<N>, Ch>>;
+pub type ChunkHashMap<N, T, B> =
+    ChunkMap<N, T, B, SmallKeyHashMap<PointN<N>, <B as ChunkBuilder<N, T>>::Chunk>>;
 /// A 2-dimensional `ChunkHashMap`.
-pub type ChunkHashMap2<T, Ch> = ChunkHashMap<[i32; 2], T, Ch>;
+pub type ChunkHashMap2<T, B> = ChunkHashMap<[i32; 2], T, B>;
 /// A 3-dimensional `ChunkHashMap`.
-pub type ChunkHashMap3<T, Ch> = ChunkHashMap<[i32; 3], T, Ch>;
+pub type ChunkHashMap3<T, B> = ChunkHashMap<[i32; 3], T, B>;
+
+/// An N-dimensional, 1-channel `ChunkHashMap`.
+pub type ChunkHashMapNx1<N, T> = ChunkHashMap<N, T, ArrayChunkBuilderNx1<N, T>>;
+/// A 2-dimensional, 1-channel `ChunkHashMap`.
+pub type ChunkHashMap2x1<N, T> = ChunkHashMap<N, T, ArrayChunkBuilderNx1<[i32; 2], T>>;
+/// A 3-dimensional, 1-channel `ChunkHashMap`.
+pub type ChunkHashMap3x1<N, T> = ChunkHashMap<N, T, ArrayChunkBuilderNx1<[i32; 3], T>>;

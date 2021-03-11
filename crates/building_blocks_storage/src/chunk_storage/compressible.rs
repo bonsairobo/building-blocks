@@ -1,8 +1,8 @@
 use crate::{
-    AHashLruCache, ArrayNx1, BytesCompression, CacheEntry, Chunk, ChunkMap, ChunkWriteStorage,
-    Compressed, CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression,
-    FastArrayCompression, IterChunkKeys, LocalChunkCache, LruCacheEntries, LruCacheIntoIter,
-    LruCacheKeys, MaybeCompressed,
+    AHashLruCache, ArrayChunkBuilderNx1, BytesCompression, CacheEntry, ChunkBuilder, ChunkMap,
+    ChunkWriteStorage, Compressed, CompressibleChunkMapReader, CompressibleChunkStorageReader,
+    Compression, FastArrayCompression, IterChunkKeys, LocalChunkCache, LruCacheEntries,
+    LruCacheIntoIter, LruCacheKeys, MaybeCompressed,
 };
 
 use building_blocks_core::prelude::*;
@@ -247,24 +247,23 @@ where
 }
 
 /// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
-pub type CompressibleChunkMap<N, T, Ch, Compr> =
-    ChunkMap<N, T, Ch, CompressibleChunkStorage<N, Compr>>;
+pub type CompressibleChunkMap<N, T, B, Compr> =
+    ChunkMap<N, T, B, CompressibleChunkStorage<N, Compr>>;
 
-impl<N, T, Ch, Compr> CompressibleChunkMap<N, T, Ch, Compr>
+impl<N, T, B, Compr> CompressibleChunkMap<N, T, B, Compr>
 where
     PointN<N>: Hash + IntegerPoint<N>,
-    Ch: Chunk<N, T>,
-    Compr: Compression<Data = Ch>,
+    B: ChunkBuilder<N, T> + Clone,
+    Compr: Compression<Data = B::Chunk>,
 {
     /// Construct a reader for this map.
     pub fn reader<'a>(
         &'a self,
-        local_cache: &'a LocalChunkCache<N, Ch>,
-    ) -> CompressibleChunkMapReader<'a, N, T, Ch, Compr> {
-        CompressibleChunkMapReader::build_with_read_storage(
-            self.indexer.chunk_shape(),
-            self.storage().reader(local_cache),
-        )
+        local_cache: &'a LocalChunkCache<N, B::Chunk>,
+    ) -> CompressibleChunkMapReader<'a, N, T, B, Compr> {
+        self.builder()
+            .clone()
+            .build_with_read_storage(self.storage().reader(local_cache))
     }
 }
 
@@ -281,7 +280,7 @@ pub type CompressibleChunkStorageNx1<N, T, B> =
 
 /// An N-dimensional, single-channel `CompressibleChunkMap`.
 pub type CompressibleChunkMapNx1<N, T, B> =
-    CompressibleChunkMap<N, T, ArrayNx1<N, T>, FastArrayCompression<N, T, B>>;
+    CompressibleChunkMap<N, T, ArrayChunkBuilderNx1<N, T>, FastArrayCompression<N, T, B>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {

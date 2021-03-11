@@ -115,8 +115,8 @@ pub type LocalChunkCache2<Ch> = LocalChunkCache<[i32; 2], Ch>;
 pub type LocalChunkCache3<Ch> = LocalChunkCache<[i32; 3], Ch>;
 
 /// A `ChunkMap` backed by a `CompressibleChunkStorageReader`.
-pub type CompressibleChunkMapReader<'a, N, T, Ch, Compr> =
-    ChunkMap<N, T, Ch, CompressibleChunkStorageReader<'a, N, Compr>>;
+pub type CompressibleChunkMapReader<'a, N, T, B, Compr> =
+    ChunkMap<N, T, B, CompressibleChunkStorageReader<'a, N, Compr>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {

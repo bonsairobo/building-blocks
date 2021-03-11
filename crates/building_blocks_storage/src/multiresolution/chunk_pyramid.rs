@@ -1,7 +1,7 @@
 use crate::{
-    prelude::*, ArrayIndexer, ArrayNx1, BytesCompression, ChunkDownsampler, ChunkHashMap,
-    ChunkMapNx1, CompressibleChunkMapNx1, OctreeChunkIndex, OctreeNode, SmallKeyHashMap,
-    VisitStatus,
+    prelude::*, ArrayChunkBuilderNx1, ArrayIndexer, ArrayNx1, BytesCompression, ChunkBuilder,
+    ChunkDownsampler, ChunkHashMapNx1, ChunkMapNx1, CompressibleChunkMapNx1, OctreeChunkIndex,
+    OctreeNode, SmallKeyHashMap, VisitStatus,
 };
 
 use building_blocks_core::prelude::*;
@@ -16,7 +16,7 @@ use std::fmt::Debug;
 /// There is no enforcement of a particular occupancy, allowing you to use this as a cache. Typically you will have some region
 /// of highest detail close to a central point. Then as you get further from the center, the detail drops.
 pub struct ChunkPyramid<N, T, Store> {
-    levels: Vec<ChunkMap<N, T, ArrayNx1<N, T>, Store>>,
+    levels: Vec<ChunkMap<N, T, ArrayChunkBuilderNx1<N, T>, Store>>,
 }
 
 pub type ChunkPyramid2<T, Store> = ChunkPyramid<[i32; 2], T, Store>;
@@ -63,7 +63,7 @@ where
     N: ArrayIndexer<N>,
     PointN<N>: Debug + IntegerPoint<N>,
     T: 'static + Clone,
-    ArrayNx1<N, T>: Chunk<N, T>,
+    ArrayNx1<N, T>: Chunk,
     Store: ChunkWriteStorage<N, ArrayNx1<N, T>>,
     ChunkIndexer<N>: Clone,
 {
@@ -82,6 +82,7 @@ where
         let lod_delta = dst_lod - src_lod;
 
         let chunk_shape = src_map.indexer.chunk_shape();
+        let ambient_value = src_map.builder().ambient_value();
 
         let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_key, lod_delta);
         let dst_chunk = dst_map.get_mut_chunk_or_insert_ambient(dst.dst_chunk_key);
@@ -96,7 +97,7 @@ where
                 dst_chunk.extent().minimum + dst.dst_offset.0,
                 chunk_shape >> 1,
             );
-            dst_chunk.fill_extent(&dst_extent, ArrayNx1::<_, T>::ambient_value());
+            dst_chunk.fill_extent(&dst_extent, ambient_value);
         }
     }
 }
@@ -104,7 +105,7 @@ where
 impl<T, Store> ChunkPyramid3<T, Store>
 where
     T: 'static + Clone,
-    Array3x1<T>: Chunk<[i32; 3], T>,
+    Array3x1<T>: Chunk,
     Store: ChunkWriteStorage<[i32; 3], Array3x1<T>>,
 {
     pub fn downsample_chunks_for_extent_all_lods_with_index<Samp>(
@@ -159,22 +160,22 @@ pub type ChunkHashMapPyramid3<T> = ChunkHashMapPyramid<[i32; 3], T>;
 impl<N, T> ChunkHashMapPyramid<N, T>
 where
     PointN<N>: Hash + IntegerPoint<N>,
-    T: Clone + Default,
+    T: Clone,
+    ArrayChunkBuilderNx1<N, T>: Clone,
 {
-    pub fn new(chunk_shape: PointN<N>, num_lods: u8) -> Self {
+    pub fn new(builder: ArrayChunkBuilderNx1<N, T>, num_lods: u8) -> Self {
         let mut levels = Vec::with_capacity(num_lods as usize);
         levels.resize_with(num_lods as usize, || {
-            ChunkMap::build_with_write_storage(chunk_shape, SmallKeyHashMap::default())
+            builder
+                .clone()
+                .build_with_write_storage(SmallKeyHashMap::default())
         });
 
         Self { levels }
     }
 
-    pub fn with_lod0_chunk_map(
-        lod0_chunk_map: ChunkHashMap<N, T, ArrayNx1<N, T>>,
-        num_lods: u8,
-    ) -> Self {
-        let mut pyramid = Self::new(lod0_chunk_map.indexer.chunk_shape(), num_lods);
+    pub fn with_lod0_chunk_map(lod0_chunk_map: ChunkHashMapNx1<N, T>, num_lods: u8) -> Self {
+        let mut pyramid = Self::new(lod0_chunk_map.builder().clone(), num_lods);
         *pyramid.level_mut(0) = lod0_chunk_map;
 
         pyramid
@@ -208,14 +209,14 @@ define_conditional_aliases!(Snappy);
 impl<N, T, B> CompressibleChunkPyramid<N, T, B>
 where
     PointN<N>: Hash + IntegerPoint<N>,
-    T: 'static + Copy + Default,
+    T: 'static + Copy,
     B: BytesCompression + Copy,
+    ArrayChunkBuilderNx1<N, T>: Clone,
 {
-    pub fn new(chunk_shape: PointN<N>, num_lods: u8, compression: B) -> Self {
+    pub fn new(builder: ArrayChunkBuilderNx1<N, T>, num_lods: u8, compression: B) -> Self {
         let mut levels = Vec::with_capacity(num_lods as usize);
         levels.resize_with(num_lods as usize, || {
-            ChunkMap::build_with_write_storage(
-                chunk_shape,
+            builder.clone().build_with_write_storage(
                 FastCompressibleChunkStorage::with_bytes_compression(compression),
             )
         });
@@ -228,7 +229,7 @@ where
         num_lods: u8,
     ) -> Self {
         let mut pyramid = Self::new(
-            lod0_chunk_map.indexer.chunk_shape(),
+            lod0_chunk_map.builder().clone(),
             num_lods,
             lod0_chunk_map.storage().compression.bytes_compression,
         );

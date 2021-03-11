@@ -14,7 +14,9 @@ pub use snappy_compression::Snappy;
 
 use serde::{Deserialize, Serialize};
 
-/// An algorithm for compressing a specific type `Data` into type `Compressed`.
+/// An algorithm for:
+///     1. compressing a specific type `Data` into type `Compressed`
+///     2. decompressing `Compressed` back into `Data`
 pub trait Compression: Sized {
     type Data;
     type CompressedData;

@@ -48,7 +48,7 @@ where
     type Data = ArrayNx1<N, T>;
     type CompressedData = FastCompressedArray<N, T, B>;
 
-    // Compress the map in-memory using some `B: BytesCompression`.
+    // Compress the map using some `B: BytesCompression`.
     //
     // WARNING: For performance, this reinterprets the inner vector as a byte slice without accounting for endianness. This is
     // not compatible across platforms.

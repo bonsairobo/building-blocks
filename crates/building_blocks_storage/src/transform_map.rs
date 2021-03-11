@@ -32,7 +32,7 @@
 //! # let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
 //! let src = Array3x1::fill(extent, 0);
 //! let chunk_shape = Point3i::fill(4);
-//! let builder = ArrayChunkBuilder3x1 { chunk_shape, ambient_value: 0 };
+//! let builder = ChunkMapBuilder3x1 { chunk_shape, ambient_value: 0 };
 //! let mut dst = builder.build_with_hash_map_storage();
 //! let tfm = TransformMap::new(&src, |value: i32| value + 1);
 //! copy_extent(&extent, &tfm, &mut dst);
@@ -204,7 +204,7 @@ mod tests {
     use super::*;
     use crate::prelude::*;
 
-    const BUILDER: ArrayChunkBuilder3x1<i32> = ArrayChunkBuilder3x1 {
+    const BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1 {
         chunk_shape: PointN([4; 3]),
         ambient_value: 0,
     };

@@ -259,7 +259,7 @@ where
 }
 
 const CHUNK_SHAPE: Point3i = PointN([16; 3]);
-const BUILDER: ArrayChunkBuilder3x1<i32> = ArrayChunkBuilder3x1 {
+const BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1 {
     chunk_shape: CHUNK_SHAPE,
     ambient_value: 0,
 };

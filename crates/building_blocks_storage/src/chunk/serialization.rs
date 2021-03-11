@@ -86,7 +86,7 @@ where
 mod test {
     use super::*;
 
-    use crate::{prelude::*, ArrayChunkBuilder3x1, SmallKeyHashMap};
+    use crate::{prelude::*, ChunkMapBuilder3x1, SmallKeyHashMap};
 
     #[cfg(feature = "lz4")]
     #[test]
@@ -151,7 +151,7 @@ mod test {
         map.for_each(&filled_extent, |_p, val| assert_eq!(val, 1));
     }
 
-    const BUILDER: ArrayChunkBuilder3x1<i32> = ArrayChunkBuilder3x1 {
+    const BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1 {
         chunk_shape: PointN([16; 3]),
         ambient_value: 0,
     };

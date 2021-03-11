@@ -30,7 +30,7 @@
 //!
 //! let ambient_value = 0;
 //! let chunk_shape = Point3i::fill(16);
-//! let builder = ArrayChunkBuilder3x1 { chunk_shape, ambient_value };
+//! let builder = ChunkMapBuilder3x1 { chunk_shape, ambient_value };
 //! let mut map = builder.build_with_hash_map_storage();
 //!
 //! // Although we only write 3 points, 3 whole dense chunks will be inserted.
@@ -79,7 +79,7 @@
 //! #
 //! # let chunk_shape = Point3i::fill(16);
 //! #
-//! let builder = ArrayChunkBuilder3x1 { chunk_shape, ambient_value: 0 };
+//! let builder = ChunkMapBuilder3x1 { chunk_shape, ambient_value: 0 };
 //! let mut map = builder.build_with_write_storage(
 //!     FastCompressibleChunkStorage::with_bytes_compression(Lz4 { level: 10 })
 //! );
@@ -213,9 +213,9 @@ pub struct ChunkMapBuilderNx1<N, T> {
 }
 
 /// A `ChunkMapBuilder` for `Array2x1` chunks.
-pub type ArrayChunkBuilder2x1<T> = ChunkMapBuilderNx1<[i32; 2], T>;
+pub type ChunkMapBuilder2x1<T> = ChunkMapBuilderNx1<[i32; 2], T>;
 /// A `ChunkMapBuilder` for `Array3x1` chunks.
-pub type ArrayChunkBuilder3x1<T> = ChunkMapBuilderNx1<[i32; 3], T>;
+pub type ChunkMapBuilder3x1<T> = ChunkMapBuilderNx1<[i32; 3], T>;
 
 impl<N, T> ChunkMapBuilder<N, T> for ChunkMapBuilderNx1<N, T>
 where
@@ -658,7 +658,7 @@ mod tests {
 
     use building_blocks_core::prelude::*;
 
-    const BUILDER: ArrayChunkBuilder3x1<i32> = ArrayChunkBuilder3x1 {
+    const BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1 {
         chunk_shape: PointN([16; 3]),
         ambient_value: 0,
     };

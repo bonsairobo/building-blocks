@@ -10,7 +10,7 @@ A simple example of how to generate a mesh from signed distance voxels.
 cargo run --example sdf_mesh
 ```
 
-<img src="examples/screenshots/sdf_mesh.png" alt="SDF Mesh" width="400">
+<img src="/examples/screenshots/sdf_mesh.png" alt="SDF Mesh" width="400">
 
 ## Mesh Showcase
 
@@ -22,7 +22,7 @@ cargo run --example mesh_showcase
 
 Use the left and right arrow keys to select one of the example shapes to be meshed.
 
-![Mesh Showcase](examples/screenshots/mesh_showcase.png)
+![Mesh Showcase](/examples/screenshots/mesh_showcase.png)
 
 ## Array Texture Materials
 
@@ -32,7 +32,7 @@ Shows how to use an "array texture" to give each type of a voxel a different mat
 cargo run --example array_texture_materials
 ```
 
-![Array Texture Materials](examples/screenshots/mesh_showcase.png)
+![Array Texture Materials](/examples/screenshots/mesh_showcase.png)
 
 ## Quad Mesh UVs
 
@@ -43,7 +43,7 @@ correctly.
 cargo run --example quad_mesh_uvs
 ```
 
-![Quad Mesh UVs](examples/screenshots/quad_mesh_uvs.png)
+![Quad Mesh UVs](/examples/screenshots/quad_mesh_uvs.png)
 
 ## Official Related Projects
 

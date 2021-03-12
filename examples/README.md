@@ -22,7 +22,7 @@ cargo run --example mesh_showcase
 
 Use the left and right arrow keys to select one of the example shapes to be meshed.
 
-![Mesh Showcase](/examples/screenshots/mesh_showcase.png)
+![Mesh Showcase](/examples/screenshots/mesh_showcase.gif)
 
 ## Array Texture Materials
 
@@ -32,7 +32,7 @@ Shows how to use an "array texture" to give each type of a voxel a different mat
 cargo run --example array_texture_materials
 ```
 
-![Array Texture Materials](/examples/screenshots/mesh_showcase.png)
+![Array Texture Materials](/examples/screenshots/array_texture_materials.png)
 
 ## Quad Mesh UVs
 

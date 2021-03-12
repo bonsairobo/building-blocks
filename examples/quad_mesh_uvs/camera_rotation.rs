@@ -19,7 +19,7 @@ pub fn camera_rotation_system(
 
     let target = Vec3::new(0.0, 0.0, 0.0);
     let height = 30.0 * (2.0 * t).sin();
-    let radius = 40.0;
+    let radius = 50.0;
     let x = radius * t.cos();
     let z = radius * t.sin();
     let eye = Vec3::new(x, height, z);

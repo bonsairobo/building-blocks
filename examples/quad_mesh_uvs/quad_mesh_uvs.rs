@@ -100,7 +100,7 @@ fn setup(
     };
 
     // Generate some voxel terrain
-    let interior_extent = Extent3i::from_min_and_shape(PointN([-20; 3]), PointN([40; 3]));
+    let interior_extent = Extent3i::from_min_and_shape(PointN([-10; 3]), PointN([20; 3]));
     let full_extent = interior_extent.padded(1);
     let mut voxels = Array3x1::fill(full_extent, Voxel::default());
     voxels.fill_extent(&interior_extent, Voxel(true));

@@ -548,19 +548,19 @@ where
     }
 }
 
-impl<'a, N, T, Store, Map, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Map, F, T>>>
-    for ArrayNx1<N, T, Store>
+impl<'a, N, In, Out, Store, Map, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Map, F, In>>>
+    for ArrayNx1<N, Out, Store>
 where
-    Self: IndexedArray<N> + GetMut<Stride, T>,
-    T: Clone,
-    TransformMap<'a, Map, F, T>: IndexedArray<N> + Get<Stride, T>,
+    Self: IndexedArray<N> + GetMut<Stride, Out>,
+    In: Clone,
+    TransformMap<'a, Map, F, In>: IndexedArray<N> + Get<Stride, Out>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
 {
     fn write_extent(
         &mut self,
         extent: &ExtentN<N>,
-        src_array: ArrayCopySrc<TransformMap<'a, Map, F, T>>,
+        src_array: ArrayCopySrc<TransformMap<'a, Map, F, In>>,
     ) {
         // It is assumed by the interface that extent is a subset of the src array, so we only need to intersect with the
         // destination.

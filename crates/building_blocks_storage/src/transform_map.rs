@@ -204,9 +204,13 @@ mod tests {
     use super::*;
     use crate::prelude::*;
 
-    const BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1 {
+    const INT_BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1 {
         chunk_shape: PointN([4; 3]),
         ambient_value: 0,
+    };
+    const FLOAT_BUILDER: ChunkMapBuilder3x1<f32> = ChunkMapBuilder3x1 {
+        chunk_shape: PointN([4; 3]),
+        ambient_value: 0.0,
     };
 
     #[test]
@@ -238,8 +242,8 @@ mod tests {
     fn copy_from_transformed_array() {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let src = Array3x1::fill(extent, 0);
-        let mut dst = BUILDER.build_with_hash_map_storage();
-        let tfm = TransformMap::new(&src, |value: i32| value + 1);
+        let mut dst: ChunkHashMap3x1<f32> = FLOAT_BUILDER.build_with_hash_map_storage();
+        let tfm = TransformMap::new(&src, |value: i32| value as f32 + 1.0);
         copy_extent(&extent, &tfm, &mut dst);
     }
 
@@ -248,13 +252,13 @@ mod tests {
     fn copy_from_transformed_chunk_map_reader() {
         let src_extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let src_array = Array3x1::fill(src_extent, 1);
-        let mut src = BUILDER.build_with_hash_map_storage();
+        let mut src = INT_BUILDER.build_with_hash_map_storage();
         copy_extent(&src_extent, &src_array, &mut src);
 
         let tfm = TransformMap::new(&src, |value: i32| value + 1);
 
         let dst_extent = Extent3::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
-        let mut dst = BUILDER.build_with_hash_map_storage();
+        let mut dst = INT_BUILDER.build_with_hash_map_storage();
         copy_extent(&dst_extent, &tfm, &mut dst);
     }
 }

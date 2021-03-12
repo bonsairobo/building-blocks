@@ -75,16 +75,16 @@ pub type SmallKeyBuildHasher = ahash::RandomState;
 
 pub mod prelude {
     pub use super::{
-        copy_extent, Array2x1, Array3x1, ArrayNx1, Chunk, ChunkHashMap2, ChunkHashMap3,
-        ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkIndexer, ChunkMap, ChunkMap2, ChunkMap2x1,
-        ChunkMap3, ChunkMap3x1, ChunkMapBuilder, ChunkMapBuilder2x1, ChunkMapBuilder3x1,
-        ChunkPyramid2, ChunkPyramid3, ChunkReadStorage, ChunkWriteStorage, Compressed,
-        CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
-        CompressibleChunkStorageReader, Compression, FastArrayCompression,
-        FastCompressibleChunkStorage, ForEach, ForEachMut, Get, GetMut, GetRef, IndexedArray,
-        IsEmpty, IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2, LocalChunkCache3,
-        OctreeChunkIndex, OctreeNode, OctreeSet, ReadExtent, SerializableChunks, SignedDistance,
-        Stride, TransformMap, WriteExtent,
+        copy_extent, Array2x1, Array3x1, ArrayNx1, Chunk, ChunkHashMap2, ChunkHashMap2x1,
+        ChunkHashMap3, ChunkHashMap3x1, ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkIndexer,
+        ChunkMap, ChunkMap2, ChunkMap2x1, ChunkMap3, ChunkMap3x1, ChunkMapBuilder,
+        ChunkMapBuilder2x1, ChunkMapBuilder3x1, ChunkPyramid2, ChunkPyramid3, ChunkReadStorage,
+        ChunkWriteStorage, Compressed, CompressibleChunkMap, CompressibleChunkMapReader,
+        CompressibleChunkStorage, CompressibleChunkStorageReader, Compression,
+        FastArrayCompression, FastCompressibleChunkStorage, ForEach, ForEachMut, Get, GetMut,
+        GetRef, IndexedArray, IsEmpty, IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2,
+        LocalChunkCache3, OctreeChunkIndex, OctreeNode, OctreeSet, ReadExtent, SerializableChunks,
+        SignedDistance, Stride, TransformMap, WriteExtent,
     };
 
     #[cfg(feature = "lz4")]

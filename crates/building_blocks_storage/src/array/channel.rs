@@ -35,6 +35,28 @@ impl<T, Store> Channel<T, Store> {
     }
 }
 
+impl<T> Channel<T, Vec<T>> {
+    pub fn new_fill(value: T, length: usize) -> Self
+    where
+        T: Clone,
+    {
+        Self::new(vec![value; length])
+    }
+}
+
+impl<T, Store> Channel<T, Store>
+where
+    Store: DerefMut<Target = [T]>,
+{
+    #[inline]
+    pub fn fill(&mut self, value: T)
+    where
+        T: Clone,
+    {
+        self.store.fill(value);
+    }
+}
+
 impl<T> Channel<MaybeUninit<T>, Vec<MaybeUninit<T>>> {
     /// Creates an uninitialized channel, mainly for performance.
     /// # Safety
@@ -63,43 +85,6 @@ impl<T> Channel<MaybeUninit<T>, Vec<MaybeUninit<T>>> {
         };
 
         Channel::new(transmuted_values)
-    }
-}
-
-impl<T> Channel<T, Vec<T>> {
-    pub fn new_fill(value: T, length: usize) -> Self
-    where
-        T: Clone,
-    {
-        Self::new(vec![value; length])
-    }
-}
-
-impl<T, Store> Channel<T, Store>
-where
-    Store: Deref<Target = [T]>,
-{
-    #[inline]
-    pub fn as_slice(&self) -> &[T] {
-        &self.store[..]
-    }
-}
-
-impl<T, Store> Channel<T, Store>
-where
-    Store: DerefMut<Target = [T]>,
-{
-    #[inline]
-    pub fn as_mut_slice(&mut self) -> &mut [T] {
-        &mut self.store[..]
-    }
-
-    #[inline]
-    pub fn fill(&mut self, value: T)
-    where
-        T: Clone,
-    {
-        self.store.fill(value);
     }
 }
 

@@ -18,6 +18,7 @@ ncollide = ["nalgebra", "ncollide3d", "building_blocks_core/nalgebra"]
 fnv = "1.0"
 indexmap = "1.5"
 itertools = "0.9"
+pathfinding = "2.1"
 
 # Optional, feature-gated
 nalgebra = { version = "0.24", optional = true }

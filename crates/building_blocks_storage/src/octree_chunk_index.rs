@@ -67,7 +67,13 @@ impl OctreeChunkIndex {
 
         assert!(
             superchunk_log2 - chunk_log2 < Point3i::fill(6),
-            "OctreeSet only support 6 levels. Make your chunk shape larger or make your superchunk shape smaller"
+            "OctreeSet only support 6 levels. Make your chunk shape larger or make your superchunk shape smaller.
+             superchunk shape = {:?}, log2 = {:?}
+             chunk shape      = {:?}, log2 = {:?}",
+            superchunk_shape,
+            superchunk_log2,
+            chunk_shape,
+            chunk_log2
         );
 
         let superchunk_shape_in_chunks = superchunk_shape >> chunk_log2;

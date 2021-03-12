@@ -29,8 +29,7 @@
 //! use building_blocks_storage::prelude::*;
 //!
 //! let ambient_value = 0;
-//! let chunk_shape = Point3i::fill(16);
-//! let builder = ChunkMapBuilder3x1 { chunk_shape, ambient_value };
+//! let builder = ChunkMapBuilder3x1 { chunk_shape: Point3i::fill(16), ambient_value };
 //! let mut map = builder.build_with_hash_map_storage();
 //!
 //! // Although we only write 3 points, 3 whole dense chunks will be inserted.
@@ -77,9 +76,7 @@
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
 //! #
-//! # let chunk_shape = Point3i::fill(16);
-//! #
-//! let builder = ChunkMapBuilder3x1 { chunk_shape, ambient_value: 0 };
+//! let builder = ChunkMapBuilder3x1 { chunk_shape: Point3i::fill(16), ambient_value: 0 };
 //! let mut map = builder.build_with_write_storage(
 //!     FastCompressibleChunkStorage::with_bytes_compression(Lz4 { level: 10 })
 //! );

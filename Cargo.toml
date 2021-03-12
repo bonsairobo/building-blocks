@@ -71,16 +71,21 @@ path = "src/bin/measure_compression_rate.rs"
 required-features = ["dot_vox", "lz4", "snappy"]
 
 [[example]]
-name = "bevy_meshing"
-path = "examples/bevy_meshing/bevy_meshing.rs"
+name = "mesh_showcase"
+path = "examples/mesh_showcase/mesh_showcase.rs"
 required-features = ["mesh", "sdfu"]
 
 [[example]]
-name = "bevy_minimal"
-path = "examples/bevy_minimal/bevy_minimal.rs"
+name = "sdf_mesh"
+path = "examples/sdf_mesh/sdf_mesh.rs"
 required-features = ["mesh", "sdfu"]
 
 [[example]]
-name = "bevy_array_texture"
-path = "examples/bevy_array_texture/bevy_array_texture.rs"
+name = "quad_mesh_uvs"
+path = "examples/quad_mesh_uvs/quad_mesh_uvs.rs"
+required-features = ["mesh"]
+
+[[example]]
+name = "array_texture_materials"
+path = "examples/array_texture_materials/array_texture_materials.rs"
 required-features = ["mesh"]

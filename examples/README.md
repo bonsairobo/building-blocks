@@ -1,22 +1,23 @@
 # Examples
 
-## Bevy Minimal
+All examples use the Bevy engine.
 
-A simple example of how to generate a voxel mesh for use in the Bevy game engine.
-Uses sdfu for modeling a signed distance field.
+## SDF Mesh
+
+A simple example of how to generate a mesh from signed distance voxels.
 
 ```sh
-cargo run --example bevy_minimal
+cargo run --example sdf_mesh
 ```
 
-<img src="https://i.imgur.com/pnTRdO4.png" alt="Minimal" width="400">
+<img src="https://i.imgur.com/pnTRdO4.png" alt="SdfMesh" width="400">
 
-## Bevy Meshing
+## Mesh Showcase
 
 A showcase of all the meshing algorithms, fetching samples from a `ChunkMap`.
 
 ```sh
-cargo run --example bevy_meshing
+cargo run --example mesh_showcase
 ```
 
 Use the left and right arrow keys to select one of the example shapes to be meshed.

@@ -24,7 +24,8 @@ enum AppState {
     Run,
 }
 
-const TEXTURE_LAYERS: u32 = 16;
+const TEXTURE_LAYERS: u32 = 4;
+const UV_SCALE: f32 = 0.1;
 
 struct Loading(Handle<Texture>);
 
@@ -45,7 +46,7 @@ fn main() {
 }
 
 fn load_assets(commands: &mut Commands, asset_server: Res<AssetServer>) {
-    let handle = asset_server.load("uv_checker.png");
+    let handle = asset_server.load("materials.png");
     commands.insert_resource(Loading(handle));
 }
 
@@ -102,9 +103,10 @@ impl MeshBuf {
         self.normals.extend_from_slice(&face.quad_mesh_normals());
 
         let mut uvs = face.simple_tex_coords(true, quad);
-        // Adjust these for the number of tiles in a row of the texture.
         for uv in uvs.iter_mut() {
-            uv[0] /= 16.0;
+            for c in uv.iter_mut() {
+                *c *= UV_SCALE;
+            }
         }
         self.tex_coords.extend_from_slice(&uvs);
 

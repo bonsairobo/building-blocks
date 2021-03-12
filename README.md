@@ -8,7 +8,7 @@
 
 Building Blocks is a voxel library for real-time applications.
 
-![Meshing](/examples/screenshots/mesh_showcase.png)
+![Meshing](/examples/screenshots/mesh_showcase.gif)
 
 ![LOD Terrain](/examples/screenshots/lod_terrain.png)
 

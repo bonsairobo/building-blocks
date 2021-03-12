@@ -82,7 +82,7 @@
 //! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
 //! // Borrow `array`'s values for the lifetime of `other_array`.
 //! let array = Array3x1::fill(extent, 1);
-//! let other_array = Array3x1::new(extent, array.values_slice());
+//! let other_array = Array3x1::new(extent, array.channels().store().as_slice());
 //! assert_eq!(other_array.get(Stride(0)), 1);
 //!
 //! // A stack-allocated array.
@@ -97,6 +97,7 @@
 //! box_array.for_each(&extent, |p: Point3i, value| assert_eq!(value, 1));
 //! ```
 
+mod channel;
 mod compression;
 mod coords;
 #[macro_use]
@@ -108,6 +109,7 @@ mod dot_vox_conversions;
 #[cfg(feature = "image")]
 mod image_conversions;
 
+pub use channel::*;
 pub use compression::*;
 pub use coords::*;
 pub use for_each::*;
@@ -126,29 +128,41 @@ use core::ops::{Add, Deref, DerefMut};
 use either::Either;
 use serde::{Deserialize, Serialize};
 
-/// A map from lattice location `PointN<N>` to data `T`, stored as a flat array on the heap.
+/// A map from lattice location `PointN<N>` to data `T`, stored as a flat array.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct ArrayNx1<N, T, Store = Vec<T>> {
-    values: Store,
+pub struct Array<N, Chan> {
+    channels: Chan,
     extent: ExtentN<N>,
-    marker: std::marker::PhantomData<T>,
 }
+
+/// An N-dimensional, 1-channel `Array`.
+pub type ArrayNx1<N, T, Store = Vec<T>> = Array<N, Channel<T, Store>>;
 
 /// A 2-dimensional, 1-channel `Array`.
 pub type Array2x1<T, Store = Vec<T>> = ArrayNx1<[i32; 2], T, Store>;
 /// A 3-dimensional, 1-channel `Array`.
 pub type Array3x1<T, Store = Vec<T>> = ArrayNx1<[i32; 3], T, Store>;
 
-impl<N, T, Store> ArrayNx1<N, T, Store> {
+impl<N, Chan> Array<N, Chan> {
     /// Moves the raw extent and values storage out of `self`.
     #[inline]
-    pub fn into_parts(self) -> (ExtentN<N>, Store) {
-        (self.extent, self.values)
+    pub fn into_parts(self) -> (ExtentN<N>, Chan) {
+        (self.extent, self.channels)
     }
 
     #[inline]
     pub fn extent(&self) -> &ExtentN<N> {
         &self.extent
+    }
+
+    #[inline]
+    pub fn channels(&self) -> &Chan {
+        &self.channels
+    }
+
+    #[inline]
+    pub fn channels_mut(&mut self) -> &mut Chan {
+        &mut self.channels
     }
 }
 
@@ -166,32 +180,15 @@ where
 
 impl<N, T, Store> ArrayNx1<N, T, Store>
 where
-    Store: Deref<Target = [T]>,
-{
-    /// Returns the entire slice of values.
-    #[inline]
-    pub fn values_slice(&self) -> &[T] {
-        self.values.as_ref()
-    }
-}
-
-impl<N, T, Store> ArrayNx1<N, T, Store>
-where
     Store: DerefMut<Target = [T]>,
 {
-    /// Returns the entire slice of values.
-    #[inline]
-    pub fn values_mut_slice(&mut self) -> &mut [T] {
-        self.values.as_mut()
-    }
-
     /// Set all points to the same value.
     #[inline]
     pub fn reset_values(&mut self, value: T)
     where
         T: Clone,
     {
-        self.values.fill(value);
+        self.channels.fill(value);
     }
 }
 
@@ -203,7 +200,7 @@ where
     type Output = &'a [u8];
 
     fn into_raw_bytes(&'a self) -> Self::Output {
-        self.values.into_raw_bytes()
+        self.channels.store().into_raw_bytes()
     }
 }
 
@@ -246,9 +243,8 @@ where
         assert_eq!(extent.num_points(), values.len());
 
         Self {
-            values,
+            channels: Channel::new(values),
             extent,
-            marker: Default::default(),
         }
     }
 
@@ -288,7 +284,7 @@ where
         T: Clone,
     {
         if self.extent.eq(extent) {
-            self.values.fill(value);
+            self.channels.fill(value);
         } else {
             self.for_each_mut(extent, |_: (), v| *v = value.clone());
         }
@@ -303,11 +299,9 @@ where
     /// # Safety
     /// Call `assume_init` after manually initializing all of the values.
     pub unsafe fn maybe_uninit(extent: ExtentN<N>) -> Self {
-        let num_points = extent.num_points();
-        let mut values = Vec::with_capacity(num_points);
-        values.set_len(num_points);
+        let channel = Channel::maybe_uninit(extent.num_points());
 
-        Self::new(extent, values)
+        Self::new(extent, channel.take_store())
     }
 
     /// Transmutes the map values from `MaybeUninit<T>` to `T` after manual initialization. The implementation just reconstructs
@@ -315,18 +309,10 @@ where
     /// # Safety
     /// All elements of the map must be initialized.
     pub unsafe fn assume_init(self) -> ArrayNx1<N, T> {
-        let transmuted_values = {
-            // Ensure the original vector is not dropped.
-            let mut v_clone = core::mem::ManuallyDrop::new(self.values);
+        let (extent, channel) = self.into_parts();
+        let channel = channel.assume_init();
 
-            Vec::from_raw_parts(
-                v_clone.as_mut_ptr() as *mut T,
-                v_clone.len(),
-                v_clone.capacity(),
-            )
-        };
-
-        ArrayNx1::new(self.extent, transmuted_values)
+        ArrayNx1::new(extent, channel.take_store())
     }
 }
 
@@ -343,11 +329,7 @@ where
 {
     #[inline]
     fn get_ref(&self, stride: Stride) -> &T {
-        if cfg!(debug_assertions) {
-            &self.values[stride.0]
-        } else {
-            unsafe { self.values.get_unchecked(stride.0) }
-        }
+        self.channels.get_ref(stride.0)
     }
 }
 
@@ -357,11 +339,7 @@ where
 {
     #[inline]
     fn get_mut(&mut self, stride: Stride) -> &mut T {
-        if cfg!(debug_assertions) {
-            &mut self.values[stride.0]
-        } else {
-            unsafe { self.values.get_unchecked_mut(stride.0) }
-        }
+        self.channels.get_mut(stride.0)
     }
 }
 
@@ -459,7 +437,7 @@ macro_rules! impl_array_for_each {
                 visitor.for_each_point_and_stride(|$p, $stride| {
                     // Need to tell the borrow checker that we're handing out non-overlapping borrows.
                     f($forward_coords, unsafe {
-                        &mut *self.values.as_mut_ptr().add($stride.0)
+                        &mut *self.channels.store_mut().as_mut_ptr().add($stride.0)
                     })
                 });
             }
@@ -491,8 +469,8 @@ macro_rules! impl_array_for_each {
                     // Need to tell the borrow checker that we're handing out non-overlapping borrows.
                     f($forward_coords, unsafe {
                         (
-                            &mut *s1.values.as_mut_ptr().add($stride.0),
-                            &mut *s2.values.as_mut_ptr().add($stride.0),
+                            &mut *s1.channels.store_mut().as_mut_ptr().add($stride.0),
+                            &mut *s2.channels.store_mut().as_mut_ptr().add($stride.0),
                         )
                     })
                 });
@@ -563,7 +541,7 @@ where
 
         if copy_entire_array {
             // Fast path, mostly for copying entire chunks between chunk maps.
-            self.values = src_array.0.values.clone();
+            self.channels = src_array.0.channels.clone();
         } else {
             unchecked_copy_extent_between_arrays(self, src_array.0, &in_bounds_extent);
         }

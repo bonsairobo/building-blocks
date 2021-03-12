@@ -69,6 +69,6 @@ pub type ChunkHashMap3<T, B> = ChunkHashMap<[i32; 3], T, B>;
 /// An N-dimensional, 1-channel `ChunkHashMap`.
 pub type ChunkHashMapNx1<N, T> = ChunkHashMap<N, T, ChunkMapBuilderNx1<N, T>>;
 /// A 2-dimensional, 1-channel `ChunkHashMap`.
-pub type ChunkHashMap2x1<N, T> = ChunkHashMap<N, T, ChunkMapBuilderNx1<[i32; 2], T>>;
+pub type ChunkHashMap2x1<T> = ChunkHashMap<[i32; 2], T, ChunkMapBuilderNx1<[i32; 2], T>>;
 /// A 3-dimensional, 1-channel `ChunkHashMap`.
-pub type ChunkHashMap3x1<N, T> = ChunkHashMap<N, T, ChunkMapBuilderNx1<[i32; 3], T>>;
+pub type ChunkHashMap3x1<T> = ChunkHashMap<[i32; 3], T, ChunkMapBuilderNx1<[i32; 3], T>>;

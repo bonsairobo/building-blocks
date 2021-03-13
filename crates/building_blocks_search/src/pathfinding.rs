@@ -1,10 +1,47 @@
-use building_blocks_core::{prelude::*, Point};
+use building_blocks_core::{num::Zero, prelude::*, Point};
 
 use core::cmp::Ordering;
 use core::hash::Hash;
 use indexmap::map::Entry::{Occupied, Vacant};
 use indexmap::IndexMap;
 use std::collections::BinaryHeap;
+use pathfinding::directed::astar::astar;
+
+/// Uses the given heuristic to do an a-star search from `start` to `finish`. All points on the path must satisfy
+/// `predicate`. Returns `Some` iff the path reaches `finish`. Otherwise, `None` is returned. The `predicate` must
+/// return the cost of moving from the node to the successor if the successor is valid. The `heuristic` function
+/// must not return a cost greater than the real cost.
+pub fn astar_path<N, C>(
+    start: PointN<N>,
+    finish: PointN<N>,
+    predicate: impl Fn(&PointN<N>) -> Option<C>,
+    heuristic: impl Fn(&PointN<N>) -> C,
+) -> Option<(Vec<PointN<N>>, C)>
+where
+    C: Zero + Copy + Ord,
+    PointN<N>: core::hash::Hash + Eq + IntegerPoint<N>,
+{
+    if !predicate(&start).is_some() {
+        return None;
+    }
+
+    let vn_offsets = PointN::<N>::von_neumann_offsets();
+
+    let successors = |p: &PointN<N>| {
+        vn_offsets
+            .iter()
+            .map(|offset| *p + *offset)
+            .filter_map(|p| match predicate(&p) {
+                Some(c) => Some((p, c)),
+                None => None,
+            })
+            .collect::<Vec<(PointN<N>, C)>>()
+    };
+
+    let success = |p: &PointN<N>| *p == finish;
+
+    astar(&start, successors, heuristic, success)
+}
 
 /// Uses the given heuristic to do greedy best-first search from `start` to `finish`. All points on the path must satisfy
 /// `predicate`. Returns `true` iff the path reaches `finish`. Otherwise, the path that got closest to `finish` is returned

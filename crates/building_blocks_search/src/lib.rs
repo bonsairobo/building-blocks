@@ -12,7 +12,7 @@ pub mod pathfinding;
 pub use find_surface::*;
 pub use flood_fill::*;
 pub use grid_ray_traversal::*;
-pub use pathfinding::*;
+pub use self::pathfinding::*;
 
 #[cfg(feature = "ncollide")]
 pub mod collision;

@@ -147,6 +147,7 @@ impl<N, Chan> Array<N, Chan> {
     /// Create a new `ArrayNx1` directly from the extent and values. This asserts that the number of points in the extent matches
     /// the length of the values `Vec`.
     pub fn new(extent: ExtentN<N>, channels: Chan) -> Self {
+        // TODO: assert that channels has length matching extent
         Self { extent, channels }
     }
 
@@ -451,16 +452,16 @@ where
 
 macro_rules! impl_array_for_each {
     (coords: $coords:ty; forwarder = |$p:ident, $stride:ident| $forward_coords:expr;) => {
-        impl<N, T, Store> ForEach<N, $coords> for ArrayNx1<N, T, Store>
+        impl<N, Chan> ForEach<N, $coords> for Array<N, Chan>
         where
-            Self: Get<Stride, Item = T>,
+            Self: Get<Stride>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
         {
-            type Item = T;
+            type Item = <Self as Get<Stride>>::Item;
 
             #[inline]
-            fn for_each(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, T)) {
+            fn for_each(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, Self::Item)) {
                 let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
                 visitor
                     .for_each_point_and_stride(|$p, $stride| f($forward_coords, self.get($stride)));
@@ -814,5 +815,18 @@ mod tests {
         assert_eq!(array.get(Point3i::fill(0)), (0, 'a'));
         assert_eq!(array.get_ref(Point3i::fill(0)), (&0, &'a'));
         assert_eq!(array.get_mut(Point3i::fill(0)), (&mut 0, &mut 'a'));
+    }
+
+    #[test]
+    fn multichannel_for_each() {
+        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+        let ch1 = Channel::new_fill(0, extent.num_points());
+        let ch2 = Channel::new_fill('a', extent.num_points());
+        let array = Array::new(extent, (ch1, ch2));
+
+        array.for_each(&extent, |_: (), (c1, c2)| {
+            assert_eq!(c1, 0);
+            assert_eq!(c2, 'a');
+        });
     }
 }

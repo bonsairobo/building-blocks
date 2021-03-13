@@ -558,11 +558,11 @@ impl_array_for_each!(
 #[derive(Copy, Clone)]
 pub struct ArrayCopySrc<Map>(pub Map);
 
-impl<'a, N: 'a, T: 'a, Store: 'a> ReadExtent<'a, N> for ArrayNx1<N, T, Store>
+impl<'a, N: 'a, Chan: 'a> ReadExtent<'a, N> for Array<N, Chan>
 where
     PointN<N>: IntegerPoint<N>,
 {
-    type Src = ArrayCopySrc<&'a ArrayNx1<N, T, Store>>;
+    type Src = ArrayCopySrc<&'a Array<N, Chan>>;
     type SrcIter = Once<(ExtentN<N>, Self::Src)>;
 
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {

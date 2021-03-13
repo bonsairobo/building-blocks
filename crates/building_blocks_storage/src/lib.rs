@@ -51,6 +51,7 @@ pub use chunk_map::*;
 pub use chunk_storage::*;
 pub use chunked_octree_set::*;
 pub use compression::*;
+pub use func::*;
 pub use multiresolution::*;
 pub use octree_chunk_index::*;
 pub use octree_set::*;
@@ -81,7 +82,7 @@ pub mod prelude {
         ChunkMapBuilder2x1, ChunkMapBuilder3x1, ChunkPyramid2, ChunkPyramid3, ChunkReadStorage,
         ChunkWriteStorage, Compressed, CompressibleChunkMap, CompressibleChunkMapReader,
         CompressibleChunkStorage, CompressibleChunkStorageReader, Compression,
-        FastArrayCompression, FastCompressibleChunkStorage, ForEach, ForEachMut, Get, GetMut,
+        FastArrayCompression, FastCompressibleChunkStorage, ForEach, ForEachMut, Func, Get, GetMut,
         GetRef, IndexedArray, IsEmpty, IterChunkKeys, Local, LocalChunkCache, LocalChunkCache2,
         LocalChunkCache3, OctreeChunkIndex, OctreeNode, OctreeSet, ReadExtent, SerializableChunks,
         SignedDistance, Stride, TransformMap, WriteExtent,

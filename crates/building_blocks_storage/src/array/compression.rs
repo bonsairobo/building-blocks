@@ -78,7 +78,7 @@ where
         };
         B::decompress_bytes(&compressed.compressed_bytes, &mut decompressed_bytes);
 
-        ArrayNx1::new(compressed.extent, decompressed_values)
+        ArrayNx1::new_one_channel(compressed.extent, decompressed_values)
     }
 }
 

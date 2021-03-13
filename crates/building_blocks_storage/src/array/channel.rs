@@ -128,3 +128,35 @@ where
         }
     }
 }
+
+impl_get_via_get_ref_and_clone!(Channel<T, Store>, T, Store);
+
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use crate::Get;
+
+    #[test]
+    fn tuple_of_channels_can_get() {
+        let mut ch1 = Channel::new_fill(0, 10);
+        let mut ch2 = Channel::new_fill(0, 10);
+
+        assert_eq!((&ch1, &ch2).get(0), (0, 0));
+        assert_eq!((&ch1, &ch2).get_ref(0), (&0, &0));
+        assert_eq!((&mut ch1, &mut ch2).get_mut(0), (&mut 0, &mut 0));
+
+        let mut owned = (ch1, ch2);
+
+        assert_eq!(owned.get(0), (0, 0));
+        assert_eq!(owned.get_ref(0), (&0, &0));
+        assert_eq!(owned.get_mut(0), (&mut 0, &mut 0));
+    }
+}

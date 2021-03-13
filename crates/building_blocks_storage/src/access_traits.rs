@@ -54,10 +54,12 @@
 //! copy_extent(&subextent, &other_map, &mut map);
 //!
 //! // You can even copy from a `Fn(Point3i) -> T`.
-//! copy_extent(&subextent, &|p: Point3i| p.x(), &mut map);
+//! copy_extent(&subextent, &Func(|p: Point3i| p.x()), &mut map);
 //!```
 
 use building_blocks_core::ExtentN;
+
+use auto_impl::auto_impl;
 
 // TODO: GATs should make it possible to collapse these traits for T, &T, and &mut T.
 
@@ -68,6 +70,7 @@ use building_blocks_core::ExtentN;
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
+#[auto_impl(&)]
 pub trait Get<L> {
     type Item;
 
@@ -75,6 +78,7 @@ pub trait Get<L> {
     fn get(&self, location: L) -> Self::Item;
 }
 
+#[auto_impl(&)]
 pub trait GetRef<'a, L> {
     type Item;
 
@@ -82,6 +86,7 @@ pub trait GetRef<'a, L> {
     fn get_ref(&'a self, location: L) -> Self::Item;
 }
 
+#[auto_impl(&mut)]
 pub trait GetMut<'a, L> {
     type Item;
 
@@ -106,6 +111,62 @@ macro_rules! impl_get_via_get_ref_and_clone {
         }
     };
 }
+
+macro_rules! impl_get_for_tuple {
+    ( $( $var:ident : $chan:ident ),+ ) => {
+        impl<Coord, $($chan),+> Get<Coord> for ($($chan,)+)
+        where
+            Coord: Copy,
+            $($chan: Get<Coord>),+
+        {
+            type Item = ($($chan::Item,)+);
+
+            #[inline]
+            fn get(&self, offset: Coord) -> Self::Item {
+                let ($($var,)+) = self;
+
+                ($($var.get(offset),)+)
+            }
+        }
+
+        impl<'a, Coord, $($chan),+> GetRef<'a, Coord> for ($($chan,)+)
+        where
+            Coord: Copy,
+            $($chan: GetRef<'a, Coord>),+
+        {
+            type Item = ($($chan::Item,)+);
+
+            #[inline]
+            fn get_ref(&'a self, offset: Coord) -> Self::Item {
+                let ($($var,)+) = self;
+
+                ($($var.get_ref(offset),)+)
+            }
+        }
+
+        impl<'a, Coord, $($chan),+> GetMut<'a, Coord> for ($($chan,)+)
+        where
+            Coord: Copy,
+            $($chan: GetMut<'a, Coord>),+
+        {
+            type Item = ($($chan::Item,)+);
+
+            #[inline]
+            fn get_mut(&'a mut self, offset: Coord) -> Self::Item {
+                let ($($var,)+) = self;
+
+                ($($var.get_mut(offset),)+)
+            }
+        }
+    };
+}
+
+impl_get_for_tuple! { a: A }
+impl_get_for_tuple! { a: A, b: B }
+impl_get_for_tuple! { a: A, b: B, c: C }
+impl_get_for_tuple! { a: A, b: B, c: C, d: D }
+impl_get_for_tuple! { a: A, b: B, c: C, d: D, e: E }
+impl_get_for_tuple! { a: A, b: B, c: C, d: D, e: E, f: F }
 
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║

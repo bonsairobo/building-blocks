@@ -82,18 +82,18 @@
 //! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
 //! // Borrow `array`'s values for the lifetime of `other_array`.
 //! let array = Array3x1::fill(extent, 1);
-//! let other_array = Array3x1::new(extent, array.channels().store().as_slice());
+//! let other_array = Array3x1::new_one_channel(extent, array.channels().store().as_slice());
 //! assert_eq!(other_array.get(Stride(0)), 1);
 //!
 //! // A stack-allocated array.
 //! let mut data = [1; 64 * 64 * 64];
-//! let mut stack_array = Array3x1::new(extent, &mut data[..]);
+//! let mut stack_array = Array3x1::new_one_channel(extent, &mut data[..]);
 //! *stack_array.get_mut(Stride(0)) = 2;
 //! assert_eq!(data[0], 2);
 //!
 //! // A boxed array.
 //! let data: Box<[u32]> = Box::new([1; 64 * 64 * 64]); // must forget the size
-//! let box_array = Array3x1::new(extent, data);
+//! let box_array = Array3x1::new_one_channel(extent, data);
 //! box_array.for_each(&extent, |p: Point3i, value| assert_eq!(value, 1));
 //! ```
 
@@ -144,6 +144,12 @@ pub type Array2x1<T, Store = Vec<T>> = ArrayNx1<[i32; 2], T, Store>;
 pub type Array3x1<T, Store = Vec<T>> = ArrayNx1<[i32; 3], T, Store>;
 
 impl<N, Chan> Array<N, Chan> {
+    /// Create a new `ArrayNx1` directly from the extent and values. This asserts that the number of points in the extent matches
+    /// the length of the values `Vec`.
+    pub fn new(extent: ExtentN<N>, channels: Chan) -> Self {
+        Self { extent, channels }
+    }
+
     /// Moves the raw extent and values storage out of `self`.
     #[inline]
     pub fn into_parts(self) -> (ExtentN<N>, Chan) {
@@ -166,7 +172,19 @@ impl<N, Chan> Array<N, Chan> {
     }
 }
 
-impl<N, T, Store> IndexedArray<N> for ArrayNx1<N, T, Store>
+impl<N, T, Store> ArrayNx1<N, T, Store>
+where
+    PointN<N>: IntegerPoint<N>,
+    Store: Deref<Target = [T]>,
+{
+    pub fn new_one_channel(extent: ExtentN<N>, values: Store) -> Self {
+        assert_eq!(extent.num_points(), values.len());
+
+        Self::new(extent, Channel::new(values))
+    }
+}
+
+impl<N, Chan> IndexedArray<N> for Array<N, Chan>
 where
     N: ArrayIndexer<N>,
 {
@@ -213,7 +231,7 @@ where
     where
         T: Clone,
     {
-        Self::new(extent, vec![value; extent.num_points()])
+        Self::new(extent, Channel::new_fill(value, extent.num_points()))
     }
 
     /// Create a new array for `extent` where each point's value is determined by the `filler` function.
@@ -237,17 +255,6 @@ where
     PointN<N>: IntegerPoint<N>,
     Store: Deref<Target = [T]>,
 {
-    /// Create a new `ArrayNx1` directly from the extent and values. This asserts that the number of points in the extent matches
-    /// the length of the values `Vec`.
-    pub fn new(extent: ExtentN<N>, values: Store) -> Self {
-        assert_eq!(extent.num_points(), values.len());
-
-        Self {
-            channels: Channel::new(values),
-            extent,
-        }
-    }
-
     /// Sets the extent minimum to `p`.
     #[inline]
     pub fn set_minimum(&mut self, p: PointN<N>) {
@@ -299,9 +306,7 @@ where
     /// # Safety
     /// Call `assume_init` after manually initializing all of the values.
     pub unsafe fn maybe_uninit(extent: ExtentN<N>) -> Self {
-        let channel = Channel::maybe_uninit(extent.num_points());
-
-        Self::new(extent, channel.take_store())
+        Self::new(extent, Channel::maybe_uninit(extent.num_points()))
     }
 
     /// Transmutes the map values from `MaybeUninit<T>` to `T` after manual initialization. The implementation just reconstructs
@@ -312,7 +317,7 @@ where
         let (extent, channel) = self.into_parts();
         let channel = channel.assume_init();
 
-        ArrayNx1::new(extent, channel.take_store())
+        ArrayNx1::new(extent, channel)
     }
 }
 
@@ -323,12 +328,23 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<'a, N, T, Chan> GetRef<'a, Stride> for Array<N, Chan>
+impl<N, Chan> Get<Stride> for Array<N, Chan>
 where
-    T: 'a,
-    Chan: GetRef<'a, usize, Item = &'a T>,
+    Chan: Get<usize>,
 {
-    type Item = &'a T;
+    type Item = Chan::Item;
+
+    #[inline]
+    fn get(&self, stride: Stride) -> Self::Item {
+        self.channels.get(stride.0)
+    }
+}
+
+impl<'a, N, Chan> GetRef<'a, Stride> for Array<N, Chan>
+where
+    Chan: GetRef<'a, usize>,
+{
+    type Item = Chan::Item;
 
     #[inline]
     fn get_ref(&'a self, stride: Stride) -> Self::Item {
@@ -336,12 +352,11 @@ where
     }
 }
 
-impl<'a, N, T, Chan> GetMut<'a, Stride> for Array<N, Chan>
+impl<'a, N, Chan> GetMut<'a, Stride> for Array<N, Chan>
 where
-    T: 'a,
-    Chan: GetMut<'a, usize, Item = &'a mut T>,
+    Chan: GetMut<'a, usize>,
 {
-    type Item = &'a mut T;
+    type Item = Chan::Item;
 
     #[inline]
     fn get_mut(&'a mut self, stride: Stride) -> Self::Item {
@@ -349,13 +364,25 @@ where
     }
 }
 
-impl<'a, N, T, Chan> GetRef<'a, Local<N>> for Array<N, Chan>
+impl<N, Chan> Get<Local<N>> for Array<N, Chan>
 where
-    Self: IndexedArray<N> + GetRef<'a, Stride, Item = &'a T>,
+    Self: IndexedArray<N> + Get<Stride>,
     PointN<N>: Copy,
-    T: 'a,
 {
-    type Item = &'a T;
+    type Item = <Self as Get<Stride>>::Item;
+
+    #[inline]
+    fn get(&self, p: Local<N>) -> Self::Item {
+        self.get(self.stride_from_local_point(p))
+    }
+}
+
+impl<'a, N, Chan> GetRef<'a, Local<N>> for Array<N, Chan>
+where
+    Self: IndexedArray<N> + GetRef<'a, Stride>,
+    PointN<N>: Copy,
+{
+    type Item = <Self as GetRef<'a, Stride>>::Item;
 
     #[inline]
     fn get_ref(&'a self, p: Local<N>) -> Self::Item {
@@ -363,13 +390,12 @@ where
     }
 }
 
-impl<'a, N, T, Chan> GetMut<'a, Local<N>> for Array<N, Chan>
+impl<'a, N, Chan> GetMut<'a, Local<N>> for Array<N, Chan>
 where
-    Self: IndexedArray<N> + GetMut<'a, Stride, Item = &'a mut T>,
+    Self: IndexedArray<N> + GetMut<'a, Stride>,
     PointN<N>: Copy,
-    T: 'a,
 {
-    type Item = &'a mut T;
+    type Item = <Self as GetMut<'a, Stride>>::Item;
 
     #[inline]
     fn get_mut(&'a mut self, p: Local<N>) -> Self::Item {
@@ -377,13 +403,27 @@ where
     }
 }
 
-impl<'a, N, T, Chan> GetRef<'a, PointN<N>> for Array<N, Chan>
+impl<N, Chan> Get<PointN<N>> for Array<N, Chan>
 where
-    Self: IndexedArray<N> + GetRef<'a, Local<N>, Item = &'a T>,
+    Self: IndexedArray<N> + Get<Local<N>>,
     PointN<N>: Point,
-    T: 'a,
 {
-    type Item = &'a T;
+    type Item = <Self as Get<Local<N>>>::Item;
+
+    #[inline]
+    fn get(&self, p: PointN<N>) -> Self::Item {
+        let local_p = p - self.extent().minimum;
+
+        self.get(Local(local_p))
+    }
+}
+
+impl<'a, N, Chan> GetRef<'a, PointN<N>> for Array<N, Chan>
+where
+    Self: IndexedArray<N> + GetRef<'a, Local<N>>,
+    PointN<N>: Point,
+{
+    type Item = <Self as GetRef<'a, Local<N>>>::Item;
 
     #[inline]
     fn get_ref(&'a self, p: PointN<N>) -> Self::Item {
@@ -393,13 +433,12 @@ where
     }
 }
 
-impl<'a, N, T, Chan> GetMut<'a, PointN<N>> for Array<N, Chan>
+impl<'a, N, Chan> GetMut<'a, PointN<N>> for Array<N, Chan>
 where
-    Self: IndexedArray<N> + GetMut<'a, Local<N>, Item = &'a mut T>,
+    Self: IndexedArray<N> + GetMut<'a, Local<N>>,
     PointN<N>: Point,
-    T: 'a,
 {
-    type Item = &'a mut T;
+    type Item = <Self as GetMut<'a, Local<N>>>::Item;
 
     #[inline]
     fn get_mut(&'a mut self, p: PointN<N>) -> Self::Item {
@@ -408,8 +447,6 @@ where
         self.get_mut(Local(local_p))
     }
 }
-
-impl_get_via_get_ref_and_clone!(Array<N, Chan>, N, T, Chan);
 
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║
@@ -754,7 +791,7 @@ mod tests {
     }
 
     #[test]
-    fn multichannel_mut_iter() {
+    fn zipped_mut_iter() {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
         let mut array1 = Array3x1::fill(extent, 0);
         let mut array2 = Array3x1::fill(extent, false);
@@ -763,5 +800,25 @@ mod tests {
             *val1 = 1;
             *val2 = true;
         });
+    }
+
+    #[test]
+    fn multichannel_get() {
+        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+        let ch1 = Channel::new_fill(0, extent.num_points());
+        let ch2 = Channel::new_fill(1, extent.num_points());
+        let mut array = Array::new(extent, (ch1, ch2));
+
+        assert_eq!(array.get(Stride(0)), (0, 1));
+        assert_eq!(array.get_ref(Stride(0)), (&0, &1));
+        assert_eq!(array.get_mut(Stride(0)), (&mut 0, &mut 1));
+
+        assert_eq!(array.get(Local(Point3i::fill(0))), (0, 1));
+        assert_eq!(array.get_ref(Local(Point3i::fill(0))), (&0, &1));
+        assert_eq!(array.get_mut(Local(Point3i::fill(0))), (&mut 0, &mut 1));
+
+        assert_eq!(array.get(Point3i::fill(0)), (0, 1));
+        assert_eq!(array.get_ref(Point3i::fill(0)), (&0, &1));
+        assert_eq!(array.get_mut(Point3i::fill(0)), (&mut 0, &mut 1));
     }
 }

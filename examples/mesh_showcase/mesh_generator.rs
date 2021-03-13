@@ -202,7 +202,7 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
         ambient_value: Sd16::ONE,
     };
     let mut map = builder.build_with_hash_map_storage();
-    copy_extent(&sample_extent, &sdf, &mut map);
+    copy_extent(&sample_extent, &Func(sdf), &mut map);
 
     // Generate the chunk meshes.
     let map_ref = &map;
@@ -252,7 +252,7 @@ fn generate_chunk_meshes_from_height_map(
         ambient_value: 0.0,
     };
     let mut map = builder.build_with_hash_map_storage();
-    copy_extent(&sample_extent, &height_map, &mut map);
+    copy_extent(&sample_extent, &Func(height_map), &mut map);
 
     // Generate the chunk meshes.
     let map_ref = &map;

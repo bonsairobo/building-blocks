@@ -172,18 +172,6 @@ impl<N, Chan> Array<N, Chan> {
     }
 }
 
-impl<N, T, Store> ArrayNx1<N, T, Store>
-where
-    PointN<N>: IntegerPoint<N>,
-    Store: Deref<Target = [T]>,
-{
-    pub fn new_one_channel(extent: ExtentN<N>, values: Store) -> Self {
-        assert_eq!(extent.num_points(), values.len());
-
-        Self::new(extent, Channel::new(values))
-    }
-}
-
 impl<N, Chan> IndexedArray<N> for Array<N, Chan>
 where
     N: ArrayIndexer<N>,
@@ -193,6 +181,41 @@ where
     #[inline]
     fn extent(&self) -> &ExtentN<N> {
         self.extent()
+    }
+}
+
+impl<N, Chan> Array<N, Chan>
+where
+    PointN<N>: IntegerPoint<N>,
+{
+    /// Sets the extent minimum to `p`.
+    #[inline]
+    pub fn set_minimum(&mut self, p: PointN<N>) {
+        self.extent.minimum = p;
+    }
+
+    /// Adds `p` to the extent minimum.
+    #[inline]
+    pub fn translate(&mut self, p: PointN<N>) {
+        self.extent = self.extent.add(p);
+    }
+
+    /// Returns `true` iff this map contains point `p`.
+    #[inline]
+    pub fn contains(&self, p: PointN<N>) -> bool {
+        self.extent.contains(p)
+    }
+}
+
+impl<N, T, Store> ArrayNx1<N, T, Store>
+where
+    PointN<N>: IntegerPoint<N>,
+    Store: Deref<Target = [T]>,
+{
+    pub fn new_one_channel(extent: ExtentN<N>, values: Store) -> Self {
+        assert_eq!(extent.num_points(), values.len());
+
+        Self::new(extent, Channel::new(values))
     }
 }
 
@@ -247,35 +270,6 @@ where
         });
 
         unsafe { array.assume_init() }
-    }
-}
-
-impl<N, T, Store> ArrayNx1<N, T, Store>
-where
-    PointN<N>: IntegerPoint<N>,
-    Store: Deref<Target = [T]>,
-{
-    /// Sets the extent minimum to `p`.
-    #[inline]
-    pub fn set_minimum(&mut self, p: PointN<N>) {
-        self.extent.minimum = p;
-    }
-
-    /// Adds `p` to the extent minimum.
-    #[inline]
-    pub fn translate(&mut self, p: PointN<N>) {
-        self.extent = self.extent.add(p);
-    }
-}
-
-impl<N, T, Store> ArrayNx1<N, T, Store>
-where
-    PointN<N>: Point,
-{
-    /// Returns `true` iff this map contains point `p`.
-    #[inline]
-    pub fn contains(&self, p: PointN<N>) -> bool {
-        self.extent.contains(p)
     }
 }
 

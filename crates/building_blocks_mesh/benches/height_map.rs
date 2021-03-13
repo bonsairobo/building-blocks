@@ -13,7 +13,7 @@ fn height_map_plane(c: &mut Criterion) {
                     let sample_extent =
                         Extent2i::from_min_and_max(PointN([0; 2]), PointN([size; 2]));
                     let mut samples = Array2x1::fill(sample_extent, Pixel(0.0));
-                    copy_extent(&sample_extent, &plane, &mut samples);
+                    copy_extent(&sample_extent, &Func(plane), &mut samples);
 
                     // Do a single run first to allocate the buffer to the right size.
                     let mut buffer = HeightMapMeshBuffer::default();

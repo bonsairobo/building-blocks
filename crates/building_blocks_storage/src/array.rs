@@ -800,19 +800,19 @@ mod tests {
     fn multichannel_get() {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
         let ch1 = Channel::new_fill(0, extent.num_points());
-        let ch2 = Channel::new_fill(1, extent.num_points());
+        let ch2 = Channel::new_fill('a', extent.num_points());
         let mut array = Array::new(extent, (ch1, ch2));
 
-        assert_eq!(array.get(Stride(0)), (0, 1));
-        assert_eq!(array.get_ref(Stride(0)), (&0, &1));
-        assert_eq!(array.get_mut(Stride(0)), (&mut 0, &mut 1));
+        assert_eq!(array.get(Stride(0)), (0, 'a'));
+        assert_eq!(array.get_ref(Stride(0)), (&0, &'a'));
+        assert_eq!(array.get_mut(Stride(0)), (&mut 0, &mut 'a'));
 
-        assert_eq!(array.get(Local(Point3i::fill(0))), (0, 1));
-        assert_eq!(array.get_ref(Local(Point3i::fill(0))), (&0, &1));
-        assert_eq!(array.get_mut(Local(Point3i::fill(0))), (&mut 0, &mut 1));
+        assert_eq!(array.get(Local(Point3i::fill(0))), (0, 'a'));
+        assert_eq!(array.get_ref(Local(Point3i::fill(0))), (&0, &'a'));
+        assert_eq!(array.get_mut(Local(Point3i::fill(0))), (&mut 0, &mut 'a'));
 
-        assert_eq!(array.get(Point3i::fill(0)), (0, 1));
-        assert_eq!(array.get_ref(Point3i::fill(0)), (&0, &1));
-        assert_eq!(array.get_mut(Point3i::fill(0)), (&mut 0, &mut 1));
+        assert_eq!(array.get(Point3i::fill(0)), (0, 'a'));
+        assert_eq!(array.get_ref(Point3i::fill(0)), (&0, &'a'));
+        assert_eq!(array.get_mut(Point3i::fill(0)), (&mut 0, &mut 'a'));
     }
 }

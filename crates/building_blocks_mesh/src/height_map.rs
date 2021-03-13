@@ -59,7 +59,9 @@ pub fn triangulate_height_map<A, H>(
     extent: &Extent2i,
     output: &mut HeightMapMeshBuffer,
 ) where
-    A: IndexedArray<[i32; 2]> + ForEach<[i32; 2], (Point2i, Stride), Item = H> + Get<Stride, H>,
+    A: IndexedArray<[i32; 2]>
+        + ForEach<[i32; 2], (Point2i, Stride), Item = H>
+        + Get<Stride, Item = H>,
     H: Height,
 {
     output.reset(height_map.extent().num_points());

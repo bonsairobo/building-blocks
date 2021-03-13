@@ -323,68 +323,86 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<N, T, Chan> GetRef<Stride, T> for Array<N, Chan>
+impl<'a, N, T, Chan> GetRef<'a, Stride> for Array<N, Chan>
 where
-    Chan: GetRef<usize, T>,
+    T: 'a,
+    Chan: GetRef<'a, usize, Item = &'a T>,
 {
+    type Item = &'a T;
+
     #[inline]
-    fn get_ref(&self, stride: Stride) -> &T {
+    fn get_ref(&'a self, stride: Stride) -> Self::Item {
         self.channels.get_ref(stride.0)
     }
 }
 
-impl<N, T, Chan> GetMut<Stride, T> for Array<N, Chan>
+impl<'a, N, T, Chan> GetMut<'a, Stride> for Array<N, Chan>
 where
-    Chan: GetMut<usize, T>,
+    T: 'a,
+    Chan: GetMut<'a, usize, Item = &'a mut T>,
 {
+    type Item = &'a mut T;
+
     #[inline]
-    fn get_mut(&mut self, stride: Stride) -> &mut T {
+    fn get_mut(&'a mut self, stride: Stride) -> Self::Item {
         self.channels.get_mut(stride.0)
     }
 }
 
-impl<N, T, Chan> GetRef<Local<N>, T> for Array<N, Chan>
+impl<'a, N, T, Chan> GetRef<'a, Local<N>> for Array<N, Chan>
 where
-    Self: IndexedArray<N> + GetRef<Stride, T>,
+    Self: IndexedArray<N> + GetRef<'a, Stride, Item = &'a T>,
     PointN<N>: Copy,
+    T: 'a,
 {
+    type Item = &'a T;
+
     #[inline]
-    fn get_ref(&self, p: Local<N>) -> &T {
+    fn get_ref(&'a self, p: Local<N>) -> Self::Item {
         self.get_ref(self.stride_from_local_point(p))
     }
 }
 
-impl<N, T, Chan> GetMut<Local<N>, T> for Array<N, Chan>
+impl<'a, N, T, Chan> GetMut<'a, Local<N>> for Array<N, Chan>
 where
-    Self: IndexedArray<N> + GetMut<Stride, T>,
+    Self: IndexedArray<N> + GetMut<'a, Stride, Item = &'a mut T>,
     PointN<N>: Copy,
+    T: 'a,
 {
+    type Item = &'a mut T;
+
     #[inline]
-    fn get_mut(&mut self, p: Local<N>) -> &mut T {
+    fn get_mut(&'a mut self, p: Local<N>) -> Self::Item {
         self.get_mut(self.stride_from_local_point(p))
     }
 }
 
-impl<N, T, Chan> GetRef<PointN<N>, T> for Array<N, Chan>
+impl<'a, N, T, Chan> GetRef<'a, PointN<N>> for Array<N, Chan>
 where
-    Self: IndexedArray<N> + GetRef<Local<N>, T>,
+    Self: IndexedArray<N> + GetRef<'a, Local<N>, Item = &'a T>,
     PointN<N>: Point,
+    T: 'a,
 {
+    type Item = &'a T;
+
     #[inline]
-    fn get_ref(&self, p: PointN<N>) -> &T {
+    fn get_ref(&'a self, p: PointN<N>) -> Self::Item {
         let local_p = p - self.extent().minimum;
 
         self.get_ref(Local(local_p))
     }
 }
 
-impl<N, T, Chan> GetMut<PointN<N>, T> for Array<N, Chan>
+impl<'a, N, T, Chan> GetMut<'a, PointN<N>> for Array<N, Chan>
 where
-    Self: IndexedArray<N> + GetMut<Local<N>, T>,
+    Self: IndexedArray<N> + GetMut<'a, Local<N>, Item = &'a mut T>,
     PointN<N>: Point,
+    T: 'a,
 {
+    type Item = &'a mut T;
+
     #[inline]
-    fn get_mut(&mut self, p: PointN<N>) -> &mut T {
+    fn get_mut(&'a mut self, p: PointN<N>) -> Self::Item {
         let local_p = p - self.extent().minimum;
 
         self.get_mut(Local(local_p))
@@ -404,7 +422,7 @@ macro_rules! impl_array_for_each {
     (coords: $coords:ty; forwarder = |$p:ident, $stride:ident| $forward_coords:expr;) => {
         impl<N, T, Store> ForEach<N, $coords> for ArrayNx1<N, T, Store>
         where
-            Self: Get<Stride, T>,
+            Self: Get<Stride, Item = T>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
         {
@@ -524,7 +542,7 @@ where
 
 impl<'a, N, T, Store> WriteExtent<N, ArrayCopySrc<&'a Self>> for ArrayNx1<N, T, Store>
 where
-    Self: Get<Stride, T> + GetMut<Stride, T>,
+    Self: Get<Stride, Item = T> + for<'r> GetMut<'r, Stride, Item = &'r mut T>,
     N: ArrayIndexer<N>,
     T: Clone,
     PointN<N>: IntegerPoint<N>,
@@ -548,19 +566,19 @@ where
     }
 }
 
-impl<'a, N, In, Out, Store, Map, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Map, F, In>>>
+impl<'a, N, Out, Store, Map, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Map, F>>>
     for ArrayNx1<N, Out, Store>
 where
-    Self: IndexedArray<N> + GetMut<Stride, Out>,
-    In: Clone,
-    TransformMap<'a, Map, F, In>: IndexedArray<N> + Get<Stride, Out>,
+    Self: IndexedArray<N> + for<'r> GetMut<'r, Stride, Item = &'r mut Out>,
+    Out: 'a,
+    TransformMap<'a, Map, F>: IndexedArray<N> + Get<Stride, Item = Out>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
 {
     fn write_extent(
         &mut self,
         extent: &ExtentN<N>,
-        src_array: ArrayCopySrc<TransformMap<'a, Map, F, In>>,
+        src_array: ArrayCopySrc<TransformMap<'a, Map, F>>,
     ) {
         // It is assumed by the interface that extent is a subset of the src array, so we only need to intersect with the
         // destination.
@@ -576,8 +594,8 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
     src: &Src,
     extent: &ExtentN<N>,
 ) where
-    Dst: IndexedArray<N> + GetMut<Stride, T>,
-    Src: IndexedArray<N> + Get<Stride, T>,
+    Dst: IndexedArray<N> + for<'r> GetMut<'r, Stride, Item = &'r mut T>,
+    Src: IndexedArray<N> + Get<Stride, Item = T>,
     ExtentN<N>: Copy,
 {
     let dst_extent = *dst.extent();

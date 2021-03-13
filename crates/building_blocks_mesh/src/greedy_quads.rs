@@ -100,7 +100,9 @@ pub fn padded_greedy_quads_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {
 /// into meshes as the user sees fit.
 pub fn greedy_quads<A, T>(voxels: &A, extent: &Extent3i, output: &mut GreedyQuadsBuffer)
 where
-    A: IndexedArray<[i32; 3]> + ForEach<[i32; 3], (Point3i, Stride), Item = T> + Get<Stride, T>,
+    A: IndexedArray<[i32; 3]>
+        + ForEach<[i32; 3], (Point3i, Stride), Item = T>
+        + Get<Stride, Item = T>,
     T: IsEmpty + IsOpaque + MergeVoxel,
 {
     greedy_quads_with_merge_strategy::<_, _, VoxelMerger<T>>(voxels, extent, output)
@@ -112,7 +114,9 @@ pub fn greedy_quads_with_merge_strategy<A, T, Merger>(
     extent: &Extent3i,
     output: &mut GreedyQuadsBuffer,
 ) where
-    A: IndexedArray<[i32; 3]> + ForEach<[i32; 3], (Point3i, Stride), Item = T> + Get<Stride, T>,
+    A: IndexedArray<[i32; 3]>
+        + ForEach<[i32; 3], (Point3i, Stride), Item = T>
+        + Get<Stride, Item = T>,
     T: IsEmpty + IsOpaque,
     Merger: MergeStrategy<Voxel = T>,
 {
@@ -135,7 +139,9 @@ fn greedy_quads_for_group<A, T, Merger>(
     visited: &mut Array3x1<bool>,
     quad_group: &mut QuadGroup,
 ) where
-    A: IndexedArray<[i32; 3]> + ForEach<[i32; 3], (Point3i, Stride), Item = T> + Get<Stride, T>,
+    A: IndexedArray<[i32; 3]>
+        + ForEach<[i32; 3], (Point3i, Stride), Item = T>
+        + Get<Stride, Item = T>,
     T: IsEmpty + IsOpaque,
     Merger: MergeStrategy<Voxel = T>,
 {
@@ -244,7 +250,7 @@ fn face_needs_mesh<A, T>(
     visited: &Array3x1<bool>,
 ) -> bool
 where
-    A: Get<Stride, T>,
+    A: Get<Stride, Item = T>,
     T: IsEmpty + IsOpaque,
 {
     if voxel.is_empty() || visited.get(voxel_stride) {
@@ -305,7 +311,7 @@ pub trait MergeStrategy {
         visited: &Array3x1<bool>,
     ) -> (i32, i32)
     where
-        A: IndexedArray<[i32; 3]> + Get<Stride, Self::Voxel>,
+        A: IndexedArray<[i32; 3]> + Get<Stride, Item = Self::Voxel>,
         Self::Voxel: IsEmpty + IsOpaque;
 }
 
@@ -345,7 +351,7 @@ where
         visited: &Array3x1<bool>,
     ) -> (i32, i32)
     where
-        A: Get<Stride, T>,
+        A: Get<Stride, Item = T>,
     {
         // Greedily search for the biggest visible quad where all merge values are the same.
         let quad_value = min_value.voxel_merge_value();
@@ -398,7 +404,7 @@ impl<T> VoxelMerger<T> {
         max_width: i32,
     ) -> i32
     where
-        A: Get<Stride, T>,
+        A: Get<Stride, Item = T>,
         T: IsEmpty + IsOpaque + MergeVoxel,
     {
         let mut quad_width = 0;

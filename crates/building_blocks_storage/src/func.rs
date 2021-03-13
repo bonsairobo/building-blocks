@@ -18,10 +18,12 @@ use building_blocks_core::prelude::*;
 
 use core::iter::{once, Once};
 
-impl<F, T, Coord> Get<Coord, T> for F
+impl<F, T, Coord> Get<Coord> for F
 where
     F: Fn(Coord) -> T,
 {
+    type Item = T;
+
     fn get(&self, c: Coord) -> T {
         (self)(c)
     }

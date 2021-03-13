@@ -95,12 +95,15 @@ impl<T> Channel<MaybeUninit<T>, Vec<MaybeUninit<T>>> {
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<T, Store> GetRef<usize, T> for Channel<T, Store>
+impl<'a, T, Store> GetRef<'a, usize> for Channel<T, Store>
 where
+    T: 'a,
     Store: Deref<Target = [T]>,
 {
+    type Item = &'a T;
+
     #[inline]
-    fn get_ref(&self, offset: usize) -> &T {
+    fn get_ref(&'a self, offset: usize) -> Self::Item {
         if cfg!(debug_assertions) {
             &self.store[offset]
         } else {
@@ -109,12 +112,15 @@ where
     }
 }
 
-impl<T, Store> GetMut<usize, T> for Channel<T, Store>
+impl<'a, T, Store> GetMut<'a, usize> for Channel<T, Store>
 where
+    T: 'a,
     Store: DerefMut<Target = [T]>,
 {
+    type Item = &'a mut T;
+
     #[inline]
-    fn get_mut(&mut self, offset: usize) -> &mut T {
+    fn get_mut(&'a mut self, offset: usize) -> Self::Item {
         if cfg!(debug_assertions) {
             &mut self.store[offset]
         } else {

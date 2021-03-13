@@ -471,7 +471,7 @@ impl<N, T> AmbientExtent<N, T> {
     }
 }
 
-impl<'a, N, T> ForEach<N, PointN<N>> for AmbientExtent<N, T>
+impl<N, T> ForEach<N, PointN<N>> for AmbientExtent<N, T>
 where
     T: Clone,
     PointN<N>: IntegerPoint<N>,
@@ -492,15 +492,18 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<N, T, B, Store> GetRef<PointN<N>, T> for ChunkMap<N, T, B, Store>
+impl<'a, N, T, B, Store> GetRef<'a, PointN<N>> for ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
+    T: 'a,
     B: ChunkMapBuilder<N, T>,
-    <B::Chunk as Chunk>::Array: GetRef<PointN<N>, T>,
+    <B::Chunk as Chunk>::Array: for<'r> GetRef<'r, PointN<N>, Item = &'r T>,
     Store: ChunkReadStorage<N, B::Chunk>,
 {
+    type Item = &'a T;
+
     #[inline]
-    fn get_ref(&self, p: PointN<N>) -> &T {
+    fn get_ref(&'a self, p: PointN<N>) -> Self::Item {
         let key = self.indexer.chunk_key_containing_point(p);
 
         self.get_chunk(key)
@@ -509,15 +512,18 @@ where
     }
 }
 
-impl<N, T, B, Store> GetMut<PointN<N>, T> for ChunkMap<N, T, B, Store>
+impl<'a, N, T, B, Store> GetMut<'a, PointN<N>> for ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
+    T: 'a,
     B: ChunkMapBuilder<N, T>,
-    <B::Chunk as Chunk>::Array: GetMut<PointN<N>, T>,
+    <B::Chunk as Chunk>::Array: for<'r> GetMut<'r, PointN<N>, Item = &'r mut T>,
     Store: ChunkWriteStorage<N, B::Chunk>,
 {
+    type Item = &'a mut T;
+
     #[inline]
-    fn get_mut(&mut self, p: PointN<N>) -> &mut T {
+    fn get_mut(&'a mut self, p: PointN<N>) -> Self::Item {
         let key = self.indexer.chunk_key_containing_point(p);
         let chunk = self.get_mut_chunk_or_insert_ambient(key);
 

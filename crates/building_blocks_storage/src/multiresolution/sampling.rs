@@ -19,7 +19,7 @@ impl<N, T> ChunkDownsampler<N, T> for PointDownsampler
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
-    T: Copy,
+    T: 'static + Copy,
 {
     fn downsample(
         &self,
@@ -48,7 +48,7 @@ impl<N, T> ChunkDownsampler<N, T> for SdfMeanDownsampler
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
-    T: Clone + From<f32>,
+    T: 'static + Clone + From<f32>,
     f32: From<T>,
 {
     fn downsample(

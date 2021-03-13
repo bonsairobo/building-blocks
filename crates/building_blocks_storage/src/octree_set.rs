@@ -104,7 +104,7 @@ impl OctreeSet {
     /// must have `0 < P <= 6`, because there is a maximum fixed depth of the octree.
     pub fn from_array3<A, T>(array: &A, extent: Extent3i) -> Self
     where
-        A: IndexedArray<[i32; 3]> + Get<Stride, T>,
+        A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
         T: Clone + IsEmpty,
     {
         let power = Self::check_extent(&extent);
@@ -152,7 +152,7 @@ impl OctreeSet {
         nodes: &mut SmallKeyHashMap<LocationCode, ChildBitMask>,
     ) -> (bool, bool)
     where
-        A: IndexedArray<[i32; 3]> + Get<Stride, T>,
+        A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
         T: Clone + IsEmpty,
     {
         // Base case where the octant is a single voxel. The `OctreeNode` is invalid and unnecessary in this case; we avoid using

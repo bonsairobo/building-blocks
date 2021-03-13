@@ -68,31 +68,39 @@ use building_blocks_core::ExtentN;
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-pub trait Get<L, T> {
+pub trait Get<L> {
+    type Item;
+
     /// Get an owned value at `location`.
-    fn get(&self, location: L) -> T;
+    fn get(&self, location: L) -> Self::Item;
 }
 
-pub trait GetRef<L, T> {
+pub trait GetRef<'a, L> {
+    type Item;
+
     /// Get an immutable reference to the value at `location`.
-    fn get_ref(&self, location: L) -> &T;
+    fn get_ref(&'a self, location: L) -> Self::Item;
 }
 
-pub trait GetMut<L, T> {
+pub trait GetMut<'a, L> {
+    type Item;
+
     /// Get a mutable reference to the value at `location`.
-    fn get_mut(&mut self, location: L) -> &mut T;
+    fn get_mut(&'a mut self, location: L) -> Self::Item;
 }
 
 // We need this macro because doing a blanket impl causes conflicts due to Rust's orphan rules.
 macro_rules! impl_get_via_get_ref_and_clone {
     ($map:ty, $($type_params:ident),*) => {
-        impl<L, $($type_params),*> $crate::Get<L, T> for $map
+        impl<L, $($type_params),*> $crate::Get<L> for $map
         where
-            Self: $crate::GetRef<L, T>,
+            Self: for<'r> $crate::GetRef<'r, L, Item = &'r T>,
             T: Clone,
         {
+            type Item = T;
+
             #[inline]
-            fn get(&self, location: L) -> T {
+            fn get(&self, location: L) -> Self::Item {
                 self.get_ref(location).clone()
             }
         }

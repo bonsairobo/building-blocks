@@ -12,7 +12,7 @@ pub fn encode_image<T, P, Map>(
 ) -> ImageBuffer<P, Vec<<P as Pixel>::Subpixel>>
 where
     T: Into<P>,
-    Map: Get<Point2i, T>,
+    Map: Get<Point2i, Item = T>,
     P: Pixel + 'static,
 {
     let img_extent = map_extent - map_extent.minimum;

@@ -20,7 +20,7 @@ impl IsEmpty for VoxColor {
 
 pub fn encode_vox<Map>(map: &Map, map_extent: Extent3i) -> DotVoxData
 where
-    Map: Get<Point3i, VoxColor>,
+    Map: Get<Point3i, Item = VoxColor>,
 {
     let shape = map_extent.shape;
     let vox_extent = map_extent - map_extent.minimum;

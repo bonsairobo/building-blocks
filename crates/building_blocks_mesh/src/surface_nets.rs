@@ -73,7 +73,7 @@ pub fn surface_nets<A, T>(
     output.reset(sdf.extent().num_points());
 
     estimate_surface(sdf, extent, voxel_size, output);
-    make_all_quads(sdf, &extent, output);
+    make_all_quads(sdf, extent, output);
 }
 
 // Find all vertex positions and normals. Also generate a map from grid position to vertex index

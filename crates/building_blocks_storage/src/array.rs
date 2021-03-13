@@ -323,9 +323,9 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<N, T, Store> GetRef<Stride, T> for ArrayNx1<N, T, Store>
+impl<N, T, Chan> GetRef<Stride, T> for Array<N, Chan>
 where
-    Store: Deref<Target = [T]>,
+    Chan: GetRef<usize, T>,
 {
     #[inline]
     fn get_ref(&self, stride: Stride) -> &T {
@@ -333,9 +333,9 @@ where
     }
 }
 
-impl<N, T, Store> GetMut<Stride, T> for ArrayNx1<N, T, Store>
+impl<N, T, Chan> GetMut<Stride, T> for Array<N, Chan>
 where
-    Store: DerefMut<Target = [T]>,
+    Chan: GetMut<usize, T>,
 {
     #[inline]
     fn get_mut(&mut self, stride: Stride) -> &mut T {
@@ -343,7 +343,7 @@ where
     }
 }
 
-impl<N, T, Store> GetRef<Local<N>, T> for ArrayNx1<N, T, Store>
+impl<N, T, Chan> GetRef<Local<N>, T> for Array<N, Chan>
 where
     Self: IndexedArray<N> + GetRef<Stride, T>,
     PointN<N>: Copy,
@@ -354,7 +354,7 @@ where
     }
 }
 
-impl<N, T, Store> GetMut<Local<N>, T> for ArrayNx1<N, T, Store>
+impl<N, T, Chan> GetMut<Local<N>, T> for Array<N, Chan>
 where
     Self: IndexedArray<N> + GetMut<Stride, T>,
     PointN<N>: Copy,
@@ -365,7 +365,7 @@ where
     }
 }
 
-impl<N, T, Store> GetRef<PointN<N>, T> for ArrayNx1<N, T, Store>
+impl<N, T, Chan> GetRef<PointN<N>, T> for Array<N, Chan>
 where
     Self: IndexedArray<N> + GetRef<Local<N>, T>,
     PointN<N>: Point,
@@ -378,7 +378,7 @@ where
     }
 }
 
-impl<N, T, Store> GetMut<PointN<N>, T> for ArrayNx1<N, T, Store>
+impl<N, T, Chan> GetMut<PointN<N>, T> for Array<N, Chan>
 where
     Self: IndexedArray<N> + GetMut<Local<N>, T>,
     PointN<N>: Point,
@@ -391,7 +391,7 @@ where
     }
 }
 
-impl_get_via_get_ref_and_clone!(ArrayNx1<N, T, Store>, N, T, Store);
+impl_get_via_get_ref_and_clone!(Array<N, Chan>, N, T, Chan);
 
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║

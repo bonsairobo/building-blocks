@@ -135,129 +135,38 @@ pub struct Array<N, Chan> {
     extent: ExtentN<N>,
 }
 
-/// An N-dimensional, 1-channel `Array`.
-pub type ArrayNx1<N, A, S1 = Vec<A>> = Array<N, Channel<A, S1>>;
-/// An N-dimensional, 2-channel `Array`.
-pub type ArrayNx2<N, A, B, S1 = Vec<A>, S2 = Vec<B>> = Array<N, (Channel<A, S1>, Channel<B, S2>)>;
-/// An N-dimensional, 3-channel `Array`.
-pub type ArrayNx3<N, A, B, C, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>> =
-    Array<N, (Channel<A, S1>, Channel<B, S2>, Channel<C, S3>)>;
-/// An N-dimensional, 4-channel `Array`.
-pub type ArrayNx4<N, A, B, C, D, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>, S4 = Vec<D>> = Array<
-    N,
-    (
-        Channel<A, S1>,
-        Channel<B, S2>,
-        Channel<C, S3>,
-        Channel<D, S4>,
-    ),
->;
-/// An N-dimensional, 5-channel `Array`.
-pub type ArrayNx5<
-    N,
-    A,
-    B,
-    C,
-    D,
-    E,
-    S1 = Vec<A>,
-    S2 = Vec<B>,
-    S3 = Vec<C>,
-    S4 = Vec<D>,
-    S5 = Vec<E>,
-> = Array<
-    N,
-    (
-        Channel<A, S1>,
-        Channel<B, S2>,
-        Channel<C, S3>,
-        Channel<D, S4>,
-        Channel<E, S5>,
-    ),
->;
-/// An N-dimensional, 6-channel `Array`.
-pub type ArrayNx6<
-    N,
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    S1 = Vec<A>,
-    S2 = Vec<B>,
-    S3 = Vec<C>,
-    S4 = Vec<D>,
-    S5 = Vec<E>,
-    S6 = Vec<F>,
-> = Array<
-    N,
-    (
-        Channel<A, S1>,
-        Channel<B, S2>,
-        Channel<C, S3>,
-        Channel<D, S4>,
-        Channel<E, S5>,
-        Channel<F, S6>,
-    ),
->;
+macro_rules! array_n_type_alias {
+    ($name:ident, $( $chan:ident : $store:ident ),+ ) => {
+        pub type $name<N, $( $chan ),+, $( $store = Vec<$chan> ),+> = Array<N, ($( Channel<$chan, $store> ),+)>;
+    };
+}
 
-/// A 2-dimensional, 1-channel `Array`.
-pub type Array2x1<A, S1 = Vec<A>> = ArrayNx1<[i32; 2], A, S1>;
-/// A 2-dimensional, 2-channel `Array`.
-pub type Array2x2<A, B, S1 = Vec<A>, S2 = Vec<B>> = ArrayNx2<[i32; 2], A, B, S1, S2>;
-/// A 2-dimensional, 3-channel `Array`.
-pub type Array2x3<A, B, C, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>> =
-    ArrayNx3<[i32; 2], A, B, C, S1, S2, S3>;
-/// A 2-dimensional, 4-channel `Array`.
-pub type Array2x4<A, B, C, D, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>, S4 = Vec<D>> =
-    ArrayNx4<[i32; 2], A, B, C, D, S1, S2, S3, S4>;
-/// A 2-dimensional, 5-channel `Array`.
-pub type Array2x5<A, B, C, D, E, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>, S4 = Vec<D>, S5 = Vec<E>> =
-    ArrayNx5<[i32; 2], A, B, C, D, E, S1, S2, S3, S4, S5>;
-/// A 2-dimensional, 6-channel `Array`.
-pub type Array2x6<
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    S1 = Vec<A>,
-    S2 = Vec<B>,
-    S3 = Vec<C>,
-    S4 = Vec<D>,
-    S5 = Vec<E>,
-    S6 = Vec<F>,
-> = ArrayNx6<[i32; 2], A, B, C, D, E, F, S1, S2, S3, S4, S5, S6>;
-/// A 3-dimensional, 1-channel `Array`.
-pub type Array3x1<A, S1 = Vec<A>> = ArrayNx1<[i32; 3], A, S1>;
-/// A 3-dimensional, 2-channel `Array`.
-pub type Array3x2<A, B, S1 = Vec<A>, S2 = Vec<B>> = ArrayNx2<[i32; 3], A, B, S1, S2>;
-/// A 3-dimensional, 3-channel `Array`.
-pub type Array3x3<A, B, C, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>> =
-    ArrayNx3<[i32; 3], A, B, C, S1, S2, S3>;
-/// A 3-dimensional, 4-channel `Array`.
-pub type Array3x4<A, B, C, D, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>, S4 = Vec<D>> =
-    ArrayNx4<[i32; 3], A, B, C, D, S1, S2, S3, S4>;
-/// A 3-dimensional, 5-channel `Array`.
-pub type Array3x5<A, B, C, D, E, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>, S4 = Vec<D>, S5 = Vec<E>> =
-    ArrayNx5<[i32; 3], A, B, C, D, E, S1, S2, S3, S4, S5>;
-/// A 3-dimensional, 6-channel `Array`.
-pub type Array3x6<
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    S1 = Vec<A>,
-    S2 = Vec<B>,
-    S3 = Vec<C>,
-    S4 = Vec<D>,
-    S5 = Vec<E>,
-    S6 = Vec<F>,
-> = ArrayNx6<[i32; 3], A, B, C, D, E, F, S1, S2, S3, S4, S5, S6>;
+macro_rules! array_type_alias {
+    ($name:ident, $dim:ty, $( $chan:ident : $store:ident ),+ ) => {
+        pub type $name<$( $chan ),+, $( $store = Vec<$chan> ),+> = Array<$dim, ($( Channel<$chan, $store> ),+)>;
+    };
+}
+
+pub type ArrayNx1<N, A, S1 = Vec<A>> = Array<N, Channel<A, S1>>;
+array_n_type_alias!(ArrayNx2, A: S1, B: S2);
+array_n_type_alias!(ArrayNx3, A: S1, B: S2, C: S3);
+array_n_type_alias!(ArrayNx4, A: S1, B: S2, C: S3, D: S4);
+array_n_type_alias!(ArrayNx5, A: S1, B: S2, C: S3, D: S4, E: S5);
+array_n_type_alias!(ArrayNx6, A: S1, B: S2, C: S3, D: S4, E: S5, F: S6);
+
+pub type Array2x1<A, S1 = Vec<A>> = Array<[i32; 2], Channel<A, S1>>;
+array_type_alias!(Array2x2, [i32; 2], A: S1, B: S2);
+array_type_alias!(Array2x3, [i32; 2], A: S1, B: S2, C: S3);
+array_type_alias!(Array2x4, [i32; 2], A: S1, B: S2, C: S3, D: S4);
+array_type_alias!(Array2x5, [i32; 2], A: S1, B: S2, C: S3, D: S4, E: S5);
+array_type_alias!(Array2x6, [i32; 2], A: S1, B: S2, C: S3, D: S4, E: S5, F: S6);
+
+pub type Array3x1<A, S1 = Vec<A>> = Array<[i32; 3], Channel<A, S1>>;
+array_type_alias!(Array3x2, [i32; 3], A: S1, B: S2);
+array_type_alias!(Array3x3, [i32; 3], A: S1, B: S2, C: S3);
+array_type_alias!(Array3x4, [i32; 3], A: S1, B: S2, C: S3, D: S4);
+array_type_alias!(Array3x5, [i32; 3], A: S1, B: S2, C: S3, D: S4, E: S5);
+array_type_alias!(Array3x6, [i32; 3], A: S1, B: S2, C: S3, D: S4, E: S5, F: S6);
 
 impl<N, Chan> Array<N, Chan> {
     /// Create a new `ArrayNx1` directly from the extent and values. This asserts that the number of points in the extent matches

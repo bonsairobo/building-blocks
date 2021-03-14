@@ -94,6 +94,35 @@ pub trait GetMut<'a, L> {
     fn get_mut(&'a mut self, location: L) -> Self::Item;
 }
 
+#[auto_impl(&mut)]
+pub trait GetMutPtr<L> {
+    type Item;
+
+    /// Get a mutable pointer to the value at `location`.
+    unsafe fn get_mut_ptr(&mut self, location: L) -> Self::Item;
+}
+
+/// This is just an implementation detail of multichannel accessors. Sometimes we need to be able to transmute lifetimes to
+/// satisfy the borrow checker, so we just get raw pointers and then convert them to borrows.
+#[doc(hidden)]
+pub trait AsMutRef<'a> {
+    type MutRef;
+
+    fn as_mut_ref(self) -> Self::MutRef;
+}
+
+impl<'a, T> AsMutRef<'a> for *mut T
+where
+    T: 'a,
+{
+    type MutRef = &'a mut T;
+
+    #[inline]
+    fn as_mut_ref(self) -> Self::MutRef {
+        unsafe { &mut *self }
+    }
+}
+
 // We need this macro because doing a blanket impl causes conflicts due to Rust's orphan rules.
 macro_rules! impl_get_via_get_ref_and_clone {
     ($map:ty, $($type_params:ident),*) => {
@@ -113,13 +142,13 @@ macro_rules! impl_get_via_get_ref_and_clone {
 }
 
 macro_rules! impl_get_for_tuple {
-    ( $( $var:ident : $chan:ident ),+ ) => {
-        impl<Coord, $($chan),+> Get<Coord> for ($($chan,)+)
+    ( $( $var:ident : $t:ident ),+ ) => {
+        impl<Coord, $($t),+> Get<Coord> for ($($t,)+)
         where
             Coord: Copy,
-            $($chan: Get<Coord>),+
+            $($t: Get<Coord>),+
         {
-            type Item = ($($chan::Item,)+);
+            type Item = ($($t::Item,)+);
 
             #[inline]
             fn get(&self, offset: Coord) -> Self::Item {
@@ -129,12 +158,12 @@ macro_rules! impl_get_for_tuple {
             }
         }
 
-        impl<'a, Coord, $($chan),+> GetRef<'a, Coord> for ($($chan,)+)
+        impl<'a, Coord, $($t),+> GetRef<'a, Coord> for ($($t,)+)
         where
             Coord: Copy,
-            $($chan: GetRef<'a, Coord>),+
+            $($t: GetRef<'a, Coord>),+
         {
-            type Item = ($($chan::Item,)+);
+            type Item = ($($t::Item,)+);
 
             #[inline]
             fn get_ref(&'a self, offset: Coord) -> Self::Item {
@@ -144,18 +173,47 @@ macro_rules! impl_get_for_tuple {
             }
         }
 
-        impl<'a, Coord, $($chan),+> GetMut<'a, Coord> for ($($chan,)+)
+        impl<'a, Coord, $($t),+> GetMut<'a, Coord> for ($($t,)+)
         where
             Coord: Copy,
-            $($chan: GetMut<'a, Coord>),+
+            $($t: GetMut<'a, Coord>),+
         {
-            type Item = ($($chan::Item,)+);
+            type Item = ($($t::Item,)+);
 
             #[inline]
             fn get_mut(&'a mut self, offset: Coord) -> Self::Item {
                 let ($($var,)+) = self;
 
                 ($($var.get_mut(offset),)+)
+            }
+        }
+
+        impl<Coord, $($t),+> GetMutPtr<Coord> for ($($t,)+)
+        where
+            Coord: Copy,
+            $($t: GetMutPtr<Coord>),+
+        {
+            type Item = ($($t::Item,)+);
+
+            #[inline]
+            unsafe fn get_mut_ptr(&mut self, offset: Coord) -> Self::Item {
+                let ($($var,)+) = self;
+
+                ($($var.get_mut_ptr(offset),)+)
+            }
+        }
+
+        impl<'a, $($t),+> AsMutRef<'a> for ($(*mut $t,)+)
+        where
+            $($t: 'a,)+
+        {
+            type MutRef = ($(&'a mut $t,)+);
+
+            #[inline]
+            fn as_mut_ref(self) -> Self::MutRef {
+                let ($($var,)+) = self;
+
+                unsafe { ($(&mut *$var,)+) }
             }
         }
     };

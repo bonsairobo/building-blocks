@@ -116,8 +116,8 @@ pub use for_each::*;
 pub use indexer::*;
 
 use crate::{
-    ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetRef, IntoRawBytes, ReadExtent, TransformMap,
-    WriteExtent,
+    AsMutRef, ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetMutPtr, GetRef, IntoRawBytes,
+    ReadExtent, TransformMap, WriteExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -136,12 +136,128 @@ pub struct Array<N, Chan> {
 }
 
 /// An N-dimensional, 1-channel `Array`.
-pub type ArrayNx1<N, T, Store = Vec<T>> = Array<N, Channel<T, Store>>;
+pub type ArrayNx1<N, A, S1 = Vec<A>> = Array<N, Channel<A, S1>>;
+/// An N-dimensional, 2-channel `Array`.
+pub type ArrayNx2<N, A, B, S1 = Vec<A>, S2 = Vec<B>> = Array<N, (Channel<A, S1>, Channel<B, S2>)>;
+/// An N-dimensional, 3-channel `Array`.
+pub type ArrayNx3<N, A, B, C, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>> =
+    Array<N, (Channel<A, S1>, Channel<B, S2>, Channel<C, S3>)>;
+/// An N-dimensional, 4-channel `Array`.
+pub type ArrayNx4<N, A, B, C, D, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>, S4 = Vec<D>> = Array<
+    N,
+    (
+        Channel<A, S1>,
+        Channel<B, S2>,
+        Channel<C, S3>,
+        Channel<D, S4>,
+    ),
+>;
+/// An N-dimensional, 5-channel `Array`.
+pub type ArrayNx5<
+    N,
+    A,
+    B,
+    C,
+    D,
+    E,
+    S1 = Vec<A>,
+    S2 = Vec<B>,
+    S3 = Vec<C>,
+    S4 = Vec<D>,
+    S5 = Vec<E>,
+> = Array<
+    N,
+    (
+        Channel<A, S1>,
+        Channel<B, S2>,
+        Channel<C, S3>,
+        Channel<D, S4>,
+        Channel<E, S5>,
+    ),
+>;
+/// An N-dimensional, 6-channel `Array`.
+pub type ArrayNx6<
+    N,
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    S1 = Vec<A>,
+    S2 = Vec<B>,
+    S3 = Vec<C>,
+    S4 = Vec<D>,
+    S5 = Vec<E>,
+    S6 = Vec<F>,
+> = Array<
+    N,
+    (
+        Channel<A, S1>,
+        Channel<B, S2>,
+        Channel<C, S3>,
+        Channel<D, S4>,
+        Channel<E, S5>,
+        Channel<F, S6>,
+    ),
+>;
 
 /// A 2-dimensional, 1-channel `Array`.
-pub type Array2x1<T, Store = Vec<T>> = ArrayNx1<[i32; 2], T, Store>;
+pub type Array2x1<A, S1 = Vec<A>> = ArrayNx1<[i32; 2], A, S1>;
+/// A 2-dimensional, 2-channel `Array`.
+pub type Array2x2<A, B, S1 = Vec<A>, S2 = Vec<B>> = ArrayNx2<[i32; 2], A, B, S1, S2>;
+/// A 2-dimensional, 3-channel `Array`.
+pub type Array2x3<A, B, C, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>> =
+    ArrayNx3<[i32; 2], A, B, C, S1, S2, S3>;
+/// A 2-dimensional, 4-channel `Array`.
+pub type Array2x4<A, B, C, D, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>, S4 = Vec<D>> =
+    ArrayNx4<[i32; 2], A, B, C, D, S1, S2, S3, S4>;
+/// A 2-dimensional, 5-channel `Array`.
+pub type Array2x5<A, B, C, D, E, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>, S4 = Vec<D>, S5 = Vec<E>> =
+    ArrayNx5<[i32; 2], A, B, C, D, E, S1, S2, S3, S4, S5>;
+/// A 2-dimensional, 6-channel `Array`.
+pub type Array2x6<
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    S1 = Vec<A>,
+    S2 = Vec<B>,
+    S3 = Vec<C>,
+    S4 = Vec<D>,
+    S5 = Vec<E>,
+    S6 = Vec<F>,
+> = ArrayNx6<[i32; 2], A, B, C, D, E, F, S1, S2, S3, S4, S5, S6>;
 /// A 3-dimensional, 1-channel `Array`.
-pub type Array3x1<T, Store = Vec<T>> = ArrayNx1<[i32; 3], T, Store>;
+pub type Array3x1<A, S1 = Vec<A>> = ArrayNx1<[i32; 3], A, S1>;
+/// A 3-dimensional, 2-channel `Array`.
+pub type Array3x2<A, B, S1 = Vec<A>, S2 = Vec<B>> = ArrayNx2<[i32; 3], A, B, S1, S2>;
+/// A 3-dimensional, 3-channel `Array`.
+pub type Array3x3<A, B, C, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>> =
+    ArrayNx3<[i32; 3], A, B, C, S1, S2, S3>;
+/// A 3-dimensional, 4-channel `Array`.
+pub type Array3x4<A, B, C, D, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>, S4 = Vec<D>> =
+    ArrayNx4<[i32; 3], A, B, C, D, S1, S2, S3, S4>;
+/// A 3-dimensional, 5-channel `Array`.
+pub type Array3x5<A, B, C, D, E, S1 = Vec<A>, S2 = Vec<B>, S3 = Vec<C>, S4 = Vec<D>, S5 = Vec<E>> =
+    ArrayNx5<[i32; 3], A, B, C, D, E, S1, S2, S3, S4, S5>;
+/// A 3-dimensional, 6-channel `Array`.
+pub type Array3x6<
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    S1 = Vec<A>,
+    S2 = Vec<B>,
+    S3 = Vec<C>,
+    S4 = Vec<D>,
+    S5 = Vec<E>,
+    S6 = Vec<F>,
+> = ArrayNx6<[i32; 3], A, B, C, D, E, F, S1, S2, S3, S4, S5, S6>;
 
 impl<N, Chan> Array<N, Chan> {
     /// Create a new `ArrayNx1` directly from the extent and values. This asserts that the number of points in the extent matches
@@ -359,6 +475,18 @@ where
     }
 }
 
+impl<N, Chan> GetMutPtr<Stride> for Array<N, Chan>
+where
+    Chan: GetMutPtr<usize>,
+{
+    type Item = Chan::Item;
+
+    #[inline]
+    unsafe fn get_mut_ptr(&mut self, stride: Stride) -> Self::Item {
+        self.channels.get_mut_ptr(stride.0)
+    }
+}
+
 impl<N, Chan> Get<Local<N>> for Array<N, Chan>
 where
     Self: IndexedArray<N> + Get<Stride>,
@@ -468,61 +596,26 @@ macro_rules! impl_array_for_each {
             }
         }
 
-        impl<'a, N, T, Store> ForEachMut<'a, N, $coords> for ArrayNx1<N, T, Store>
+        impl<'a, N, Chan, Ptr, Ref> ForEachMut<'a, N, $coords> for Array<N, Chan>
         where
+            Self: GetMutPtr<Stride, Item = Ptr>,
+            Ptr: AsMutRef<'a, MutRef = Ref>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
-            T: 'a,
-            Store: DerefMut<Target = [T]>,
         {
-            type Item = &'a mut T;
+            type Item = Ref;
 
             #[inline]
             fn for_each_mut(
                 &'a mut self,
                 iter_extent: &ExtentN<N>,
-                mut f: impl FnMut($coords, &'a mut T),
+                mut f: impl FnMut($coords, Ref),
             ) {
                 let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
                 visitor.for_each_point_and_stride(|$p, $stride| {
                     // Need to tell the borrow checker that we're handing out non-overlapping borrows.
-                    f($forward_coords, unsafe {
-                        &mut *self.channels.store_mut().as_mut_ptr().add($stride.0)
-                    })
-                });
-            }
-        }
-
-        impl<'a, N, T, S, Store1, Store2> ForEachMut<'a, N, $coords>
-            for (&mut ArrayNx1<N, T, Store1>, &mut ArrayNx1<N, S, Store2>)
-        where
-            N: ArrayIndexer<N>,
-            PointN<N>: IntegerPoint<N>,
-            T: 'a,
-            S: 'a,
-            Store1: DerefMut<Target = [T]>,
-            Store2: DerefMut<Target = [S]>,
-        {
-            type Item = (&'a mut T, &'a mut S);
-
-            // XXX: this is slightly weird because we don't actually need `&mut self` for this, but it works, so... ¯\_(ツ)_/¯
-            #[inline]
-            fn for_each_mut(
-                &'a mut self,
-                iter_extent: &ExtentN<N>,
-                mut f: impl FnMut($coords, (&'a mut T, &'a mut S)),
-            ) {
-                let (s1, s2) = self;
-
-                let visitor = ArrayForEach::new_global(s1.extent(), *iter_extent);
-                visitor.for_each_point_and_stride(|$p, $stride| {
-                    // Need to tell the borrow checker that we're handing out non-overlapping borrows.
-                    f($forward_coords, unsafe {
-                        (
-                            &mut *s1.channels.store_mut().as_mut_ptr().add($stride.0),
-                            &mut *s2.channels.store_mut().as_mut_ptr().add($stride.0),
-                        )
-                    })
+                    let ptr = unsafe { self.get_mut_ptr($stride) };
+                    f($forward_coords, ptr.as_mut_ref())
                 });
             }
         }
@@ -646,10 +739,9 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
 
 impl<N, T, Ch, Store> WriteExtent<N, ChunkCopySrc<N, T, Ch>> for ArrayNx1<N, T, Store>
 where
-    for<'r> Self: ForEachMut<'r, N, Stride, Item = &'r mut T>,
+    for<'r> Self: ForEachMut<'r, N, (), Item = &'r mut T>,
     Self: WriteExtent<N, ArrayCopySrc<Ch>>,
-    N: ArrayIndexer<N>,
-    T: 'static + Clone,
+    T: Clone,
     PointN<N>: IntegerPoint<N>,
     Store: DerefMut<Target = [T]>,
 {
@@ -786,18 +878,6 @@ mod tests {
     }
 
     #[test]
-    fn zipped_mut_iter() {
-        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
-        let mut array1 = Array3x1::fill(extent, 0);
-        let mut array2 = Array3x1::fill(extent, false);
-
-        (&mut array1, &mut array2).for_each_mut(&extent, |_p: Point3i, (val1, val2)| {
-            *val1 = 1;
-            *val2 = true;
-        });
-    }
-
-    #[test]
     fn multichannel_get() {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
         let ch1 = Channel::new_fill(0, extent.num_points());
@@ -822,11 +902,21 @@ mod tests {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
         let ch1 = Channel::new_fill(0, extent.num_points());
         let ch2 = Channel::new_fill('a', extent.num_points());
-        let array = Array::new(extent, (ch1, ch2));
+        let mut array = Array::new(extent, (ch1, ch2));
 
         array.for_each(&extent, |_: (), (c1, c2)| {
             assert_eq!(c1, 0);
             assert_eq!(c2, 'a');
+        });
+
+        array.for_each_mut(&extent, |_: (), (c1, c2)| {
+            *c1 = 1;
+            *c2 = 'b';
+        });
+
+        array.for_each(&extent, |_: (), (c1, c2)| {
+            assert_eq!(c1, 1);
+            assert_eq!(c2, 'b');
         });
     }
 }

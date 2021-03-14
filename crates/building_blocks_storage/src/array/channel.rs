@@ -1,4 +1,4 @@
-use crate::{GetMut, GetRef};
+use crate::{GetMut, GetMutPtr, GetRef};
 
 use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
@@ -126,6 +126,18 @@ where
         } else {
             unsafe { self.store.get_unchecked_mut(offset) }
         }
+    }
+}
+
+impl<T, Store> GetMutPtr<usize> for Channel<T, Store>
+where
+    Store: DerefMut<Target = [T]>,
+{
+    type Item = *mut T;
+
+    #[inline]
+    unsafe fn get_mut_ptr(&mut self, offset: usize) -> Self::Item {
+        self.store.as_mut_ptr().add(offset)
     }
 }
 

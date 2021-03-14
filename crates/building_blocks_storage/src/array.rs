@@ -169,7 +169,7 @@ array_type_alias!(Array3x5, [i32; 3], A: S1, B: S2, C: S3, D: S4, E: S5);
 array_type_alias!(Array3x6, [i32; 3], A: S1, B: S2, C: S3, D: S4, E: S5, F: S6);
 
 impl<N, Chan> Array<N, Chan> {
-    /// Create a new `ArrayNx1` directly from the extent and values. This asserts that the number of points in the extent matches
+    /// Create a new `Array` directly from the extent and values. This asserts that the number of points in the extent matches
     /// the length of the values `Vec`.
     pub fn new(extent: ExtentN<N>, channels: Chan) -> Self {
         // TODO: assert that channels has length matching extent

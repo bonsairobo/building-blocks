@@ -102,8 +102,33 @@ pub trait GetMutPtr<L> {
     unsafe fn get_mut_ptr(&mut self, location: L) -> Self::Item;
 }
 
-/// This is just an implementation detail of multichannel accessors. Sometimes we need to be able to transmute lifetimes to
-/// satisfy the borrow checker, so we just get raw pointers and then convert them to borrows.
+// We need this macro because doing a blanket impl causes conflicts due to Rust's orphan rules.
+macro_rules! impl_get_via_get_ref_and_clone {
+    ($map:ty, $($type_params:ident),*) => {
+        impl<L, $($type_params),*> $crate::Get<L> for $map
+        where
+            Self: for<'r> $crate::GetRef<'r, L, Item = &'r T>,
+            T: Clone,
+        {
+            type Item = T;
+
+            #[inline]
+            fn get(&self, location: L) -> Self::Item {
+                self.get_ref(location).clone()
+            }
+        }
+    };
+}
+
+// ████████╗██╗   ██╗██████╗ ██╗     ███████╗███████╗
+// ╚══██╔══╝██║   ██║██╔══██╗██║     ██╔════╝██╔════╝
+//    ██║   ██║   ██║██████╔╝██║     █████╗  ███████╗
+//    ██║   ██║   ██║██╔═══╝ ██║     ██╔══╝  ╚════██║
+//    ██║   ╚██████╔╝██║     ███████╗███████╗███████║
+//    ╚═╝    ╚═════╝ ╚═╝     ╚══════╝╚══════╝╚══════╝
+
+/// An implementation detail of multichannel accessors. Sometimes we need to be able to transmute lifetimes to satisfy the
+/// borrow checker, so we just get raw pointers and then convert them to borrows.
 #[doc(hidden)]
 pub trait AsMutRef<'a> {
     type MutRef;
@@ -123,25 +148,7 @@ where
     }
 }
 
-// We need this macro because doing a blanket impl causes conflicts due to Rust's orphan rules.
-macro_rules! impl_get_via_get_ref_and_clone {
-    ($map:ty, $($type_params:ident),*) => {
-        impl<L, $($type_params),*> $crate::Get<L> for $map
-        where
-            Self: for<'r> $crate::GetRef<'r, L, Item = &'r T>,
-            T: Clone,
-        {
-            type Item = T;
-
-            #[inline]
-            fn get(&self, location: L) -> Self::Item {
-                self.get_ref(location).clone()
-            }
-        }
-    };
-}
-
-macro_rules! impl_get_for_tuple {
+macro_rules! impl_for_tuple {
     ( $( $var:ident : $t:ident ),+ ) => {
         impl<Coord, $($t),+> Get<Coord> for ($($t,)+)
         where
@@ -219,12 +226,12 @@ macro_rules! impl_get_for_tuple {
     };
 }
 
-impl_get_for_tuple! { a: A }
-impl_get_for_tuple! { a: A, b: B }
-impl_get_for_tuple! { a: A, b: B, c: C }
-impl_get_for_tuple! { a: A, b: B, c: C, d: D }
-impl_get_for_tuple! { a: A, b: B, c: C, d: D, e: E }
-impl_get_for_tuple! { a: A, b: B, c: C, d: D, e: E, f: F }
+impl_for_tuple! { a: A }
+impl_for_tuple! { a: A, b: B }
+impl_for_tuple! { a: A, b: B, c: C }
+impl_for_tuple! { a: A, b: B, c: C, d: D }
+impl_for_tuple! { a: A, b: B, c: C, d: D, e: E }
+impl_for_tuple! { a: A, b: B, c: C, d: D, e: E, f: F }
 
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║

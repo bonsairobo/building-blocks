@@ -594,14 +594,14 @@ where
     }
 }
 
-impl<'a, N, T, Store> WriteExtent<N, ArrayCopySrc<&'a Self>> for ArrayNx1<N, T, Store>
+impl<'a, N, Chan, DataPtr> WriteExtent<N, ArrayCopySrc<&'a Self>> for Array<N, Chan>
 where
-    Self: Get<Stride, Item = T> + for<'r> GetMut<'r, Stride, Item = &'r mut T>,
+    Self: Get<Stride, Item = DataPtr::Data> + GetMutPtr<Stride, Item = DataPtr>,
     N: ArrayIndexer<N>,
-    T: Clone,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
-    Store: Clone,
+    Chan: Clone,
+    DataPtr: WritePtr,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src_array: ArrayCopySrc<&'a Self>) {
         // It is assumed by the interface that extent is a subset of the src array, so we only need to intersect with the
@@ -620,14 +620,14 @@ where
     }
 }
 
-impl<'a, N, Out, Store, Map, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Map, F>>>
-    for ArrayNx1<N, Out, Store>
+impl<'a, N, T, Store, Map, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Map, F>>>
+    for ArrayNx1<N, T, Store>
 where
-    Self: IndexedArray<N> + for<'r> GetMut<'r, Stride, Item = &'r mut Out>,
-    Out: 'a,
-    TransformMap<'a, Map, F>: IndexedArray<N> + Get<Stride, Item = Out>,
+    Self: IndexedArray<N> + GetMutPtr<Stride>,
+    TransformMap<'a, Map, F>: IndexedArray<N> + Get<Stride, Item = T>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
+    <Self as GetMutPtr<Stride>>::Item: WritePtr<Data = T>,
 {
     fn write_extent(
         &mut self,
@@ -643,14 +643,15 @@ where
 }
 
 // SAFETY: `extent` must be in-bounds of both arrays.
-fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
+fn unchecked_copy_extent_between_arrays<Dst, Src, N, DataPtr>(
     dst: &mut Dst,
     src: &Src,
     extent: &ExtentN<N>,
 ) where
-    Dst: IndexedArray<N> + for<'r> GetMut<'r, Stride, Item = &'r mut T>,
-    Src: IndexedArray<N> + Get<Stride, Item = T>,
+    Dst: IndexedArray<N> + GetMutPtr<Stride, Item = DataPtr>,
+    Src: IndexedArray<N> + Get<Stride, Item = DataPtr::Data>,
     ExtentN<N>: Copy,
+    DataPtr: WritePtr,
 {
     let dst_extent = *dst.extent();
     // It shoudn't matter which type we use for the indexer.
@@ -661,20 +662,21 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
         |s_dst, s_src| {
             // The actual copy.
             // PERF: could be faster with SIMD copy
-            *dst.get_mut(s_dst) = src.get(s_src);
+            unsafe {
+                dst.get_mut_ptr(s_dst).write_ptr(src.get(s_src));
+            }
         },
     );
 }
 
-impl<N, T, Ch, Store> WriteExtent<N, ChunkCopySrc<N, T, Ch>> for ArrayNx1<N, T, Store>
+impl<N, Chan, Data, DataPtr, Ch> WriteExtent<N, ChunkCopySrc<N, Data, Ch>> for Array<N, Chan>
 where
-    for<'r> Self: ForEachMut<'r, N, (), Item = &'r mut T>,
-    Self: ForEachMutPtr<N, (), Item = *mut T> + WriteExtent<N, ArrayCopySrc<Ch>>,
-    T: Clone,
+    Self: ForEachMutPtr<N, (), Item = DataPtr> + WriteExtent<N, ArrayCopySrc<Ch>>,
+    Data: Clone,
     PointN<N>: IntegerPoint<N>,
-    Store: DerefMut<Target = [T]>,
+    DataPtr: WritePtr<Data = Data>,
 {
-    fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<N, T, Ch>) {
+    fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<N, Data, Ch>) {
         match src {
             Either::Left(array) => self.write_extent(extent, array),
             Either::Right(ambient) => self.fill_extent(extent, ambient.get()),
@@ -682,13 +684,16 @@ where
     }
 }
 
-impl<N, T, Store, F> WriteExtent<N, F> for ArrayNx1<N, T, Store>
+impl<N, Chan, F, DataPtr> WriteExtent<N, F> for Array<N, Chan>
 where
-    for<'r> Self: ForEachMut<'r, N, PointN<N>, Item = &'r mut T>,
-    F: Fn(PointN<N>) -> T,
+    Self: ForEachMutPtr<N, PointN<N>, Item = DataPtr>,
+    F: Fn(PointN<N>) -> DataPtr::Data,
+    DataPtr: WritePtr,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: F) {
-        self.for_each_mut(extent, |p, v| *v = (src)(p));
+        unsafe {
+            self.for_each_mut_ptr(extent, |p, v| v.write_ptr((src)(p)));
+        }
     }
 }
 
@@ -806,10 +811,7 @@ mod tests {
 
     #[test]
     fn multichannel_get() {
-        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
-        let ch1 = Channel::new_fill(0, extent.num_points());
-        let ch2 = Channel::new_fill('a', extent.num_points());
-        let mut array = Array::new(extent, (ch1, ch2));
+        let mut array = make_multichannel_array();
 
         assert_eq!(array.get(Stride(0)), (0, 'a'));
         assert_eq!(array.get_ref(Stride(0)), (&0, &'a'));
@@ -826,10 +828,8 @@ mod tests {
 
     #[test]
     fn multichannel_for_each() {
-        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
-        let ch1 = Channel::new_fill(0, extent.num_points());
-        let ch2 = Channel::new_fill('a', extent.num_points());
-        let mut array = Array::new(extent, (ch1, ch2));
+        let mut array = make_multichannel_array();
+        let extent = *array.extent();
 
         array.for_each(&extent, |_: (), (c1, c2)| {
             assert_eq!(c1, 0);
@@ -849,16 +849,31 @@ mod tests {
 
     #[test]
     fn multichannel_fill_extent() {
-        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
-        let ch1 = Channel::new_fill(0, extent.num_points());
-        let ch2 = Channel::new_fill('a', extent.num_points());
-        let mut array = Array::new(extent, (ch1, ch2));
+        let mut array = make_multichannel_array();
+        let extent = *array.extent();
 
         array.fill_extent(&extent, (1, 'b'));
 
-        array.for_each(&extent, |_: (), (num, letter)| {
+        array.for_each(array.extent(), |_: (), (num, letter)| {
             assert_eq!(num, 1);
             assert_eq!(letter, 'b');
         });
+    }
+
+    #[test]
+    fn multichannel_copy() {
+        let src = make_multichannel_array();
+        let mut dst = make_multichannel_array();
+        let extent = *src.extent();
+
+        copy_extent(&extent, &src, &mut dst);
+    }
+
+    fn make_multichannel_array() -> Array3x2<i32, char> {
+        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+        let ch1 = Channel::new_fill(0, extent.num_points());
+        let ch2 = Channel::new_fill('a', extent.num_points());
+
+        Array::new(extent, (ch1, ch2))
     }
 }

@@ -41,6 +41,7 @@ pub mod octree_set;
 pub mod raw_bytes;
 pub mod signed_distance;
 pub mod transform_map;
+pub mod tuple;
 
 pub use access_traits::*;
 pub use array::*;
@@ -58,6 +59,7 @@ pub use octree_set::*;
 pub use raw_bytes::*;
 pub use signed_distance::*;
 pub use transform_map::*;
+pub use tuple::*;
 
 /// Used in many generic algorithms to check if a voxel is considered empty.
 pub trait IsEmpty {

@@ -110,8 +110,8 @@
 
 use crate::{
     ArrayCopySrc, ArrayIndexer, ArrayNx1, Chunk, ChunkHashMap, ChunkIndexer, ChunkReadStorage,
-    ChunkWriteStorage, ForEach, ForEachMut, GetMut, GetRef, IterChunkKeys, ReadExtent,
-    SmallKeyHashMap, WriteExtent,
+    ChunkWriteStorage, ForEach, ForEachMut, ForEachMutPtr, GetMut, GetRef, IterChunkKeys,
+    ReadExtent, SmallKeyHashMap, WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
@@ -568,7 +568,7 @@ where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     B: ChunkMapBuilder<N, T>,
-    <B::Chunk as Chunk>::Array: ForEachMut<'a, N, PointN<N>, Item = &'a mut T>,
+    <B::Chunk as Chunk>::Array: ForEachMutPtr<N, PointN<N>, Item = *mut T>,
     T: 'a,
     Store: ChunkWriteStorage<N, B::Chunk>,
 {
@@ -576,11 +576,10 @@ where
 
     #[inline]
     fn for_each_mut(&'a mut self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Item)) {
-        self.visit_mut_chunks(extent, |chunk| {
-            // Tell the borrow checker that we're only giving out non-overlapping references.
-            (unsafe { &mut *(chunk as *mut B::Chunk) })
+        self.visit_mut_chunks(extent, |chunk| unsafe {
+            chunk
                 .array_mut()
-                .for_each_mut(extent, |p, value| f(p, value))
+                .for_each_mut_ptr(extent, |p, ptr| f(p, &mut *ptr))
         });
     }
 }

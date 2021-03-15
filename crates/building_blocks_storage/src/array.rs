@@ -642,14 +642,14 @@ where
     }
 }
 
-impl<'a, N, Chan, DataPtr> WriteExtent<N, ArrayCopySrc<&'a Self>> for Array<N, Chan>
+impl<'a, N, Chan, Ptr> WriteExtent<N, ArrayCopySrc<&'a Self>> for Array<N, Chan>
 where
-    Self: Get<Stride, Item = DataPtr::Data> + GetMutPtr<Stride, Item = DataPtr>,
+    Self: Get<Stride, Item = Ptr::Data> + GetMutPtr<Stride, Item = Ptr>,
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
     Chan: Clone,
-    DataPtr: WritePtr,
+    Ptr: WritePtr,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src_array: ArrayCopySrc<&'a Self>) {
         // It is assumed by the interface that extent is a subset of the src array, so we only need to intersect with the
@@ -691,15 +691,15 @@ where
 }
 
 // SAFETY: `extent` must be in-bounds of both arrays.
-fn unchecked_copy_extent_between_arrays<Dst, Src, N, DataPtr>(
+fn unchecked_copy_extent_between_arrays<Dst, Src, N, Ptr>(
     dst: &mut Dst,
     src: &Src,
     extent: &ExtentN<N>,
 ) where
-    Dst: IndexedArray<N> + GetMutPtr<Stride, Item = DataPtr>,
-    Src: IndexedArray<N> + Get<Stride, Item = DataPtr::Data>,
+    Dst: IndexedArray<N> + GetMutPtr<Stride, Item = Ptr>,
+    Src: IndexedArray<N> + Get<Stride, Item = Ptr::Data>,
     ExtentN<N>: Copy,
-    DataPtr: WritePtr,
+    Ptr: WritePtr,
 {
     let dst_extent = *dst.extent();
     // It shoudn't matter which type we use for the indexer.
@@ -717,12 +717,12 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, DataPtr>(
     );
 }
 
-impl<N, Chan, Data, DataPtr, Ch> WriteExtent<N, ChunkCopySrc<N, Data, Ch>> for Array<N, Chan>
+impl<N, Chan, Data, Ptr, Ch> WriteExtent<N, ChunkCopySrc<N, Data, Ch>> for Array<N, Chan>
 where
-    Self: ForEachMutPtr<N, (), Item = DataPtr> + WriteExtent<N, ArrayCopySrc<Ch>>,
+    Self: ForEachMutPtr<N, (), Item = Ptr> + WriteExtent<N, ArrayCopySrc<Ch>>,
     Data: Clone,
     PointN<N>: IntegerPoint<N>,
-    DataPtr: WritePtr<Data = Data>,
+    Ptr: WritePtr<Data = Data>,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<N, Data, Ch>) {
         match src {
@@ -732,11 +732,11 @@ where
     }
 }
 
-impl<N, Chan, F, DataPtr> WriteExtent<N, F> for Array<N, Chan>
+impl<N, Chan, F, Ptr> WriteExtent<N, F> for Array<N, Chan>
 where
-    Self: ForEachMutPtr<N, PointN<N>, Item = DataPtr>,
-    F: Fn(PointN<N>) -> DataPtr::Data,
-    DataPtr: WritePtr,
+    Self: ForEachMutPtr<N, PointN<N>, Item = Ptr>,
+    F: Fn(PointN<N>) -> Ptr::Data,
+    Ptr: WritePtr,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: F) {
         unsafe {

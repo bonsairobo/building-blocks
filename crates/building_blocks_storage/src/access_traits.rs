@@ -61,27 +61,6 @@ use building_blocks_core::ExtentN;
 
 use auto_impl::auto_impl;
 
-/// An implementation detail of multichannel accessors. Sometimes we need to be able to transmute lifetimes to satisfy the
-/// borrow checker, so we just get raw pointers and then convert them to borrows.
-#[doc(hidden)]
-pub trait AsMutRef<'a> {
-    type MutRef;
-
-    fn as_mut_ref(self) -> Self::MutRef;
-}
-
-impl<'a, T> AsMutRef<'a> for *mut T
-where
-    T: 'a,
-{
-    type MutRef = &'a mut T;
-
-    #[inline]
-    fn as_mut_ref(self) -> Self::MutRef {
-        unsafe { &mut *self }
-    }
-}
-
 // TODO: GATs should make it possible to collapse these traits for T, &T, and &mut T.
 
 //  ██████╗ ███████╗████████╗████████╗███████╗██████╗ ███████╗
@@ -141,6 +120,78 @@ macro_rules! impl_get_via_get_ref_and_clone {
     };
 }
 
+macro_rules! impl_get_for_tuple {
+    ( $( $var:ident : $t:ident ),+ ) => {
+
+        impl<Coord, $($t),+> Get<Coord> for ($($t,)+)
+        where
+            Coord: Copy,
+            $($t: Get<Coord>),+
+        {
+            type Item = ($($t::Item,)+);
+
+            #[inline]
+            fn get(&self, offset: Coord) -> Self::Item {
+                let ($($var,)+) = self;
+
+                ($($var.get(offset),)+)
+            }
+        }
+
+        impl<'a, Coord, $($t),+> GetRef<'a, Coord> for ($($t,)+)
+        where
+            Coord: Copy,
+            $($t: GetRef<'a, Coord>),+
+        {
+            type Item = ($($t::Item,)+);
+
+            #[inline]
+            fn get_ref(&'a self, offset: Coord) -> Self::Item {
+                let ($($var,)+) = self;
+
+                ($($var.get_ref(offset),)+)
+            }
+        }
+
+        impl<'a, Coord, $($t),+> GetMut<'a, Coord> for ($($t,)+)
+        where
+            Coord: Copy,
+            $($t: GetMut<'a, Coord>),+
+        {
+            type Item = ($($t::Item,)+);
+
+            #[inline]
+            fn get_mut(&'a mut self, offset: Coord) -> Self::Item {
+                let ($($var,)+) = self;
+
+                ($($var.get_mut(offset),)+)
+            }
+        }
+
+        impl<Coord, $($t),+> GetMutPtr<Coord> for ($($t,)+)
+        where
+            Coord: Copy,
+            $($t: GetMutPtr<Coord>),+
+        {
+            type Item = ($($t::Item,)+);
+
+            #[inline]
+            unsafe fn get_mut_ptr(&mut self, offset: Coord) -> Self::Item {
+                let ($($var,)+) = self;
+
+                ($($var.get_mut_ptr(offset),)+)
+            }
+        }
+    }
+}
+
+impl_get_for_tuple! { a: A }
+impl_get_for_tuple! { a: A, b: B }
+impl_get_for_tuple! { a: A, b: B, c: C }
+impl_get_for_tuple! { a: A, b: B, c: C, d: D }
+impl_get_for_tuple! { a: A, b: B, c: C, d: D, e: E }
+impl_get_for_tuple! { a: A, b: B, c: C, d: D, e: E, f: F }
+
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║
 // █████╗  ██║   ██║██████╔╝    █████╗  ███████║██║     ███████║
@@ -152,6 +203,14 @@ pub trait ForEach<N, Coord> {
     type Item;
 
     fn for_each(&self, extent: &ExtentN<N>, f: impl FnMut(Coord, Self::Item));
+}
+
+/// An implementation detail of multichannel arrays that helps us get around compiler limitations w.r.t. HRTB.
+#[doc(hidden)]
+pub trait ForEachMutPtr<N, Coord> {
+    type Item;
+
+    unsafe fn for_each_mut_ptr(&mut self, extent: &ExtentN<N>, f: impl FnMut(Coord, Self::Item));
 }
 
 pub trait ForEachMut<'a, N, Coord> {

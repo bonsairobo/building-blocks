@@ -116,8 +116,8 @@ pub use for_each::*;
 pub use indexer::*;
 
 use crate::{
-    AsMutRef, ChunkCopySrc, ForEach, ForEachMut, Get, GetMut, GetMutPtr, GetRef, IntoRawBytes,
-    ReadExtent, TransformMap, WriteExtent,
+    AsMutRef, ChunkCopySrc, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetMutPtr, GetRef,
+    IntoRawBytes, ReadExtent, TransformMap, WriteExtent, WritePtr,
 };
 
 use building_blocks_core::prelude::*;
@@ -233,6 +233,29 @@ where
     }
 }
 
+impl<N, Chan, Ptr> Array<N, Chan>
+where
+    Self: ForEachMutPtr<N, (), Item = Ptr>,
+    PointN<N>: IntegerPoint<N>,
+    Ptr: WritePtr,
+{
+    /// Fill the entire `extent` with the same `value`.
+    pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: Ptr::Data)
+    where
+        Ptr::Data: Clone,
+    {
+        // if self.extent.eq(extent) {
+        //     self.channels.fill(value);
+        // } else {
+
+        unsafe {
+            self.for_each_mut_ptr(extent, |_: (), v| v.write_ptr(value.clone()));
+        }
+
+        // }
+    }
+}
+
 impl<N, T, Store> ArrayNx1<N, T, Store>
 where
     PointN<N>: IntegerPoint<N>,
@@ -296,25 +319,6 @@ where
         });
 
         unsafe { array.assume_init() }
-    }
-}
-
-impl<N, T, Store> ArrayNx1<N, T, Store>
-where
-    for<'r> Self: ForEachMut<'r, N, (), Item = &'r mut T>,
-    PointN<N>: IntegerPoint<N>,
-    Store: DerefMut<Target = [T]>,
-{
-    /// Fill the entire `extent` with the same `value`.
-    pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: T)
-    where
-        T: Clone,
-    {
-        if self.extent.eq(extent) {
-            self.channels.fill(value);
-        } else {
-            self.for_each_mut(extent, |_: (), v| *v = value.clone());
-        }
     }
 }
 
@@ -505,12 +509,31 @@ macro_rules! impl_array_for_each {
             }
         }
 
-        impl<'a, N, Chan, Ptr, Ref> ForEachMut<'a, N, $coords> for Array<N, Chan>
+        impl<'a, N, Chan, Ptr> ForEachMutPtr<N, $coords> for Array<N, Chan>
         where
             Self: GetMutPtr<Stride, Item = Ptr>,
-            Ptr: AsMutRef<'a, MutRef = Ref>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
+        {
+            type Item = Ptr;
+
+            #[inline]
+            unsafe fn for_each_mut_ptr(
+                &mut self,
+                iter_extent: &ExtentN<N>,
+                mut f: impl FnMut($coords, Self::Item),
+            ) {
+                let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
+                visitor.for_each_point_and_stride(|$p, $stride| {
+                    f($forward_coords, self.get_mut_ptr($stride));
+                });
+            }
+        }
+
+        impl<'a, N, Chan, Ptr, Ref> ForEachMut<'a, N, $coords> for Array<N, Chan>
+        where
+            Self: ForEachMutPtr<N, $coords, Item = Ptr>,
+            Ptr: AsMutRef<'a, MutRef = Ref>,
         {
             type Item = Ref;
 
@@ -518,14 +541,11 @@ macro_rules! impl_array_for_each {
             fn for_each_mut(
                 &'a mut self,
                 iter_extent: &ExtentN<N>,
-                mut f: impl FnMut($coords, Ref),
+                mut f: impl FnMut($coords, Self::Item),
             ) {
-                let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
-                visitor.for_each_point_and_stride(|$p, $stride| {
-                    // Need to tell the borrow checker that we're handing out non-overlapping borrows.
-                    let ptr = unsafe { self.get_mut_ptr($stride) };
-                    f($forward_coords, ptr.as_mut_ref())
-                });
+                unsafe {
+                    self.for_each_mut_ptr(iter_extent, |c, ptr| f(c, ptr.as_mut_ref()));
+                }
             }
         }
     };
@@ -649,7 +669,7 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, T>(
 impl<N, T, Ch, Store> WriteExtent<N, ChunkCopySrc<N, T, Ch>> for ArrayNx1<N, T, Store>
 where
     for<'r> Self: ForEachMut<'r, N, (), Item = &'r mut T>,
-    Self: WriteExtent<N, ArrayCopySrc<Ch>>,
+    Self: ForEachMutPtr<N, (), Item = *mut T> + WriteExtent<N, ArrayCopySrc<Ch>>,
     T: Clone,
     PointN<N>: IntegerPoint<N>,
     Store: DerefMut<Target = [T]>,
@@ -824,6 +844,21 @@ mod tests {
         array.for_each(&extent, |_: (), (c1, c2)| {
             assert_eq!(c1, 1);
             assert_eq!(c2, 'b');
+        });
+    }
+
+    #[test]
+    fn multichannel_fill_extent() {
+        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+        let ch1 = Channel::new_fill(0, extent.num_points());
+        let ch2 = Channel::new_fill('a', extent.num_points());
+        let mut array = Array::new(extent, (ch1, ch2));
+
+        array.fill_extent(&extent, (1, 'b'));
+
+        array.for_each(&extent, |_: (), (num, letter)| {
+            assert_eq!(num, 1);
+            assert_eq!(letter, 'b');
         });
     }
 }

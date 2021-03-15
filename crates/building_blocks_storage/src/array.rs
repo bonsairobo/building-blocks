@@ -620,19 +620,19 @@ where
     }
 }
 
-impl<'a, N, T, Store, Map, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Map, F>>>
-    for ArrayNx1<N, T, Store>
+impl<'a, N, Chan, Delegate, F, Data> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Delegate, F>>>
+    for Array<N, Chan>
 where
     Self: IndexedArray<N> + GetMutPtr<Stride>,
-    TransformMap<'a, Map, F>: IndexedArray<N> + Get<Stride, Item = T>,
+    TransformMap<'a, Delegate, F>: IndexedArray<N> + Get<Stride, Item = Data>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
-    <Self as GetMutPtr<Stride>>::Item: WritePtr<Data = T>,
+    <Self as GetMutPtr<Stride>>::Item: WritePtr<Data = Data>,
 {
     fn write_extent(
         &mut self,
         extent: &ExtentN<N>,
-        src_array: ArrayCopySrc<TransformMap<'a, Map, F>>,
+        src_array: ArrayCopySrc<TransformMap<'a, Delegate, F>>,
     ) {
         // It is assumed by the interface that extent is a subset of the src array, so we only need to intersect with the
         // destination.
@@ -811,7 +811,7 @@ mod tests {
 
     #[test]
     fn multichannel_get() {
-        let mut array = make_multichannel_array();
+        let (mut array, _extent) = make_multichannel_array();
 
         assert_eq!(array.get(Stride(0)), (0, 'a'));
         assert_eq!(array.get_ref(Stride(0)), (&0, &'a'));
@@ -828,8 +828,7 @@ mod tests {
 
     #[test]
     fn multichannel_for_each() {
-        let mut array = make_multichannel_array();
-        let extent = *array.extent();
+        let (mut array, extent) = make_multichannel_array();
 
         array.for_each(&extent, |_: (), (c1, c2)| {
             assert_eq!(c1, 0);
@@ -849,8 +848,7 @@ mod tests {
 
     #[test]
     fn multichannel_fill_extent() {
-        let mut array = make_multichannel_array();
-        let extent = *array.extent();
+        let (mut array, extent) = make_multichannel_array();
 
         array.fill_extent(&extent, (1, 'b'));
 
@@ -862,18 +860,31 @@ mod tests {
 
     #[test]
     fn multichannel_copy() {
-        let src = make_multichannel_array();
-        let mut dst = make_multichannel_array();
-        let extent = *src.extent();
+        let (src, _extent) = make_multichannel_array();
+        let (mut dst, extent) = make_multichannel_array();
 
         copy_extent(&extent, &src, &mut dst);
     }
 
-    fn make_multichannel_array() -> Array3x2<i32, char> {
+    #[test]
+    fn select_channel_with_transform() {
+        let (src, extent) = make_multichannel_array();
+        let src_select = TransformMap::new(&src, |(_num, letter): (i32, char)| letter);
+
+        let mut dst = Array3x1::fill(extent, 'b');
+
+        copy_extent(&extent, &src_select, &mut dst);
+
+        dst.for_each(&extent, |_: (), letter| {
+            assert_eq!(letter, 'a');
+        });
+    }
+
+    fn make_multichannel_array() -> (Array3x2<i32, char>, Extent3i) {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
         let ch1 = Channel::new_fill(0, extent.num_points());
         let ch2 = Channel::new_fill('a', extent.num_points());
 
-        Array::new(extent, (ch1, ch2))
+        (Array::new(extent, (ch1, ch2)), extent)
     }
 }

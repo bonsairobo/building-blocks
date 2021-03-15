@@ -39,8 +39,8 @@
 //! ```
 
 use crate::{
-    AmbientExtent, ArrayCopySrc, ArrayNx1, ChunkCopySrc, ChunkCopySrcIter, ChunkMap,
-    ChunkMapBuilder, ForEach, Get, IndexedArray, ReadExtent,
+    AmbientExtent, Array, ArrayCopySrc, ChunkCopySrc, ChunkCopySrcIter, ChunkMap, ChunkMapBuilder,
+    ForEach, Get, IndexedArray, ReadExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -118,10 +118,9 @@ where
 // TODO: try to make a generic ReadExtent impl, it's hard because we need a way to define the src types as a function of the
 // delegate src types (kinda hints at a monad or HKT)
 
-impl<'a, N, F, In, Out> ReadExtent<'a, N> for TransformMap<'a, ArrayNx1<N, In>, F>
+impl<'a, N, Chan, F> ReadExtent<'a, N> for TransformMap<'a, Array<N, Chan>, F>
 where
     Self: IndexedArray<N> + Clone,
-    F: Fn(In) -> Out,
     PointN<N>: IntegerPoint<N>,
 {
     type Src = ArrayCopySrc<Self>;

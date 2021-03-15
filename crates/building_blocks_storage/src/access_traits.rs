@@ -61,6 +61,27 @@ use building_blocks_core::ExtentN;
 
 use auto_impl::auto_impl;
 
+/// An implementation detail of multichannel accessors. Sometimes we need to be able to transmute lifetimes to satisfy the
+/// borrow checker, so we just get raw pointers and then convert them to borrows.
+#[doc(hidden)]
+pub trait AsMutRef<'a> {
+    type MutRef;
+
+    fn as_mut_ref(self) -> Self::MutRef;
+}
+
+impl<'a, T> AsMutRef<'a> for *mut T
+where
+    T: 'a,
+{
+    type MutRef = &'a mut T;
+
+    #[inline]
+    fn as_mut_ref(self) -> Self::MutRef {
+        unsafe { &mut *self }
+    }
+}
+
 // TODO: GATs should make it possible to collapse these traits for T, &T, and &mut T.
 
 //  ██████╗ ███████╗████████╗████████╗███████╗██████╗ ███████╗

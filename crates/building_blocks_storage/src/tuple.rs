@@ -1,25 +1,4 @@
-use crate::{Get, GetMut, GetMutPtr, GetRef};
-
-/// An implementation detail of multichannel accessors. Sometimes we need to be able to transmute lifetimes to satisfy the
-/// borrow checker, so we just get raw pointers and then convert them to borrows.
-#[doc(hidden)]
-pub trait AsMutRef<'a> {
-    type MutRef;
-
-    fn as_mut_ref(self) -> Self::MutRef;
-}
-
-impl<'a, T> AsMutRef<'a> for *mut T
-where
-    T: 'a,
-{
-    type MutRef = &'a mut T;
-
-    #[inline]
-    fn as_mut_ref(self) -> Self::MutRef {
-        unsafe { &mut *self }
-    }
-}
+use crate::{AsMutRef, Get, GetMut, GetMutPtr, GetRef};
 
 macro_rules! impl_for_tuple {
     ( $( $var:ident : $t:ident ),+ ) => {

@@ -78,11 +78,11 @@ pub type SmallKeyBuildHasher = ahash::RandomState;
 
 pub mod prelude {
     pub use super::{
-        copy_extent, Chunk, ChunkHashMap2, ChunkHashMap2x1, ChunkHashMap3, ChunkHashMap3x1,
-        ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkIndexer, ChunkMap, ChunkMap2, ChunkMap2x1,
-        ChunkMap3, ChunkMap3x1, ChunkMapBuilder, ChunkMapBuilder2x1, ChunkMapBuilder3x1,
-        ChunkPyramid2, ChunkPyramid3, ChunkReadStorage, ChunkWriteStorage, Compressed,
-        CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
+        copy_extent, Channel, Chunk, ChunkHashMap2, ChunkHashMap2x1, ChunkHashMap3,
+        ChunkHashMap3x1, ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkIndexer, ChunkMap,
+        ChunkMap2, ChunkMap2x1, ChunkMap3, ChunkMap3x1, ChunkMapBuilder, ChunkMapBuilder2x1,
+        ChunkMapBuilder3x1, ChunkPyramid2, ChunkPyramid3, ChunkReadStorage, ChunkWriteStorage,
+        Compressed, CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
         CompressibleChunkStorageReader, Compression, FastArrayCompression,
         FastCompressibleChunkStorage, Func, IndexedArray, IsEmpty, IterChunkKeys, Local,
         LocalChunkCache, LocalChunkCache2, LocalChunkCache3, OctreeChunkIndex, OctreeNode,

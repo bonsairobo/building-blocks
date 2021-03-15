@@ -7,10 +7,11 @@
 //!
 //! You can index an array with 3 kinds of coordinates, with [`Get`](crate::access_traits) traits:
 //!   - `Get*<Stride>`: flat array offset
-//!   - `Get*<&LocalN>`: N-dimensional point in extent-local coordinates (i.e. min = `[0, 0, 0]`)
-//!   - `Get*<PointN>`: N-dimensional point in global (ambient) coordinates
+//!   - `Get*<Local<N>>`: N-dimensional point in extent-local coordinates (i.e. min = `[0, 0, 0]`)
+//!   - `Get*<PointN<N>>`: N-dimensional point in global (ambient) coordinates
 //!
-//! Indexing assumes that the coordinates are in-bounds of the array, panicking otherwise.
+//! Indexing assumes that the coordinates are in-bounds of the array, panicking otherwise. Bounds checking is only enabled in
+//! debug mode.
 //!
 //! # Iteration
 //!
@@ -73,28 +74,69 @@
 //!
 //! # Storage
 //!
-//! By default, `ArrayNx1` uses a `Vec` to store elements. But any type that implements `Deref<Target = [T]>` or
-//! `DerefMut<Target = [T]>` should be usable. This means you can construct an array with most pointer types.
+//! By default, `Array` uses a `Vec` to store elements. But any type that implements `Deref<Target = [T]>` or `DerefMut<Target =
+//! [T]>` should be usable. This means you can construct an array with most pointer types.
 //!
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
-//! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
+//! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
 //! // Borrow `array`'s values for the lifetime of `other_array`.
 //! let array = Array3x1::fill(extent, 1);
 //! let other_array = Array3x1::new_one_channel(extent, array.channels().store().as_slice());
 //! assert_eq!(other_array.get(Stride(0)), 1);
 //!
 //! // A stack-allocated array.
-//! let mut data = [1; 64 * 64 * 64];
+//! let mut data = [1; 32 * 32 * 32];
 //! let mut stack_array = Array3x1::new_one_channel(extent, &mut data[..]);
 //! *stack_array.get_mut(Stride(0)) = 2;
 //! assert_eq!(data[0], 2);
 //!
 //! // A boxed array.
-//! let data: Box<[u32]> = Box::new([1; 64 * 64 * 64]); // must forget the size
+//! let data: Box<[u32]> = Box::new([1; 32 * 32 * 32]); // must forget the size
 //! let box_array = Array3x1::new_one_channel(extent, data);
 //! box_array.for_each(&extent, |p: Point3i, value| assert_eq!(value, 1));
+//! ```
+//!
+//! # Multichannel
+//!
+//! It's often the case that you have multiple data types to store per spatial dimension. For example, you might store geometry
+//! data like `Sd8` as well as a voxel type identifier. While you can put these in a struct, that may not be the most efficient
+//! option. If you only need access to one of those fields of the struct for a particular algorithm, then you will needlessly
+//! load the entire struct into cache. To avoid this problem, `Array` support storing multiple data "channels" in
+//! structure-of-arrays (SoA) style.
+//!
+//! ```
+//! # use building_blocks_core::prelude::*;
+//! # use building_blocks_storage::{prelude::*};
+//! # let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+//!
+//! #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+//! struct VoxelId(u8);
+//!
+//! // Each channel is just a flat array (`Vec` by default).
+//! let ch1 = Channel::new_fill(VoxelId(0), extent.num_points());
+//! let ch2 = Channel::new_fill(1.0, extent.num_points());
+//! // This means 3D with 2 channels. The channels must be provided as a tuple. Type annotation is only here for educational
+//! // purpose.
+//! let mut array: Array3x2<VoxelId, f32> = Array3x2::new(extent, (ch1, ch2));
+//!
+//! // This array supports all of the usual access traits and maps the channels to tuples as you would expect.
+//! let p = Point3i::fill(1);
+//! assert_eq!(array.get(p), (VoxelId(0), 1.0));
+//! assert_eq!(array.get_ref(p), (&VoxelId(0), &1.0));
+//! assert_eq!(array.get_mut(p), (&mut VoxelId(0), &mut 1.0));
+//!
+//! // Here we choose to access just one channel, and there is no performance penalty.
+//! array.for_each_mut(&extent, |p: Point3i, (_id, dist)| {
+//!     let r = p.dot(p);
+//!     *dist = (r as f32).sqrt();
+//! });
+//!
+//! // And if we want to copy just one of those channels into another map, we can use `TransformMap` to select the channel.
+//! let mut dst = Array3x1::fill(extent, 0.0);
+//! let src_select = TransformMap::new(&array, |(_id, dist): (VoxelId, f32)| dist);
+//! copy_extent(&extent, &src_select, &mut dst);
 //! ```
 
 mod channel;

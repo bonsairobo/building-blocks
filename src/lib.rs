@@ -6,16 +6,17 @@
 //!
 //! Building Blocks is a voxel library for real-time applications.
 //!
-//! ![Meshing](https://i.imgur.com/IZwfRHc.gif)
+//! ![Meshing](/examples/screenshots/mesh_showcase.gif)
 //!
-//! ![Noise](https://i.imgur.com/56zSvZh.png)
+//! ![LOD Terrain](/examples/screenshots/lod_terrain.png)
 //!
 //! The primary focus is core data structures and algorithms. Features include:
 //!
-//! - memory-efficient storage of voxel maps
+//! - 2D and 3D data storage
 //!   - a [`ChunkMap`](crate::storage::chunk_map) with generic chunk storage
 //!   - chunk compression and caching
-//!   - [`OctreeSet`](crate::storage::octree_set) hierarchical set of voxel points
+//!   - structure-of-arrays (SoA) storage of multiple data channels per spatial dimension
+//!   - [`OctreeSet`](crate::storage::octree) hierarchical set of voxel points
 //!   - all storages are serializable with [`serde`](https://serde.rs/)
 //! - mesh generation
 //!   - Surface Nets isosurface extraction

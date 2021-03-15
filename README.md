@@ -8,15 +8,16 @@
 
 Building Blocks is a voxel library for real-time applications.
 
-![Meshing](/examples/screenshots/mesh_showcase.gif)
+![Meshing](https://i.imgur.com/IZwfRHc.gif)
 
-![LOD Terrain](/examples/screenshots/lod_terrain.png)
+![Noise](https://i.imgur.com/56zSvZh.png)
 
 The primary focus is core data structures and algorithms. Features include:
 
-- memory-efficient storage of voxel maps
+- 2D and 3D data storage
   - a [`ChunkMap`](crate::storage::chunk_map) with generic chunk storage
   - chunk compression and caching
+  - structure-of-arrays (SoA) storage of multiple data channels per spatial dimension
   - [`OctreeSet`](crate::storage::octree) hierarchical set of voxel points
   - all storages are serializable with [`serde`](https://serde.rs/)
 - mesh generation
@@ -54,7 +55,7 @@ let radius = 10.0;
 let sphere_sdf = Sphere::new(radius).translate(center);
 
 let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(50));
-let mut samples = Array3::fill_with(extent, |p| sphere_sdf.dist(Point3f::from(p)));
+let mut samples = Array3x1::fill_with(extent, |p| sphere_sdf.dist(Point3f::from(p)));
 
 let mut mesh_buffer = SurfaceNetsBuffer::default();
 let voxel_size = 2.0; // length of the edge of a voxel
@@ -147,7 +148,7 @@ so it can! Just use `default-features = false` and add "snappy" to you `features
 #### VOX Files
 
 ".VOX" files are supported via the [`dot_vox`](https://docs.rs/dot_vox/) crate. Enable the `dot_vox` feature to expose the
-generic `encode_vox` function and `Array3::decode_vox` constructor.
+generic `encode_vox` function and `Array3x1::decode_vox` constructor.
 
 #### Images
 

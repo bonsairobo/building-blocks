@@ -757,17 +757,15 @@ mod tests {
         let extent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
         let mut array: Array3x1<MaybeUninit<i32>> = unsafe { Array3x1::maybe_uninit(extent) };
 
-        for p in extent.iter_points() {
-            unsafe {
-                array.get_mut(p).as_mut_ptr().write(1);
-            }
-        }
+        array.for_each_mut(&extent, |_: (), val| unsafe {
+            val.as_mut_ptr().write(1);
+        });
 
         let array = unsafe { array.assume_init() };
 
-        for p in extent.iter_points() {
-            assert_eq!(array.get(p), 1i32);
-        }
+        array.for_each(&extent, |_: (), val| {
+            assert_eq!(val, 1i32);
+        });
     }
 
     #[test]
@@ -776,9 +774,9 @@ mod tests {
         let mut array = Array3x1::fill(extent, 0);
 
         let subextent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(5));
-        for p in subextent.iter_points() {
-            *array.get_mut(p) = p.x() + p.y() + p.z();
-        }
+        array.for_each_mut(&subextent, |p: Point3i, val| {
+            *val = p.x() + p.y() + p.z();
+        });
 
         let mut other_array = Array3x1::fill(extent, 0);
         copy_extent(&subextent, &array, &mut other_array);

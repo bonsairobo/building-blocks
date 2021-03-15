@@ -62,10 +62,10 @@ impl<N, T, Store> ChunkPyramid<N, T, Store>
 where
     N: ArrayIndexer<N>,
     PointN<N>: Debug + IntegerPoint<N>,
+    ChunkIndexer<N>: Clone,
     T: 'static + Clone,
     ArrayNx1<N, T>: Chunk,
     Store: ChunkWriteStorage<N, ArrayNx1<N, T>>,
-    ChunkIndexer<N>: Clone,
 {
     pub fn downsample_chunk<Samp>(
         &mut self,

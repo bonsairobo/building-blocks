@@ -20,7 +20,7 @@
 //!
 //! # Serialization
 //!
-//! In order to efficiently serialize a `ChunkMap`, you can first use `SerializableChunks::from_chunk_map` to create a compact
+//! In order to efficiently serialize a `ChunkMap`, you can first use `SerializableChunks::from_iter` to create a compact
 //! serializable representation. It will compress the bincode representation of the chunks.
 //!
 //! # Example `ChunkHashMap` Usage

@@ -154,19 +154,25 @@ array_n_type_alias!(ArrayNx4, A: S1, B: S2, C: S3, D: S4);
 array_n_type_alias!(ArrayNx5, A: S1, B: S2, C: S3, D: S4, E: S5);
 array_n_type_alias!(ArrayNx6, A: S1, B: S2, C: S3, D: S4, E: S5, F: S6);
 
-pub type Array2x1<A, S1 = Vec<A>> = Array<[i32; 2], Channel<A, S1>>;
-array_type_alias!(Array2x2, [i32; 2], A: S1, B: S2);
-array_type_alias!(Array2x3, [i32; 2], A: S1, B: S2, C: S3);
-array_type_alias!(Array2x4, [i32; 2], A: S1, B: S2, C: S3, D: S4);
-array_type_alias!(Array2x5, [i32; 2], A: S1, B: S2, C: S3, D: S4, E: S5);
-array_type_alias!(Array2x6, [i32; 2], A: S1, B: S2, C: S3, D: S4, E: S5, F: S6);
+pub mod multichannel_aliases {
+    use super::*;
 
-pub type Array3x1<A, S1 = Vec<A>> = Array<[i32; 3], Channel<A, S1>>;
-array_type_alias!(Array3x2, [i32; 3], A: S1, B: S2);
-array_type_alias!(Array3x3, [i32; 3], A: S1, B: S2, C: S3);
-array_type_alias!(Array3x4, [i32; 3], A: S1, B: S2, C: S3, D: S4);
-array_type_alias!(Array3x5, [i32; 3], A: S1, B: S2, C: S3, D: S4, E: S5);
-array_type_alias!(Array3x6, [i32; 3], A: S1, B: S2, C: S3, D: S4, E: S5, F: S6);
+    pub type Array2x1<A, S1 = Vec<A>> = Array<[i32; 2], Channel<A, S1>>;
+    array_type_alias!(Array2x2, [i32; 2], A: S1, B: S2);
+    array_type_alias!(Array2x3, [i32; 2], A: S1, B: S2, C: S3);
+    array_type_alias!(Array2x4, [i32; 2], A: S1, B: S2, C: S3, D: S4);
+    array_type_alias!(Array2x5, [i32; 2], A: S1, B: S2, C: S3, D: S4, E: S5);
+    array_type_alias!(Array2x6, [i32; 2], A: S1, B: S2, C: S3, D: S4, E: S5, F: S6);
+
+    pub type Array3x1<A, S1 = Vec<A>> = Array<[i32; 3], Channel<A, S1>>;
+    array_type_alias!(Array3x2, [i32; 3], A: S1, B: S2);
+    array_type_alias!(Array3x3, [i32; 3], A: S1, B: S2, C: S3);
+    array_type_alias!(Array3x4, [i32; 3], A: S1, B: S2, C: S3, D: S4);
+    array_type_alias!(Array3x5, [i32; 3], A: S1, B: S2, C: S3, D: S4, E: S5);
+    array_type_alias!(Array3x6, [i32; 3], A: S1, B: S2, C: S3, D: S4, E: S5, F: S6);
+}
+
+pub use multichannel_aliases::*;
 
 impl<N, Chan> Array<N, Chan> {
     /// Create a new `Array` directly from the extent and values. This asserts that the number of points in the extent matches

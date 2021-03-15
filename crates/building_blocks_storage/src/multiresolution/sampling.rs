@@ -1,4 +1,4 @@
-use crate::{prelude::*, ArrayIndexer};
+use crate::{prelude::*, ArrayIndexer, ArrayNx1};
 
 use building_blocks_core::prelude::*;
 

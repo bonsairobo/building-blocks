@@ -1157,7 +1157,7 @@ mod tests {
         Array3x1::fill_with(extent, |_| Voxel(rng.gen()))
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, Copy)]
     struct Voxel(bool);
 
     impl IsEmpty for Voxel {

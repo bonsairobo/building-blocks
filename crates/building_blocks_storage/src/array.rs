@@ -283,12 +283,11 @@ where
     }
 }
 
-impl<N, Chan, Ptr> Array<N, Chan>
+impl<N, Chan> Array<N, Chan>
 where
-    Self: ForEachMutPtr<N, (), Item = Ptr>,
+    Self: ForEachMutPtr<N, (), Item = Chan::Ptr>,
     PointN<N>: IntegerPoint<N>,
     Chan: Channels,
-    Ptr: WritePtr<Data = Chan::Data>,
 {
     /// Fill the entire `extent` with the same `value`.
     pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: Chan::Data)
@@ -340,12 +339,13 @@ where
     /// Create a new array for `extent` where each point's value is determined by the `filler` function.
     pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> T) -> Self
     where
-        ArrayNx1<N, MaybeUninit<T>>: ForEachMutPtr<N, PointN<N>, Item = *mut MaybeUninit<T>>,
+        ArrayNx1<N, MaybeUninit<T>>:
+            for<'r> ForEachMut<'r, N, PointN<N>, Item = &'r mut MaybeUninit<T>>,
     {
         let mut array = unsafe { ArrayNx1::maybe_uninit(extent) };
 
         array.for_each_mut(&extent, |p, val| unsafe {
-            val.as_mut_ptr().write_ptr(filler(p));
+            val.as_mut_ptr().write(filler(p));
         });
 
         unsafe { array.assume_init() }
@@ -563,13 +563,14 @@ macro_rules! impl_array_for_each {
             }
         }
 
-        impl<'a, N, Chan, Ptr> ForEachMutPtr<N, $coords> for Array<N, Chan>
+        impl<'a, N, Chan> ForEachMutPtr<N, $coords> for Array<N, Chan>
         where
-            Self: GetMutPtr<Stride, Item = Ptr>,
+            Self: GetMutPtr<Stride, Item = Chan::Ptr>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
+            Chan: Channels,
         {
-            type Item = Ptr;
+            type Item = Chan::Ptr;
 
             #[inline]
             unsafe fn for_each_mut_ptr(
@@ -584,10 +585,11 @@ macro_rules! impl_array_for_each {
             }
         }
 
-        impl<'a, N, Chan, Ptr, Ref> ForEachMut<'a, N, $coords> for Array<N, Chan>
+        impl<'a, N, Chan, Ref> ForEachMut<'a, N, $coords> for Array<N, Chan>
         where
-            Self: ForEachMutPtr<N, $coords, Item = Ptr>,
-            Ptr: AsMutRef<'a, MutRef = Ref>,
+            Self: ForEachMutPtr<N, $coords, Item = Chan::Ptr>,
+            Chan: Channels,
+            Chan::Ptr: AsMutRef<'a, MutRef = Ref>,
         {
             type Item = Ref;
 
@@ -648,14 +650,13 @@ where
     }
 }
 
-impl<'a, N, Chan, Ptr> WriteExtent<N, ArrayCopySrc<&'a Self>> for Array<N, Chan>
+impl<'a, N, Chan> WriteExtent<N, ArrayCopySrc<&'a Self>> for Array<N, Chan>
 where
-    Self: Get<Stride, Item = Ptr::Data> + GetMutPtr<Stride, Item = Ptr>,
+    Self: Get<Stride, Item = Chan::Data> + GetMutPtr<Stride, Item = Chan::Ptr>,
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
-    Chan: Clone,
-    Ptr: WritePtr,
+    Chan: Channels + Clone,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src_array: ArrayCopySrc<&'a Self>) {
         // It is assumed by the interface that extent is a subset of the src array, so we only need to intersect with the
@@ -674,14 +675,14 @@ where
     }
 }
 
-impl<'a, N, Chan, Delegate, F, Data> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Delegate, F>>>
+impl<'a, N, Chan, Delegate, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Delegate, F>>>
     for Array<N, Chan>
 where
-    Self: IndexedArray<N> + GetMutPtr<Stride>,
-    TransformMap<'a, Delegate, F>: IndexedArray<N> + Get<Stride, Item = Data>,
+    Self: IndexedArray<N> + GetMutPtr<Stride, Item = Chan::Ptr>,
+    TransformMap<'a, Delegate, F>: IndexedArray<N> + Get<Stride, Item = Chan::Data>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
-    <Self as GetMutPtr<Stride>>::Item: WritePtr<Data = Data>,
+    Chan: Channels,
 {
     fn write_extent(
         &mut self,
@@ -723,15 +724,14 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, Ptr>(
     );
 }
 
-impl<N, Chan, Data, Ptr, Ch> WriteExtent<N, ChunkCopySrc<N, Data, Ch>> for Array<N, Chan>
+impl<N, Chan, Ch> WriteExtent<N, ChunkCopySrc<N, Chan::Data, Ch>> for Array<N, Chan>
 where
-    Self: ForEachMutPtr<N, (), Item = Ptr> + WriteExtent<N, ArrayCopySrc<Ch>>,
+    Self: ForEachMutPtr<N, (), Item = Chan::Ptr> + WriteExtent<N, ArrayCopySrc<Ch>>,
     PointN<N>: IntegerPoint<N>,
-    Chan: Channels<Data = Data>,
-    Data: Clone,
-    Ptr: WritePtr<Data = Data>,
+    Chan: Channels,
+    Chan::Data: Clone,
 {
-    fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<N, Data, Ch>) {
+    fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<N, Chan::Data, Ch>) {
         match src {
             Either::Left(array) => self.write_extent(extent, array),
             Either::Right(ambient) => self.fill_extent(extent, ambient.get()),
@@ -739,11 +739,11 @@ where
     }
 }
 
-impl<N, Chan, F, Ptr> WriteExtent<N, F> for Array<N, Chan>
+impl<N, Chan, F> WriteExtent<N, F> for Array<N, Chan>
 where
-    Self: ForEachMutPtr<N, PointN<N>, Item = Ptr>,
-    F: Fn(PointN<N>) -> Ptr::Data,
-    Ptr: WritePtr,
+    Self: ForEachMutPtr<N, PointN<N>, Item = Chan::Ptr>,
+    F: Fn(PointN<N>) -> Chan::Data,
+    Chan: Channels,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: F) {
         unsafe {

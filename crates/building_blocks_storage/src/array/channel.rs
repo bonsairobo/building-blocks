@@ -1,4 +1,4 @@
-use crate::{GetMut, GetMutPtr, GetRef};
+use crate::{GetMut, GetMutPtr, GetRef, WritePtr};
 
 use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
@@ -152,6 +152,7 @@ impl_get_via_get_ref_and_clone!(Channel<T, Store>, T, Store);
 
 pub trait Channels {
     type Data;
+    type Ptr: WritePtr<Data = Self::Data>;
 
     fn fill(value: Self::Data, length: usize) -> Self;
     fn reset_values(&mut self, value: Self::Data);
@@ -162,6 +163,7 @@ where
     T: Clone,
 {
     type Data = T;
+    type Ptr = *mut T;
 
     fn fill(value: Self::Data, length: usize) -> Self {
         Self::fill(value, length)
@@ -180,6 +182,7 @@ macro_rules! impl_channels_for_tuple {
             $($t: Channels),+
         {
             type Data = ($($t::Data,)+);
+            type Ptr = ($(*mut $t::Data,)+);
 
             #[inline]
             fn fill(value: Self::Data, length: usize) -> Self {

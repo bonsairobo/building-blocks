@@ -1,6 +1,6 @@
 use crate::{
     for_each_stride_parallel_global_unchecked2, for_each_stride_parallel_global_unchecked3,
-    Array2x1ForEach, Array3x1ForEach, ArrayForEach, Local, Local2i, Local3i, Stride,
+    Array2ForEach, Array3ForEach, ArrayForEach, Local, Local2i, Local3i, Stride,
 };
 
 use building_blocks_core::prelude::*;
@@ -65,7 +65,7 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
 
     #[inline]
     fn for_each_point_and_stride_unchecked(
-        for_each: Array2x1ForEach,
+        for_each: Array2ForEach,
         mut f: impl FnMut(Point2i, Stride),
     ) {
         for_each2!(for_each, x, y, stride, { f(PointN([x, y]), stride) });
@@ -90,7 +90,7 @@ impl ArrayIndexer<[i32; 3]> for [i32; 3] {
 
     #[inline]
     fn for_each_point_and_stride_unchecked(
-        for_each: Array3x1ForEach,
+        for_each: Array3ForEach,
         mut f: impl FnMut(Point3i, Stride),
     ) {
         for_each3!(for_each, x, y, z, stride, { f(PointN([x, y, z]), stride) });

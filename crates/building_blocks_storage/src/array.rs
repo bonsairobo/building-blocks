@@ -103,25 +103,26 @@
 //! It's often the case that you have multiple data types to store per spatial dimension. For example, you might store geometry
 //! data like `Sd8` as well as a voxel type identifier. While you can put these in a struct, that may not be the most efficient
 //! option. If you only need access to one of those fields of the struct for a particular algorithm, then you will needlessly
-//! load the entire struct into cache. To avoid this problem, `Array` support storing multiple data "channels" in
+//! load the entire struct into cache. To avoid this problem, `Array` supports storing multiple data "channels" in
 //! structure-of-arrays (SoA) style.
 //!
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::{prelude::*};
 //! # let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
-//!
+//! #
 //! #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 //! struct VoxelId(u8);
 //!
 //! // Each channel is just a flat array (`Vec` by default).
 //! let ch1 = Channel::new_fill(VoxelId(0), extent.num_points());
 //! let ch2 = Channel::new_fill(1.0, extent.num_points());
-//! // This means 3D with 2 channels. The channels must be provided as a tuple. Type annotation is only here for educational
-//! // purpose.
+//! // This means 3D with 2 channels. The channels must be provided as a tuple.
+//! // Type annotation is only here for educational purpose.
 //! let mut array: Array3x2<VoxelId, f32> = Array3x2::new(extent, (ch1, ch2));
 //!
-//! // This array supports all of the usual access traits and maps the channels to tuples as you would expect.
+//! // This array supports all of the usual access traits and maps the channels
+//! // to tuples as you would expect.
 //! let p = Point3i::fill(1);
 //! assert_eq!(array.get(p), (VoxelId(0), 1.0));
 //! assert_eq!(array.get_ref(p), (&VoxelId(0), &1.0));
@@ -133,7 +134,8 @@
 //!     *dist = (r as f32).sqrt();
 //! });
 //!
-//! // And if we want to copy just one of those channels into another map, we can use `TransformMap` to select the channel.
+//! // And if we want to copy just one of those channels into another map, we can
+//! // use `TransformMap` to select the channel.
 //! let mut dst = Array3x1::fill(extent, 0.0);
 //! let src_select = TransformMap::new(&array, |(_id, dist): (VoxelId, f32)| dist);
 //! copy_extent(&extent, &src_select, &mut dst);

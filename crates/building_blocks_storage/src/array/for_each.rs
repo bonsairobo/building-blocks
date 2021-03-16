@@ -22,9 +22,9 @@ pub struct ArrayForEach<N> {
 }
 
 /// A 2D `ArrayForEach`.
-pub type Array2x1ForEach = ArrayForEach<[i32; 2]>;
+pub type Array2ForEach = ArrayForEach<[i32; 2]>;
 /// A 3D `ArrayForEach`.
-pub type Array3x1ForEach = ArrayForEach<[i32; 3]>;
+pub type Array3ForEach = ArrayForEach<[i32; 3]>;
 
 impl<N> ArrayForEach<N>
 where

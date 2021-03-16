@@ -5,7 +5,7 @@ use building_blocks_core::prelude::*;
 /// Execute a block of code in a strided 2D for loop described by `for_each`.
 macro_rules! for_each2 {
     ($for_each:ident, $x:ident, $y:ident, $stride:ident, $code:block) => {
-        let $crate::Array2x1ForEach {
+        let $crate::Array2ForEach {
             iter_extent,
             array_shape,
             index_min,

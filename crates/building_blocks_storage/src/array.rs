@@ -293,7 +293,7 @@ where
     /// Fill the entire `extent` with the same `value`.
     pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: Chan::Data)
     where
-        Ptr::Data: Clone,
+        Chan::Data: Clone,
     {
         if self.extent.eq(extent) {
             self.channels.reset_values(value);
@@ -340,13 +340,12 @@ where
     /// Create a new array for `extent` where each point's value is determined by the `filler` function.
     pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> T) -> Self
     where
-        ArrayNx1<N, MaybeUninit<T>>:
-            for<'r> ForEachMut<'r, N, PointN<N>, Item = &'r mut MaybeUninit<T>>,
+        ArrayNx1<N, MaybeUninit<T>>: ForEachMutPtr<N, PointN<N>, Item = *mut MaybeUninit<T>>,
     {
         let mut array = unsafe { ArrayNx1::maybe_uninit(extent) };
 
-        array.for_each_mut(&extent, |p, x| unsafe {
-            x.as_mut_ptr().write(filler(p));
+        array.for_each_mut(&extent, |p, val| unsafe {
+            val.as_mut_ptr().write_ptr(filler(p));
         });
 
         unsafe { array.assume_init() }

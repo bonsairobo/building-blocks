@@ -1,7 +1,7 @@
 use crate::{
     prelude::*, ArrayIndexer, ArrayNx1, BytesCompression, ChunkDownsampler, ChunkHashMapNx1,
-    ChunkMapBuilder, ChunkMapBuilderNx1, ChunkMapNx1, CompressibleChunkMapNx1, OctreeChunkIndex,
-    OctreeNode, SmallKeyHashMap, VisitStatus,
+    ChunkMap, ChunkMapBuilder, ChunkMapBuilderNx1, ChunkMapNx1, CompressibleChunkMapNx1,
+    OctreeChunkIndex, OctreeNode, SmallKeyHashMap, VisitStatus,
 };
 
 use building_blocks_core::prelude::*;

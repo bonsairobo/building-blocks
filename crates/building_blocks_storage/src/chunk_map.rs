@@ -92,7 +92,7 @@
 //! map.storage_mut().compress_lru();
 //!
 //! // In order to use the read-only access traits, you need to construct a `CompressibleChunkStorageReader`.
-//! let local_cache = LocalChunkCache::new();
+//! let local_cache = LocalChunkCache3::new();
 //! let reader = map.reader(&local_cache);
 //!
 //! let bounding_extent = reader.bounding_extent();

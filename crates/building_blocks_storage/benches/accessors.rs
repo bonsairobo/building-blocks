@@ -134,7 +134,7 @@ fn compressible_chunk_map_point_indexing(c: &mut Criterion) {
                     set_up_chunk_map(storage, size)
                 },
                 |(chunk_map, iter_extent)| {
-                    let local_cache = LocalChunkCache::new();
+                    let local_cache = LocalChunkCache3::new();
                     let reader = chunk_map.reader(&local_cache);
                     for p in iter_extent.iter_points() {
                         black_box(reader.get(p));

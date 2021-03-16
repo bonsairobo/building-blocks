@@ -115,8 +115,8 @@
 //! struct VoxelId(u8);
 //!
 //! // Each channel is just a flat array (`Vec` by default).
-//! let ch1 = Channel::new_fill(VoxelId(0), extent.num_points());
-//! let ch2 = Channel::new_fill(1.0, extent.num_points());
+//! let ch1 = Channel::fill(VoxelId(0), extent.num_points());
+//! let ch2 = Channel::fill(1.0, extent.num_points());
 //! // This means 3D with 2 channels. The channels must be provided as a tuple.
 //! // Type annotation is only here for educational purpose.
 //! let mut array: Array3x2<VoxelId, f32> = Array3x2::new(extent, (ch1, ch2));
@@ -168,7 +168,7 @@ use building_blocks_core::prelude::*;
 
 use core::iter::{once, Once};
 use core::mem::MaybeUninit;
-use core::ops::{Add, Deref, DerefMut};
+use core::ops::{Add, Deref};
 use either::Either;
 use serde::{Deserialize, Serialize};
 
@@ -287,22 +287,69 @@ impl<N, Chan, Ptr> Array<N, Chan>
 where
     Self: ForEachMutPtr<N, (), Item = Ptr>,
     PointN<N>: IntegerPoint<N>,
-    Ptr: WritePtr,
+    Chan: Channels,
+    Ptr: WritePtr<Data = Chan::Data>,
 {
     /// Fill the entire `extent` with the same `value`.
-    pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: Ptr::Data)
+    pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: Chan::Data)
     where
         Ptr::Data: Clone,
     {
-        // if self.extent.eq(extent) {
-        //     self.channels.fill(value);
-        // } else {
-
-        unsafe {
-            self.for_each_mut_ptr(extent, |_: (), v| v.write_ptr(value.clone()));
+        if self.extent.eq(extent) {
+            self.channels.reset_values(value);
+        } else {
+            unsafe {
+                self.for_each_mut_ptr(extent, |_: (), v| v.write_ptr(value.clone()));
+            }
         }
+    }
+}
 
-        // }
+impl<N, Chan> Array<N, Chan>
+where
+    Chan: Channels,
+{
+    /// Set all points to the same value.
+    #[inline]
+    pub fn reset_values(&mut self, value: Chan::Data)
+    where
+        Chan::Data: Clone,
+    {
+        self.channels.reset_values(value);
+    }
+}
+
+impl<N, Chan> Array<N, Chan>
+where
+    PointN<N>: IntegerPoint<N>,
+    Chan: Channels,
+{
+    /// Creates a map that fills the entire `extent` with the same `value`.
+    pub fn fill(extent: ExtentN<N>, value: Chan::Data) -> Self
+    where
+        Chan::Data: Clone,
+    {
+        Self::new(extent, Chan::fill(value, extent.num_points()))
+    }
+}
+
+impl<N, T> ArrayNx1<N, T, Vec<T>>
+where
+    PointN<N>: IntegerPoint<N>,
+{
+    /// Create a new array for `extent` where each point's value is determined by the `filler` function.
+    pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> T) -> Self
+    where
+        ArrayNx1<N, MaybeUninit<T>>:
+            for<'r> ForEachMut<'r, N, PointN<N>, Item = &'r mut MaybeUninit<T>>,
+    {
+        let mut array = unsafe { ArrayNx1::maybe_uninit(extent) };
+
+        array.for_each_mut(&extent, |p, x| unsafe {
+            x.as_mut_ptr().write(filler(p));
+        });
+
+        unsafe { array.assume_init() }
     }
 }
 
@@ -318,20 +365,6 @@ where
     }
 }
 
-impl<N, T, Store> ArrayNx1<N, T, Store>
-where
-    Store: DerefMut<Target = [T]>,
-{
-    /// Set all points to the same value.
-    #[inline]
-    pub fn reset_values(&mut self, value: T)
-    where
-        T: Clone,
-    {
-        self.channels.fill(value);
-    }
-}
-
 impl<'a, N, T, Store> IntoRawBytes<'a> for ArrayNx1<N, T, Store>
 where
     T: 'static + Copy,
@@ -341,34 +374,6 @@ where
 
     fn into_raw_bytes(&'a self) -> Self::Output {
         self.channels.store().into_raw_bytes()
-    }
-}
-
-impl<N, T> ArrayNx1<N, T, Vec<T>>
-where
-    PointN<N>: IntegerPoint<N>,
-{
-    /// Creates a map that fills the entire `extent` with the same `value`.
-    pub fn fill(extent: ExtentN<N>, value: T) -> Self
-    where
-        T: Clone,
-    {
-        Self::new(extent, Channel::new_fill(value, extent.num_points()))
-    }
-
-    /// Create a new array for `extent` where each point's value is determined by the `filler` function.
-    pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> T) -> Self
-    where
-        ArrayNx1<N, MaybeUninit<T>>:
-            for<'r> ForEachMut<'r, N, PointN<N>, Item = &'r mut MaybeUninit<T>>,
-    {
-        let mut array = unsafe { ArrayNx1::maybe_uninit(extent) };
-
-        array.for_each_mut(&extent, |p, x| unsafe {
-            x.as_mut_ptr().write(filler(p));
-        });
-
-        unsafe { array.assume_init() }
     }
 }
 
@@ -722,8 +727,9 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, Ptr>(
 impl<N, Chan, Data, Ptr, Ch> WriteExtent<N, ChunkCopySrc<N, Data, Ch>> for Array<N, Chan>
 where
     Self: ForEachMutPtr<N, (), Item = Ptr> + WriteExtent<N, ArrayCopySrc<Ch>>,
-    Data: Clone,
     PointN<N>: IntegerPoint<N>,
+    Chan: Channels<Data = Data>,
+    Data: Clone,
     Ptr: WritePtr<Data = Data>,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<N, Data, Ch>) {
@@ -932,8 +938,8 @@ mod tests {
 
     fn make_multichannel_array() -> (Array3x2<i32, char>, Extent3i) {
         let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
-        let ch1 = Channel::new_fill(0, extent.num_points());
-        let ch2 = Channel::new_fill('a', extent.num_points());
+        let ch1 = Channel::fill(0, extent.num_points());
+        let ch2 = Channel::fill('a', extent.num_points());
 
         (Array::new(extent, (ch1, ch2)), extent)
     }

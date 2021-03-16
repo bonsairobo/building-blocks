@@ -36,7 +36,7 @@ impl<T, Store> Channel<T, Store> {
 }
 
 impl<T> Channel<T, Vec<T>> {
-    pub fn new_fill(value: T, length: usize) -> Self
+    pub fn fill(value: T, length: usize) -> Self
     where
         T: Clone,
     {
@@ -49,7 +49,7 @@ where
     Store: DerefMut<Target = [T]>,
 {
     #[inline]
-    pub fn fill(&mut self, value: T)
+    pub fn reset_values(&mut self, value: T)
     where
         T: Clone,
     {
@@ -143,6 +143,69 @@ where
 
 impl_get_via_get_ref_and_clone!(Channel<T, Store>, T, Store);
 
+// ███╗   ███╗██╗   ██╗██╗  ████████╗██╗
+// ████╗ ████║██║   ██║██║  ╚══██╔══╝██║
+// ██╔████╔██║██║   ██║██║     ██║   ██║
+// ██║╚██╔╝██║██║   ██║██║     ██║   ██║
+// ██║ ╚═╝ ██║╚██████╔╝███████╗██║   ██║
+// ╚═╝     ╚═╝ ╚═════╝ ╚══════╝╚═╝   ╚═╝
+
+pub trait Channels {
+    type Data;
+
+    fn fill(value: Self::Data, length: usize) -> Self;
+    fn reset_values(&mut self, value: Self::Data);
+}
+
+impl<T> Channels for Channel<T>
+where
+    T: Clone,
+{
+    type Data = T;
+
+    fn fill(value: Self::Data, length: usize) -> Self {
+        Self::fill(value, length)
+    }
+
+    fn reset_values(&mut self, value: Self::Data) {
+        self.reset_values(value)
+    }
+}
+
+macro_rules! impl_channels_for_tuple {
+    ( $( $var1:ident, $var2:ident : $t:ident ),+ ) => {
+
+        impl<$($t),+> Channels for ($($t,)+)
+        where
+            $($t: Channels),+
+        {
+            type Data = ($($t::Data,)+);
+
+            #[inline]
+            fn fill(value: Self::Data, length: usize) -> Self {
+                let ($($var1,)+) = value;
+
+                ($($t::fill($var1, length),)+)
+            }
+
+            #[inline]
+            fn reset_values(&mut self, value: Self::Data) {
+                let ($($var1,)+) = self;
+                let ($($var2,)+) = value;
+
+                $( $var1.reset_values($var2); )+
+            }
+        }
+    }
+}
+
+impl_channels_for_tuple! { a1, a2: A }
+impl_channels_for_tuple! { a1, a2: A, b1, b2: B }
+impl_channels_for_tuple! { a1, a2: A, b1, b2: B, c1, c2: C }
+impl_channels_for_tuple! { a1, a2: A, b1, b2: B, c1, c2: C, d1, d2: D }
+impl_channels_for_tuple! { a1, a2: A, b1, b2: B, c1, c2: C, d1, d2: D, e1, e2: E }
+impl_channels_for_tuple! { a1, a2: A, b1, b2: B, c1, c2: C, d1, d2: D, e1, e2: E, f1, f2: F }
+
 // ████████╗███████╗███████╗████████╗
 // ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
 //    ██║   █████╗  ███████╗   ██║
@@ -158,8 +221,8 @@ mod test {
 
     #[test]
     fn tuple_of_channels_can_get() {
-        let mut ch1 = Channel::new_fill(0, 10);
-        let mut ch2 = Channel::new_fill(0, 10);
+        let mut ch1 = Channel::fill(0, 10);
+        let mut ch2 = Channel::fill(0, 10);
 
         assert_eq!((&ch1, &ch2).get(0), (0, 0));
         assert_eq!((&ch1, &ch2).get_ref(0), (&0, &0));

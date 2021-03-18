@@ -64,7 +64,6 @@ where
     PointN<N>: Debug + IntegerPoint<N>,
     ChunkIndexer<N>: Clone,
     T: 'static + Clone,
-    ArrayNx1<N, T>: Chunk,
     Store: ChunkWriteStorage<N, ArrayNx1<N, T>>,
 {
     pub fn downsample_chunk<Samp>(
@@ -74,7 +73,7 @@ where
         src_lod: u8,
         dst_lod: u8,
     ) where
-        Samp: ChunkDownsampler<N, T>,
+        Samp: ChunkDownsampler<N, T, ArrayNx1<N, T>>,
         PointN<N>: Debug,
     {
         assert!(dst_lod > src_lod);
@@ -91,7 +90,7 @@ where
         if let Some(src_chunk) = src_map.get_mut_chunk(src_chunk_key) {
             debug_assert_eq!(src_chunk.extent().shape, chunk_shape);
 
-            sampler.downsample(&src_chunk, dst_chunk, dst.dst_offset, lod_delta);
+            sampler.downsample(src_chunk, dst_chunk, dst.dst_offset, lod_delta);
         } else {
             let dst_extent = ExtentN::from_min_and_shape(
                 dst_chunk.extent().minimum + dst.dst_offset.0,
@@ -105,7 +104,6 @@ where
 impl<T, Store> ChunkPyramid3<T, Store>
 where
     T: 'static + Clone,
-    Array3x1<T>: Chunk,
     Store: ChunkWriteStorage<[i32; 3], Array3x1<T>>,
 {
     pub fn downsample_chunks_for_extent_all_lods_with_index<Samp>(
@@ -114,7 +112,7 @@ where
         sampler: &Samp,
         extent: &Extent3i,
     ) where
-        Samp: ChunkDownsampler<[i32; 3], T>,
+        Samp: ChunkDownsampler<[i32; 3], T, Array3x1<T>>,
     {
         let chunk_shape = self.chunk_shape();
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);

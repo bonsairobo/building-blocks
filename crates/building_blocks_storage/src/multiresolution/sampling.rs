@@ -2,11 +2,11 @@ use crate::{prelude::*, ArrayIndexer, ArrayNx1};
 
 use building_blocks_core::prelude::*;
 
-pub trait ChunkDownsampler<N, T> {
+pub trait ChunkDownsampler<N, T, Src> {
     /// Samples `src_chunk` in order to write out just a portion of `dst_chunk`, starting at `dst_min`.
     fn downsample(
         &self,
-        src_chunk: &ArrayNx1<N, T>,
+        src_chunk: &Src,
         dst_chunk: &mut ArrayNx1<N, T>,
         dst_min: Local<N>,
         level_delta: u8,
@@ -15,15 +15,16 @@ pub trait ChunkDownsampler<N, T> {
 
 pub struct PointDownsampler;
 
-impl<N, T> ChunkDownsampler<N, T> for PointDownsampler
+impl<N, Src, T> ChunkDownsampler<N, T, Src> for PointDownsampler
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     T: 'static + Copy,
+    Src: Get<Local<N>, Item = T> + IndexedArray<N>,
 {
     fn downsample(
         &self,
-        src_chunk: &ArrayNx1<N, T>,
+        src_chunk: &Src,
         dst_chunk: &mut ArrayNx1<N, T>,
         dst_min: Local<N>,
         lod_delta: u8,
@@ -44,16 +45,17 @@ where
 
 pub struct SdfMeanDownsampler;
 
-impl<N, T> ChunkDownsampler<N, T> for SdfMeanDownsampler
+impl<N, Src, T> ChunkDownsampler<N, T, Src> for SdfMeanDownsampler
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     T: 'static + Clone + From<f32>,
     f32: From<T>,
+    Src: Get<Local<N>, Item = T> + IndexedArray<N>,
 {
     fn downsample(
         &self,
-        src_chunk: &ArrayNx1<N, T>,
+        src_chunk: &Src,
         dst_chunk: &mut ArrayNx1<N, T>,
         dst_min: Local<N>,
         lod_delta: u8,

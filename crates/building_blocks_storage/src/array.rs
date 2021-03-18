@@ -157,7 +157,7 @@ pub use indexer::*;
 
 use crate::{
     AsMultiMut, AsMultiMutPtr, ChunkCopySrc, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut,
-    GetMutPtr, GetRef, IntoRawBytes, MultiMutPtr, ReadExtent, TransformMap, WriteExtent,
+    GetMutPtr, GetRef, MultiMutPtr, ReadExtent, TransformMap, WriteExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -381,18 +381,6 @@ where
         assert_eq!(extent.num_points(), values.len());
 
         Self::new(extent, Channel::new(values))
-    }
-}
-
-impl<'a, N, T, Store> IntoRawBytes<'a> for ArrayNx1<N, T, Store>
-where
-    T: 'static + Copy,
-    Store: Deref<Target = [T]>,
-{
-    type Output = &'a [u8];
-
-    fn into_raw_bytes(&'a self) -> Self::Output {
-        self.channels.store().into_raw_bytes()
     }
 }
 

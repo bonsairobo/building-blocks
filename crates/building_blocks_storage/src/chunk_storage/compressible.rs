@@ -1,8 +1,8 @@
 use crate::{
     BytesCompression, CacheEntry, ChunkMap, ChunkMapBuilder, ChunkMapBuilderNx1, ChunkWriteStorage,
     Compressed, CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression,
-    FastArrayCompression, IterChunkKeys, LocalChunkCache, LruCacheEntries, LruCacheIntoIter,
-    LruCacheKeys, MaybeCompressed, SmallKeyLruCache,
+    FastArrayCompressionNx1, FromBytesCompression, IterChunkKeys, LocalChunkCache, LruCacheEntries,
+    LruCacheIntoIter, LruCacheKeys, MaybeCompressed, SmallKeyLruCache,
 };
 
 use building_blocks_core::prelude::*;
@@ -16,13 +16,14 @@ pub struct CompressibleChunkStorage<N, Compr>
 where
     Compr: Compression,
 {
+    // TODO: these should be private
     pub cache: SmallKeyLruCache<PointN<N>, Compr::Data, CompressedLocation>,
     pub compression: Compr,
     pub compressed: CompressedChunks<Compr>,
 }
 
 pub type FastCompressibleChunkStorage<N, T, B> =
-    CompressibleChunkStorage<N, FastArrayCompression<N, T, B>>;
+    CompressibleChunkStorage<N, FastArrayCompressionNx1<N, T, B>>;
 
 impl<N, T, B> FastCompressibleChunkStorage<N, T, B>
 where
@@ -31,7 +32,9 @@ where
     B: BytesCompression,
 {
     pub fn with_bytes_compression(bytes_compression: B) -> Self {
-        Self::new(FastArrayCompression::new(bytes_compression))
+        Self::new(FastArrayCompressionNx1::from_bytes_compression(
+            bytes_compression,
+        ))
     }
 }
 
@@ -276,11 +279,11 @@ pub type LruChunkCacheEntries<'a, N, Ch> = LruCacheEntries<'a, PointN<N>, Ch, Co
 pub type LruChunkCacheIntoIter<N, Ch> = LruCacheIntoIter<PointN<N>, Ch, CompressedLocation>;
 
 pub type CompressibleChunkStorageNx1<N, T, B> =
-    CompressibleChunkStorage<N, FastArrayCompression<N, T, B>>;
+    CompressibleChunkStorage<N, FastArrayCompressionNx1<N, T, B>>;
 
 /// An N-dimensional, single-channel `CompressibleChunkMap`.
 pub type CompressibleChunkMapNx1<N, T, B> =
-    CompressibleChunkMap<N, T, ChunkMapBuilderNx1<N, T>, FastArrayCompression<N, T, B>>;
+    CompressibleChunkMap<N, T, ChunkMapBuilderNx1<N, T>, FastArrayCompressionNx1<N, T, B>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {

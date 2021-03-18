@@ -25,6 +25,10 @@ pub trait Compression: Sized {
     fn decompress(compressed: &Self::CompressedData) -> Self::Data;
 }
 
+pub trait FromBytesCompression<B> {
+    fn from_bytes_compression(bytes_compression: B) -> Self;
+}
+
 /// A value compressed with compression algorithm `A`.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Compressed<A>
@@ -80,94 +84,5 @@ impl<A: Compression> MaybeCompressed<A::Data, Compressed<A>> {
             MaybeCompressed::Compressed(_) => panic!("Must be decompressed"),
             MaybeCompressed::Decompressed(d) => d,
         }
-    }
-}
-
-// ████████╗███████╗███████╗████████╗
-// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
-//    ██║   █████╗  ███████╗   ██║
-//    ██║   ██╔══╝  ╚════██║   ██║
-//    ██║   ███████╗███████║   ██║
-//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::{Array3x1, IntoRawBytes};
-
-    use building_blocks_core::prelude::*;
-
-    #[cfg(feature = "lz4")]
-    use crate::Lz4;
-    #[cfg(feature = "snap")]
-    use crate::Snappy;
-
-    #[cfg(feature = "snap")]
-    #[test]
-    fn sphere_array_compression_rate_snappy() {
-        sphere_array_compression_rate(Snappy, 32);
-        sphere_array_compression_rate(Snappy, 64);
-        sphere_array_compression_rate(Snappy, 128);
-    }
-
-    #[cfg(feature = "snap")]
-    #[test]
-    fn homogeneous_array_compression_rate_snappy() {
-        homogeneous_array_compression_rate(Snappy, 32);
-        homogeneous_array_compression_rate(Snappy, 64);
-        homogeneous_array_compression_rate(Snappy, 128);
-    }
-
-    #[cfg(feature = "lz4")]
-    #[test]
-    fn sphere_array_compression_rate_lz4() {
-        sphere_array_compression_rate(Lz4 { level: 10 }, 32);
-        sphere_array_compression_rate(Lz4 { level: 10 }, 64);
-        sphere_array_compression_rate(Lz4 { level: 10 }, 128);
-    }
-
-    #[cfg(feature = "lz4")]
-    #[test]
-    fn homogeneous_array_compression_rate_lz4() {
-        homogeneous_array_compression_rate(Lz4 { level: 10 }, 32);
-        homogeneous_array_compression_rate(Lz4 { level: 10 }, 64);
-        homogeneous_array_compression_rate(Lz4 { level: 10 }, 128);
-    }
-
-    fn homogeneous_array_compression_rate<B: BytesCompression>(compression: B, side_length: i32) {
-        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(side_length));
-        let array = Array3x1::fill_with(extent, |_p| 0u16);
-        array_compression_rate(&array, compression);
-    }
-
-    fn sphere_array_compression_rate<B: BytesCompression>(compression: B, side_length: i32) {
-        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(side_length));
-        let array = Array3x1::fill_with(extent, |p| if p.norm() > 50.0 { 0u16 } else { 1u16 });
-        array_compression_rate(&array, compression);
-    }
-
-    fn array_compression_rate<B: BytesCompression>(array: &Array3x1<u16>, compression: B) {
-        let source_size_bytes = array.extent().num_points() * 2;
-
-        let mut compressed_bytes = Vec::new();
-        compression.compress_bytes(array.into_raw_bytes(), &mut compressed_bytes);
-
-        let compressed_size_bytes = compressed_bytes.len();
-
-        test_print(&format!(
-            "source = {} bytes, compressed = {} bytes; rate = {:.1}%\n",
-            source_size_bytes,
-            compressed_size_bytes,
-            100.0 * (compressed_size_bytes as f32 / source_size_bytes as f32)
-        ));
-    }
-
-    fn test_print(message: &str) {
-        use std::io::Write;
-
-        std::io::stdout()
-            .lock()
-            .write_all(message.as_bytes())
-            .unwrap();
     }
 }

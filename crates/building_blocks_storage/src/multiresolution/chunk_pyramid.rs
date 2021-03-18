@@ -1,7 +1,7 @@
 use crate::{
     prelude::*, ArrayIndexer, ArrayNx1, BytesCompression, ChunkDownsampler, ChunkHashMapNx1,
     ChunkMap, ChunkMapBuilder, ChunkMapBuilderNx1, ChunkMapNx1, CompressibleChunkMapNx1,
-    OctreeChunkIndex, OctreeNode, SmallKeyHashMap, VisitStatus,
+    FastArrayCompressionNx1, OctreeChunkIndex, OctreeNode, SmallKeyHashMap, VisitStatus,
 };
 
 use building_blocks_core::prelude::*;
@@ -184,7 +184,7 @@ where
 
 /// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
 pub type CompressibleChunkPyramid<N, T, B> =
-    ChunkPyramid<N, T, CompressibleChunkStorage<N, FastArrayCompression<N, T, B>>>;
+    ChunkPyramid<N, T, CompressibleChunkStorage<N, FastArrayCompressionNx1<N, T, B>>>;
 
 macro_rules! define_conditional_aliases {
     ($backend:ident) => {
@@ -231,7 +231,11 @@ where
         let mut pyramid = Self::new(
             lod0_chunk_map.builder().clone(),
             num_lods,
-            lod0_chunk_map.storage().compression.bytes_compression,
+            *lod0_chunk_map
+                .storage()
+                .compression
+                .channels_compression()
+                .bytes_compression(),
         );
         *pyramid.level_mut(0) = lod0_chunk_map;
 

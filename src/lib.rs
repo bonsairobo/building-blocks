@@ -6,9 +6,9 @@
 //!
 //! Building Blocks is a voxel library for real-time applications.
 //!
-//! ![Meshing](examples/screenshots/mesh_showcase.gif)
+//! ![Meshing](https://raw.githubusercontent.com/bonsairobo/building-blocks/main/examples/screenshots/mesh_showcase.gif)
 //!
-//! ![LOD Terrain](examples/screenshots/lod_terrain.png)
+//! ![LOD Terrain](https://media.githubusercontent.com/media/bonsairobo/building-blocks/main/examples/screenshots/lod_terrain.png)
 //!
 //! The primary focus is core data structures and algorithms. Features include:
 //!

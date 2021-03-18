@@ -134,7 +134,7 @@ impl_get_via_get_ref_and_clone!(Channel<T, Store>, T, Store);
 // ╚██████╗╚██████╔╝██║ ╚═╝ ██║██║     ██║  ██║███████╗███████║███████║██║╚██████╔╝██║ ╚████║
 //  ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝
 
-#[derive(Clone, Copy, Deserialize, Serialize)]
+#[derive(Clone, Copy)]
 pub struct FastChannelsCompression<By, Chan> {
     bytes_compression: By,
     marker: std::marker::PhantomData<Chan>,

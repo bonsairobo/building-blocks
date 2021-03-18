@@ -70,10 +70,6 @@ where
     type Data = Array<N, C::Data>;
     type CompressedData = FastCompressedArray<N, C>;
 
-    // Compress the map using some `B: BytesCompression`.
-    //
-    // WARNING: For performance, this reinterprets the inner vector as a byte slice without accounting for endianness. This is
-    // not compatible across platforms.
     fn compress(&self, data: &Self::Data) -> Compressed<Self> {
         let compressed_channels = self.channels_compression.compress(data.channels()).take();
 

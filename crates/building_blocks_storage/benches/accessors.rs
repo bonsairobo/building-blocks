@@ -129,7 +129,7 @@ fn compressible_chunk_map_point_indexing(c: &mut Criterion) {
             b.iter_with_setup(
                 || {
                     let storage =
-                        FastCompressibleChunkStorage::with_bytes_compression(Lz4 { level: 10 });
+                        FastCompressibleChunkStorageNx1::with_bytes_compression(Lz4 { level: 10 });
 
                     set_up_chunk_map(storage, size)
                 },

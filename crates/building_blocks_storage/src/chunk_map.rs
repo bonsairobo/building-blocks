@@ -28,8 +28,9 @@
 //! use building_blocks_core::prelude::*;
 //! use building_blocks_storage::prelude::*;
 //!
+//! let chunk_shape = Point3i::fill(16);
 //! let ambient_value = 0;
-//! let builder = ChunkMapBuilder3x1 { chunk_shape: Point3i::fill(16), ambient_value };
+//! let builder = ChunkMapBuilder3x1::new(chunk_shape, ambient_value);
 //! let mut map = builder.build_with_hash_map_storage();
 //!
 //! // Although we only write 3 points, 3 whole dense chunks will be inserted.
@@ -76,7 +77,9 @@
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
 //! #
-//! let builder = ChunkMapBuilder3x1 { chunk_shape: Point3i::fill(16), ambient_value: 0 };
+//! let chunk_shape = Point3i::fill(16);
+//! let ambient_value = 0;
+//! let builder = ChunkMapBuilder3x1::new(chunk_shape, ambient_value);
 //! let mut map = builder.build_with_write_storage(
 //!     FastCompressibleChunkStorage::with_bytes_compression(Lz4 { level: 10 })
 //! );
@@ -109,9 +112,9 @@
 //! ```
 
 use crate::{
-    ArrayCopySrc, ArrayIndexer, ArrayNx1, AsMultiMut, Chunk, ChunkHashMap, ChunkIndexer,
-    ChunkReadStorage, ChunkWriteStorage, ForEach, ForEachMut, ForEachMutPtr, GetMut, GetRef,
-    IterChunkKeys, MultiRef, ReadExtent, SmallKeyHashMap, WriteExtent,
+    Array, ArrayCopySrc, ArrayIndexer, AsMultiMut, Channel, Chunk, ChunkHashMap, ChunkIndexer,
+    ChunkReadStorage, ChunkWriteStorage, FillChannels, ForEach, ForEachMut, ForEachMutPtr, Get,
+    GetMut, GetRef, IterChunkKeys, MultiRef, ReadExtent, SmallKeyHashMap, WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
@@ -202,24 +205,39 @@ pub trait ChunkMapBuilder<N, T>: Sized {
     }
 }
 
-/// A `ChunkMapBuilder` for `ArrayNx1` chunks.
+/// A `ChunkMapBuilder` for `Array` chunks.
 #[derive(Clone, Copy)]
-pub struct ChunkMapBuilderNx1<N, T> {
+pub struct ChunkMapBuilderNxM<N, T, Chan> {
     pub chunk_shape: PointN<N>,
     pub ambient_value: T,
+    marker: std::marker::PhantomData<Chan>,
+}
+
+impl<N, T, Chan> ChunkMapBuilderNxM<N, T, Chan> {
+    pub const fn new(chunk_shape: PointN<N>, ambient_value: T) -> Self {
+        Self {
+            chunk_shape,
+            ambient_value,
+            marker: std::marker::PhantomData,
+        }
+    }
 }
 
 /// A `ChunkMapBuilder` for `Array2x1` chunks.
-pub type ChunkMapBuilder2x1<T> = ChunkMapBuilderNx1<[i32; 2], T>;
+pub type ChunkMapBuilderNx1<N, T> = ChunkMapBuilderNxM<N, T, Channel<T>>;
+/// A `ChunkMapBuilder` for `Array2x1` chunks.
+pub type ChunkMapBuilder2x1<T> = ChunkMapBuilderNxM<[i32; 2], T, Channel<T>>;
 /// A `ChunkMapBuilder` for `Array3x1` chunks.
-pub type ChunkMapBuilder3x1<T> = ChunkMapBuilderNx1<[i32; 3], T>;
+pub type ChunkMapBuilder3x1<T> = ChunkMapBuilderNxM<[i32; 3], T, Channel<T>>;
+pub type ChunkMapBuilder3x2<A, B> = ChunkMapBuilderNxM<[i32; 3], (A, B), (Channel<A>, Channel<B>)>;
 
-impl<N, T> ChunkMapBuilder<N, T> for ChunkMapBuilderNx1<N, T>
+impl<N, T, Chan> ChunkMapBuilder<N, T> for ChunkMapBuilderNxM<N, T, Chan>
 where
     PointN<N>: Clone + IntegerPoint<N>,
     T: Clone,
+    Chan: FillChannels<Data = T>,
 {
-    type Chunk = ArrayNx1<N, T>;
+    type Chunk = Array<N, Chan>;
 
     fn chunk_shape(&self) -> PointN<N> {
         self.chunk_shape.clone()
@@ -230,7 +248,7 @@ where
     }
 
     fn new_ambient(&self, extent: ExtentN<N>) -> Self::Chunk {
-        ArrayNx1::fill(extent, self.ambient_value())
+        Array::fill(extent, self.ambient_value())
     }
 }
 
@@ -492,6 +510,26 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
+impl<'a, N, T, B, Store> Get<PointN<N>> for ChunkMap<N, T, B, Store>
+where
+    PointN<N>: IntegerPoint<N>,
+    T: Clone,
+    B: ChunkMapBuilder<N, T>,
+    <B::Chunk as Chunk>::Array: Get<PointN<N>, Item = T>,
+    Store: ChunkReadStorage<N, B::Chunk>,
+{
+    type Item = T;
+
+    #[inline]
+    fn get(&self, p: PointN<N>) -> Self::Item {
+        let key = self.indexer.chunk_key_containing_point(p);
+
+        self.get_chunk(key)
+            .map(|chunk| chunk.array_ref().get(p))
+            .unwrap_or(self.ambient_value.clone())
+    }
+}
+
 impl<'a, N, T, B, Store, Ref> GetRef<'a, PointN<N>> for ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
@@ -529,8 +567,6 @@ where
         chunk.array_mut().get_mut(p)
     }
 }
-
-impl_get_via_get_ref_and_clone!(ChunkMap<N, T, B, Store>, N, T, B, Store);
 
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║
@@ -624,7 +660,7 @@ where
     }
 }
 
-// If ArrayNx1 supports writing from type Src, then so does ChunkMap.
+// If `Array` supports writing from type Src, then so does ChunkMap.
 impl<N, T, B, Store, Src> WriteExtent<N, Src> for ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
@@ -658,10 +694,8 @@ mod tests {
 
     use building_blocks_core::prelude::*;
 
-    const BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1 {
-        chunk_shape: PointN([16; 3]),
-        ambient_value: 0,
-    };
+    const CHUNK_SHAPE: Point3i = PointN([16; 3]);
+    const BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1::new(CHUNK_SHAPE, 0);
 
     #[test]
     fn write_and_read_points() {
@@ -718,5 +752,29 @@ mod tests {
                 assert_eq!(map.get(p), 0);
             }
         }
+    }
+
+    #[test]
+    fn multichannel_accessors() {
+        let builder = ChunkMapBuilder3x2::new(CHUNK_SHAPE, (0, 'a'));
+        let mut map = builder.build_with_hash_map_storage();
+
+        assert_eq!(map.get(Point3i::fill(1)), (0, 'a'));
+        assert_eq!(map.get_ref(Point3i::fill(1)), (&0, &'a'));
+        assert_eq!(map.get_mut(Point3i::fill(1)), (&mut 0, &mut 'a'));
+
+        let extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(80));
+
+        map.for_each_mut(&extent, |_p, (num, letter)| {
+            *num = 1;
+            *letter = 'b';
+        });
+
+        map.for_each(&extent, |_p, (num, letter)| {
+            assert_eq!(num, 1);
+            assert_eq!(letter, 'b');
+        });
+
+        // map.fill_extent(&extent, (1, 'b'));
     }
 }

@@ -42,10 +42,7 @@ fn sdf_mean_downsample_chunk_pyramid(c: &mut Criterion) {
                         let chunk_shape = Point3i::fill(16);
                         let superchunk_shape = Point3i::fill((1 << (num_lods - 1)) * 16);
 
-                        let builder = ChunkMapBuilder3x1 {
-                            chunk_shape,
-                            ambient_value: Sd8::ONE,
-                        };
+                        let builder = ChunkMapBuilder3x1::new(chunk_shape, Sd8::ONE);
                         let mut lod0_map = builder.build_with_hash_map_storage();
 
                         let map_extent =

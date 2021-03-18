@@ -197,10 +197,7 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
 
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
     // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
-    let builder = ChunkMapBuilder3x1 {
-        chunk_shape: PointN([16; 3]),
-        ambient_value: Sd16::ONE,
-    };
+    let builder = ChunkMapBuilder3x1::new(PointN([16; 3]), Sd16::ONE);
     let mut map = builder.build_with_hash_map_storage();
     copy_extent(&sample_extent, &Func(sdf), &mut map);
 
@@ -247,10 +244,7 @@ fn generate_chunk_meshes_from_height_map(
 
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
     // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
-    let builder = ChunkMapBuilder2x1 {
-        chunk_shape: PointN([16; 2]),
-        ambient_value: 0.0,
-    };
+    let builder = ChunkMapBuilder2x1::new(PointN([16; 2]), 0.0);
     let mut map = builder.build_with_hash_map_storage();
     copy_extent(&sample_extent, &Func(height_map), &mut map);
 
@@ -294,10 +288,7 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
     // Chunk up the voxels just to show that meshing across chunks is consistent.
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
     // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
-    let builder = ChunkMapBuilder3x1 {
-        chunk_shape: PointN([16; 3]),
-        ambient_value: CubeVoxel::default(),
-    };
+    let builder = ChunkMapBuilder3x1::new(PointN([16; 3]), CubeVoxel::default());
     let mut map = builder.build_with_hash_map_storage();
     copy_extent(voxels.extent(), &voxels, &mut map);
 

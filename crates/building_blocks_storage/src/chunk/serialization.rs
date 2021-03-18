@@ -151,8 +151,5 @@ mod test {
         map.for_each(&filled_extent, |_p, val| assert_eq!(val, 1));
     }
 
-    const BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1 {
-        chunk_shape: PointN([16; 3]),
-        ambient_value: 0,
-    };
+    const BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1::new(PointN([16; 3]), 0);
 }

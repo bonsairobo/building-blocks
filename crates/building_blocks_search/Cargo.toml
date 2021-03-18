@@ -15,7 +15,6 @@ default = ["ncollide"]
 ncollide = ["nalgebra", "ncollide3d", "building_blocks_core/nalgebra"]
 
 [dependencies]
-fnv = "1.0"
 indexmap = "1.5"
 itertools = "0.9"
 pathfinding = "2.1"

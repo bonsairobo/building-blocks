@@ -15,7 +15,7 @@
 //!
 //! `ChunkMap<N, T, Meta, Store>` depends on a backing chunk storage `Store`, which can implement some of `ChunkReadStorage` or
 //! `ChunkWriteStorage`. A storage can be as simple as a `HashMap`, which provides good performance for both iteration and
-//! random access. It could also be something more memory efficient like `CompressibleChunkStorage` or
+//! random access. It could also be something more memory efficient like `FastCompressibleChunkStorage` or
 //! `CompressibleChunkStorageReader`, which perform nearly as well but involve some extra management of the cache.
 //!
 //! # Serialization
@@ -81,7 +81,7 @@
 //! let ambient_value = 0;
 //! let builder = ChunkMapBuilder3x1::new(chunk_shape, ambient_value);
 //! let mut map = builder.build_with_write_storage(
-//!     FastCompressibleChunkStorage::with_bytes_compression(Lz4 { level: 10 })
+//!     FastCompressibleChunkStorageNx1::with_bytes_compression(Lz4 { level: 10 })
 //! );
 //!
 //! // You can write voxels the same as any other `ChunkMap`. As chunks are created, they will be placed in an LRU cache.

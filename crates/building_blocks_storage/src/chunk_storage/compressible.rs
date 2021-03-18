@@ -1,9 +1,9 @@
 use crate::{
     CacheEntry, ChunkMap, ChunkMapBuilder, ChunkMapBuilderNx1, ChunkWriteStorage, Compressed,
     CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression, FastArrayCompression,
-    FastArrayCompressionNx1, FastArrayCompressionNx2, FastChannelsCompression,
-    FromBytesCompression, IterChunkKeys, LocalChunkCache, LruCacheEntries, LruCacheIntoIter,
-    LruCacheKeys, MaybeCompressed, SmallKeyLruCache,
+    FastArrayCompressionNx1, FastChannelsCompression, FromBytesCompression, IterChunkKeys,
+    LocalChunkCache, LruCacheEntries, LruCacheIntoIter, LruCacheKeys, MaybeCompressed,
+    SmallKeyLruCache,
 };
 
 use building_blocks_core::prelude::*;
@@ -26,10 +26,25 @@ where
 pub type FastCompressibleChunkStorage<N, By, Chan> =
     CompressibleChunkStorage<N, FastArrayCompression<N, FastChannelsCompression<By, Chan>>>;
 
-pub type FastCompressibleChunkStorageNx1<N, T, B> =
-    CompressibleChunkStorage<N, FastArrayCompressionNx1<N, T, B>>;
-pub type FastCompressibleChunkStorageNx2<N, By, A, B> =
-    CompressibleChunkStorage<N, FastArrayCompressionNx2<N, By, A, B>>;
+pub mod multichannel_aliases {
+    use super::*;
+    use crate::array::compression::multichannel_aliases::*;
+
+    pub type FastCompressibleChunkStorageNx1<N, By, A> =
+        CompressibleChunkStorage<N, FastArrayCompressionNx1<N, By, A>>;
+    pub type FastCompressibleChunkStorageNx2<N, By, A, B> =
+        CompressibleChunkStorage<N, FastArrayCompressionNx2<N, By, A, B>>;
+    pub type FastCompressibleChunkStorageNx3<N, By, A, B, C> =
+        CompressibleChunkStorage<N, FastArrayCompressionNx3<N, By, A, B, C>>;
+    pub type FastCompressibleChunkStorageNx4<N, By, A, B, C, D> =
+        CompressibleChunkStorage<N, FastArrayCompressionNx4<N, By, A, B, C, D>>;
+    pub type FastCompressibleChunkStorageNx5<N, By, A, B, C, D, E> =
+        CompressibleChunkStorage<N, FastArrayCompressionNx5<N, By, A, B, C, D, E>>;
+    pub type FastCompressibleChunkStorageNx6<N, By, A, B, C, D, E, F> =
+        CompressibleChunkStorage<N, FastArrayCompressionNx6<N, By, A, B, C, D, E, F>>;
+}
+
+pub use multichannel_aliases::*;
 
 impl<N, By, Chan> FastCompressibleChunkStorage<N, By, Chan>
 where

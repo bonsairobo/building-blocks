@@ -112,7 +112,7 @@ mod test {
 
         let compression = Lz4 { level: 10 };
         do_serialize_and_deserialize_round_trip_test(
-            FastCompressibleChunkStorage::with_bytes_compression(compression),
+            FastCompressibleChunkStorageNx1::with_bytes_compression(compression),
             compression,
         );
     }

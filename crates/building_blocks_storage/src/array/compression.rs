@@ -1,7 +1,4 @@
-use crate::{
-    Array, ArrayNx1, BincodeCompression, Compressed, Compression, FastChannelsCompression1,
-    FastChannelsCompression2, FromBytesCompression,
-};
+use crate::{Array, ArrayNx1, BincodeCompression, Compressed, Compression, FromBytesCompression};
 
 use building_blocks_core::prelude::*;
 
@@ -87,9 +84,25 @@ where
     }
 }
 
-pub type FastArrayCompressionNx1<N, T, B> = FastArrayCompression<N, FastChannelsCompression1<B, T>>;
-pub type FastArrayCompressionNx2<N, By, A, B> =
-    FastArrayCompression<N, FastChannelsCompression2<By, A, B>>;
+pub mod multichannel_aliases {
+    use super::*;
+    use crate::array::channel::multichannel_aliases::*;
+
+    pub type FastArrayCompressionNx1<N, T, B> =
+        FastArrayCompression<N, FastChannelsCompression1<B, T>>;
+    pub type FastArrayCompressionNx2<N, By, A, B> =
+        FastArrayCompression<N, FastChannelsCompression2<By, A, B>>;
+    pub type FastArrayCompressionNx3<N, By, A, B, C> =
+        FastArrayCompression<N, FastChannelsCompression3<By, A, B, C>>;
+    pub type FastArrayCompressionNx4<N, By, A, B, C, D> =
+        FastArrayCompression<N, FastChannelsCompression4<By, A, B, C, D>>;
+    pub type FastArrayCompressionNx5<N, By, A, B, C, D, E> =
+        FastArrayCompression<N, FastChannelsCompression5<By, A, B, C, D, E>>;
+    pub type FastArrayCompressionNx6<N, By, A, B, C, D, E, F> =
+        FastArrayCompression<N, FastChannelsCompression6<By, A, B, C, D, E, F>>;
+}
+
+pub use multichannel_aliases::*;
 
 pub type BincodeArrayCompression<N, T, B> = BincodeCompression<ArrayNx1<N, T>, B>;
 pub type BincodeCompressedArray<N, T, B> = Compressed<BincodeArrayCompression<N, T, B>>;

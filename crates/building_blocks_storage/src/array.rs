@@ -138,11 +138,12 @@
 //! ```
 
 mod channel;
-mod compression;
 mod coords;
 #[macro_use]
 mod for_each;
 mod indexer;
+
+pub mod compression;
 
 #[cfg(feature = "dot_vox")]
 mod dot_vox_conversions;

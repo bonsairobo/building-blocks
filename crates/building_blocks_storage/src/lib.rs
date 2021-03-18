@@ -90,6 +90,7 @@ pub mod prelude {
     pub use super::access_traits::*;
     pub use super::array::multichannel_aliases::*;
     pub use super::chunk_map::multichannel_aliases::*;
+    pub use super::chunk_storage::compressible::multichannel_aliases::*;
     pub use super::chunk_storage::hash_map::multichannel_aliases::*;
 
     #[cfg(feature = "lz4")]

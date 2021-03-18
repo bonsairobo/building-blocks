@@ -1,7 +1,23 @@
 use core::mem::MaybeUninit;
 
-/// An implementation detail of multichannel accessors. Sometimes we need to be able to transmute lifetimes to satisfy the
-/// borrow checker, so we just get raw pointers and then convert them to borrows.
+/// Used for variadic conversion from `&(A, B, ...)` to `(&A, &B, ...)`.
+#[doc(hidden)]
+pub trait MultiRef<'a> {
+    type Data;
+
+    fn from_data_ref(data_ref: &'a Self::Data) -> Self;
+}
+
+impl<'a, T> MultiRef<'a> for &'a T {
+    type Data = T;
+
+    #[inline]
+    fn from_data_ref(data_ref: &'a Self::Data) -> Self {
+        data_ref
+    }
+}
+
+/// Used for variadic conversion from `(*mut A, *mut B, ...)` to `(&'a mut A, &'a mut B, ...)`.
 #[doc(hidden)]
 pub trait AsMultiMut<'a> {
     type MultiMut;
@@ -21,7 +37,7 @@ where
     }
 }
 
-/// For converting various pointer types into something writeable by multichannel arrays.
+/// Used for variadic conversion from `(*mut MaybeUninit<A>, *mut MaybeUninit<B>, ...)` to `(*mut A, *mut B)`.
 #[doc(hidden)]
 pub trait AsMultiMutPtr {
     type Data;
@@ -40,7 +56,7 @@ impl<T> AsMultiMutPtr for *mut MaybeUninit<T> {
     }
 }
 
-/// An abstraction over multichannel pointers, i.e. tuples of pointers.
+/// Used for variadic copying of source data `(A, B, ...)` to destination pointers `(*mut A, *mut B, ...)`.
 #[doc(hidden)]
 pub trait MultiMutPtr {
     type Data;
@@ -59,6 +75,20 @@ impl<T> MultiMutPtr for *mut T {
 
 macro_rules! impl_tuple {
     ( $( $var1:ident, $var2:ident : $t:ident ),+ ) => {
+        impl<'a, $($t),+> MultiRef<'a> for ($($t,)+)
+        where
+            $($t: 'a + MultiRef<'a>,)+
+        {
+            type Data = ($($t::Data,)+);
+
+            #[inline]
+            fn from_data_ref(data_ref: &'a Self::Data) -> Self {
+                let ($($var1,)+) = data_ref;
+
+                ($($t::from_data_ref($var1),)+)
+            }
+        }
+
         impl<'a, $($t),+> AsMultiMut<'a> for ($(*mut $t,)+)
         where
             $($t: 'a,)+

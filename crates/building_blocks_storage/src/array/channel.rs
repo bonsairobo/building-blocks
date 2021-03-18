@@ -135,26 +135,45 @@ impl_get_via_get_ref_and_clone!(Channel<T, Store>, T, Store);
 //  ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝
 
 #[derive(Clone, Copy, Deserialize, Serialize)]
-pub struct FastChannelsCompression<Chan, B> {
-    bytes_compression: B,
+pub struct FastChannelsCompression<By, Chan> {
+    bytes_compression: By,
     marker: std::marker::PhantomData<Chan>,
 }
 
-impl<Chan, B> FastChannelsCompression<Chan, B> {
-    pub fn new(bytes_compression: B) -> Self {
+pub mod multichannel_aliases {
+    use super::*;
+
+    macro_rules! multichannel_compression_type_alias {
+        ($name:ident, $( $t:ident ),+) => {
+            pub type $name<By, $($t,)+> = FastChannelsCompression<By, ($(Channel<$t>,)+)>;
+        };
+    }
+
+    pub type FastChannelsCompression1<By, A> = FastChannelsCompression<By, Channel<A>>;
+    multichannel_compression_type_alias!(FastChannelsCompression2, A, B);
+    multichannel_compression_type_alias!(FastChannelsCompression3, A, B, C);
+    multichannel_compression_type_alias!(FastChannelsCompression4, A, B, C, D);
+    multichannel_compression_type_alias!(FastChannelsCompression5, A, B, C, D, E);
+    multichannel_compression_type_alias!(FastChannelsCompression6, A, B, C, D, E, F);
+}
+
+pub use multichannel_aliases::*;
+
+impl<By, Chan> FastChannelsCompression<By, Chan> {
+    pub fn new(bytes_compression: By) -> Self {
         Self {
             bytes_compression,
             marker: Default::default(),
         }
     }
 
-    pub fn bytes_compression(&self) -> &B {
+    pub fn bytes_compression(&self) -> &By {
         &self.bytes_compression
     }
 }
 
-impl<Chan, B> FromBytesCompression<B> for FastChannelsCompression<Chan, B> {
-    fn from_bytes_compression(bytes_compression: B) -> Self {
+impl<By, Chan> FromBytesCompression<By> for FastChannelsCompression<By, Chan> {
+    fn from_bytes_compression(bytes_compression: By) -> Self {
         Self::new(bytes_compression)
     }
 }
@@ -172,9 +191,9 @@ impl<T> FastCompressedChannel<T> {
     }
 }
 
-impl<T, B> Compression for FastChannelsCompression<Channel<T>, B>
+impl<By, T> Compression for FastChannelsCompression<By, Channel<T>>
 where
-    B: BytesCompression,
+    By: BytesCompression,
     Channel<T>: for<'r> AsRawBytes<'r>,
 {
     type Data = Channel<T>;
@@ -208,7 +227,7 @@ where
                 num_values * core::mem::size_of::<T>(),
             )
         };
-        B::decompress_bytes(&compressed.compressed_bytes, &mut decompressed_bytes);
+        By::decompress_bytes(&compressed.compressed_bytes, &mut decompressed_bytes);
 
         Channel::new(decompressed_values)
     }
@@ -337,6 +356,30 @@ macro_rules! impl_channels_for_tuple {
                 ($($t::assume_init($var1),)+)
             }
         }
+
+        impl<$($t),+, By> Compression for FastChannelsCompression<By, ($(Channel<$t>,)+)>
+        where
+            $( FastChannelsCompression<By, Channel<$t>>: Compression<Data = Channel<$t>>, )+
+            By: Clone,
+        {
+            type Data = ($(Channel<$t>,)+);
+            type CompressedData = ($(Compressed<FastChannelsCompression<By, Channel<$t>>>,)+);
+
+            fn compress(&self, data: &Self::Data) -> Compressed<Self> {
+                let ($($var1,)+) = data;
+
+                // Have to make compression objects for each channel.
+                let ($($var2,)+) = ($(FastChannelsCompression::<By, Channel<$t>>::new(self.bytes_compression.clone()),)+);
+
+                Compressed::new(($($var2.compress($var1),)+))
+            }
+
+            fn decompress(compressed: &Self::CompressedData) -> Self::Data {
+                let ($($var1,)+) = compressed;
+
+                ( $($var1.decompress(),)+ )
+            }
+        }
     }
 }
 
@@ -374,5 +417,20 @@ mod test {
         assert_eq!(owned.get(0), (0, 0));
         assert_eq!(owned.get_ref(0), (&0, &0));
         assert_eq!(owned.get_mut(0), (&mut 0, &mut 0));
+    }
+
+    #[cfg(feature = "lz4")]
+    #[test]
+    fn multichannel_compression() {
+        use crate::Lz4;
+
+        let channels = (Channel::fill(0, 10), Channel::fill('a', 10));
+
+        let compression = FastChannelsCompression2::from_bytes_compression(Lz4 { level: 10 });
+
+        let compressed_channels = compression.compress(&channels);
+        let decompressed_channels = compressed_channels.decompress();
+
+        assert_eq!(channels, decompressed_channels);
     }
 }

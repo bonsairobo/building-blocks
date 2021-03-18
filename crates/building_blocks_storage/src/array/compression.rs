@@ -1,5 +1,5 @@
 use crate::{
-    Array, ArrayNx1, BincodeCompression, Channel, Compressed, Compression, FastChannelsCompression,
+    Array, ArrayNx1, BincodeCompression, Compressed, Compression, FastChannelsCompression1,
     FromBytesCompression,
 };
 
@@ -87,8 +87,7 @@ where
     }
 }
 
-pub type FastArrayCompressionNx1<N, T, B> =
-    FastArrayCompression<N, FastChannelsCompression<Channel<T>, B>>;
+pub type FastArrayCompressionNx1<N, T, B> = FastArrayCompression<N, FastChannelsCompression1<B, T>>;
 
 pub type BincodeArrayCompression<N, T, B> = BincodeCompression<ArrayNx1<N, T>, B>;
 pub type BincodeCompressedArray<N, T, B> = Compressed<BincodeArrayCompression<N, T, B>>;

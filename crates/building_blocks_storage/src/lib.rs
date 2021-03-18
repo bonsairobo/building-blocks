@@ -78,9 +78,8 @@ pub type SmallKeyBuildHasher = ahash::RandomState;
 
 pub mod prelude {
     pub use super::{
-        copy_extent, Chunk, ChunkHashMap2x1, ChunkHashMap3x1, ChunkHashMapPyramid2,
-        ChunkHashMapPyramid3, ChunkIndexer, ChunkMap2x1, ChunkMap3x1, ChunkMapBuilder,
-        ChunkMapBuilder2x1, ChunkMapBuilder3x1, ChunkReadStorage, ChunkWriteStorage, Compressed,
+        copy_extent, Chunk, ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkIndexer, ChunkMap2x1,
+        ChunkMap3x1, ChunkMapBuilder, ChunkReadStorage, ChunkWriteStorage, Compressed,
         CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
         CompressibleChunkStorageReader, Compression, FastArrayCompression,
         FastCompressibleChunkStorage, Func, IndexedArray, IsEmpty, IterChunkKeys, Local,
@@ -90,6 +89,8 @@ pub mod prelude {
 
     pub use super::access_traits::*;
     pub use super::array::multichannel_aliases::*;
+    pub use super::chunk_map::multichannel_aliases::*;
+    pub use super::chunk_storage::hash_map::multichannel_aliases::*;
 
     #[cfg(feature = "lz4")]
     pub use super::Lz4;

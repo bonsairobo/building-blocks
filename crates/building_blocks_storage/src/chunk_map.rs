@@ -229,14 +229,14 @@ macro_rules! builder_type_alias {
     };
 }
 
-pub mod builder_aliases {
+pub mod multichannel_aliases {
     use super::*;
 
     /// A `ChunkMapBuilder` for `ArrayNx1` chunks.
-    pub type ChunkMapBuilderNx1<N, T> = ChunkMapBuilderNxM<N, T, Channel<T>>;
+    pub type ChunkMapBuilderNx1<N, A> = ChunkMapBuilderNxM<N, A, Channel<A>>;
 
     /// A `ChunkMapBuilder` for `Array2x1` chunks.
-    pub type ChunkMapBuilder2x1<T> = ChunkMapBuilderNxM<[i32; 2], T, Channel<T>>;
+    pub type ChunkMapBuilder2x1<A> = ChunkMapBuilderNxM<[i32; 2], A, Channel<A>>;
     builder_type_alias!(ChunkMapBuilder2x2, [i32; 2], A, B);
     builder_type_alias!(ChunkMapBuilder2x3, [i32; 2], A, B, C);
     builder_type_alias!(ChunkMapBuilder2x4, [i32; 2], A, B, C, D);
@@ -244,7 +244,7 @@ pub mod builder_aliases {
     builder_type_alias!(ChunkMapBuilder2x6, [i32; 2], A, B, C, D, E, F);
 
     /// A `ChunkMapBuilder` for `Array3x1` chunks.
-    pub type ChunkMapBuilder3x1<T> = ChunkMapBuilderNxM<[i32; 3], T, Channel<T>>;
+    pub type ChunkMapBuilder3x1<A> = ChunkMapBuilderNxM<[i32; 3], A, Channel<A>>;
     builder_type_alias!(ChunkMapBuilder3x2, [i32; 3], A, B);
     builder_type_alias!(ChunkMapBuilder3x3, [i32; 3], A, B, C);
     builder_type_alias!(ChunkMapBuilder3x4, [i32; 3], A, B, C, D);
@@ -252,7 +252,7 @@ pub mod builder_aliases {
     builder_type_alias!(ChunkMapBuilder3x6, [i32; 3], A, B, C, D, E, F);
 }
 
-pub use builder_aliases::*;
+pub use multichannel_aliases::*;
 
 impl<N, T, Chan> ChunkMapBuilder<N, T> for ChunkMapBuilderNxM<N, T, Chan>
 where

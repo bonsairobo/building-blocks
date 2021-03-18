@@ -1,6 +1,7 @@
 mod compressible;
 mod compressible_reader;
-mod hash_map;
+
+pub mod hash_map;
 
 pub use compressible::*;
 pub use compressible_reader::*;

@@ -114,7 +114,7 @@
 use crate::{
     Array, ArrayCopySrc, ArrayIndexer, AsMultiMut, Channel, Chunk, ChunkHashMap, ChunkIndexer,
     ChunkReadStorage, ChunkWriteStorage, FillChannels, ForEach, ForEachMut, ForEachMutPtr, Get,
-    GetMut, GetRef, IterChunkKeys, MultiRef, ReadExtent, SmallKeyHashMap, WriteExtent,
+    GetMut, GetRef, IterChunkKeys, MultiMutPtr, MultiRef, ReadExtent, SmallKeyHashMap, WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
@@ -439,15 +439,21 @@ where
             }
         }
     }
+}
 
+impl<N, T, B, Store, MutPtr> ChunkMap<N, T, B, Store>
+where
+    Self: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
+    T: Clone,
+    MutPtr: MultiMutPtr<Data = T>,
+{
     /// Fill all of `extent` with the same `value`.
     #[inline]
-    pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: T)
-    where
-        for<'r> Self: ForEachMut<'r, N, PointN<N>, Item = &'r mut T>,
-        T: Clone,
-    {
-        self.for_each_mut(extent, |_p, v| *v = value.clone());
+    pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: T) {
+        // PERF: write whole chunks using a fast path
+        unsafe {
+            self.for_each_mut_ptr(extent, |_p, ptr| ptr.write(value.clone()));
+        }
     }
 }
 
@@ -598,23 +604,39 @@ where
     }
 }
 
-impl<'a, N, T, B, Store, Mut, MutPtr> ForEachMut<'a, N, PointN<N>> for ChunkMap<N, T, B, Store>
+impl<N, T, B, Store, MutPtr> ForEachMutPtr<N, PointN<N>> for ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
     B: ChunkMapBuilder<N, T>,
     <B::Chunk as Chunk>::Array: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
     Store: ChunkWriteStorage<N, B::Chunk>,
+{
+    type Item = MutPtr;
+
+    #[inline]
+    unsafe fn for_each_mut_ptr(
+        &mut self,
+        extent: &ExtentN<N>,
+        mut f: impl FnMut(PointN<N>, Self::Item),
+    ) {
+        self.visit_mut_chunks(extent, |chunk| {
+            chunk
+                .array_mut()
+                .for_each_mut_ptr(extent, |p, ptr| f(p, ptr))
+        });
+    }
+}
+
+impl<'a, N, T, B, Store, Mut, MutPtr> ForEachMut<'a, N, PointN<N>> for ChunkMap<N, T, B, Store>
+where
+    Self: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
     MutPtr: AsMultiMut<'a, MultiMut = Mut>,
 {
     type Item = Mut;
 
     #[inline]
     fn for_each_mut(&'a mut self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Item)) {
-        self.visit_mut_chunks(extent, |chunk| unsafe {
-            chunk
-                .array_mut()
-                .for_each_mut_ptr(extent, |p, ptr| f(p, ptr.as_multi_mut()))
-        });
+        unsafe { self.for_each_mut_ptr(extent, |p, ptr| f(p, ptr.as_multi_mut())) }
     }
 }
 
@@ -775,6 +797,6 @@ mod tests {
             assert_eq!(letter, 'b');
         });
 
-        // map.fill_extent(&extent, (1, 'b'));
+        map.fill_extent(&extent, (1, 'b'));
     }
 }

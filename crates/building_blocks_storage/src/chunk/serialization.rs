@@ -123,7 +123,7 @@ mod test {
         use crate::Snappy;
 
         do_serialize_and_deserialize_round_trip_test(
-            FastCompressibleChunkStorage::with_bytes_compression(Snappy),
+            FastCompressibleChunkStorageNx1::with_bytes_compression(Snappy),
             Snappy,
         );
     }

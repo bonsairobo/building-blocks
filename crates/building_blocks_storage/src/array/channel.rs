@@ -134,6 +134,7 @@ impl_get_via_get_ref_and_clone!(Channel<T, Store>, T, Store);
 // ╚██████╗╚██████╔╝██║ ╚═╝ ██║██║     ██║  ██║███████╗███████║███████║██║╚██████╔╝██║ ╚████║
 //  ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝
 
+#[derive(Clone, Copy, Deserialize, Serialize)]
 pub struct FastChannelsCompression<Chan, B> {
     bytes_compression: B,
     marker: std::marker::PhantomData<Chan>,
@@ -273,7 +274,7 @@ impl<T> UninitChannels for Channel<MaybeUninit<T>> {
     /// Transmutes the channel values from `MaybeUninit<T>` to `T` after manual initialization. The implementation just
     /// reconstructs the internal `Vec` after transmuting the data pointer, so the overhead is minimal.
     /// # Safety
-    /// All elements of the map must be initialized.
+    /// All elements of the channel must be initialized.
     unsafe fn assume_init(self) -> Self::InitSelf {
         let transmuted_values = {
             // Ensure the original vector is not dropped.

@@ -109,9 +109,9 @@
 //! ```
 
 use crate::{
-    ArrayCopySrc, ArrayIndexer, ArrayNx1, Chunk, ChunkHashMap, ChunkIndexer, ChunkReadStorage,
-    ChunkWriteStorage, ForEach, ForEachMut, ForEachMutPtr, GetMut, GetRef, IterChunkKeys, MultiRef,
-    ReadExtent, SmallKeyHashMap, WriteExtent,
+    ArrayCopySrc, ArrayIndexer, ArrayNx1, AsMultiMut, Chunk, ChunkHashMap, ChunkIndexer,
+    ChunkReadStorage, ChunkWriteStorage, ForEach, ForEachMut, ForEachMutPtr, GetMut, GetRef,
+    IterChunkKeys, MultiRef, ReadExtent, SmallKeyHashMap, WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
@@ -562,23 +562,22 @@ where
     }
 }
 
-impl<'a, N, T, B, Store> ForEachMut<'a, N, PointN<N>> for ChunkMap<N, T, B, Store>
+impl<'a, N, T, B, Store, Mut, MutPtr> ForEachMut<'a, N, PointN<N>> for ChunkMap<N, T, B, Store>
 where
-    N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     B: ChunkMapBuilder<N, T>,
-    <B::Chunk as Chunk>::Array: ForEachMutPtr<N, PointN<N>, Item = *mut T>,
-    T: 'a,
+    <B::Chunk as Chunk>::Array: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
     Store: ChunkWriteStorage<N, B::Chunk>,
+    MutPtr: AsMultiMut<'a, MultiMut = Mut>,
 {
-    type Item = &'a mut T;
+    type Item = Mut;
 
     #[inline]
     fn for_each_mut(&'a mut self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Item)) {
         self.visit_mut_chunks(extent, |chunk| unsafe {
             chunk
                 .array_mut()
-                .for_each_mut_ptr(extent, |p, ptr| f(p, &mut *ptr))
+                .for_each_mut_ptr(extent, |p, ptr| f(p, ptr.as_multi_mut()))
         });
     }
 }

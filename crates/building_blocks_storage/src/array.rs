@@ -109,17 +109,13 @@
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::{prelude::*};
-//! # let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+//! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
 //! #
 //! #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 //! struct VoxelId(u8);
 //!
-//! // Each channel is just a flat array (`Vec` by default).
-//! let ch1 = Channel::fill(VoxelId(0), extent.num_points());
-//! let ch2 = Channel::fill(1.0, extent.num_points());
-//! // This means 3D with 2 channels. The channels must be provided as a tuple.
-//! // Type annotation is only here for educational purpose.
-//! let mut array: Array3x2<VoxelId, f32> = Array3x2::new(extent, (ch1, ch2));
+//! // This means 3D with 2 channels. Although we pass in a tuple, the two data types are internally stored in separate arrays.
+//! let mut array = Array3x2::fill(extent, (VoxelId(0), 1.0));
 //!
 //! // This array supports all of the usual access traits and maps the channels
 //! // to tuples as you would expect.
@@ -160,14 +156,13 @@ pub use for_each::*;
 pub use indexer::*;
 
 use crate::{
-    AsMutRef, ChunkCopySrc, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetMutPtr, GetRef,
-    IntoRawBytes, ReadExtent, TransformMap, WriteExtent, WritePtr,
+    AsMutRef, AsWritePtr, ChunkCopySrc, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetMutPtr,
+    GetRef, IntoRawBytes, ReadExtent, TransformMap, WriteExtent, WritePtr,
 };
 
 use building_blocks_core::prelude::*;
 
 use core::iter::{once, Once};
-use core::mem::MaybeUninit;
 use core::ops::{Add, Deref};
 use either::Either;
 use serde::{Deserialize, Serialize};
@@ -287,7 +282,7 @@ impl<N, Chan> Array<N, Chan>
 where
     Self: ForEachMutPtr<N, (), Item = Chan::Ptr>,
     PointN<N>: IntegerPoint<N>,
-    Chan: Channels,
+    Chan: FillChannels,
 {
     /// Fill the entire `extent` with the same `value`.
     pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: Chan::Data)
@@ -306,7 +301,7 @@ where
 
 impl<N, Chan> Array<N, Chan>
 where
-    Chan: Channels,
+    Chan: FillChannels,
 {
     /// Set all points to the same value.
     #[inline]
@@ -321,7 +316,7 @@ where
 impl<N, Chan> Array<N, Chan>
 where
     PointN<N>: IntegerPoint<N>,
-    Chan: Channels,
+    Chan: FillChannels,
 {
     /// Creates a map that fills the entire `extent` with the same `value`.
     pub fn fill(extent: ExtentN<N>, value: Chan::Data) -> Self
@@ -332,23 +327,51 @@ where
     }
 }
 
-impl<N, T> ArrayNx1<N, T, Vec<T>>
+impl<N, Chan, UninitChan> Array<N, Chan>
 where
     PointN<N>: IntegerPoint<N>,
+    Chan: Channels<UninitSelf = UninitChan>,
+    UninitChan: UninitChannels<InitSelf = Chan>,
+    UninitChan::Ptr: AsWritePtr<Data = Chan::Data>,
 {
     /// Create a new array for `extent` where each point's value is determined by the `filler` function.
-    pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> T) -> Self
+    pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> Chan::Data) -> Self
     where
-        ArrayNx1<N, MaybeUninit<T>>:
-            for<'r> ForEachMut<'r, N, PointN<N>, Item = &'r mut MaybeUninit<T>>,
+        Array<N, UninitChan>: ForEachMutPtr<N, PointN<N>, Item = UninitChan::Ptr>,
     {
-        let mut array = unsafe { ArrayNx1::maybe_uninit(extent) };
+        unsafe {
+            let mut array = Array::<_, UninitChan>::maybe_uninit(extent);
 
-        array.for_each_mut(&extent, |p, val| unsafe {
-            val.as_mut_ptr().write(filler(p));
-        });
+            array.for_each_mut_ptr(&extent, |p, val| {
+                val.as_mut_ptr().write_ptr(filler(p));
+            });
 
-        unsafe { array.assume_init() }
+            Array::assume_init(array)
+        }
+    }
+}
+
+impl<N, Chan> Array<N, Chan>
+where
+    PointN<N>: IntegerPoint<N>,
+    Chan: UninitChannels,
+{
+    /// Creates an uninitialized map, mainly for performance.
+    /// # Safety
+    /// Call `assume_init` after manually initializing all of the values.
+    pub unsafe fn maybe_uninit(extent: ExtentN<N>) -> Array<N, Chan> {
+        Array::new(extent, Chan::maybe_uninit(extent.num_points()))
+    }
+
+    /// Transmutes the map values from `MaybeUninit<T>` to `T` after manual initialization. The implementation just reconstructs
+    /// the internal `Vec` after transmuting the data pointer, so the overhead is minimal.
+    /// # Safety
+    /// All elements of the map must be initialized.
+    pub unsafe fn assume_init(self) -> Array<N, Chan::InitSelf> {
+        let (extent, channel) = self.into_parts();
+        let channel = Chan::assume_init(channel);
+
+        Array::new(extent, channel)
     }
 }
 
@@ -373,29 +396,6 @@ where
 
     fn into_raw_bytes(&'a self) -> Self::Output {
         self.channels.store().into_raw_bytes()
-    }
-}
-
-impl<N, T> ArrayNx1<N, MaybeUninit<T>>
-where
-    PointN<N>: IntegerPoint<N>,
-{
-    /// Creates an uninitialized map, mainly for performance.
-    /// # Safety
-    /// Call `assume_init` after manually initializing all of the values.
-    pub unsafe fn maybe_uninit(extent: ExtentN<N>) -> Self {
-        Self::new(extent, Channel::maybe_uninit(extent.num_points()))
-    }
-
-    /// Transmutes the map values from `MaybeUninit<T>` to `T` after manual initialization. The implementation just reconstructs
-    /// the internal `Vec` after transmuting the data pointer, so the overhead is minimal.
-    /// # Safety
-    /// All elements of the map must be initialized.
-    pub unsafe fn assume_init(self) -> ArrayNx1<N, T> {
-        let (extent, channel) = self.into_parts();
-        let channel = channel.assume_init();
-
-        ArrayNx1::new(extent, channel)
     }
 }
 
@@ -728,7 +728,7 @@ impl<N, Chan, Ch> WriteExtent<N, ChunkCopySrc<N, Chan::Data, Ch>> for Array<N, C
 where
     Self: ForEachMutPtr<N, (), Item = Chan::Ptr> + WriteExtent<N, ArrayCopySrc<Ch>>,
     PointN<N>: IntegerPoint<N>,
-    Chan: Channels,
+    Chan: FillChannels,
     Chan::Data: Clone,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<N, Chan::Data, Ch>) {
@@ -763,12 +763,11 @@ where
 mod tests {
     use super::*;
     use crate::{copy_extent, Array2x1, Array3x1, Get};
-
-    use building_blocks_core::{Extent2, Extent3};
+    use core::mem::MaybeUninit;
 
     #[test]
     fn fill_and_get_2d() {
-        let extent = Extent2::from_min_and_shape(PointN([1, 1]), PointN([10, 10]));
+        let extent = Extent2i::from_min_and_shape(PointN([1, 1]), PointN([10, 10]));
         let mut array = Array2x1::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 100);
         *array.get_mut(Stride(0)) = 1;
@@ -785,7 +784,7 @@ mod tests {
 
     #[test]
     fn fill_and_get_3d() {
-        let extent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
+        let extent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
         let mut array = Array3x1::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 1000);
         *array.get_mut(Stride(0)) = 1;
@@ -802,7 +801,7 @@ mod tests {
 
     #[test]
     fn fill_and_for_each_2d() {
-        let extent = Extent2::from_min_and_shape(Point2i::fill(1), Point2i::fill(10));
+        let extent = Extent2i::from_min_and_shape(Point2i::fill(1), Point2i::fill(10));
         let mut array = Array2x1::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 100);
         *array.get_mut(Stride(0)) = 1;
@@ -818,7 +817,7 @@ mod tests {
 
     #[test]
     fn fill_and_for_each_3d() {
-        let extent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
+        let extent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
         let mut array = Array3x1::fill(extent, 0);
         assert_eq!(array.extent.num_points(), 1000);
         *array.get_mut(Stride(0)) = 1;
@@ -834,7 +833,7 @@ mod tests {
 
     #[test]
     fn uninitialized() {
-        let extent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
+        let extent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(10));
         let mut array: Array3x1<MaybeUninit<i32>> = unsafe { Array3x1::maybe_uninit(extent) };
 
         array.for_each_mut(&extent, |_: (), val| unsafe {
@@ -850,10 +849,10 @@ mod tests {
 
     #[test]
     fn copy() {
-        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
         let mut array = Array3x1::fill(extent, 0);
 
-        let subextent = Extent3::from_min_and_shape(Point3i::fill(1), Point3i::fill(5));
+        let subextent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(5));
         array.for_each_mut(&subextent, |p: Point3i, val| {
             *val = p.x() + p.y() + p.z();
         });
@@ -866,7 +865,8 @@ mod tests {
 
     #[test]
     fn multichannel_get() {
-        let (mut array, _extent) = make_multichannel_array();
+        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+        let mut array = Array3x2::fill(extent, (0, 'a'));
 
         assert_eq!(array.get(Stride(0)), (0, 'a'));
         assert_eq!(array.get_ref(Stride(0)), (&0, &'a'));
@@ -883,7 +883,8 @@ mod tests {
 
     #[test]
     fn multichannel_for_each() {
-        let (mut array, extent) = make_multichannel_array();
+        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+        let mut array = Array3x2::fill(extent, (0, 'a'));
 
         array.for_each(&extent, |_: (), (c1, c2)| {
             assert_eq!(c1, 0);
@@ -903,7 +904,8 @@ mod tests {
 
     #[test]
     fn multichannel_fill_extent() {
-        let (mut array, extent) = make_multichannel_array();
+        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+        let mut array = Array3x2::fill(extent, (0, 'a'));
 
         array.fill_extent(&extent, (1, 'b'));
 
@@ -915,15 +917,17 @@ mod tests {
 
     #[test]
     fn multichannel_copy() {
-        let (src, _extent) = make_multichannel_array();
-        let (mut dst, extent) = make_multichannel_array();
-
+        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+        let src = Array3x2::fill(extent, (0, 'a'));
+        let mut dst = Array3x2::fill(extent, (1, 'b'));
         copy_extent(&extent, &src, &mut dst);
+        assert_eq!(src, dst);
     }
 
     #[test]
     fn select_channel_with_transform() {
-        let (src, extent) = make_multichannel_array();
+        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+        let src = Array3x2::fill(extent, (0, 'a'));
         let src_select = TransformMap::new(&src, |(_num, letter): (i32, char)| letter);
 
         let mut dst = Array3x1::fill(extent, 'b');
@@ -933,13 +937,5 @@ mod tests {
         dst.for_each(&extent, |_: (), letter| {
             assert_eq!(letter, 'a');
         });
-    }
-
-    fn make_multichannel_array() -> (Array3x2<i32, char>, Extent3i) {
-        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
-        let ch1 = Channel::fill(0, extent.num_points());
-        let ch2 = Channel::fill('a', extent.num_points());
-
-        (Array::new(extent, (ch1, ch2)), extent)
     }
 }

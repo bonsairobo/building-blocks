@@ -12,7 +12,7 @@
 //!
 //! struct BigData([u8; 9001]);
 //!
-//! let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
+//! let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
 //! let mut index_map = Array3x1::fill(extent, 0u8);
 //! *index_map.get_mut(PointN([0, 0, 1])) = 1;
 //!
@@ -29,7 +29,7 @@
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
-//! # let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
+//! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
 //! let src = Array3x1::fill(extent, 0);
 //! let chunk_shape = Point3i::fill(4);
 //! let builder = ChunkMapBuilder3x1 { chunk_shape, ambient_value: 0 };
@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn transform_accessors() {
-        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
+        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let inner_map: Array3x1<usize> = Array3x1::fill(extent, 0usize);
 
         let palette = vec![1, 2, 3];
@@ -237,7 +237,7 @@ mod tests {
     #[cfg(feature = "lz4")]
     #[test]
     fn copy_from_transformed_array() {
-        let extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
+        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let src = Array3x1::fill(extent, 0);
         let mut dst: ChunkHashMap3x1<f32> = FLOAT_BUILDER.build_with_hash_map_storage();
         let tfm = TransformMap::new(&src, |value: i32| value as f32 + 1.0);
@@ -247,14 +247,14 @@ mod tests {
     #[cfg(feature = "lz4")]
     #[test]
     fn copy_from_transformed_chunk_map_reader() {
-        let src_extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
+        let src_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let src_array = Array3x1::fill(src_extent, 1);
         let mut src = INT_BUILDER.build_with_hash_map_storage();
         copy_extent(&src_extent, &src_array, &mut src);
 
         let tfm = TransformMap::new(&src, |value: i32| value + 1);
 
-        let dst_extent = Extent3::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
+        let dst_extent = Extent3i::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
         let mut dst = INT_BUILDER.build_with_hash_map_storage();
         copy_extent(&dst_extent, &tfm, &mut dst);
     }

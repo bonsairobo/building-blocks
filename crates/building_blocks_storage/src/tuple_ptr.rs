@@ -1,3 +1,5 @@
+use core::mem::MaybeUninit;
+
 /// An implementation detail of multichannel accessors. Sometimes we need to be able to transmute lifetimes to satisfy the
 /// borrow checker, so we just get raw pointers and then convert them to borrows.
 #[doc(hidden)]
@@ -16,6 +18,25 @@ where
     #[inline]
     fn as_mut_ref(self) -> Self::MutRef {
         unsafe { &mut *self }
+    }
+}
+
+/// For converting various pointer types into something writeable by multichannel arrays.
+#[doc(hidden)]
+pub trait AsWritePtr {
+    type Data;
+    type Ptr: WritePtr<Data = Self::Data>;
+
+    unsafe fn as_mut_ptr(self) -> Self::Ptr;
+}
+
+impl<T> AsWritePtr for *mut MaybeUninit<T> {
+    type Data = T;
+    type Ptr = *mut T;
+
+    #[inline]
+    unsafe fn as_mut_ptr(self) -> Self::Ptr {
+        MaybeUninit::as_mut_ptr(&mut *self)
     }
 }
 
@@ -52,15 +73,33 @@ macro_rules! impl_tuple {
             }
         }
 
-        impl<$($t),+> WritePtr for ($(*mut $t,)+) {
-            type Data = ($($t,)+);
+        impl<$($t),+> AsWritePtr for ($($t,)+)
+        where
+            $($t: AsWritePtr),+
+        {
+            type Data = ($($t::Data,)+);
+            type Ptr = ($($t::Ptr,)+);
+
+            #[inline]
+            unsafe fn as_mut_ptr(self) -> Self::Ptr {
+                let ($($var1,)+) = self;
+
+                ($($var1.as_mut_ptr(),)+)
+            }
+        }
+
+        impl<$($t),+> WritePtr for ($($t,)+)
+        where
+            $($t: WritePtr,)+
+        {
+            type Data = ($($t::Data,)+);
 
             #[inline]
             unsafe fn write_ptr(self, data: Self::Data) {
                 let ($($var1,)+) = self;
                 let ($($var2,)+) = data;
 
-                $( *$var1 = $var2; )+
+                $( $var1.write_ptr($var2); )+
             }
         }
     };

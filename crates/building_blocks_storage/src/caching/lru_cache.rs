@@ -22,7 +22,7 @@ pub struct LruCache<K, V, E, H> {
 }
 
 /// An `LruCache` using the FNV hashing algorithm.
-pub type AHashLruCache<K, V, E = ()> = LruCache<K, V, E, SmallKeyBuildHasher>;
+pub type SmallKeyLruCache<K, V, E = ()> = LruCache<K, V, E, SmallKeyBuildHasher>;
 
 impl<K, V, E, H> Default for LruCache<K, V, E, H>
 where
@@ -542,7 +542,7 @@ mod tests {
 
     #[test]
     fn get_after_insert_and_evict_and_remove() {
-        let mut cache = AHashLruCache::default();
+        let mut cache = SmallKeyLruCache::default();
         assert_eq!(cache.get(&1), None);
 
         cache.insert(1, 2);
@@ -560,7 +560,7 @@ mod tests {
 
     #[test]
     fn get_after_insert_and_remove() {
-        let mut cache: AHashLruCache<i32, i32, ()> = AHashLruCache::default();
+        let mut cache: SmallKeyLruCache<i32, i32, ()> = SmallKeyLruCache::default();
 
         cache.insert(1, 2);
 
@@ -571,7 +571,7 @@ mod tests {
 
     #[test]
     fn repopulate_after_evict() {
-        let mut cache = AHashLruCache::default();
+        let mut cache = SmallKeyLruCache::default();
         assert_eq!(cache.get(&1), None);
 
         cache.insert(1, 2);
@@ -589,7 +589,7 @@ mod tests {
 
     #[test]
     fn evict_lru() {
-        let mut cache = AHashLruCache::default();
+        let mut cache = SmallKeyLruCache::default();
 
         cache.insert(1, 2);
         cache.insert(2, 3);
@@ -608,7 +608,7 @@ mod tests {
 
     #[test]
     fn get_does_not_affect_lru_order() {
-        let mut cache = AHashLruCache::default();
+        let mut cache = SmallKeyLruCache::default();
 
         cache.insert(1, 2);
         cache.insert(2, 3);
@@ -620,7 +620,7 @@ mod tests {
 
     #[test]
     fn evict_empty_entry_increases_num_evicted() {
-        let mut cache = AHashLruCache::default();
+        let mut cache = SmallKeyLruCache::default();
 
         cache.insert(1, 2);
         cache.remove(&1);

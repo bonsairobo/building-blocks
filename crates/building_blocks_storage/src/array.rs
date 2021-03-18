@@ -329,16 +329,14 @@ where
 
 impl<N, Chan, UninitChan> Array<N, Chan>
 where
+    Array<N, UninitChan>: ForEachMutPtr<N, PointN<N>, Item = UninitChan::Ptr>,
     PointN<N>: IntegerPoint<N>,
     Chan: Channels<UninitSelf = UninitChan>,
     UninitChan: UninitChannels<InitSelf = Chan>,
     UninitChan::Ptr: AsWritePtr<Data = Chan::Data>,
 {
     /// Create a new array for `extent` where each point's value is determined by the `filler` function.
-    pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> Chan::Data) -> Self
-    where
-        Array<N, UninitChan>: ForEachMutPtr<N, PointN<N>, Item = UninitChan::Ptr>,
-    {
+    pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> Chan::Data) -> Self {
         unsafe {
             let mut array = Array::<_, UninitChan>::maybe_uninit(extent);
 
@@ -346,7 +344,7 @@ where
                 val.as_mut_ptr().write_ptr(filler(p));
             });
 
-            Array::assume_init(array)
+            array.assume_init()
         }
     }
 }
@@ -912,6 +910,21 @@ mod tests {
         array.for_each(array.extent(), |_: (), (num, letter)| {
             assert_eq!(num, 1);
             assert_eq!(letter, 'b');
+        });
+    }
+
+    #[test]
+    fn multichannel_fill_with() {
+        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+        let array =
+            Array3x2::fill_with(extent, |p| if p.x() % 2 == 0 { (1, 'b') } else { (0, 'a') });
+
+        array.for_each(array.extent(), |p: Point3i, (num, letter)| {
+            if p.x() % 2 == 0 {
+                assert_eq!((num, letter), (1, 'b'));
+            } else {
+                assert_eq!((num, letter), (0, 'a'));
+            }
         });
     }
 

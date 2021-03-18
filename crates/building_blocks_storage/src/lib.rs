@@ -35,13 +35,13 @@ pub mod chunk_storage;
 pub mod chunked_octree_set;
 pub mod compression;
 pub mod func;
+pub mod multi_ptr;
 pub mod multiresolution;
 pub mod octree_chunk_index;
 pub mod octree_set;
 pub mod raw_bytes;
 pub mod signed_distance;
 pub mod transform_map;
-pub mod tuple_ptr;
 
 pub use access_traits::*;
 pub use array::*;
@@ -53,13 +53,13 @@ pub use chunk_storage::*;
 pub use chunked_octree_set::*;
 pub use compression::*;
 pub use func::*;
+pub use multi_ptr::*;
 pub use multiresolution::*;
 pub use octree_chunk_index::*;
 pub use octree_set::*;
 pub use raw_bytes::*;
 pub use signed_distance::*;
 pub use transform_map::*;
-pub use tuple_ptr::*;
 
 /// Used in many generic algorithms to check if a voxel is considered empty.
 pub trait IsEmpty {

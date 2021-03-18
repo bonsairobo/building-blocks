@@ -1,4 +1,4 @@
-use crate::{GetMut, GetMutPtr, GetRef, WritePtr};
+use crate::{GetMut, GetMutPtr, GetRef, MultiMutPtr};
 
 use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
@@ -121,7 +121,7 @@ impl_get_via_get_ref_and_clone!(Channel<T, Store>, T, Store);
 
 pub trait Channels {
     type Data;
-    type Ptr: WritePtr<Data = Self::Data>;
+    type Ptr: MultiMutPtr<Data = Self::Data>;
     type UninitSelf: UninitChannels;
 }
 

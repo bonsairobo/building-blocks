@@ -156,8 +156,8 @@ pub use for_each::*;
 pub use indexer::*;
 
 use crate::{
-    AsMutRef, AsWritePtr, ChunkCopySrc, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetMutPtr,
-    GetRef, IntoRawBytes, ReadExtent, TransformMap, WriteExtent, WritePtr,
+    AsMultiMut, AsMultiMutPtr, ChunkCopySrc, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut,
+    GetMutPtr, GetRef, IntoRawBytes, MultiMutPtr, ReadExtent, TransformMap, WriteExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -293,7 +293,7 @@ where
             self.channels.reset_values(value);
         } else {
             unsafe {
-                self.for_each_mut_ptr(extent, |_: (), v| v.write_ptr(value.clone()));
+                self.for_each_mut_ptr(extent, |_: (), v| v.write(value.clone()));
             }
         }
     }
@@ -333,7 +333,7 @@ where
     PointN<N>: IntegerPoint<N>,
     Chan: Channels<UninitSelf = UninitChan>,
     UninitChan: UninitChannels<InitSelf = Chan>,
-    UninitChan::Ptr: AsWritePtr<Data = Chan::Data>,
+    UninitChan::Ptr: AsMultiMutPtr<Data = Chan::Data>,
 {
     /// Create a new array for `extent` where each point's value is determined by the `filler` function.
     pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> Chan::Data) -> Self {
@@ -341,7 +341,7 @@ where
             let mut array = Array::<_, UninitChan>::maybe_uninit(extent);
 
             array.for_each_mut_ptr(&extent, |p, val| {
-                val.as_mut_ptr().write_ptr(filler(p));
+                val.as_multi_mut_ptr().write(filler(p));
             });
 
             array.assume_init()
@@ -586,7 +586,7 @@ macro_rules! impl_array_for_each {
         where
             Self: ForEachMutPtr<N, $coords, Item = Chan::Ptr>,
             Chan: Channels,
-            Chan::Ptr: AsMutRef<'a, MutRef = Ref>,
+            Chan::Ptr: AsMultiMut<'a, MultiMut = Ref>,
         {
             type Item = Ref;
 
@@ -597,7 +597,7 @@ macro_rules! impl_array_for_each {
                 mut f: impl FnMut($coords, Self::Item),
             ) {
                 unsafe {
-                    self.for_each_mut_ptr(iter_extent, |c, ptr| f(c, ptr.as_mut_ref()));
+                    self.for_each_mut_ptr(iter_extent, |c, ptr| f(c, ptr.as_multi_mut()));
                 }
             }
         }
@@ -703,7 +703,7 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, Ptr>(
     Dst: IndexedArray<N> + GetMutPtr<Stride, Item = Ptr>,
     Src: IndexedArray<N> + Get<Stride, Item = Ptr::Data>,
     ExtentN<N>: Copy,
-    Ptr: WritePtr,
+    Ptr: MultiMutPtr,
 {
     let dst_extent = *dst.extent();
     // It shoudn't matter which type we use for the indexer.
@@ -715,7 +715,7 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, Ptr>(
             // The actual copy.
             // PERF: could be faster with SIMD copy
             unsafe {
-                dst.get_mut_ptr(s_dst).write_ptr(src.get(s_src));
+                dst.get_mut_ptr(s_dst).write(src.get(s_src));
             }
         },
     );
@@ -744,7 +744,7 @@ where
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: F) {
         unsafe {
-            self.for_each_mut_ptr(extent, |p, v| v.write_ptr((src)(p)));
+            self.for_each_mut_ptr(extent, |p, v| v.write((src)(p)));
         }
     }
 }

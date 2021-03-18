@@ -367,9 +367,8 @@ where
     /// All elements of the map must be initialized.
     pub unsafe fn assume_init(self) -> Array<N, Chan::InitSelf> {
         let (extent, channel) = self.into_parts();
-        let channel = Chan::assume_init(channel);
 
-        Array::new(extent, channel)
+        Array::new(extent, channel.assume_init())
     }
 }
 

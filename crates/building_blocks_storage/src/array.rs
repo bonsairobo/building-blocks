@@ -582,13 +582,13 @@ macro_rules! impl_array_for_each {
             }
         }
 
-        impl<'a, N, Chan, Ref> ForEachMut<'a, N, $coords> for Array<N, Chan>
+        impl<'a, N, Chan> ForEachMut<'a, N, $coords> for Array<N, Chan>
         where
             Self: ForEachMutPtr<N, $coords, Item = Chan::Ptr>,
             Chan: Channels,
-            Chan::Ptr: AsMultiMut<'a, MultiMut = Ref>,
+            Chan::Ptr: AsMultiMut<'a>,
         {
-            type Item = Ref;
+            type Item = <Chan::Ptr as AsMultiMut<'a>>::MultiMut;
 
             #[inline]
             fn for_each_mut(

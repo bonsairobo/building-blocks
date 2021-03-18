@@ -54,7 +54,7 @@
 //!     }
 //! });
 //!
-//! // You can also access individual points like you can with a `ArrayNx1`. This is
+//! // You can also access individual points like you can with an `Array`. This is
 //! // slower than iterating, because it hashes the chunk coordinates for every access.
 //! for &p in write_points.iter() {
 //!     assert_eq!(map.get(p), 1);

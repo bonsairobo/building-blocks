@@ -2,12 +2,12 @@ mod serialization;
 
 pub use serialization::*;
 
-use crate::ArrayNx1;
+use crate::Array;
 
 /// One piece of a chunked lattice map.
 pub trait Chunk {
     /// The inner array type. This makes it easier for `Chunk` implementations to satisfy access trait bounds by inheriting them
-    /// from existing array types like `ArrayNx1`.
+    /// from existing array types like `Array`.
     type Array;
 
     /// Borrow the inner array.
@@ -17,7 +17,7 @@ pub trait Chunk {
     fn array_mut(&mut self) -> &mut Self::Array;
 }
 
-impl<N, T> Chunk for ArrayNx1<N, T> {
+impl<N, Chan> Chunk for Array<N, Chan> {
     type Array = Self;
 
     #[inline]

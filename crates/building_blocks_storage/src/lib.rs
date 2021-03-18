@@ -10,7 +10,7 @@
 //! implement the `SignedDistance` trait required for smooth meshing.
 //!
 //! The core storage types are:
-//!   - `ArrayNx1`: N-dimensional, dense array
+//!   - `Array`: N-dimensional, dense array
 //!   - `ChunkHashMap`: N-dimensional, sparse array
 //!   - `CompressibleChunkMap`: N-dimensional, sparse array with chunk compression
 //!

@@ -1,5 +1,5 @@
 use building_blocks::storage::{
-    dot_vox::load, Array3x1, BytesCompression, Compression, FastArrayCompression, Lz4, Snappy,
+    dot_vox::load, Array3x1, BytesCompression, Compression, FastArrayCompressionNx1, Lz4, Snappy,
     VoxColor,
 };
 
@@ -25,7 +25,7 @@ fn measure_compression_rate<B: BytesCompression>(
 ) {
     let source_size_bytes = vox_array.extent().num_points() * std::mem::size_of::<VoxColor>();
 
-    let compression = FastArrayCompression::new(bytes_compression);
+    let compression = FastArrayCompressionNx1::new(bytes_compression);
     let compressed_array = compression.compress(vox_array);
 
     let compressed_size_bytes = compressed_array.compressed_data.compressed_bytes().len();

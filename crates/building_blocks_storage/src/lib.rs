@@ -81,7 +81,7 @@ pub mod prelude {
         copy_extent, Chunk, ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkIndexer, ChunkMap2x1,
         ChunkMap3x1, ChunkMapBuilder, ChunkReadStorage, ChunkWriteStorage, Compressed,
         CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
-        CompressibleChunkStorageReader, Compression, FastArrayCompression,
+        CompressibleChunkStorageReader, Compression, FastArrayCompressionNx1,
         FastCompressibleChunkStorage, Func, IndexedArray, IsEmpty, IterChunkKeys, Local,
         LocalChunkCache2, LocalChunkCache3, OctreeChunkIndex, OctreeNode, OctreeSet,
         SerializableChunks, SignedDistance, Stride, TransformMap,

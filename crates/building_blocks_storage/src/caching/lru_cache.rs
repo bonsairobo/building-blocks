@@ -21,7 +21,7 @@ pub struct LruCache<K, V, E, H> {
     num_evicted: usize,
 }
 
-/// An `LruCache` using the FNV hashing algorithm.
+/// An `LruCache` using a hashing algorithm that's optimal for small keys.
 pub type SmallKeyLruCache<K, V, E = ()> = LruCache<K, V, E, SmallKeyBuildHasher>;
 
 impl<K, V, E, H> Default for LruCache<K, V, E, H>

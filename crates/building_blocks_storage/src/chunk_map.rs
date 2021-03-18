@@ -122,7 +122,7 @@ use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
 use core::hash::Hash;
 use either::Either;
 
-/// A lattice map made up of same-shaped `ArrayNx1` chunks. It takes a value at every possible `PointN`, because accesses made
+/// A lattice map made up of same-shaped `Array` chunks. It takes a value at every possible `PointN`, because accesses made
 /// outside of the stored chunks will return some ambient value specified on creation.
 ///
 /// `ChunkMap` is generic over the type used to actually store the `Chunk`s. You can use any storage that implements
@@ -223,13 +223,36 @@ impl<N, T, Chan> ChunkMapBuilderNxM<N, T, Chan> {
     }
 }
 
-/// A `ChunkMapBuilder` for `Array2x1` chunks.
-pub type ChunkMapBuilderNx1<N, T> = ChunkMapBuilderNxM<N, T, Channel<T>>;
-/// A `ChunkMapBuilder` for `Array2x1` chunks.
-pub type ChunkMapBuilder2x1<T> = ChunkMapBuilderNxM<[i32; 2], T, Channel<T>>;
-/// A `ChunkMapBuilder` for `Array3x1` chunks.
-pub type ChunkMapBuilder3x1<T> = ChunkMapBuilderNxM<[i32; 3], T, Channel<T>>;
-pub type ChunkMapBuilder3x2<A, B> = ChunkMapBuilderNxM<[i32; 3], (A, B), (Channel<A>, Channel<B>)>;
+macro_rules! builder_type_alias {
+    ($name:ident, $dim:ty, $( $chan:ident ),+ ) => {
+        pub type $name<$( $chan ),+> = ChunkMapBuilderNxM<$dim, ($($chan),+), ($(Channel<$chan>),+)>;
+    };
+}
+
+pub mod builder_aliases {
+    use super::*;
+
+    /// A `ChunkMapBuilder` for `ArrayNx1` chunks.
+    pub type ChunkMapBuilderNx1<N, T> = ChunkMapBuilderNxM<N, T, Channel<T>>;
+
+    /// A `ChunkMapBuilder` for `Array2x1` chunks.
+    pub type ChunkMapBuilder2x1<T> = ChunkMapBuilderNxM<[i32; 2], T, Channel<T>>;
+    builder_type_alias!(ChunkMapBuilder2x2, [i32; 2], A, B);
+    builder_type_alias!(ChunkMapBuilder2x3, [i32; 2], A, B, C);
+    builder_type_alias!(ChunkMapBuilder2x4, [i32; 2], A, B, C, D);
+    builder_type_alias!(ChunkMapBuilder2x5, [i32; 2], A, B, C, D, E);
+    builder_type_alias!(ChunkMapBuilder2x6, [i32; 2], A, B, C, D, E, F);
+
+    /// A `ChunkMapBuilder` for `Array3x1` chunks.
+    pub type ChunkMapBuilder3x1<T> = ChunkMapBuilderNxM<[i32; 3], T, Channel<T>>;
+    builder_type_alias!(ChunkMapBuilder3x2, [i32; 3], A, B);
+    builder_type_alias!(ChunkMapBuilder3x3, [i32; 3], A, B, C);
+    builder_type_alias!(ChunkMapBuilder3x4, [i32; 3], A, B, C, D);
+    builder_type_alias!(ChunkMapBuilder3x5, [i32; 3], A, B, C, D, E);
+    builder_type_alias!(ChunkMapBuilder3x6, [i32; 3], A, B, C, D, E, F);
+}
+
+pub use builder_aliases::*;
 
 impl<N, T, Chan> ChunkMapBuilder<N, T> for ChunkMapBuilderNxM<N, T, Chan>
 where

@@ -1,6 +1,6 @@
 use crate::{
     Array, ArrayNx1, BincodeCompression, Compressed, Compression, FastChannelsCompression1,
-    FromBytesCompression,
+    FastChannelsCompression2, FromBytesCompression,
 };
 
 use building_blocks_core::prelude::*;
@@ -88,6 +88,8 @@ where
 }
 
 pub type FastArrayCompressionNx1<N, T, B> = FastArrayCompression<N, FastChannelsCompression1<B, T>>;
+pub type FastArrayCompressionNx2<N, By, A, B> =
+    FastArrayCompression<N, FastChannelsCompression2<By, A, B>>;
 
 pub type BincodeArrayCompression<N, T, B> = BincodeCompression<ArrayNx1<N, T>, B>;
 pub type BincodeCompressedArray<N, T, B> = Compressed<BincodeArrayCompression<N, T, B>>;

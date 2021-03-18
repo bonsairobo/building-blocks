@@ -1,8 +1,9 @@
 use crate::{
-    BytesCompression, CacheEntry, ChunkMap, ChunkMapBuilder, ChunkMapBuilderNx1, ChunkWriteStorage,
-    Compressed, CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression,
-    FastArrayCompressionNx1, FromBytesCompression, IterChunkKeys, LocalChunkCache, LruCacheEntries,
-    LruCacheIntoIter, LruCacheKeys, MaybeCompressed, SmallKeyLruCache,
+    CacheEntry, ChunkMap, ChunkMapBuilder, ChunkMapBuilderNx1, ChunkWriteStorage, Compressed,
+    CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression, FastArrayCompression,
+    FastArrayCompressionNx1, FastArrayCompressionNx2, FastChannelsCompression,
+    FromBytesCompression, IterChunkKeys, LocalChunkCache, LruCacheEntries, LruCacheIntoIter,
+    LruCacheKeys, MaybeCompressed, SmallKeyLruCache,
 };
 
 use building_blocks_core::prelude::*;
@@ -22,17 +23,21 @@ where
     pub compressed: CompressedChunks<Compr>,
 }
 
-pub type FastCompressibleChunkStorage<N, T, B> =
-    CompressibleChunkStorage<N, FastArrayCompressionNx1<N, T, B>>;
+pub type FastCompressibleChunkStorage<N, By, Chan> =
+    CompressibleChunkStorage<N, FastArrayCompression<N, FastChannelsCompression<By, Chan>>>;
 
-impl<N, T, B> FastCompressibleChunkStorage<N, T, B>
+pub type FastCompressibleChunkStorageNx1<N, T, B> =
+    CompressibleChunkStorage<N, FastArrayCompressionNx1<N, T, B>>;
+pub type FastCompressibleChunkStorageNx2<N, By, A, B> =
+    CompressibleChunkStorage<N, FastArrayCompressionNx2<N, By, A, B>>;
+
+impl<N, By, Chan> FastCompressibleChunkStorage<N, By, Chan>
 where
     PointN<N>: Hash + IntegerPoint<N>,
-    T: 'static + Copy,
-    B: BytesCompression,
+    FastChannelsCompression<By, Chan>: Compression,
 {
-    pub fn with_bytes_compression(bytes_compression: B) -> Self {
-        Self::new(FastArrayCompressionNx1::from_bytes_compression(
+    pub fn with_bytes_compression(bytes_compression: By) -> Self {
+        Self::new(FastArrayCompression::from_bytes_compression(
             bytes_compression,
         ))
     }

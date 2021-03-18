@@ -822,4 +822,34 @@ mod tests {
 
         map.fill_extent(&extent, (1, 'b'));
     }
+
+    #[cfg(feature = "lz4")]
+    #[test]
+    fn multichannel_compressed_accessors() {
+        use crate::{FastCompressibleChunkStorageNx2, LocalChunkCache, Lz4};
+
+        let builder = ChunkMapBuilder3x2::new(CHUNK_SHAPE, (0, 'a'));
+        let mut map = builder.build_with_write_storage(
+            FastCompressibleChunkStorageNx2::with_bytes_compression(Lz4 { level: 10 }),
+        );
+
+        assert_eq!(map.get_mut(Point3i::fill(1)), (&mut 0, &mut 'a'));
+
+        let extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(80));
+
+        map.for_each_mut(&extent, |_p, (num, letter)| {
+            *num = 1;
+            *letter = 'b';
+        });
+
+        let local_cache = LocalChunkCache::new();
+        let reader = map.reader(&local_cache);
+        assert_eq!(reader.get(Point3i::fill(1)), (0, 'a'));
+        assert_eq!(reader.get_ref(Point3i::fill(1)), (&0, &'a'));
+
+        reader.for_each(&extent, |_p, (num, letter)| {
+            assert_eq!(num, 1);
+            assert_eq!(letter, 'b');
+        });
+    }
 }

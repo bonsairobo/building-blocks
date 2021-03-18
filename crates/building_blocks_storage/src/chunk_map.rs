@@ -110,7 +110,7 @@
 
 use crate::{
     ArrayCopySrc, ArrayIndexer, ArrayNx1, Chunk, ChunkHashMap, ChunkIndexer, ChunkReadStorage,
-    ChunkWriteStorage, ForEach, ForEachMut, ForEachMutPtr, GetMut, GetRef, IterChunkKeys,
+    ChunkWriteStorage, ForEach, ForEachMut, ForEachMutPtr, GetMut, GetRef, IterChunkKeys, MultiRef,
     ReadExtent, SmallKeyHashMap, WriteExtent,
 };
 
@@ -492,15 +492,15 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<'a, N, T, B, Store> GetRef<'a, PointN<N>> for ChunkMap<N, T, B, Store>
+impl<'a, N, T, B, Store, Ref> GetRef<'a, PointN<N>> for ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    T: 'a,
     B: ChunkMapBuilder<N, T>,
-    <B::Chunk as Chunk>::Array: for<'r> GetRef<'r, PointN<N>, Item = &'r T>,
+    <B::Chunk as Chunk>::Array: GetRef<'a, PointN<N>, Item = Ref>,
     Store: ChunkReadStorage<N, B::Chunk>,
+    Ref: MultiRef<'a, Data = T>,
 {
-    type Item = &'a T;
+    type Item = Ref;
 
     #[inline]
     fn get_ref(&'a self, p: PointN<N>) -> Self::Item {
@@ -508,19 +508,18 @@ where
 
         self.get_chunk(key)
             .map(|chunk| chunk.array_ref().get_ref(p))
-            .unwrap_or(&self.ambient_value)
+            .unwrap_or(Ref::from_data_ref(&self.ambient_value))
     }
 }
 
-impl<'a, N, T, B, Store> GetMut<'a, PointN<N>> for ChunkMap<N, T, B, Store>
+impl<'a, N, T, B, Store, Mut> GetMut<'a, PointN<N>> for ChunkMap<N, T, B, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    T: 'a,
     B: ChunkMapBuilder<N, T>,
-    <B::Chunk as Chunk>::Array: for<'r> GetMut<'r, PointN<N>, Item = &'r mut T>,
+    <B::Chunk as Chunk>::Array: GetMut<'a, PointN<N>, Item = Mut>,
     Store: ChunkWriteStorage<N, B::Chunk>,
 {
-    type Item = &'a mut T;
+    type Item = Mut;
 
     #[inline]
     fn get_mut(&'a mut self, p: PointN<N>) -> Self::Item {

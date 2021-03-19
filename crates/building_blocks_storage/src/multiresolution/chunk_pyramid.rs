@@ -105,6 +105,9 @@ where
     T: 'static + Clone,
     Store: ChunkWriteStorage<[i32; 3], Array3x1<T>>,
 {
+    /// Downsamples all chunks that both:
+    ///   1. overlap `extent`
+    ///   2. are present in `index`
     pub fn downsample_chunks_with_index<Samp>(
         &mut self,
         index: &OctreeChunkIndex,
@@ -126,18 +129,12 @@ where
                 octree.visit_all_octants_for_extent_in_postorder(
                     &chunk_space_extent,
                     &mut |node: &OctreeNode| {
-                        let dst_lod = node.octant().power();
-                        if dst_lod > 0 && dst_lod < self.num_lods() {
-                            // Destination LOD > 0, so we should downsample all non-empty children.
-                            let src_lod = dst_lod - 1;
-                            for child_octant_index in 0..8 {
-                                if node.child_bitmask() & (1 << child_octant_index) != 0 {
-                                    let child_octant = node.octant().child(child_octant_index);
-                                    let src_chunk_key =
-                                        (child_octant.minimum() << chunk_log2) >> src_lod as i32;
-                                    self.downsample_chunk(sampler, src_chunk_key, src_lod, dst_lod);
-                                }
-                            }
+                        let src_lod = node.octant().power();
+                        if src_lod < self.num_lods() - 1 {
+                            let dst_lod = src_lod + 1;
+                            let src_chunk_key =
+                                (node.octant().minimum() << chunk_log2) >> src_lod as i32;
+                            self.downsample_chunk(sampler, src_chunk_key, src_lod, dst_lod);
                         }
 
                         VisitStatus::Continue

@@ -74,7 +74,6 @@ where
         dst_lod: u8,
     ) where
         Samp: ChunkDownsampler<N, T, ArrayNx1<N, T>>,
-        PointN<N>: Debug,
     {
         assert!(dst_lod > src_lod);
         let [src_map, dst_map] = self.two_levels_mut(src_lod, dst_lod);

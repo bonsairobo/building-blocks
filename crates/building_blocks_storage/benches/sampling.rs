@@ -79,7 +79,7 @@ fn sdf_mean_downsample_chunk_pyramid(c: &mut Criterion) {
                         (pyramid, index, map_extent)
                     },
                     |(mut pyramid, index, map_extent)| {
-                        pyramid.downsample_chunks_for_extent_all_lods_with_index(
+                        pyramid.downsample_chunks_with_index(
                             &index,
                             &SdfMeanDownsampler,
                             &map_extent,

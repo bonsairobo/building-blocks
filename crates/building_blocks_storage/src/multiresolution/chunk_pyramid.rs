@@ -105,7 +105,7 @@ where
     T: 'static + Clone,
     Store: ChunkWriteStorage<[i32; 3], Array3x1<T>>,
 {
-    pub fn downsample_chunks_for_extent_all_lods_with_index<Samp>(
+    pub fn downsample_chunks_with_index<Samp>(
         &mut self,
         index: &OctreeChunkIndex,
         sampler: &Samp,

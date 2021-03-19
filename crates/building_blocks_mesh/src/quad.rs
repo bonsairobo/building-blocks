@@ -136,57 +136,51 @@ impl OrientedCubeFace {
                         [quad.width as f32, 0.0],
                     ]
                 }
+            } else if self.n_sign < 0 {
+                [
+                    [0.0, quad.height as f32],
+                    [quad.width as f32, quad.height as f32],
+                    [0.0, 0.0],
+                    [quad.width as f32, 0.0],
+                ]
             } else {
-                if self.n_sign < 0 {
-                    [
-                        [0.0, quad.height as f32],
-                        [quad.width as f32, quad.height as f32],
-                        [0.0, 0.0],
-                        [quad.width as f32, 0.0],
-                    ]
-                } else {
-                    [
-                        [quad.width as f32, quad.height as f32],
-                        [0.0, quad.height as f32],
-                        [quad.width as f32, 0.0],
-                        [0.0, 0.0],
-                    ]
-                }
+                [
+                    [quad.width as f32, quad.height as f32],
+                    [0.0, quad.height as f32],
+                    [quad.width as f32, 0.0],
+                    [0.0, 0.0],
+                ]
             }
+        } else if self.flip_u {
+            if self.n_sign < 0 {
+                [
+                    [quad.width as f32, 0.0],
+                    [0.0, 0.0],
+                    [quad.width as f32, quad.height as f32],
+                    [0.0, quad.height as f32],
+                ]
+            } else {
+                [
+                    [0.0, 0.0],
+                    [quad.width as f32, 0.0],
+                    [0.0, quad.height as f32],
+                    [quad.width as f32, quad.height as f32],
+                ]
+            }
+        } else if self.n_sign < 0 {
+            [
+                [0.0, 0.0],
+                [quad.width as f32, 0.0],
+                [0.0, quad.height as f32],
+                [quad.width as f32, quad.height as f32],
+            ]
         } else {
-            if self.flip_u {
-                if self.n_sign < 0 {
-                    [
-                        [quad.width as f32, 0.0],
-                        [0.0, 0.0],
-                        [quad.width as f32, quad.height as f32],
-                        [0.0, quad.height as f32],
-                    ]
-                } else {
-                    [
-                        [0.0, 0.0],
-                        [quad.width as f32, 0.0],
-                        [0.0, quad.height as f32],
-                        [quad.width as f32, quad.height as f32],
-                    ]
-                }
-            } else {
-                if self.n_sign < 0 {
-                    [
-                        [0.0, 0.0],
-                        [quad.width as f32, 0.0],
-                        [0.0, quad.height as f32],
-                        [quad.width as f32, quad.height as f32],
-                    ]
-                } else {
-                    [
-                        [quad.width as f32, 0.0],
-                        [0.0, 0.0],
-                        [quad.width as f32, quad.height as f32],
-                        [0.0, quad.height as f32],
-                    ]
-                }
-            }
+            [
+                [quad.width as f32, 0.0],
+                [0.0, 0.0],
+                [quad.width as f32, quad.height as f32],
+                [0.0, quad.height as f32],
+            ]
         }
     }
 

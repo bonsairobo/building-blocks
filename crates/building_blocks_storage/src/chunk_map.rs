@@ -256,14 +256,14 @@ pub use multichannel_aliases::*;
 
 impl<N, T, Chan> ChunkMapBuilder<N, T> for ChunkMapBuilderNxM<N, T, Chan>
 where
-    PointN<N>: Clone + IntegerPoint<N>,
+    PointN<N>: IntegerPoint<N>,
     T: Clone,
     Chan: FillChannels<Data = T>,
 {
     type Chunk = Array<N, Chan>;
 
     fn chunk_shape(&self) -> PointN<N> {
-        self.chunk_shape.clone()
+        self.chunk_shape
     }
 
     fn ambient_value(&self) -> T {
@@ -555,7 +555,7 @@ where
 
         self.get_chunk(key)
             .map(|chunk| chunk.array_ref().get(p))
-            .unwrap_or(self.ambient_value.clone())
+            .unwrap_or_else(|| self.ambient_value.clone())
     }
 }
 
@@ -575,7 +575,7 @@ where
 
         self.get_chunk(key)
             .map(|chunk| chunk.array_ref().get_ref(p))
-            .unwrap_or(Ref::from_data_ref(&self.ambient_value))
+            .unwrap_or_else(|| Ref::from_data_ref(&self.ambient_value))
     }
 }
 

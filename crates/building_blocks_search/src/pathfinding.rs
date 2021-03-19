@@ -4,8 +4,8 @@ use core::cmp::Ordering;
 use core::hash::Hash;
 use indexmap::map::Entry::{Occupied, Vacant};
 use indexmap::IndexMap;
-use std::collections::BinaryHeap;
 use pathfinding::directed::astar::astar;
+use std::collections::BinaryHeap;
 
 /// Uses the given heuristic to do an a-star search from `start` to `finish`. All points on the path must satisfy
 /// `predicate`. Returns `Some` iff the path reaches `finish`. Otherwise, `None` is returned. The `predicate` must
@@ -21,9 +21,7 @@ where
     C: Zero + Copy + Ord,
     PointN<N>: core::hash::Hash + Eq + IntegerPoint<N>,
 {
-    if !predicate(&start).is_some() {
-        return None;
-    }
+    predicate(&start)?;
 
     let vn_offsets = PointN::<N>::von_neumann_offsets();
 

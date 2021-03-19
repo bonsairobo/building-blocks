@@ -99,7 +99,7 @@ fn setup(
         ..Default::default()
     };
 
-    // Generate some voxel terrain
+    // Just a solid cube of voxels. We only fill the interior since we need some empty voxels to form a boundary for the mesh.
     let interior_extent = Extent3i::from_min_and_shape(PointN([-10; 3]), PointN([20; 3]));
     let full_extent = interior_extent.padded(1);
     let mut voxels = Array3x1::fill(full_extent, Voxel::default());

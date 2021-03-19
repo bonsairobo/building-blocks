@@ -29,6 +29,29 @@ fn point_downsample3(c: &mut Criterion) {
     group.finish();
 }
 
+fn sdf_mean_downsample3(c: &mut Criterion) {
+    let mut group = c.benchmark_group("sdf_mean_downsample3");
+    for size in CHUNK_SIZES.iter() {
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
+            b.iter_with_setup(
+                || {
+                    let chunk_shape = Point3i::fill(size);
+                    let extent = Extent3i::from_min_and_shape(Point3i::ZERO, chunk_shape);
+                    let src = Array3x1::fill(extent, Sd8::ONE);
+                    let dst = Array3x1::fill(extent, Sd8(0));
+
+                    (src, dst, chunk_shape)
+                },
+                |(src, mut dst, chunk_shape)| {
+                    SdfMeanDownsampler.downsample(&src, &mut dst, Local(chunk_shape / 2), 1);
+                    black_box(dst);
+                },
+            );
+        });
+    }
+    group.finish();
+}
+
 fn sdf_mean_downsample_chunk_pyramid(c: &mut Criterion) {
     let mut group = c.benchmark_group("sdf_mean_downsample_chunk_pyramid_all_lods");
     for map_chunks in [1, 2, 4, 8].iter() {
@@ -72,6 +95,7 @@ fn sdf_mean_downsample_chunk_pyramid(c: &mut Criterion) {
 criterion_group!(
     benches,
     point_downsample3,
+    sdf_mean_downsample3,
     sdf_mean_downsample_chunk_pyramid
 );
 criterion_main!(benches);

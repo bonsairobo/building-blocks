@@ -11,7 +11,7 @@ pub trait Chunk {
     type Array;
 
     /// Borrow the inner array.
-    fn array_ref(&self) -> &Self::Array;
+    fn array(&self) -> &Self::Array;
 
     /// Mutably borrow the inner array.
     fn array_mut(&mut self) -> &mut Self::Array;
@@ -21,7 +21,7 @@ impl<N, Chan> Chunk for Array<N, Chan> {
     type Array = Self;
 
     #[inline]
-    fn array_ref(&self) -> &Self::Array {
+    fn array(&self) -> &Self::Array {
         self
     }
 

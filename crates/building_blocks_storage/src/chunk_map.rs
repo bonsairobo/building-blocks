@@ -554,7 +554,7 @@ where
         let key = self.indexer.chunk_key_containing_point(p);
 
         self.get_chunk(key)
-            .map(|chunk| chunk.array_ref().get(p))
+            .map(|chunk| chunk.array().get(p))
             .unwrap_or_else(|| self.ambient_value.clone())
     }
 }
@@ -574,7 +574,7 @@ where
         let key = self.indexer.chunk_key_containing_point(p);
 
         self.get_chunk(key)
-            .map(|chunk| chunk.array_ref().get_ref(p))
+            .map(|chunk| chunk.array().get_ref(p))
             .unwrap_or_else(|| Ref::from_data_ref(&self.ambient_value))
     }
 }
@@ -618,7 +618,7 @@ where
     fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Item)) {
         self.visit_chunks(extent, |chunk| match chunk {
             Either::Left(chunk) => {
-                chunk.array_ref().for_each(extent, |p, value| f(p, value));
+                chunk.array().for_each(extent, |p, value| f(p, value));
             }
             Either::Right((chunk_extent, ambient)) => {
                 ambient.for_each(&extent.intersection(&chunk_extent), |p, value| f(p, value))

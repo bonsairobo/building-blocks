@@ -1,7 +1,7 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{
-    Array3x1, ChunkDownsampler, ChunkHashMapPyramid3, ChunkMapBuilder, ChunkMapBuilder3x1, Local,
-    OctreeChunkIndex, PointDownsampler, Sd8, SdfMeanDownsampler,
+    Array3x1, ChunkDownsampler, ChunkMapBuilder3x1, ChunkPyramid3, Local, OctreeChunkIndex,
+    PointDownsampler, Sd8, SdfMeanDownsampler, SmallKeyHashMap,
 };
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
@@ -53,7 +53,7 @@ fn sdf_mean_downsample3(c: &mut Criterion) {
 }
 
 fn sdf_mean_downsample_chunk_pyramid(c: &mut Criterion) {
-    let mut group = c.benchmark_group("sdf_mean_downsample_chunk_pyramid_all_lods");
+    let mut group = c.benchmark_group("sdf_mean_downsample_chunk_pyramid_with_index");
     for map_chunks in [1, 2, 4, 8].iter() {
         group.bench_with_input(
             BenchmarkId::from_parameter(map_chunks),
@@ -66,7 +66,10 @@ fn sdf_mean_downsample_chunk_pyramid(c: &mut Criterion) {
                         let superchunk_shape = Point3i::fill((1 << (num_lods - 1)) * 16);
 
                         let builder = ChunkMapBuilder3x1::new(chunk_shape, Sd8::ONE);
-                        let mut lod0_map = builder.build_with_hash_map_storage();
+                        let mut pyramid =
+                            ChunkPyramid3::new(builder, || SmallKeyHashMap::new(), num_lods);
+
+                        let lod0_map = pyramid.level_mut(0);
 
                         let map_extent =
                             Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(map_chunks))
@@ -74,7 +77,6 @@ fn sdf_mean_downsample_chunk_pyramid(c: &mut Criterion) {
                         lod0_map.fill_extent(&map_extent, Sd8::NEG_ONE);
 
                         let index = OctreeChunkIndex::index_chunk_map(superchunk_shape, &lod0_map);
-                        let pyramid = ChunkHashMapPyramid3::with_lod0_chunk_map(lod0_map, num_lods);
 
                         (pyramid, index, map_extent)
                     },

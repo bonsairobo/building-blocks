@@ -125,8 +125,8 @@ where
     /// index into `self.levels`; it is essentially `level + 1`, since LOD0 is not owned by `self`.
     pub fn downsample_lod0_chunk<Samp, Lod0Ch, Lod0ChBorrow>(
         &mut self,
-        sampler: &Samp,
         get_lod0_chunk: impl Fn(PointN<N>) -> Option<Lod0Ch>,
+        sampler: &Samp,
         src_chunk_key: PointN<N>,
         dst_lod: u8,
     ) where
@@ -262,8 +262,8 @@ where
 
                             if src_lod == 0 {
                                 self.downsample_lod0_chunk(
-                                    sampler,
                                     &get_lod0_chunk,
+                                    sampler,
                                     src_chunk_key,
                                     dst_lod,
                                 );
@@ -432,27 +432,36 @@ mod tests {
     }
 
     #[test]
-    fn downsample_multichannel_chunk() {
+    fn downsample_multichannel_chunks_with_index() {
         let num_lods = 6;
         let chunk_shape = Point3i::fill(16);
+        let superchunk_shape = Point3i::fill(512);
 
+        let lod0_extent =
+            Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(2)) * chunk_shape;
+
+        // Build a multichannel chunk map for LOD0.
         let ambient = (Sd8::ONE, 'a');
         let lod0_builder = ChunkMapBuilder3x2::new(chunk_shape, ambient);
         let mut lod0 = lod0_builder.build_with_hash_map_storage();
-        let map_extent =
-            Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(2)) * chunk_shape;
-        lod0.fill_extent(&map_extent, ambient);
+        lod0.fill_extent(&lod0_extent, ambient);
 
+        let pyramid_builder = ChunkMapBuilder3x1::new(chunk_shape, Sd8::ONE);
+        let mut pyramid = ChunkPyramid3::new(pyramid_builder, || SmallKeyHashMap::new(), num_lods);
+
+        let index = OctreeChunkIndex::index_chunk_map(superchunk_shape, &lod0);
+
+        // Since we're downsampling multichannel chunks, we need to project them onto the one channel that we're downsampling.
         let get_lod0_chunk = |p| {
             lod0.get_chunk(p)
                 .map(|chunk| TransformMap::new(chunk, |(sd, _letter): (Sd8, char)| sd))
         };
 
-        let pyramid_builder = ChunkMapBuilder3x1::new(chunk_shape, Sd8::ONE);
-        let mut pyramid = ChunkPyramid3::new(pyramid_builder, || SmallKeyHashMap::new(), num_lods);
-
-        let src_chunk_key = Point3i::ZERO;
-        let dst_lod = 1;
-        pyramid.downsample_lod0_chunk(&SdfMeanDownsampler, get_lod0_chunk, src_chunk_key, dst_lod);
+        pyramid.downsample_chunks_with_lod0_and_index(
+            get_lod0_chunk,
+            &index,
+            &SdfMeanDownsampler,
+            &lod0_extent,
+        );
     }
 }

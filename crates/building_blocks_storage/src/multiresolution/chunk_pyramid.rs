@@ -6,6 +6,7 @@ use crate::{
 
 use building_blocks_core::prelude::*;
 
+use std::borrow::Borrow;
 use std::fmt::Debug;
 
 /// A set of `ChunkMap`s used as storage for voxels with variable level of detail (LOD).
@@ -20,7 +21,7 @@ use std::fmt::Debug;
 /// regardless of where LOD0 is stored.
 pub struct ChunkPyramid<N, T, Store> {
     // TODO: allow generic builder / multichannel
-    levels: Vec<ChunkMap<N, T, ChunkMapBuilderNx1<N, T>, Store>>,
+    levels: Vec<ChunkMapNx1<N, T, Store>>,
     builder: ChunkMapBuilderNx1<N, T>,
 }
 
@@ -110,16 +111,77 @@ where
                 dst_chunks,
             );
         } else {
-            // Just fill the destination samples with the ambient value.
-            let dst =
-                DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_key, lod_delta);
-            let dst_chunk = dst_chunks.get_mut_chunk_or_insert_ambient(dst.dst_chunk_key);
-            let dst_extent = ExtentN::from_min_and_shape(
-                dst_chunk.extent().minimum + dst.dst_offset.0,
-                chunk_shape >> 1,
-            );
-            dst_chunk.fill_extent(&dst_extent, builder.ambient_value());
+            Self::downsample_ambient(
+                builder.ambient_value(),
+                chunk_shape,
+                src_chunk_key,
+                lod_delta,
+                dst_chunks,
+            )
         }
+    }
+
+    /// The same as `downsample_chunk`, but using a source chunk from `lod0_chunks`. Note that `dst_lod` is NOT treated as an
+    /// index into `self.levels`; it is essentially `level + 1`, since LOD0 is not owned by `self`.
+    pub fn downsample_lod0_chunk<Samp, Lod0Ch, Lod0ChBorrow>(
+        &mut self,
+        sampler: &Samp,
+        get_lod0_chunk: impl Fn(PointN<N>) -> Option<Lod0Ch>,
+        src_chunk_key: PointN<N>,
+        dst_lod: u8,
+    ) where
+        // Need to get tricky here to support both chunk references and TransformMaps returned from a closure.
+        Lod0Ch: Borrow<Lod0ChBorrow>,
+        Samp: ChunkDownsampler<N, T, Lod0ChBorrow>,
+        ArrayNx1<N, T>: ForEachMutPtr<N, (), Item = *mut T>,
+    {
+        assert!(dst_lod > 0);
+        let dst_level = dst_lod - 1;
+        let lod_delta = dst_lod;
+
+        let Self { levels, builder } = self;
+
+        let chunk_shape = builder.chunk_shape();
+
+        let dst_chunks = &mut levels[dst_level as usize];
+
+        if let Some(src_chunk) = get_lod0_chunk(src_chunk_key) {
+            downsample_chunk_into_map(
+                sampler,
+                chunk_shape,
+                src_chunk_key,
+                src_chunk.borrow(),
+                lod_delta,
+                dst_chunks,
+            );
+        } else {
+            Self::downsample_ambient(
+                builder.ambient_value(),
+                chunk_shape,
+                src_chunk_key,
+                lod_delta,
+                dst_chunks,
+            )
+        }
+    }
+
+    /// Fill the destination samples with the ambient value.
+    fn downsample_ambient(
+        ambient_value: T,
+        chunk_shape: PointN<N>,
+        src_chunk_key: PointN<N>,
+        lod_delta: u8,
+        dst_chunks: &mut ChunkMapNx1<N, T, Store>,
+    ) where
+        ArrayNx1<N, T>: ForEachMutPtr<N, (), Item = *mut T>,
+    {
+        let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_key, lod_delta);
+        let dst_chunk = dst_chunks.get_mut_chunk_or_insert_ambient(dst.dst_chunk_key);
+        let dst_extent = ExtentN::from_min_and_shape(
+            dst_chunk.extent().minimum + dst.dst_offset.0,
+            chunk_shape >> 1,
+        );
+        dst_chunk.fill_extent(&dst_extent, ambient_value);
     }
 }
 
@@ -158,6 +220,56 @@ where
                             let src_chunk_key =
                                 (node.octant().minimum() << chunk_log2) >> src_lod as i32;
                             self.downsample_chunk(sampler, src_lod, src_chunk_key, dst_lod);
+                        }
+
+                        VisitStatus::Continue
+                    },
+                );
+            });
+    }
+
+    /// Same as `downsample_chunks_with_index`, but allows passing in a closure that fetches LOD0 chunks. This is mostly a
+    /// workaround so we can downsample multichannel chunks from LOD0.
+    pub fn downsample_chunks_with_lod0_and_index<Samp, Lod0Ch, Lod0ChBorrow>(
+        &mut self,
+        get_lod0_chunk: impl Fn(Point3i) -> Option<Lod0Ch>,
+        index: &OctreeChunkIndex,
+        sampler: &Samp,
+        extent: &Extent3i,
+    ) where
+        Lod0Ch: Borrow<Lod0ChBorrow>,
+        Samp: ChunkDownsampler<[i32; 3], T, Array3x1<T>>
+            + ChunkDownsampler<[i32; 3], T, Lod0ChBorrow>,
+    {
+        let chunk_shape = self.chunk_shape();
+        let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
+
+        let chunk_space_extent =
+            Extent3i::from_min_and_shape(extent.minimum >> chunk_log2, extent.shape >> chunk_log2);
+
+        index
+            .superchunk_octrees
+            .visit_octrees(extent, &mut |octree| {
+                // Post-order is important to make sure we start downsampling at LOD 0.
+                octree.visit_all_octants_for_extent_in_postorder(
+                    &chunk_space_extent,
+                    &mut |node: &OctreeNode| {
+                        let src_lod = node.octant().power();
+                        if src_lod < self.num_levels() - 1 {
+                            let dst_lod = src_lod + 1;
+                            let src_chunk_key =
+                                (node.octant().minimum() << chunk_log2) >> src_lod as i32;
+
+                            if src_lod == 0 {
+                                self.downsample_lod0_chunk(
+                                    sampler,
+                                    &get_lod0_chunk,
+                                    src_chunk_key,
+                                    dst_lod,
+                                );
+                            } else {
+                                self.downsample_chunk(sampler, src_lod, src_chunk_key, dst_lod);
+                            }
                         }
 
                         VisitStatus::Continue
@@ -265,6 +377,7 @@ define_conditional_aliases!(Snappy);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{Sd8, SdfMeanDownsampler, TransformMap};
 
     #[test]
     fn downsample_destination_for_one_level_up() {
@@ -316,5 +429,30 @@ mod tests {
                 dst_offset: Local(Point3i::ZERO),
             }
         );
+    }
+
+    #[test]
+    fn downsample_multichannel_chunk() {
+        let num_lods = 6;
+        let chunk_shape = Point3i::fill(16);
+
+        let ambient = (Sd8::ONE, 'a');
+        let lod0_builder = ChunkMapBuilder3x2::new(chunk_shape, ambient);
+        let mut lod0 = lod0_builder.build_with_hash_map_storage();
+        let map_extent =
+            Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(2)) * chunk_shape;
+        lod0.fill_extent(&map_extent, ambient);
+
+        let get_lod0_chunk = |p| {
+            lod0.get_chunk(p)
+                .map(|chunk| TransformMap::new(chunk, |(sd, _letter): (Sd8, char)| sd))
+        };
+
+        let pyramid_builder = ChunkMapBuilder3x1::new(chunk_shape, Sd8::ONE);
+        let mut pyramid = ChunkPyramid3::new(pyramid_builder, || SmallKeyHashMap::new(), num_lods);
+
+        let src_chunk_key = Point3i::ZERO;
+        let dst_lod = 1;
+        pyramid.downsample_lod0_chunk(&SdfMeanDownsampler, get_lod0_chunk, src_chunk_key, dst_lod);
     }
 }

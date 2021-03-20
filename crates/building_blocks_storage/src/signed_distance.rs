@@ -21,14 +21,14 @@ pub struct Sd16(pub i16);
 impl Sd8 {
     pub const RESOLUTION: f32 = std::i8::MAX as f32;
     pub const PRECISION: f32 = 1.0 / Self::RESOLUTION;
-    pub const NEG_ONE: Self = Self(std::i8::MIN);
+    pub const NEG_ONE: Self = Self(-std::i8::MAX);
     pub const ONE: Self = Self(std::i8::MAX);
 }
 
 impl Sd16 {
     pub const RESOLUTION: f32 = std::i16::MAX as f32;
     pub const PRECISION: f32 = 1.0 / Self::RESOLUTION;
-    pub const NEG_ONE: Self = Self(std::i16::MIN);
+    pub const NEG_ONE: Self = Self(-std::i16::MAX);
     pub const ONE: Self = Self(std::i16::MAX);
 }
 
@@ -78,5 +78,39 @@ impl SignedDistance for Sd16 {
     #[inline]
     fn is_negative(&self) -> bool {
         self.0 < 0
+    }
+}
+
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sd8_boundary_conversions() {
+        assert_eq!(-1.0, f32::from(Sd8::NEG_ONE));
+        assert_eq!(1.0, f32::from(Sd8::ONE));
+        assert_eq!(0.0, f32::from(Sd8(0)));
+
+        assert_eq!(Sd8::NEG_ONE, Sd8::from(-1.0));
+        assert_eq!(Sd8::ONE, Sd8::from(1.0));
+        assert_eq!(Sd8(0), Sd8::from(0.0));
+    }
+
+    #[test]
+    fn sd16_boundary_conversions() {
+        assert_eq!(-1.0, f32::from(Sd16::NEG_ONE));
+        assert_eq!(1.0, f32::from(Sd16::ONE));
+        assert_eq!(0.0, f32::from(Sd16(0)));
+
+        assert_eq!(Sd16::NEG_ONE, Sd16::from(-1.0));
+        assert_eq!(Sd16::ONE, Sd16::from(1.0));
+        assert_eq!(Sd16(0), Sd16::from(0.0));
     }
 }

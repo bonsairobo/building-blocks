@@ -137,12 +137,12 @@
 //! copy_extent(&extent, &src_select, &mut dst);
 //! ```
 
-mod channel;
 mod coords;
 #[macro_use]
 mod for_each;
 mod indexer;
 
+pub mod channel;
 pub mod compression;
 
 #[cfg(feature = "dot_vox")]

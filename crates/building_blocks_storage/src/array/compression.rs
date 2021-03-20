@@ -1,4 +1,4 @@
-use crate::{Array, ArrayNx1, BincodeCompression, Compressed, Compression, FromBytesCompression};
+use crate::{Array, Compressed, Compression, FromBytesCompression};
 
 use building_blocks_core::prelude::*;
 
@@ -88,8 +88,8 @@ pub mod multichannel_aliases {
     use super::*;
     use crate::array::channel::multichannel_aliases::*;
 
-    pub type FastArrayCompressionNx1<N, T, B> =
-        FastArrayCompression<N, FastChannelsCompression1<B, T>>;
+    pub type FastArrayCompressionNx1<N, By, A> =
+        FastArrayCompression<N, FastChannelsCompression1<By, A>>;
     pub type FastArrayCompressionNx2<N, By, A, B> =
         FastArrayCompression<N, FastChannelsCompression2<By, A, B>>;
     pub type FastArrayCompressionNx3<N, By, A, B, C> =
@@ -103,34 +103,6 @@ pub mod multichannel_aliases {
 }
 
 pub use multichannel_aliases::*;
-
-pub type BincodeArrayCompression<N, T, B> = BincodeCompression<ArrayNx1<N, T>, B>;
-pub type BincodeCompressedArray<N, T, B> = Compressed<BincodeArrayCompression<N, T, B>>;
-
-macro_rules! define_conditional_aliases {
-    ($backend:ident) => {
-        use crate::{$backend, MaybeCompressed};
-
-        pub type MaybeCompressedArrayNx1<N, T, B = $backend> =
-            MaybeCompressed<ArrayNx1<N, T>, Compressed<FastArrayCompressionNx1<N, T, B>>>;
-        pub type MaybeCompressedArray2x1<T, B = $backend> = MaybeCompressedArrayNx1<[i32; 2], T, B>;
-        pub type MaybeCompressedArray3x1<T, B = $backend> = MaybeCompressedArrayNx1<[i32; 3], T, B>;
-
-        pub type MaybeCompressedArrayRefN<'a, N, T, B = $backend> =
-            MaybeCompressed<&'a ArrayNx1<N, T>, &'a Compressed<FastArrayCompressionNx1<N, T, B>>>;
-        pub type MaybeCompressedArrayRef2<'a, T, B = $backend> =
-            MaybeCompressedArrayRefN<'a, [i32; 2], T, B>;
-        pub type MaybeCompressedArrayRef3<'a, T, B = $backend> =
-            MaybeCompressedArrayRefN<'a, [i32; 3], T, B>;
-    };
-}
-
-// LZ4 and Snappy are not mutually exclusive, but if we only use one, then we want to have these aliases refer to the choice we
-// made.
-#[cfg(all(feature = "lz4", not(feature = "snap")))]
-define_conditional_aliases!(Lz4);
-#[cfg(all(not(feature = "lz4"), feature = "snap"))]
-define_conditional_aliases!(Snappy);
 
 // ████████╗███████╗███████╗████████╗
 // ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝

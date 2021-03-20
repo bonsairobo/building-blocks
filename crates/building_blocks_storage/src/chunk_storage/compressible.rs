@@ -1,9 +1,8 @@
 use crate::{
-    CacheEntry, ChunkMap, ChunkMapBuilder, ChunkMapBuilderNx1, ChunkWriteStorage, Compressed,
+    CacheEntry, ChunkMap, ChunkMapBuilder, ChunkWriteStorage, Compressed,
     CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression, FastArrayCompression,
-    FastArrayCompressionNx1, FastChannelsCompression, FromBytesCompression, IterChunkKeys,
-    LocalChunkCache, LruCacheEntries, LruCacheIntoIter, LruCacheKeys, MaybeCompressed,
-    SmallKeyLruCache,
+    FastChannelsCompression, FromBytesCompression, IterChunkKeys, LocalChunkCache, LruCacheEntries,
+    LruCacheIntoIter, LruCacheKeys, MaybeCompressed, SmallKeyLruCache,
 };
 
 use building_blocks_core::prelude::*;
@@ -24,26 +23,6 @@ where
 
 pub type FastCompressibleChunkStorage<N, By, Chan> =
     CompressibleChunkStorage<N, FastArrayCompression<N, FastChannelsCompression<By, Chan>>>;
-
-pub mod multichannel_aliases {
-    use super::*;
-    use crate::array::compression::multichannel_aliases::*;
-
-    pub type FastCompressibleChunkStorageNx1<N, By, A> =
-        CompressibleChunkStorage<N, FastArrayCompressionNx1<N, By, A>>;
-    pub type FastCompressibleChunkStorageNx2<N, By, A, B> =
-        CompressibleChunkStorage<N, FastArrayCompressionNx2<N, By, A, B>>;
-    pub type FastCompressibleChunkStorageNx3<N, By, A, B, C> =
-        CompressibleChunkStorage<N, FastArrayCompressionNx3<N, By, A, B, C>>;
-    pub type FastCompressibleChunkStorageNx4<N, By, A, B, C, D> =
-        CompressibleChunkStorage<N, FastArrayCompressionNx4<N, By, A, B, C, D>>;
-    pub type FastCompressibleChunkStorageNx5<N, By, A, B, C, D, E> =
-        CompressibleChunkStorage<N, FastArrayCompressionNx5<N, By, A, B, C, D, E>>;
-    pub type FastCompressibleChunkStorageNx6<N, By, A, B, C, D, E, F> =
-        CompressibleChunkStorage<N, FastArrayCompressionNx6<N, By, A, B, C, D, E, F>>;
-}
-
-pub use multichannel_aliases::*;
 
 impl<N, By, Chan> FastCompressibleChunkStorage<N, By, Chan>
 where
@@ -268,10 +247,6 @@ where
     }
 }
 
-/// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
-pub type CompressibleChunkMap<N, T, B, Compr> =
-    ChunkMap<N, T, B, CompressibleChunkStorage<N, Compr>>;
-
 impl<N, T, B, Compr> CompressibleChunkMap<N, T, B, Compr>
 where
     PointN<N>: Hash + IntegerPoint<N>,
@@ -297,34 +272,62 @@ pub type LruChunkCacheKeys<'a, N, Ch> = LruCacheKeys<'a, PointN<N>, Ch, Compress
 pub type LruChunkCacheEntries<'a, N, Ch> = LruCacheEntries<'a, PointN<N>, Ch, CompressedLocation>;
 pub type LruChunkCacheIntoIter<N, Ch> = LruCacheIntoIter<PointN<N>, Ch, CompressedLocation>;
 
-pub type CompressibleChunkStorageNx1<N, T, B> =
-    CompressibleChunkStorage<N, FastArrayCompressionNx1<N, T, B>>;
+/// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
+pub type CompressibleChunkMap<N, T, B, Compr> =
+    ChunkMap<N, T, B, CompressibleChunkStorage<N, Compr>>;
 
-/// An N-dimensional, single-channel `CompressibleChunkMap`.
-pub type CompressibleChunkMapNx1<N, T, B> =
-    CompressibleChunkMap<N, T, ChunkMapBuilderNx1<N, T>, FastArrayCompressionNx1<N, T, B>>;
+pub mod multichannel_aliases {
+    use super::*;
+    use crate::array::compression::multichannel_aliases::*;
+    use crate::{Channel, ChunkMapBuilderNxM};
 
-macro_rules! define_conditional_aliases {
-    ($backend:ident) => {
-        use crate::$backend;
+    pub type FastCompressibleChunkStorageNx1<N, By, A> =
+        CompressibleChunkStorage<N, FastArrayCompressionNx1<N, By, A>>;
+    pub type FastCompressibleChunkStorageNx2<N, By, A, B> =
+        CompressibleChunkStorage<N, FastArrayCompressionNx2<N, By, A, B>>;
+    pub type FastCompressibleChunkStorageNx3<N, By, A, B, C> =
+        CompressibleChunkStorage<N, FastArrayCompressionNx3<N, By, A, B, C>>;
+    pub type FastCompressibleChunkStorageNx4<N, By, A, B, C, D> =
+        CompressibleChunkStorage<N, FastArrayCompressionNx4<N, By, A, B, C, D>>;
+    pub type FastCompressibleChunkStorageNx5<N, By, A, B, C, D, E> =
+        CompressibleChunkStorage<N, FastArrayCompressionNx5<N, By, A, B, C, D, E>>;
+    pub type FastCompressibleChunkStorageNx6<N, By, A, B, C, D, E, F> =
+        CompressibleChunkStorage<N, FastArrayCompressionNx6<N, By, A, B, C, D, E, F>>;
 
-        /// 2-dimensional, single-channel `CompressibleChunkStorage`.
-        pub type CompressibleChunkStorage2x1<T, B = $backend> =
-            CompressibleChunkStorageNx1<[i32; 2], T, B>;
-        /// 3-dimensional, single-channel `CompressibleChunkStorage`.
-        pub type CompressibleChunkStorage3x1<T, B = $backend> =
-            CompressibleChunkStorageNx1<[i32; 3], T, B>;
+    macro_rules! compressible_map_type_alias {
+        ($name:ident, $dim:ty, $( $chan:ident ),+ ) => {
+            pub type $name<By, $( $chan ),+> = CompressibleChunkMap<
+                $dim,
+                ($($chan,)+),
+                ChunkMapBuilderNxM<$dim, ($($chan,)+), ($(Channel<$chan>,)+)>,
+                FastArrayCompression<$dim, FastChannelsCompression<By, ($(Channel<$chan>,)+)>>,
+            >;
+        };
+    }
 
-        /// A 2-dimensional, single-channel `CompressibleChunkMap`.
-        pub type CompressibleChunkMap2x1<T, B = $backend> = CompressibleChunkMapNx1<[i32; 2], T, B>;
-        /// A 3-dimensional, single-channel `CompressibleChunkMap`.
-        pub type CompressibleChunkMap3x1<T, B = $backend> = CompressibleChunkMapNx1<[i32; 3], T, B>;
-    };
+    pub type CompressibleChunkMap2x1<By, A> = CompressibleChunkMap<
+        [i32; 2],
+        A,
+        ChunkMapBuilderNxM<[i32; 2], A, Channel<A>>,
+        FastArrayCompression<[i32; 2], FastChannelsCompression<By, A>>,
+    >;
+    compressible_map_type_alias!(CompressibleChunkMap2x2, [i32; 2], A, B);
+    compressible_map_type_alias!(CompressibleChunkMap2x3, [i32; 2], A, B, C);
+    compressible_map_type_alias!(CompressibleChunkMap2x4, [i32; 2], A, B, C, D);
+    compressible_map_type_alias!(CompressibleChunkMap2x5, [i32; 2], A, B, C, D, E);
+    compressible_map_type_alias!(CompressibleChunkMap2x6, [i32; 2], A, B, C, D, E, F);
+
+    pub type CompressibleChunkMap3x1<By, A> = CompressibleChunkMap<
+        [i32; 3],
+        A,
+        ChunkMapBuilderNxM<[i32; 3], A, Channel<A>>,
+        FastArrayCompression<[i32; 3], FastChannelsCompression<By, A>>,
+    >;
+    compressible_map_type_alias!(CompressibleChunkMap3x2, [i32; 3], A, B);
+    compressible_map_type_alias!(CompressibleChunkMap3x3, [i32; 3], A, B, C);
+    compressible_map_type_alias!(CompressibleChunkMap3x4, [i32; 3], A, B, C, D);
+    compressible_map_type_alias!(CompressibleChunkMap3x5, [i32; 3], A, B, C, D, E);
+    compressible_map_type_alias!(CompressibleChunkMap3x6, [i32; 3], A, B, C, D, E, F);
 }
 
-// LZ4 and Snappy are not mutually exclusive, but if you only use one, then you want to have these aliases refer to the choice
-// you made.
-#[cfg(all(feature = "lz4", not(feature = "snap")))]
-define_conditional_aliases!(Lz4);
-#[cfg(all(not(feature = "lz4"), feature = "snap"))]
-define_conditional_aliases!(Snappy);
+pub use multichannel_aliases::*;

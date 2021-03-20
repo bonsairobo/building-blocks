@@ -79,13 +79,12 @@ pub type SmallKeyBuildHasher = ahash::RandomState;
 pub mod prelude {
     pub use super::{
         copy_extent, BytesCompression, Chunk, ChunkHashMapPyramid2, ChunkHashMapPyramid3,
-        ChunkIndexer, ChunkMap2x1, ChunkMap3x1, ChunkMapBuilder, ChunkReadStorage,
-        ChunkWriteStorage, Compressed, CompressibleChunkMap, CompressibleChunkMapReader,
-        CompressibleChunkStorage, CompressibleChunkStorageReader, Compression,
-        FastArrayCompressionNx1, FastCompressibleChunkStorage, FromBytesCompression, Func,
-        IndexedArray, IsEmpty, IterChunkKeys, Local, LocalChunkCache2, LocalChunkCache3,
-        OctreeChunkIndex, OctreeNode, OctreeSet, Sd16, Sd8, SerializableChunks, SignedDistance,
-        Stride, TransformMap,
+        ChunkIndexer, ChunkMapBuilder, ChunkReadStorage, ChunkWriteStorage, Compressed,
+        CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
+        CompressibleChunkStorageReader, Compression, FastCompressibleChunkStorage,
+        FromBytesCompression, Func, IndexedArray, IsEmpty, IterChunkKeys, Local, LocalChunkCache2,
+        LocalChunkCache3, OctreeChunkIndex, OctreeNode, OctreeSet, Sd16, Sd8, SerializableChunks,
+        SignedDistance, Stride, TransformMap,
     };
 
     pub use super::access_traits::*;
@@ -98,19 +97,6 @@ pub mod prelude {
     pub use super::Lz4;
     #[cfg(feature = "snap")]
     pub use super::Snappy;
-
-    #[cfg(any(
-        all(feature = "lz4", not(feature = "snap")),
-        all(not(feature = "lz4"), feature = "snap"),
-    ))]
-    pub use super::{
-        CompressibleChunkMap2x1, CompressibleChunkMap3x1, CompressibleChunkMapReader2x1,
-        CompressibleChunkMapReader3x1, CompressibleChunkPyramid2, CompressibleChunkPyramid3,
-        CompressibleChunkStorage2x1, CompressibleChunkStorage3x1,
-        CompressibleChunkStorageReader2x1, CompressibleChunkStorageReader3x1,
-        MaybeCompressedArray2x1, MaybeCompressedArray3x1, MaybeCompressedArrayRef2,
-        MaybeCompressedArrayRef3,
-    };
 }
 
 #[cfg(feature = "dot_vox")]

@@ -1,7 +1,7 @@
 use crate::{
-    CacheEntry, ChunkMap, ChunkReadStorage, CompressedChunks, CompressibleChunkStorage,
-    Compression, IterChunkKeys, LocalCache, LruChunkCacheEntries, LruChunkCacheKeys,
-    SmallKeyBuildHasher,
+    ArrayNx1, CacheEntry, ChunkMap, ChunkReadStorage, CompressedChunks, CompressibleChunkStorage,
+    Compression, FastArrayCompressionNx1, IterChunkKeys, LocalCache, LruChunkCacheEntries,
+    LruChunkCacheKeys, SmallKeyBuildHasher,
 };
 
 use building_blocks_core::prelude::*;
@@ -115,42 +115,19 @@ pub type LocalChunkCache2<Ch> = LocalChunkCache<[i32; 2], Ch>;
 pub type LocalChunkCache3<Ch> = LocalChunkCache<[i32; 3], Ch>;
 
 /// A `ChunkMap` backed by a `CompressibleChunkStorageReader`.
-pub type CompressibleChunkMapReader<'a, N, T, B, Compr> =
-    ChunkMap<N, T, B, CompressibleChunkStorageReader<'a, N, Compr>>;
+pub type CompressibleChunkMapReader<'a, N, T, Bldr, Compr> =
+    ChunkMap<N, T, Bldr, CompressibleChunkStorageReader<'a, N, Compr>>;
 
-macro_rules! define_conditional_aliases {
-    ($backend:ident) => {
-        use crate::{$backend, ArrayNx1, FastArrayCompressionNx1};
-
-        /// N-dimensional, single-channel `CompressibleChunkStorageReader`.
-        pub type CompressibleChunkStorageReaderNx1<'a, N, T, B = $backend> =
-            CompressibleChunkStorageReader<'a, N, FastArrayCompressionNx1<N, T, B>>;
-        /// 2-dimensional, single-channel `CompressibleChunkStorageReader`.
-        pub type CompressibleChunkStorageReader2x1<'a, T, B = $backend> =
-            CompressibleChunkStorageReaderNx1<'a, [i32; 2], T, B>;
-        /// 3-dimensional, single-channel `CompressibleChunkStorageReader`.
-        pub type CompressibleChunkStorageReader3x1<'a, T, B = $backend> =
-            CompressibleChunkStorageReaderNx1<'a, [i32; 3], T, B>;
-
-        /// N-dimensional, single-channel `CompressibleChunkMapReader`.
-        pub type CompressibleChunkMapReaderNx1<'a, N, T, B = $backend> = ChunkMap<
-            N,
-            T,
-            ArrayNx1<N, T>,
-            CompressibleChunkStorageReader<'a, N, FastArrayCompressionNx1<N, T, B>>,
-        >;
-        /// 2-dimensional, single-channel `CompressibleChunkMapReader`.
-        pub type CompressibleChunkMapReader2x1<'a, T, B = $backend> =
-            CompressibleChunkMapReaderNx1<'a, [i32; 2], T, B>;
-        /// 3-dimensional, single-channel `CompressibleChunkMapReader`.
-        pub type CompressibleChunkMapReader3x1<'a, T, B = $backend> =
-            CompressibleChunkMapReaderNx1<'a, [i32; 3], T, B>;
-    };
-}
-
-// LZ4 and Snappy are not mutually exclusive, but if you only use one, then you want to have these aliases refer to the choice
-// you made.
-#[cfg(all(feature = "lz4", not(feature = "snap")))]
-define_conditional_aliases!(Lz4);
-#[cfg(all(not(feature = "lz4"), feature = "snap"))]
-define_conditional_aliases!(Snappy);
+/// N-dimensional, single-channel `CompressibleChunkMapReader`.
+pub type CompressibleChunkMapReaderNx1<'a, N, By, T> = ChunkMap<
+    N,
+    T,
+    ArrayNx1<N, T>,
+    CompressibleChunkStorageReader<'a, N, FastArrayCompressionNx1<N, By, T>>,
+>;
+/// 2-dimensional, single-channel `CompressibleChunkMapReader`.
+pub type CompressibleChunkMapReader2x1<'a, By, T> =
+    CompressibleChunkMapReaderNx1<'a, [i32; 2], By, T>;
+/// 3-dimensional, single-channel `CompressibleChunkMapReader`.
+pub type CompressibleChunkMapReader3x1<'a, By, T> =
+    CompressibleChunkMapReaderNx1<'a, [i32; 3], By, T>;

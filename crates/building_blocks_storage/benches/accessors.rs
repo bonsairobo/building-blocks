@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{prelude::*, SmallKeyHashMap};
+use building_blocks_storage::{prelude::*, ChunkMap3x1, SmallKeyHashMap};
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 

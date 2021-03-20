@@ -344,28 +344,12 @@ pub type ChunkHashMapPyramid2<T> = ChunkHashMapPyramid<[i32; 2], T>;
 pub type ChunkHashMapPyramid3<T> = ChunkHashMapPyramid<[i32; 3], T>;
 
 /// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
-pub type CompressibleChunkPyramid<N, T, B> =
-    ChunkPyramid<N, T, CompressibleChunkStorage<N, FastArrayCompressionNx1<N, T, B>>>;
-
-macro_rules! define_conditional_aliases {
-    ($backend:ident) => {
-        use crate::$backend;
-
-        /// 2-dimensional `CompressibleChunkPyramid`.
-        pub type CompressibleChunkPyramid2<T, B = $backend> =
-            CompressibleChunkPyramid<[i32; 2], T, B>;
-        /// 3-dimensional `CompressibleChunkPyramid`.
-        pub type CompressibleChunkPyramid3<T, B = $backend> =
-            CompressibleChunkPyramid<[i32; 3], T, B>;
-    };
-}
-
-// LZ4 and Snappy are not mutually exclusive, but if you only use one, then you want to have these aliases refer to the choice
-// you made.
-#[cfg(all(feature = "lz4", not(feature = "snap")))]
-define_conditional_aliases!(Lz4);
-#[cfg(all(not(feature = "lz4"), feature = "snap"))]
-define_conditional_aliases!(Snappy);
+pub type CompressibleChunkPyramid<N, By, T> =
+    ChunkPyramid<N, T, CompressibleChunkStorage<N, FastArrayCompressionNx1<N, By, T>>>;
+/// 2-dimensional `CompressibleChunkPyramid`.
+pub type CompressibleChunkPyramid2<By, T> = CompressibleChunkPyramid<[i32; 2], T, By>;
+/// 3-dimensional `CompressibleChunkPyramid`.
+pub type CompressibleChunkPyramid3<By, T> = CompressibleChunkPyramid<[i32; 3], T, By>;
 
 // ████████╗███████╗███████╗████████╗
 // ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝

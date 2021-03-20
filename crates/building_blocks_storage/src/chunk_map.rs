@@ -13,7 +13,7 @@
 //!
 //! # Chunk Storage
 //!
-//! `ChunkMap<N, T, Meta, Store>` depends on a backing chunk storage `Store`, which can implement some of `ChunkReadStorage` or
+//! `ChunkMap<N, T, Bldr, Store>` depends on a backing chunk storage `Store`, which can implement some of `ChunkReadStorage` or
 //! `ChunkWriteStorage`. A storage can be as simple as a `HashMap`, which provides good performance for both iteration and
 //! random access. It could also be something more memory efficient like `FastCompressibleChunkStorage` or
 //! `CompressibleChunkStorageReader`, which perform nearly as well but involve some extra management of the cache.
@@ -139,18 +139,18 @@ use either::Either;
 /// - `GetMut`
 /// - `ForEachMut`
 /// - `WriteExtent`
-pub struct ChunkMap<N, T, B, Store> {
+pub struct ChunkMap<N, T, Bldr, Store> {
     /// Translates from lattice coordinates to chunk key space.
     pub indexer: ChunkIndexer<N>,
     storage: Store,
-    builder: B,
+    builder: Bldr,
     ambient_value: T, // Needed for GetRef to return a reference to non-temporary value
 }
 
 /// A 2-dimensional `ChunkMap`.
-pub type ChunkMap2<T, B, Store> = ChunkMap<[i32; 2], T, B, Store>;
+pub type ChunkMap2<T, Bldr, Store> = ChunkMap<[i32; 2], T, Bldr, Store>;
 /// A 3-dimensional `ChunkMap`.
-pub type ChunkMap3<T, B, Store> = ChunkMap<[i32; 3], T, B, Store>;
+pub type ChunkMap3<T, Bldr, Store> = ChunkMap<[i32; 3], T, Bldr, Store>;
 
 /// An N-dimensional, single-channel `ChunkMap`.
 pub type ChunkMapNx1<N, T, Store> = ChunkMap<N, T, ChunkMapBuilderNx1<N, T>, Store>;
@@ -276,15 +276,15 @@ where
     }
 }
 
-impl<N, T, B, Store> ChunkMap<N, T, B, Store>
+impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkMapBuilder<N, T>,
+    Bldr: ChunkMapBuilder<N, T>,
 {
     /// Creates a map using the given `storage`.
     ///
     /// All dimensions of `chunk_shape` must be powers of 2.
-    fn new(builder: B, storage: Store) -> Self {
+    fn new(builder: Bldr, storage: Store) -> Self {
         let indexer = ChunkIndexer::new(builder.chunk_shape());
         let ambient_value = builder.ambient_value();
 
@@ -297,7 +297,7 @@ where
     }
 }
 
-impl<N, T, B, Store> ChunkMap<N, T, B, Store> {
+impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store> {
     /// Consumes `self` and returns the backing chunk storage.
     #[inline]
     pub fn take_storage(self) -> Store {
@@ -317,22 +317,22 @@ impl<N, T, B, Store> ChunkMap<N, T, B, Store> {
     }
 
     #[inline]
-    pub fn builder(&self) -> &B {
+    pub fn builder(&self) -> &Bldr {
         &self.builder
     }
 }
 
-impl<N, T, B, Store> ChunkMap<N, T, B, Store>
+impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkMapBuilder<N, T>,
-    Store: ChunkReadStorage<N, B::Chunk>,
+    Bldr: ChunkMapBuilder<N, T>,
+    Store: ChunkReadStorage<N, Bldr::Chunk>,
 {
     /// Borrow the chunk at `key`.
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    pub fn get_chunk(&self, key: PointN<N>) -> Option<&B::Chunk> {
+    pub fn get_chunk(&self, key: PointN<N>) -> Option<&Bldr::Chunk> {
         debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.get(key)
@@ -343,7 +343,7 @@ where
     pub fn visit_chunks(
         &self,
         extent: &ExtentN<N>,
-        mut visitor: impl FnMut(Either<&B::Chunk, (&ExtentN<N>, AmbientExtent<N, T>)>),
+        mut visitor: impl FnMut(Either<&Bldr::Chunk, (&ExtentN<N>, AmbientExtent<N, T>)>),
     ) {
         for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
             if let Some(chunk) = self.get_chunk(chunk_key) {
@@ -360,7 +360,11 @@ where
 
     /// Call `visitor` on all occupied chunks that overlap `extent`.
     #[inline]
-    pub fn visit_occupied_chunks(&self, extent: &ExtentN<N>, mut visitor: impl FnMut(&B::Chunk)) {
+    pub fn visit_occupied_chunks(
+        &self,
+        extent: &ExtentN<N>,
+        mut visitor: impl FnMut(&Bldr::Chunk),
+    ) {
         for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
             if let Some(chunk) = self.get_chunk(chunk_key) {
                 visitor(chunk)
@@ -369,17 +373,17 @@ where
     }
 }
 
-impl<N, T, B, Store> ChunkMap<N, T, B, Store>
+impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkMapBuilder<N, T>,
-    Store: ChunkWriteStorage<N, B::Chunk>,
+    Bldr: ChunkMapBuilder<N, T>,
+    Store: ChunkWriteStorage<N, Bldr::Chunk>,
 {
     /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
     ///
     /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
     #[inline]
-    pub fn write_chunk(&mut self, key: PointN<N>, chunk: B::Chunk) {
+    pub fn write_chunk(&mut self, key: PointN<N>, chunk: Bldr::Chunk) {
         debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.write(key, chunk);
@@ -389,7 +393,7 @@ where
     ///
     /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
     #[inline]
-    pub fn replace_chunk(&mut self, key: PointN<N>, chunk: B::Chunk) -> Option<B::Chunk> {
+    pub fn replace_chunk(&mut self, key: PointN<N>, chunk: Bldr::Chunk) -> Option<Bldr::Chunk> {
         debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.replace(key, chunk)
@@ -399,7 +403,7 @@ where
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    pub fn get_mut_chunk(&mut self, key: PointN<N>) -> Option<&mut B::Chunk> {
+    pub fn get_mut_chunk(&mut self, key: PointN<N>) -> Option<&mut Bldr::Chunk> {
         debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.get_mut(key)
@@ -412,8 +416,8 @@ where
     pub fn get_mut_chunk_or_insert_with(
         &mut self,
         key: PointN<N>,
-        create_chunk: impl FnOnce() -> B::Chunk,
-    ) -> &mut B::Chunk {
+        create_chunk: impl FnOnce() -> Bldr::Chunk,
+    ) -> &mut Bldr::Chunk {
         debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         self.storage.get_mut_or_insert_with(key, create_chunk)
@@ -423,7 +427,7 @@ where
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    pub fn get_mut_chunk_or_insert_ambient(&mut self, key: PointN<N>) -> &mut B::Chunk {
+    pub fn get_mut_chunk_or_insert_ambient(&mut self, key: PointN<N>) -> &mut Bldr::Chunk {
         debug_assert!(self.indexer.chunk_key_is_valid(key));
 
         let Self {
@@ -443,7 +447,7 @@ where
     pub fn visit_mut_chunks(
         &mut self,
         extent: &ExtentN<N>,
-        mut visitor: impl FnMut(&mut B::Chunk),
+        mut visitor: impl FnMut(&mut Bldr::Chunk),
     ) {
         for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
             visitor(self.get_mut_chunk_or_insert_ambient(chunk_key));
@@ -455,7 +459,7 @@ where
     pub fn visit_occupied_mut_chunks(
         &mut self,
         extent: &ExtentN<N>,
-        mut visitor: impl FnMut(&mut B::Chunk),
+        mut visitor: impl FnMut(&mut Bldr::Chunk),
     ) {
         for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
             if let Some(chunk) = self.get_mut_chunk(chunk_key) {
@@ -465,7 +469,7 @@ where
     }
 }
 
-impl<N, T, B, Store, MutPtr> ChunkMap<N, T, B, Store>
+impl<N, T, Bldr, Store, MutPtr> ChunkMap<N, T, Bldr, Store>
 where
     Self: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
     T: Clone,
@@ -481,7 +485,7 @@ where
     }
 }
 
-impl<'a, N, T, B, Store> ChunkMap<N, T, B, Store>
+impl<'a, N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
     Store: IterChunkKeys<'a, N>,
@@ -540,13 +544,13 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<'a, N, T, B, Store> Get<PointN<N>> for ChunkMap<N, T, B, Store>
+impl<'a, N, T, Bldr, Store> Get<PointN<N>> for ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
     T: Clone,
-    B: ChunkMapBuilder<N, T>,
-    <B::Chunk as Chunk>::Array: Get<PointN<N>, Item = T>,
-    Store: ChunkReadStorage<N, B::Chunk>,
+    Bldr: ChunkMapBuilder<N, T>,
+    <Bldr::Chunk as Chunk>::Array: Get<PointN<N>, Item = T>,
+    Store: ChunkReadStorage<N, Bldr::Chunk>,
 {
     type Item = T;
 
@@ -560,12 +564,12 @@ where
     }
 }
 
-impl<'a, N, T, B, Store, Ref> GetRef<'a, PointN<N>> for ChunkMap<N, T, B, Store>
+impl<'a, N, T, Bldr, Store, Ref> GetRef<'a, PointN<N>> for ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkMapBuilder<N, T>,
-    <B::Chunk as Chunk>::Array: GetRef<'a, PointN<N>, Item = Ref>,
-    Store: ChunkReadStorage<N, B::Chunk>,
+    Bldr: ChunkMapBuilder<N, T>,
+    <Bldr::Chunk as Chunk>::Array: GetRef<'a, PointN<N>, Item = Ref>,
+    Store: ChunkReadStorage<N, Bldr::Chunk>,
     Ref: MultiRef<'a, Data = T>,
 {
     type Item = Ref;
@@ -580,12 +584,12 @@ where
     }
 }
 
-impl<'a, N, T, B, Store, Mut> GetMut<'a, PointN<N>> for ChunkMap<N, T, B, Store>
+impl<'a, N, T, Bldr, Store, Mut> GetMut<'a, PointN<N>> for ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkMapBuilder<N, T>,
-    <B::Chunk as Chunk>::Array: GetMut<'a, PointN<N>, Item = Mut>,
-    Store: ChunkWriteStorage<N, B::Chunk>,
+    Bldr: ChunkMapBuilder<N, T>,
+    <Bldr::Chunk as Chunk>::Array: GetMut<'a, PointN<N>, Item = Mut>,
+    Store: ChunkWriteStorage<N, Bldr::Chunk>,
 {
     type Item = Mut;
 
@@ -605,13 +609,13 @@ where
 // ██║     ╚██████╔╝██║  ██║    ███████╗██║  ██║╚██████╗██║  ██║
 // ╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
-impl<N, T, B, Store> ForEach<N, PointN<N>> for ChunkMap<N, T, B, Store>
+impl<N, T, Bldr, Store> ForEach<N, PointN<N>> for ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkMapBuilder<N, T>,
-    <B::Chunk as Chunk>::Array: ForEach<N, PointN<N>, Item = T>,
+    Bldr: ChunkMapBuilder<N, T>,
+    <Bldr::Chunk as Chunk>::Array: ForEach<N, PointN<N>, Item = T>,
     T: Copy,
-    Store: ChunkReadStorage<N, B::Chunk>,
+    Store: ChunkReadStorage<N, Bldr::Chunk>,
 {
     type Item = T;
 
@@ -628,12 +632,12 @@ where
     }
 }
 
-impl<N, T, B, Store, MutPtr> ForEachMutPtr<N, PointN<N>> for ChunkMap<N, T, B, Store>
+impl<N, T, Bldr, Store, MutPtr> ForEachMutPtr<N, PointN<N>> for ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkMapBuilder<N, T>,
-    <B::Chunk as Chunk>::Array: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
-    Store: ChunkWriteStorage<N, B::Chunk>,
+    Bldr: ChunkMapBuilder<N, T>,
+    <Bldr::Chunk as Chunk>::Array: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
+    Store: ChunkWriteStorage<N, Bldr::Chunk>,
 {
     type Item = MutPtr;
 
@@ -651,7 +655,8 @@ where
     }
 }
 
-impl<'a, N, T, B, Store, Mut, MutPtr> ForEachMut<'a, N, PointN<N>> for ChunkMap<N, T, B, Store>
+impl<'a, N, T, Bldr, Store, Mut, MutPtr> ForEachMut<'a, N, PointN<N>>
+    for ChunkMap<N, T, Bldr, Store>
 where
     Self: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
     MutPtr: IntoMultiMut<'a, MultiMut = Mut>,
@@ -671,17 +676,17 @@ where
 // ╚██████╗╚██████╔╝██║        ██║
 //  ╚═════╝ ╚═════╝ ╚═╝        ╚═╝
 
-impl<'a, N, T, B, Store> ReadExtent<'a, N> for ChunkMap<N, T, B, Store>
+impl<'a, N, T, Bldr, Store> ReadExtent<'a, N> for ChunkMap<N, T, Bldr, Store>
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
-    B: ChunkMapBuilder<N, T>,
-    B::Chunk: 'a,
+    Bldr: ChunkMapBuilder<N, T>,
+    Bldr::Chunk: 'a,
     T: 'a + Copy,
-    Store: ChunkReadStorage<N, B::Chunk>,
+    Store: ChunkReadStorage<N, Bldr::Chunk>,
 {
-    type Src = ChunkCopySrc<N, T, &'a B::Chunk>;
-    type SrcIter = ChunkCopySrcIter<N, T, &'a B::Chunk>;
+    type Src = ChunkCopySrc<N, T, &'a Bldr::Chunk>;
+    type SrcIter = ChunkCopySrcIter<N, T, &'a Bldr::Chunk>;
 
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
         let chunk_iters = self
@@ -707,12 +712,12 @@ where
 }
 
 // If `Array` supports writing from type Src, then so does ChunkMap.
-impl<N, T, B, Store, Src> WriteExtent<N, Src> for ChunkMap<N, T, B, Store>
+impl<N, T, Bldr, Store, Src> WriteExtent<N, Src> for ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    B: ChunkMapBuilder<N, T>,
-    <B::Chunk as Chunk>::Array: WriteExtent<N, Src>,
-    Store: ChunkWriteStorage<N, B::Chunk>,
+    Bldr: ChunkMapBuilder<N, T>,
+    <Bldr::Chunk as Chunk>::Array: WriteExtent<N, Src>,
+    Store: ChunkWriteStorage<N, Bldr::Chunk>,
     Src: Copy,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src) {

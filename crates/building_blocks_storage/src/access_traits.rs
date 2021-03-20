@@ -61,8 +61,6 @@ use building_blocks_core::ExtentN;
 
 use auto_impl::auto_impl;
 
-// TODO: GATs should make it possible to collapse these traits for T, &T, and &mut T.
-
 //  ██████╗ ███████╗████████╗████████╗███████╗██████╗ ███████╗
 // ██╔════╝ ██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗██╔════╝
 // ██║  ███╗█████╗     ██║      ██║   █████╗  ██████╔╝███████╗

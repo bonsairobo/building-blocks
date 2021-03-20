@@ -17,10 +17,9 @@ pub struct CompressibleChunkStorage<N, Compr>
 where
     Compr: Compression,
 {
-    // TODO: these should be private
-    pub cache: SmallKeyLruCache<PointN<N>, Compr::Data, CompressedLocation>,
-    pub compression: Compr,
-    pub compressed: CompressedChunks<Compr>,
+    pub(crate) cache: SmallKeyLruCache<PointN<N>, Compr::Data, CompressedLocation>,
+    pub(crate) compression: Compr,
+    pub(crate) compressed: CompressedChunks<Compr>,
 }
 
 pub type FastCompressibleChunkStorage<N, By, Chan> =

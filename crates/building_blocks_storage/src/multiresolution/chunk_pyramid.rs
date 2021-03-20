@@ -259,7 +259,7 @@ where
     ) -> Self {
         let lod_delta = lod_delta as i32;
         let chunk_shape_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
-        let level_up_log2 = chunk_shape_log2 + PointN::ONES * lod_delta;
+        let level_up_log2 = chunk_shape_log2 + PointN::fill(lod_delta);
         let level_up_shape = chunk_shape << lod_delta;
         let dst_chunk_key = (src_chunk_key >> level_up_log2) << chunk_shape_log2;
         let offset = src_chunk_key % level_up_shape;

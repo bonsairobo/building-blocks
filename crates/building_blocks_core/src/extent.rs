@@ -106,8 +106,8 @@ where
         <PointN<N> as Point>::Scalar: Add<Output = <PointN<N> as Point>::Scalar>,
     {
         Self::from_min_and_shape(
-            self.minimum - (PointN::ONES * pad_amount),
-            self.shape + (PointN::ONES * (pad_amount + pad_amount)),
+            self.minimum - PointN::fill(pad_amount),
+            self.shape + PointN::fill(pad_amount + pad_amount),
         )
     }
 }

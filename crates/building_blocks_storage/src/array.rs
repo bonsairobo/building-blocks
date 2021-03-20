@@ -157,8 +157,8 @@ pub use for_each::*;
 pub use indexer::*;
 
 use crate::{
-    AsMultiMut, AsMultiMutPtr, ChunkCopySrc, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut,
-    GetMutPtr, GetRef, MultiMutPtr, ReadExtent, TransformMap, WriteExtent,
+    ChunkCopySrc, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetMutPtr, GetRef, IntoMultiMut,
+    IntoMultiMutPtr, MultiMutPtr, ReadExtent, TransformMap, WriteExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -334,7 +334,7 @@ where
     PointN<N>: IntegerPoint<N>,
     Chan: Channels<UninitSelf = UninitChan>,
     UninitChan: UninitChannels<InitSelf = Chan>,
-    UninitChan::Ptr: AsMultiMutPtr<Data = Chan::Data>,
+    UninitChan::Ptr: IntoMultiMutPtr<Data = Chan::Data>,
 {
     /// Create a new array for `extent` where each point's value is determined by the `filler` function.
     pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> Chan::Data) -> Self {
@@ -342,7 +342,7 @@ where
             let mut array = Array::<_, UninitChan>::maybe_uninit(extent);
 
             array.for_each_mut_ptr(&extent, |p, val| {
-                val.as_multi_mut_ptr().write(filler(p));
+                val.into_multi_mut_ptr().write(filler(p));
             });
 
             array.assume_init()
@@ -575,9 +575,9 @@ macro_rules! impl_array_for_each {
         where
             Self: ForEachMutPtr<N, $coords, Item = Chan::Ptr>,
             Chan: Channels,
-            Chan::Ptr: AsMultiMut<'a>,
+            Chan::Ptr: IntoMultiMut<'a>,
         {
-            type Item = <Chan::Ptr as AsMultiMut<'a>>::MultiMut;
+            type Item = <Chan::Ptr as IntoMultiMut<'a>>::MultiMut;
 
             #[inline]
             fn for_each_mut(
@@ -586,7 +586,7 @@ macro_rules! impl_array_for_each {
                 mut f: impl FnMut($coords, Self::Item),
             ) {
                 unsafe {
-                    self.for_each_mut_ptr(iter_extent, |c, ptr| f(c, ptr.as_multi_mut()));
+                    self.for_each_mut_ptr(iter_extent, |c, ptr| f(c, ptr.into_multi_mut()));
                 }
             }
         }

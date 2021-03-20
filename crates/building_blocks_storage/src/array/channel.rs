@@ -254,7 +254,12 @@ pub trait FillChannels: Channels {
 pub trait UninitChannels: Channels {
     type InitSelf;
 
+    /// # Safety
+    /// Elements should not be read until they are initialized.
     unsafe fn maybe_uninit(size: usize) -> Self;
+
+    /// # Safety
+    /// All elements of the channel must be initialized.
     unsafe fn assume_init(self) -> Self::InitSelf;
 }
 

@@ -72,7 +72,7 @@ pub enum MaybeCompressed<D, C> {
 }
 
 impl<A: Compression> MaybeCompressed<A::Data, Compressed<A>> {
-    pub fn as_decompressed(self) -> A::Data {
+    pub fn into_decompressed(self) -> A::Data {
         match self {
             MaybeCompressed::Compressed(c) => c.decompress(),
             MaybeCompressed::Decompressed(d) => d,

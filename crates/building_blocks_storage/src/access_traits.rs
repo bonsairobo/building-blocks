@@ -208,6 +208,8 @@ pub trait ForEach<N, Coord> {
 pub trait ForEachMutPtr<N, Coord> {
     type Item;
 
+    /// # Safety
+    /// `Self::Item` is intended to be a `*mut T` with the lifetime of `self`.
     unsafe fn for_each_mut_ptr(&mut self, extent: &ExtentN<N>, f: impl FnMut(Coord, Self::Item));
 }
 

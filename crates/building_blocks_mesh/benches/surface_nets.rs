@@ -44,7 +44,7 @@ criterion_main!(benches);
 struct Voxel(f32);
 
 impl SignedDistance for Voxel {
-    fn is_negative(self) -> bool {
+    fn is_negative(&self) -> bool {
         self.0 < 0.0
     }
 }

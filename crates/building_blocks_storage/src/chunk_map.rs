@@ -112,9 +112,10 @@
 //! ```
 
 use crate::{
-    Array, ArrayCopySrc, ArrayIndexer, AsMultiMut, Channel, Chunk, ChunkHashMap, ChunkIndexer,
+    Array, ArrayCopySrc, ArrayIndexer, Channel, Chunk, ChunkHashMap, ChunkIndexer,
     ChunkReadStorage, ChunkWriteStorage, FillChannels, ForEach, ForEachMut, ForEachMutPtr, Get,
-    GetMut, GetRef, IterChunkKeys, MultiMutPtr, MultiRef, ReadExtent, SmallKeyHashMap, WriteExtent,
+    GetMut, GetRef, IntoMultiMut, IterChunkKeys, MultiMutPtr, MultiRef, ReadExtent,
+    SmallKeyHashMap, WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
@@ -653,13 +654,13 @@ where
 impl<'a, N, T, B, Store, Mut, MutPtr> ForEachMut<'a, N, PointN<N>> for ChunkMap<N, T, B, Store>
 where
     Self: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
-    MutPtr: AsMultiMut<'a, MultiMut = Mut>,
+    MutPtr: IntoMultiMut<'a, MultiMut = Mut>,
 {
     type Item = Mut;
 
     #[inline]
     fn for_each_mut(&'a mut self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Item)) {
-        unsafe { self.for_each_mut_ptr(extent, |p, ptr| f(p, ptr.as_multi_mut())) }
+        unsafe { self.for_each_mut_ptr(extent, |p, ptr| f(p, ptr.into_multi_mut())) }
     }
 }
 

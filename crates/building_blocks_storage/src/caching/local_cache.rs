@@ -37,7 +37,7 @@ where
 
     // TODO: impl IntoIterator instead
     /// Consume self and iterate over all (key, value) pairs.
-    pub fn into_iter(self) -> impl Iterator<Item = (K, V)> {
+    pub fn flush_iter(self) -> impl Iterator<Item = (K, V)> {
         self.store
             .into_inner()
             .into_iter()

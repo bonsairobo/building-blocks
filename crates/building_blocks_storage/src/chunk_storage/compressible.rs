@@ -165,7 +165,7 @@ where
     /// Consumes and flushes the chunk cache into the chunk map. This is not strictly necessary, but
     /// it will help with caching efficiency.
     pub fn flush_local_cache(&mut self, local_cache: LocalChunkCache<N, Compr::Data>) {
-        for (key, chunk) in local_cache.into_iter() {
+        for (key, chunk) in local_cache.flush_iter() {
             self.insert_chunk(key, chunk);
         }
     }

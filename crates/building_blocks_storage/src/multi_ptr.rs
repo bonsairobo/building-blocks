@@ -19,39 +19,41 @@ impl<'a, T> MultiRef<'a> for &'a T {
 
 /// Used for variadic conversion from `(*mut A, *mut B, ...)` to `(&'a mut A, &'a mut B, ...)`.
 #[doc(hidden)]
-pub trait AsMultiMut<'a> {
+pub trait IntoMultiMut<'a> {
     type MultiMut;
 
-    fn as_multi_mut(self) -> Self::MultiMut;
+    fn into_multi_mut(self) -> Self::MultiMut;
 }
 
-impl<'a, T> AsMultiMut<'a> for *mut T
+impl<'a, T> IntoMultiMut<'a> for *mut T
 where
     T: 'a,
 {
     type MultiMut = &'a mut T;
 
     #[inline]
-    fn as_multi_mut(self) -> Self::MultiMut {
+    fn into_multi_mut(self) -> Self::MultiMut {
         unsafe { &mut *self }
     }
 }
 
 /// Used for variadic conversion from `(*mut MaybeUninit<A>, *mut MaybeUninit<B>, ...)` to `(*mut A, *mut B)`.
 #[doc(hidden)]
-pub trait AsMultiMutPtr {
+pub trait IntoMultiMutPtr {
     type Data;
     type Ptr: MultiMutPtr<Data = Self::Data>;
 
-    unsafe fn as_multi_mut_ptr(self) -> Self::Ptr;
+    /// # Safety
+    /// `Self::Ptr` is intended to contain `*mut` pointers, so this carries the same safety concerns as any such pointer.
+    unsafe fn into_multi_mut_ptr(self) -> Self::Ptr;
 }
 
-impl<T> AsMultiMutPtr for *mut MaybeUninit<T> {
+impl<T> IntoMultiMutPtr for *mut MaybeUninit<T> {
     type Data = T;
     type Ptr = *mut T;
 
     #[inline]
-    unsafe fn as_multi_mut_ptr(self) -> Self::Ptr {
+    unsafe fn into_multi_mut_ptr(self) -> Self::Ptr {
         (&mut *self).as_mut_ptr()
     }
 }
@@ -61,6 +63,8 @@ impl<T> AsMultiMutPtr for *mut MaybeUninit<T> {
 pub trait MultiMutPtr {
     type Data;
 
+    /// # Safety
+    /// `self` is intended to contain `*mut` pointers, so this carries the same safety concerns as any such pointer.
     unsafe fn write(self, data: Self::Data);
 }
 
@@ -89,32 +93,32 @@ macro_rules! impl_tuple {
             }
         }
 
-        impl<'a, $($t),+> AsMultiMut<'a> for ($(*mut $t,)+)
+        impl<'a, $($t),+> IntoMultiMut<'a> for ($(*mut $t,)+)
         where
             $($t: 'a,)+
         {
             type MultiMut = ($(&'a mut $t,)+);
 
             #[inline]
-            fn as_multi_mut(self) -> Self::MultiMut {
+            fn into_multi_mut(self) -> Self::MultiMut {
                 let ($($var1,)+) = self;
 
                 unsafe { ($(&mut *$var1,)+) }
             }
         }
 
-        impl<$($t),+> AsMultiMutPtr for ($($t,)+)
+        impl<$($t),+> IntoMultiMutPtr for ($($t,)+)
         where
-            $($t: AsMultiMutPtr),+
+            $($t: IntoMultiMutPtr),+
         {
             type Data = ($($t::Data,)+);
             type Ptr = ($($t::Ptr,)+);
 
             #[inline]
-            unsafe fn as_multi_mut_ptr(self) -> Self::Ptr {
+            unsafe fn into_multi_mut_ptr(self) -> Self::Ptr {
                 let ($($var1,)+) = self;
 
-                ($($var1.as_multi_mut_ptr(),)+)
+                ($($var1.into_multi_mut_ptr(),)+)
             }
         }
 

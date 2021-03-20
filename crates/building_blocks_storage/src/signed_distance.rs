@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 
 pub trait SignedDistance: Into<f32> {
-    fn is_negative(self) -> bool;
+    fn is_negative(&self) -> bool;
 }
 
 impl SignedDistance for f32 {
     #[inline]
-    fn is_negative(self) -> bool {
-        self < 0.0
+    fn is_negative(&self) -> bool {
+        *self < 0.0
     }
 }
 
@@ -49,7 +49,7 @@ impl From<f32> for Sd8 {
 }
 impl SignedDistance for Sd8 {
     #[inline]
-    fn is_negative(self) -> bool {
+    fn is_negative(&self) -> bool {
         self.0 < 0
     }
 }
@@ -71,7 +71,7 @@ impl From<f32> for Sd16 {
 }
 impl SignedDistance for Sd16 {
     #[inline]
-    fn is_negative(self) -> bool {
+    fn is_negative(&self) -> bool {
         self.0 < 0
     }
 }

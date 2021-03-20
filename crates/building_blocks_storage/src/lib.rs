@@ -84,8 +84,8 @@ pub mod prelude {
         CompressibleChunkStorage, CompressibleChunkStorageReader, Compression,
         FastArrayCompressionNx1, FastCompressibleChunkStorage, FromBytesCompression, Func,
         IndexedArray, IsEmpty, IterChunkKeys, Local, LocalChunkCache2, LocalChunkCache3,
-        OctreeChunkIndex, OctreeNode, OctreeSet, SerializableChunks, SignedDistance, Stride,
-        TransformMap,
+        OctreeChunkIndex, OctreeNode, OctreeSet, Sd16, Sd8, SerializableChunks, SignedDistance,
+        Stride, TransformMap,
     };
 
     pub use super::access_traits::*;

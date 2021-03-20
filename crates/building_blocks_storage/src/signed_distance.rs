@@ -38,11 +38,13 @@ impl Default for Sd8 {
     }
 }
 impl From<Sd8> for f32 {
+    #[inline]
     fn from(s: Sd8) -> f32 {
         s.0 as f32 * Sd8::PRECISION
     }
 }
 impl From<f32> for Sd8 {
+    #[inline]
     fn from(s: f32) -> Self {
         Sd8((Self::RESOLUTION * s.min(1.0).max(-1.0)) as i8)
     }
@@ -55,16 +57,19 @@ impl SignedDistance for Sd8 {
 }
 
 impl Default for Sd16 {
+    #[inline]
     fn default() -> Self {
         Self::ONE
     }
 }
 impl From<Sd16> for f32 {
+    #[inline]
     fn from(s: Sd16) -> f32 {
         s.0 as f32 * Sd16::PRECISION
     }
 }
 impl From<f32> for Sd16 {
+    #[inline]
     fn from(s: f32) -> Self {
         Sd16((Self::RESOLUTION * s.min(1.0).max(-1.0)) as i16)
     }

@@ -173,6 +173,7 @@ impl Point3i {
 }
 
 impl Point3f {
+    /// Returns the coordinates of the voxel containing `self`.
     #[inline]
     pub fn in_voxel(self) -> Point3i {
         self.floor_int()

@@ -84,6 +84,7 @@ impl Point2i {
 }
 
 impl Point2f {
+    /// Returns the coordinates of the pixel containing `self`.
     #[inline]
     pub fn in_pixel(self) -> Point2i {
         self.floor_int()

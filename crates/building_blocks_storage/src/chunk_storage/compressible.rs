@@ -305,24 +305,21 @@ pub mod multichannel_aliases {
         };
     }
 
-    pub type CompressibleChunkMap2x1<By, A> = CompressibleChunkMap<
-        [i32; 2],
+    pub type CompressibleChunkMapNx1<N, By, A> = CompressibleChunkMap<
+        N,
         A,
-        ChunkMapBuilderNxM<[i32; 2], A, Channel<A>>,
-        FastArrayCompression<[i32; 2], FastChannelsCompression<By, A>>,
+        ChunkMapBuilderNxM<N, A, Channel<A>>,
+        FastArrayCompression<N, FastChannelsCompression<By, A>>,
     >;
+
+    pub type CompressibleChunkMap2x1<By, A> = CompressibleChunkMapNx1<[i32; 2], By, A>;
     compressible_map_type_alias!(CompressibleChunkMap2x2, [i32; 2], A, B);
     compressible_map_type_alias!(CompressibleChunkMap2x3, [i32; 2], A, B, C);
     compressible_map_type_alias!(CompressibleChunkMap2x4, [i32; 2], A, B, C, D);
     compressible_map_type_alias!(CompressibleChunkMap2x5, [i32; 2], A, B, C, D, E);
     compressible_map_type_alias!(CompressibleChunkMap2x6, [i32; 2], A, B, C, D, E, F);
 
-    pub type CompressibleChunkMap3x1<By, A> = CompressibleChunkMap<
-        [i32; 3],
-        A,
-        ChunkMapBuilderNxM<[i32; 3], A, Channel<A>>,
-        FastArrayCompression<[i32; 3], FastChannelsCompression<By, A>>,
-    >;
+    pub type CompressibleChunkMap3x1<By, A> = CompressibleChunkMapNx1<[i32; 3], By, A>;
     compressible_map_type_alias!(CompressibleChunkMap3x2, [i32; 3], A, B);
     compressible_map_type_alias!(CompressibleChunkMap3x3, [i32; 3], A, B, C);
     compressible_map_type_alias!(CompressibleChunkMap3x4, [i32; 3], A, B, C, D);

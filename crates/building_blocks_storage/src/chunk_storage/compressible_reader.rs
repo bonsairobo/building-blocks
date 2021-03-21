@@ -1,7 +1,7 @@
 use crate::{
-    ArrayNx1, CacheEntry, ChunkMap, ChunkReadStorage, CompressedChunks, CompressibleChunkStorage,
-    Compression, FastArrayCompressionNx1, IterChunkKeys, LocalCache, LruChunkCacheEntries,
-    LruChunkCacheKeys, SmallKeyBuildHasher,
+    CacheEntry, Channel, ChunkMap, ChunkReadStorage, CompressedChunks, CompressibleChunkStorage,
+    Compression, IterChunkKeys, LocalCache, LruChunkCacheEntries, LruChunkCacheKeys,
+    SmallKeyBuildHasher,
 };
 
 use building_blocks_core::prelude::*;
@@ -118,16 +118,45 @@ pub type LocalChunkCache3<Ch> = LocalChunkCache<[i32; 3], Ch>;
 pub type CompressibleChunkMapReader<'a, N, T, Bldr, Compr> =
     ChunkMap<N, T, Bldr, CompressibleChunkStorageReader<'a, N, Compr>>;
 
-/// N-dimensional, single-channel `CompressibleChunkMapReader`.
-pub type CompressibleChunkMapReaderNx1<'a, N, By, T> = ChunkMap<
-    N,
-    T,
-    ArrayNx1<N, T>,
-    CompressibleChunkStorageReader<'a, N, FastArrayCompressionNx1<N, By, T>>,
->;
-/// 2-dimensional, single-channel `CompressibleChunkMapReader`.
-pub type CompressibleChunkMapReader2x1<'a, By, T> =
-    CompressibleChunkMapReaderNx1<'a, [i32; 2], By, T>;
-/// 3-dimensional, single-channel `CompressibleChunkMapReader`.
-pub type CompressibleChunkMapReader3x1<'a, By, T> =
-    CompressibleChunkMapReaderNx1<'a, [i32; 3], By, T>;
+pub mod multichannel_aliases {
+    use super::*;
+    use crate::{ChunkMapBuilderNxM, FastArrayCompression, FastChannelsCompression};
+
+    macro_rules! compressible_map_reader_type_alias {
+        ($name:ident, $dim:ty, $( $chan:ident ),+ ) => {
+            pub type $name<'a, By, $( $chan ),+> = CompressibleChunkMapReader<
+                'a,
+                $dim,
+                A,
+                ChunkMapBuilderNxM<$dim, ($($chan,)+), ($(Channel<$chan>,)+)>,
+                FastArrayCompression<$dim, FastChannelsCompression<By, ($(Channel<$chan>,)+)>>,
+            >;
+        };
+    }
+
+    pub type CompressibleChunkMapReaderNx1<'a, N, By, A> = CompressibleChunkMapReader<
+        'a,
+        N,
+        A,
+        ChunkMapBuilderNxM<N, A, Channel<A>>,
+        FastArrayCompression<N, FastChannelsCompression<By, A>>,
+    >;
+
+    pub type CompressibleChunkMapReader2x1<'a, By, A> =
+        CompressibleChunkMapReaderNx1<'a, [i32; 2], By, A>;
+    compressible_map_reader_type_alias!(CompressibleChunkMapReader2x2, [i32; 2], A, B);
+    compressible_map_reader_type_alias!(CompressibleChunkMapReader2x3, [i32; 2], A, B, C);
+    compressible_map_reader_type_alias!(CompressibleChunkMapReader2x4, [i32; 2], A, B, C, D);
+    compressible_map_reader_type_alias!(CompressibleChunkMapReader2x5, [i32; 2], A, B, C, D, E);
+    compressible_map_reader_type_alias!(CompressibleChunkMapReader2x6, [i32; 2], A, B, C, D, E, F);
+
+    pub type CompressibleChunkMapReader3x1<'a, By, A> =
+        CompressibleChunkMapReaderNx1<'a, [i32; 3], By, A>;
+    compressible_map_reader_type_alias!(CompressibleChunkMapReader3x2, [i32; 3], A, B);
+    compressible_map_reader_type_alias!(CompressibleChunkMapReader3x3, [i32; 3], A, B, C);
+    compressible_map_reader_type_alias!(CompressibleChunkMapReader3x4, [i32; 3], A, B, C, D);
+    compressible_map_reader_type_alias!(CompressibleChunkMapReader3x5, [i32; 3], A, B, C, D, E);
+    compressible_map_reader_type_alias!(CompressibleChunkMapReader3x6, [i32; 3], A, B, C, D, E, F);
+}
+
+pub use multichannel_aliases::*;

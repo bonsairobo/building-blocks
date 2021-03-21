@@ -1,4 +1,4 @@
-use building_blocks::storage::{dot_vox::load, prelude::*, VoxColor};
+use building_blocks::storage::{dot_vox::load, prelude::*, FastArrayCompressionNx1, VoxColor};
 
 fn main() {
     let args: Vec<_> = std::env::args().collect();

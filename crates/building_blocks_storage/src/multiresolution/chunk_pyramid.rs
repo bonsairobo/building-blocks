@@ -336,14 +336,14 @@ where
     }
 }
 
-/// A `ChunkMap` using `HashMap` as chunk storage.
+/// A `ChunkPyramid` using `HashMap` as chunk storage.
 pub type ChunkHashMapPyramid<N, T> = ChunkPyramid<N, T, SmallKeyHashMap<PointN<N>, ArrayNx1<N, T>>>;
 /// A 2-dimensional `ChunkHashMapPyramid`.
 pub type ChunkHashMapPyramid2<T> = ChunkHashMapPyramid<[i32; 2], T>;
 /// A 3-dimensional `ChunkHashMapPyramid`.
 pub type ChunkHashMapPyramid3<T> = ChunkHashMapPyramid<[i32; 3], T>;
 
-/// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
+/// A `ChunkPyramid` using `CompressibleChunkStorage` as chunk storage.
 pub type CompressibleChunkPyramid<N, By, T> =
     ChunkPyramid<N, T, CompressibleChunkStorage<N, FastArrayCompressionNx1<N, By, T>>>;
 /// 2-dimensional `CompressibleChunkPyramid`.

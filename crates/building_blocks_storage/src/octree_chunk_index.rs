@@ -128,6 +128,8 @@ impl OctreeChunkIndex {
         }
     }
 
+    /// Traverses all octree nodes overlapping `extent` to find the `LodChunkKey3`s that are "active" when the clipmap is
+    /// centered at `lod0_center`.
     pub fn active_clipmap_lod_chunks(
         &self,
         extent: &Extent3i,

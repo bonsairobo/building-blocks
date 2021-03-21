@@ -18,7 +18,7 @@ fn surface_nets_sine_sdf(c: &mut Criterion) {
                             Point3i::fill(-radius),
                             Point3i::fill(radius),
                         );
-                        let mut samples = Array3x1::fill(sample_extent, Voxel(0.0));
+                        let mut samples = Array3x1::fill(sample_extent, Sd8(0));
                         copy_extent(&sample_extent, &Func(sine_sdf), &mut samples);
 
                         // Do a single run first to allocate the buffer to the right size.
@@ -40,30 +40,15 @@ fn surface_nets_sine_sdf(c: &mut Criterion) {
 criterion_group!(benches, surface_nets_sine_sdf);
 criterion_main!(benches);
 
-#[derive(Clone)]
-struct Voxel(f32);
-
-impl SignedDistance for Voxel {
-    fn is_negative(&self) -> bool {
-        self.0 < 0.0
-    }
-}
-
-impl From<Voxel> for f32 {
-    fn from(v: Voxel) -> f32 {
-        v.0
-    }
-}
-
 // About the largest radius that can be meshed in a single frame, single-threaded (16.6 ms)
 const EXTENT_RADIUS: i32 = 30;
 
 // The higher the frequency (n) the more surface area to mesh.
-fn sine_sdf(p: Point3i) -> Voxel {
+fn sine_sdf(p: Point3i) -> Sd8 {
     let n = 10.0;
     let val = ((p.x() as f32 / EXTENT_RADIUS as f32) * n * std::f32::consts::PI / 2.0).sin()
         + ((p.y() as f32 / EXTENT_RADIUS as f32) * n * std::f32::consts::PI / 2.0).sin()
         + ((p.z() as f32 / EXTENT_RADIUS as f32) * n * std::f32::consts::PI / 2.0).sin();
 
-    Voxel(val)
+    Sd8::from(val)
 }

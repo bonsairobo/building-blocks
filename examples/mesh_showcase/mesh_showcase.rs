@@ -12,8 +12,8 @@ use bevy::{
 
 fn main() {
     let mut window_desc = WindowDescriptor::default();
-    window_desc.width = 1600.;
-    window_desc.height = 900.;
+    window_desc.width = 1600.0;
+    window_desc.height = 900.0;
     window_desc.title = "Building Blocks: Bevy Meshing Example".to_string();
 
     App::build()

@@ -14,7 +14,7 @@ pub struct LodState {
 
 impl LodState {
     pub fn new(lod0_center: Point3i) -> Self {
-        LodState {
+        Self {
             old_lod0_center: lod0_center,
         }
     }

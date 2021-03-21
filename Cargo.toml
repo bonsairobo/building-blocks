@@ -52,7 +52,7 @@ lto = true
 [profile.bench]
 lto = true
 
-# TODO: use RFC #2906 to deduplicate dependeny specs once it is merged
+# TODO: use RFC #2906 to deduplicate dependency specs once it is merged
 
 [dependencies]
 building_blocks_core = { path = "crates/building_blocks_core", version = "0.5.0", default-features = false }
@@ -63,7 +63,7 @@ building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.5.0"
 building_blocks_search = { path = "crates/building_blocks_search", version = "0.5.0", default-features = false, optional = true }
 
 [dev-dependencies]
-bevy = { git = "https://github.com/bevyengine/bevy", rev = "d9fb61d4" }
+bevy = { git = "https://github.com/bevyengine/bevy", rev = "d9fb61d4", default-features = false, features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"] }
 simdnoise = "3.1"
 
 # Common code for tests and examples.
@@ -97,4 +97,4 @@ required-features = ["mesh"]
 [[example]]
 name = "lod_terrain"
 path = "examples/lod_terrain/lod_terrain.rs"
-required-features = ["mesh"]
+required-features = ["glam", "mesh"]

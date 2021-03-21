@@ -3,12 +3,14 @@ mod level_of_detail;
 mod mesh_generator;
 mod voxel_map;
 
-use camera::{camera_control_system, create_camera_entity};
+use camera::{camera_control_system, camera_position, create_camera_entity};
 use level_of_detail::{level_of_detail_system, LodState};
 use mesh_generator::{
     mesh_generator_system, ChunkMeshes, MeshCommand, MeshCommandQueue, MeshMaterial,
 };
 use voxel_map::{generate_map, CHUNK_LOG2, CLIP_BOX_RADIUS, WORLD_CHUNKS_EXTENT, WORLD_EXTENT};
+
+use building_blocks::core::prelude::*;
 
 use bevy::{
     prelude::*,
@@ -16,12 +18,11 @@ use bevy::{
     tasks::ComputeTaskPool,
     // wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
 };
-use building_blocks::core::prelude::*;
 
 fn main() {
     let mut window_desc = WindowDescriptor::default();
-    window_desc.width = 1600.;
-    window_desc.height = 900.;
+    window_desc.width = 1600.0;
+    window_desc.height = 900.0;
     window_desc.title = "Building Blocks: LOD Terrain Example".to_string();
 
     App::build()
@@ -55,7 +56,7 @@ fn setup(
     let seed = 666;
     let map = generate_map(&*pool, WORLD_CHUNKS_EXTENT, freq, scale, seed);
 
-    let init_lod0_center = CAMERA_INIT_POSITION >> CHUNK_LOG2;
+    let init_lod0_center = Point3f::from(camera_position(0.0)).in_voxel() >> CHUNK_LOG2;
 
     let mut mesh_commands = MeshCommandQueue::default();
     map.index.active_clipmap_lod_chunks(
@@ -76,18 +77,10 @@ fn setup(
         materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
     ));
 
-    initialize_camera(commands);
+    create_camera_entity(commands);
 
     commands.spawn(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 250.0, 0.0)),
         ..Default::default()
     });
 }
-
-fn initialize_camera(commands: &mut Commands) {
-    let eye = Vec3::from(Point3f::from(CAMERA_INIT_POSITION));
-    let target = Vec3::new(0.0, 0.0, 0.0);
-    create_camera_entity(commands, eye, target);
-}
-
-const CAMERA_INIT_POSITION: Point3i = PointN([-1600, 100, -1600]);

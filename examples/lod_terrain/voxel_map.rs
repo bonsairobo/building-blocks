@@ -76,10 +76,10 @@ pub const SUPERCHUNK_SHAPE: Point3i = PointN([1 << (CHUNK_LOG2 + NUM_LODS as i32
 pub const CLIP_BOX_RADIUS: i32 = 16;
 
 pub const WORLD_CHUNKS_EXTENT: Extent3i = Extent3i {
-    minimum: PointN([-50, -1, -50]),
-    shape: PointN([100, 2, 100]),
+    minimum: PointN([-50, 0, -50]),
+    shape: PointN([100, 1, 100]),
 };
 pub const WORLD_EXTENT: Extent3i = Extent3i {
-    minimum: PointN([-800, -16, -800]),
-    shape: PointN([1600, 32, 1600]),
+    minimum: PointN([-800, 0, -800]),
+    shape: PointN([1600, 16, 1600]),
 };

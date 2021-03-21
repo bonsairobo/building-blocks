@@ -1,6 +1,6 @@
 # Examples
 
-All examples use the Bevy engine.
+All examples use the Bevy engine. This list is roughly ordered by complexity.
 
 ## SDF Mesh
 
@@ -24,16 +24,6 @@ Use the left and right arrow keys to select one of the example shapes to be mesh
 
 ![Mesh Showcase](/examples/screenshots/mesh_showcase.gif)
 
-## Array Texture Materials
-
-Shows how to use an "array texture" to give each type of a voxel a different material.
-
-```sh
-cargo run --example array_texture_materials
-```
-
-![Array Texture Materials](/examples/screenshots/array_texture_materials.png)
-
 ## Quad Mesh UVs
 
 A `greedy_quads` mesh of a cube with UV coordinates mapped on all faces. This is useful for seeing that textures are oriented
@@ -45,12 +35,33 @@ cargo run --example quad_mesh_uvs
 
 ![Quad Mesh UVs](/examples/screenshots/quad_mesh_uvs.png)
 
+## Array Texture Materials
+
+Shows how to use an "array texture" to give each type of a voxel a different material.
+
+```sh
+cargo run --example array_texture_materials
+```
+
+![Array Texture Materials](/examples/screenshots/array_texture_materials.png)
+
+## LOD Terrain
+
+A larger scale example of terrain generated with 3D fractional brownian motion
+([SIMDnoise](https://docs.rs/simdnoise/3.1.6/simdnoise/) crate). The further chunks are from the camera, the more they get
+downsampled. Chunk meshes are dynamically generated as the camera moves.
+
+```sh
+cargo run --example lod_terrain
+```
+
+![LOD Terrain](/examples/screenshots/lod_terrain.png)
+
 ## Official Related Projects
 
 All of these are works in progress and likely to break as things change upstream.
 
 - [building-blocks-editor](https://github.com/bonsairobo/building-blocks-editor): A voxel map editor built with Bevy
-- [bevy-building-blocks](https://github.com/bonsairobo/bevy-building-blocks): Helpful Bevy plugins for voxel map IO
 - [smooth-voxel-renderer](https://github.com/bonsairobo/smooth-voxel-renderer): A Bevy plugin for rendering textured, smooth voxel meshes
 
 ## Community Projects Using building-blocks

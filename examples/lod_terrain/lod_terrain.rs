@@ -51,13 +51,14 @@ fn setup(
 ) {
     // wireframe_config.global = true;
 
+    // Generate a voxel map from noise.
     let freq = 0.15;
     let scale = 20.0;
     let seed = 666;
     let map = generate_map(&*pool, WORLD_CHUNKS_EXTENT, freq, scale, seed);
 
+    // Queue up commands to initialize the chunk meshes to their appropriate LODs given the starting camera position.
     let init_lod0_center = Point3f::from(camera_position(0.0)).in_voxel() >> CHUNK_LOG2;
-
     let mut mesh_commands = MeshCommandQueue::default();
     map.index.active_clipmap_lod_chunks(
         &WORLD_EXTENT,
@@ -67,18 +68,15 @@ fn setup(
     );
     assert!(!mesh_commands.is_empty());
     commands.insert_resource(mesh_commands);
-
-    commands.insert_resource(map);
-
     commands.insert_resource(LodState::new(init_lod0_center));
-
+    commands.insert_resource(map);
     commands.insert_resource(ChunkMeshes::default());
     commands.insert_resource(MeshMaterial(
         materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
     ));
 
+    // Lights, camera, action!
     create_camera_entity(&mut commands);
-
     commands.spawn(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 250.0, 0.0)),
         ..Default::default()

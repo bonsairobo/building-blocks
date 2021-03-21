@@ -134,6 +134,7 @@ impl_get_via_get_ref_and_clone!(Channel<T, Store>, T, Store);
 // ╚██████╗╚██████╔╝██║ ╚═╝ ██║██║     ██║  ██║███████╗███████║███████║██║╚██████╔╝██║ ╚████║
 //  ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝
 
+/// Compresses a tuple of `Channel`s into a tuple of `FastCompressedChannel`s.
 #[derive(Clone, Copy)]
 pub struct FastChannelsCompression<By, Chan> {
     bytes_compression: By,

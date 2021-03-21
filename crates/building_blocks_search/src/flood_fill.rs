@@ -180,6 +180,7 @@ mod tests {
     use super::*;
 
     use building_blocks_storage::prelude::*;
+    use utilities::{data_sets::sphere_bit_array, test::test_print};
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     struct Color(u8);
@@ -190,21 +191,9 @@ mod tests {
         let old_color = Color(1);
         let new_color = Color(2);
 
-        let sphere_radius = 32;
-        let map_radius = sphere_radius + 1;
-        let mut map = Array3x1::fill(
-            Extent3i::from_min_and_shape(Point3i::fill(-map_radius), Point3i::fill(2 * map_radius)),
-            background_color,
-        );
+        let array_edge_length = 32;
 
-        // Initialize the sphere with "old color."
-        let center = Point3i::ZERO;
-        let map_extent = *map.extent();
-        map.for_each_mut(&map_extent, |p: Point3i, value| {
-            if p.l2_distance_squared(center) < sphere_radius * sphere_radius {
-                *value = old_color;
-            }
-        });
+        let (mut map, sphere_radius) = sphere_bit_array(array_edge_length, old_color, background_color);
 
         // Flood fill the sphere with "new color."
         let extent = *map.extent();
@@ -220,11 +209,11 @@ mod tests {
 
             true
         };
-        von_neumann_flood_fill3(extent, center, visitor);
+        von_neumann_flood_fill3(extent, Point3i::ZERO, visitor);
 
         // Assert that we actually filled the sphere, and only the sphere.
-        map.for_each(&map_extent, |p: Point3i, value| {
-            if p.l2_distance_squared(center) < sphere_radius * sphere_radius {
+        map.for_each(&extent, |p: Point3i, value| {
+            if p.norm() < sphere_radius as f32 {
                 assert_eq!(value, new_color);
             } else {
                 assert_eq!(value, background_color);
@@ -232,14 +221,5 @@ mod tests {
         });
 
         test_print(&format!("# flood fill visits = {}\n", num_visits));
-    }
-
-    fn test_print(message: &str) {
-        use std::io::Write;
-
-        std::io::stdout()
-            .lock()
-            .write_all(message.as_bytes())
-            .unwrap();
     }
 }

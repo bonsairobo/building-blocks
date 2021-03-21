@@ -116,6 +116,9 @@ mod test {
     use super::*;
     use crate::{Array3x1, BytesCompression};
 
+    use crate::test_utilities::sphere_bit_array;
+    use utilities::test::test_print;
+
     #[cfg(feature = "lz4")]
     use crate::Lz4;
     #[cfg(feature = "snap")]
@@ -160,8 +163,7 @@ mod test {
     }
 
     fn sphere_array_compression_rate<B: BytesCompression>(compression: B, side_length: i32) {
-        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(side_length));
-        let array = Array3x1::fill_with(extent, |p| if p.norm() > 50.0 { 0u16 } else { 1u16 });
+        let array = sphere_bit_array(side_length, 1u16, 0u16).0;
         array_compression_rate(&array, compression);
     }
 
@@ -183,14 +185,5 @@ mod test {
             compressed_size_bytes,
             100.0 * (compressed_size_bytes as f32 / source_size_bytes as f32)
         ));
-    }
-
-    fn test_print(message: &str) {
-        use std::io::Write;
-
-        std::io::stdout()
-            .lock()
-            .write_all(message.as_bytes())
-            .unwrap();
     }
 }

@@ -1,37 +1,19 @@
-use building_blocks_core::prelude::*;
 use building_blocks_search::find_surface_points;
-use building_blocks_storage::{prelude::*, IsEmpty};
+use building_blocks_storage::IsEmpty;
+
+use utilities::data_sets::sphere_bit_array;
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 fn sphere_surface(c: &mut Criterion) {
     let mut group = c.benchmark_group("sphere_surface");
-    for radius in [8, 16, 32].iter() {
+    for array_edge_length in [8, 16, 32].iter() {
         group.bench_with_input(
-            BenchmarkId::from_parameter(radius),
-            radius,
-            |b, &sphere_radius| {
+            BenchmarkId::from_parameter(array_edge_length),
+            array_edge_length,
+            |b, &array_edge_length| {
                 b.iter_with_setup(
-                    || {
-                        let map_radius = sphere_radius + 1;
-                        let mut map = Array3x1::fill(
-                            Extent3i::from_min_and_shape(
-                                Point3i::fill(-map_radius),
-                                Point3i::fill(2 * map_radius),
-                            ),
-                            Voxel(false),
-                        );
-
-                        let center = Point3i::ZERO;
-                        let map_extent = *map.extent();
-                        map.for_each_mut(&map_extent, |p: Point3i, value| {
-                            if p.l2_distance_squared(center) < sphere_radius * sphere_radius {
-                                *value = Voxel(true)
-                            }
-                        });
-
-                        map
-                    },
+                    || sphere_bit_array(array_edge_length, Voxel(true), Voxel(false)).0,
                     |map| find_surface_points(&map, &map.extent().padded(-1)),
                 );
             },
@@ -43,7 +25,7 @@ fn sphere_surface(c: &mut Criterion) {
 criterion_group!(benches, sphere_surface);
 criterion_main!(benches);
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 struct Voxel(bool);
 
 impl IsEmpty for Voxel {

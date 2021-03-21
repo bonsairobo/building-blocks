@@ -5,12 +5,10 @@ use building_blocks::core::{
 use building_blocks::mesh::*;
 use building_blocks::storage::{prelude::*, IsEmpty, Sd16};
 
+use utilities::bevy_util::mesh::create_mesh_bundle;
+
 use bevy::{
     prelude::*,
-    render::{
-        mesh::{Indices, VertexAttributeValues},
-        pipeline::PrimitiveTopology,
-    },
     tasks::{ComputeTaskPool, TaskPool},
 };
 
@@ -179,12 +177,11 @@ pub fn mesh_generator_system(
 
         for mesh in chunk_meshes.into_iter() {
             if let Some(mesh) = mesh {
-                state.chunk_mesh_entities.push(create_mesh_entity(
-                    mesh,
-                    commands,
-                    material.0.clone(),
-                    &mut meshes,
-                ));
+                let entity = commands
+                    .spawn(create_mesh_bundle(mesh, material.0.clone(), &mut meshes))
+                    .current_entity()
+                    .unwrap();
+                state.chunk_mesh_entities.push(entity);
             }
         }
     }
@@ -213,8 +210,6 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
                 let mut padded_chunk = Array3x1::fill(padded_chunk_extent, Sd16(0));
                 copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
 
-                // TODO bevy: we could avoid re-allocating the buffers on every call if we had
-                // thread-local storage accessible from this task
                 let mut surface_nets_buffer = SurfaceNetsBuffer::default();
                 let voxel_size = 1.0;
                 surface_nets(
@@ -263,8 +258,6 @@ fn generate_chunk_meshes_from_height_map(
                 let mut padded_chunk = Array2x1::fill(padded_chunk_extent, 0.0);
                 copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
 
-                // TODO bevy: we could avoid re-allocating the buffers on every call if we had
-                // thread-local storage accessible from this task
                 let mut height_map_mesh_buffer = HeightMapMeshBuffer::default();
                 triangulate_height_map(
                     &padded_chunk,
@@ -305,8 +298,6 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
                 let mut padded_chunk = Array3x1::fill(padded_chunk_extent, CubeVoxel(false));
                 copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
 
-                // TODO bevy: we could avoid re-allocating the buffers on every call if we had
-                // thread-local storage accessible from this task
                 let mut buffer = GreedyQuadsBuffer::new_with_y_up(padded_chunk_extent);
                 greedy_quads(&padded_chunk, &padded_chunk_extent, &mut buffer);
 
@@ -325,35 +316,4 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
             })
         }
     })
-}
-
-fn create_mesh_entity(
-    mesh: PosNormMesh,
-    commands: &mut Commands,
-    material: Handle<StandardMaterial>,
-    meshes: &mut Assets<Mesh>,
-) -> Entity {
-    assert_eq!(mesh.positions.len(), mesh.normals.len());
-    let num_vertices = mesh.positions.len();
-
-    let mut render_mesh = Mesh::new(PrimitiveTopology::TriangleList);
-    render_mesh.set_attribute(
-        "Vertex_Position",
-        VertexAttributeValues::Float3(mesh.positions),
-    );
-    render_mesh.set_attribute("Vertex_Normal", VertexAttributeValues::Float3(mesh.normals));
-    render_mesh.set_attribute(
-        "Vertex_Uv",
-        VertexAttributeValues::Float2(vec![[0.0; 2]; num_vertices]),
-    );
-    render_mesh.set_indices(Some(Indices::U32(mesh.indices)));
-
-    commands
-        .spawn(PbrBundle {
-            mesh: meshes.add(render_mesh),
-            material,
-            ..Default::default()
-        })
-        .current_entity()
-        .unwrap()
 }

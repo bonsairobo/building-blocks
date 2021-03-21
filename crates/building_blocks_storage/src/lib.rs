@@ -108,3 +108,6 @@ pub use dot_vox_conversions::*;
 mod image_conversions;
 #[cfg(feature = "image")]
 pub use image_conversions::*;
+
+#[cfg(test)]
+mod test_utilities;

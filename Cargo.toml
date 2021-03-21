@@ -52,18 +52,22 @@ lto = true
 [profile.bench]
 lto = true
 
+# TODO: use RFC #2906 to deduplicate dependeny specs once it is merged
+
 [dependencies]
 building_blocks_core = { path = "crates/building_blocks_core", version = "0.5.0", default-features = false }
 building_blocks_storage = { path = "crates/building_blocks_storage", version = "0.5.0", default-features = false }
 
 # Optional, feature-gated
-building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.5.0", optional = true }
-building_blocks_search = { path = "crates/building_blocks_search", version = "0.5.0", optional = true, default-features = false }
+building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.5.0", default-features = false, optional = true }
+building_blocks_search = { path = "crates/building_blocks_search", version = "0.5.0", default-features = false, optional = true }
 
 [dev-dependencies]
-# bevy = "0.4" # for examples
 bevy = { git = "https://github.com/bevyengine/bevy", rev = "d9fb61d4" }
-log = "0.4"
+simdnoise = "3.1"
+
+# Common code for tests and examples.
+utilities = { path = "crates/utilities" }
 
 [[bin]]
 name = "measure_compression_rate"
@@ -88,4 +92,9 @@ required-features = ["mesh"]
 [[example]]
 name = "array_texture_materials"
 path = "examples/array_texture_materials/array_texture_materials.rs"
+required-features = ["mesh"]
+
+[[example]]
+name = "lod_terrain"
+path = "examples/lod_terrain/lod_terrain.rs"
 required-features = ["mesh"]

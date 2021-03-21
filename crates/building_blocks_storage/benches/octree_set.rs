@@ -4,6 +4,7 @@ use building_blocks_storage::{
     prelude::*,
     IsEmpty,
 };
+use utilities::data_sets::sphere_bit_array;
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
@@ -16,7 +17,7 @@ fn octree_from_array3_sphere(c: &mut Criterion) {
             &edge_len,
             |b, &edge_len| {
                 b.iter_with_setup(
-                    || make_sphere_array(edge_len),
+                    || sphere_bit_array(edge_len, Voxel(true), Voxel(false)).0,
                     |map| OctreeSet::from_array3(&map, *map.extent()),
                 );
             },
@@ -58,7 +59,7 @@ fn octree_visit_branches_and_leaves_of_sphere(c: &mut Criterion) {
             |b, &edge_len| {
                 b.iter_with_setup(
                     || {
-                        let map = make_sphere_array(edge_len);
+                        let map = sphere_bit_array(edge_len, Voxel(true), Voxel(false)).0;
 
                         OctreeSet::from_array3(&map, *map.extent())
                     },
@@ -86,7 +87,7 @@ fn octree_visit_branch_and_leaf_nodes_of_sphere(c: &mut Criterion) {
             |b, &edge_len| {
                 b.iter_with_setup(
                     || {
-                        let map = make_sphere_array(edge_len);
+                        let map = sphere_bit_array(edge_len, Voxel(true), Voxel(false)).0;
 
                         OctreeSet::from_array3(&map, *map.extent())
                     },
@@ -119,32 +120,11 @@ criterion_group!(
 );
 criterion_main!(benches);
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 struct Voxel(bool);
 
 impl IsEmpty for Voxel {
     fn is_empty(&self) -> bool {
         !self.0
     }
-}
-
-fn make_sphere_array(edge_length: i32) -> Array3x1<Voxel> {
-    let sphere_radius = edge_length / 2;
-    let mut map = Array3x1::fill(
-        Extent3i::from_min_and_shape(
-            Point3i::fill(-sphere_radius),
-            Point3i::fill(2 * sphere_radius),
-        ),
-        Voxel(false),
-    );
-
-    let center = Point3i::ZERO;
-    let map_extent = *map.extent();
-    map.for_each_mut(&map_extent, |p: Point3i, value| {
-        if p.l2_distance_squared(center) <= sphere_radius * sphere_radius {
-            *value = Voxel(true)
-        }
-    });
-
-    map
 }

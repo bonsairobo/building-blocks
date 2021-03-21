@@ -1,0 +1,13 @@
+[package]
+name = "utilities"
+version = "0.1.0"
+authors = ["Duncan <bonsairobo@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+building_blocks_core = { path = "../../crates/building_blocks_core", default-features = false }
+building_blocks_storage = { path = "../../crates/building_blocks_storage", default-features = false }
+building_blocks_mesh = { path = "../../crates/building_blocks_mesh", default-features = false }
+
+bevy = { git = "https://github.com/bevyengine/bevy", rev = "d9fb61d4" }
+thread_local = "1.1"

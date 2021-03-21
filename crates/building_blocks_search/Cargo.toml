@@ -28,6 +28,8 @@ building_blocks_storage = { path = "../building_blocks_storage", version = "0.5.
 
 [dev-dependencies]
 criterion = "0.3"
+# Common code for tests and examples.
+utilities = { path = "../utilities" }
 
 [[bench]]
 name = "find_surface"

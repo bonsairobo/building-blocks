@@ -146,7 +146,7 @@ fn choose_shape(index: i32) -> Shape {
 pub struct MeshMaterial(pub Handle<StandardMaterial>);
 
 pub fn mesh_generator_system(
-    commands: &mut Commands,
+    mut commands: Commands,
     pool: Res<ComputeTaskPool>,
     mut state: ResMut<MeshGeneratorState>,
     mut meshes: ResMut<Assets<Mesh>>,

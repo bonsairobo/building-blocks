@@ -17,7 +17,7 @@ fn main() {
 }
 
 fn setup(
-    commands: &mut Commands,
+    mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
@@ -62,7 +62,7 @@ fn setup(
         })
         .spawn(PerspectiveCameraBundle {
             transform: Transform::from_translation(Vec3::new(0.0, 0.0, 150.0))
-                .looking_at(Vec3::new(0.0, 10.0, 0.0), Vec3::unit_y()),
+                .looking_at(Vec3::new(0.0, 10.0, 0.0), Vec3::Y),
             ..Default::default()
         })
         .spawn(PbrBundle {

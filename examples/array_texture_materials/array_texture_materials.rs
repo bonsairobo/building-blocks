@@ -45,7 +45,7 @@ fn main() {
         .run();
 }
 
-fn load_assets(commands: &mut Commands, asset_server: Res<AssetServer>) {
+fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
     let handle = asset_server.load("materials.png");
     commands.insert_resource(Loading(handle));
 }
@@ -117,7 +117,7 @@ impl MeshBuf {
 }
 
 fn setup(
-    commands: &mut Commands,
+    mut commands: Commands,
     texture_handle: Res<Loading>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,

@@ -36,7 +36,7 @@ fn main() {
 }
 
 fn setup(
-    commands: &mut Commands,
+    mut commands: Commands,
     mut wireframe_config: ResMut<WireframeConfig>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {

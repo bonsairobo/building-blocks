@@ -44,7 +44,7 @@ fn main() {
 }
 
 fn setup(
-    commands: &mut Commands,
+    mut commands: Commands,
     // mut wireframe_config: ResMut<WireframeConfig>,
     pool: Res<ComputeTaskPool>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -77,7 +77,7 @@ fn setup(
         materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
     ));
 
-    create_camera_entity(commands);
+    create_camera_entity(&mut commands);
 
     commands.spawn(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 250.0, 0.0)),

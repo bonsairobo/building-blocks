@@ -23,7 +23,7 @@ pub fn camera_rotation_system(
     let x = radius * t.cos();
     let z = radius * t.sin();
     let eye = Vec3::new(x, height, z);
-    let new_transform = Mat4::face_toward(eye, target, Vec3::unit_y());
+    let new_transform = Mat4::face_toward(eye, target, Vec3::Y);
 
     let mut cam_tfm = transforms.get_mut(state.camera).unwrap();
     *cam_tfm = Transform::from_matrix(new_transform);

@@ -7,12 +7,7 @@ use building_blocks::{
 };
 use utilities::bevy_util::{mesh::create_mesh_bundle, thread_local_resource::ThreadLocalResource};
 
-use bevy::{
-    asset::prelude::*,
-    ecs,
-    prelude::*,
-    tasks::ComputeTaskPool,
-};
+use bevy::{asset::prelude::*, ecs, prelude::*, tasks::ComputeTaskPool};
 use std::{cell::RefCell, collections::VecDeque};
 
 fn max_mesh_creations_per_frame(pool: &ComputeTaskPool) -> usize {
@@ -56,10 +51,10 @@ pub struct ChunkMeshes {
 
 /// Generates new meshes for all dirty chunks.
 pub fn mesh_generator_system(
-    commands: &mut Commands,
+    mut commands: Commands,
     pool: Res<ComputeTaskPool>,
     voxel_map: Res<VoxelMap>,
-    local_mesh_buffers: ecs::Local<ThreadLocalMeshBuffers>,
+    local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers>,
     mesh_material: Res<MeshMaterial>,
     mut mesh_commands: ResMut<MeshCommandQueue>,
     mut mesh_assets: ResMut<Assets<Mesh>>,
@@ -71,12 +66,12 @@ pub fn mesh_generator_system(
         &*pool,
         &mut *mesh_commands,
         &mut *chunk_meshes,
-        commands,
+        &mut commands,
     );
     spawn_mesh_entities(
         new_chunk_meshes,
         &*mesh_material,
-        commands,
+        &mut commands,
         &mut *mesh_assets,
         &mut *chunk_meshes,
     );

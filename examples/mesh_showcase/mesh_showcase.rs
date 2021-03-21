@@ -55,7 +55,7 @@ fn setup(
     commands
         .insert_resource(CameraRotationState::new(camera_entity))
         .insert_resource(MeshMaterial(
-            materials.add(Color::rgba(0.0, 0.0, 0.0, 0.0).into()),
+            materials.add(Color::rgba(0.0, 0.0, 0.0, 1.0).into()),
         ))
         .insert_resource(MeshGeneratorState::new());
 }

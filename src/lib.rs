@@ -10,7 +10,8 @@
 //!
 //! ![Wireframe](https://media.githubusercontent.com/media/bonsairobo/building-blocks/main/examples/screenshots/wireframe.png)
 //!
-//! ![LOD Terrain](https://media.githubusercontent.com/media/bonsairobo/building-blocks/main/examples/screenshots/lod_terrain.png)
+//! ![LOD
+//! Terrain](https://media.githubusercontent.com/media/bonsairobo/building-blocks/main/examples/screenshots/lod_terrain.png)
 //!
 //! The primary focus is core data structures and algorithms. Features include:
 //!
@@ -96,13 +97,17 @@
 //!
 //! To learn the basics about lattice maps, start with these doc pages:
 //!
-//! - [points](https://docs.rs/building_blocks_core/latest/building_blocks_core/point/struct.PointN.html)
-//! - [extents](https://docs.rs/building_blocks_core/latest/building_blocks_core/extent/struct.ExtentN.html)
-//! - [arrays](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/array/index.html)
+//! - [point](https://docs.rs/building_blocks_core/latest/building_blocks_core/point/struct.PointN.html)
+//! - [extent](https://docs.rs/building_blocks_core/latest/building_blocks_core/extent/struct.ExtentN.html)
+//! - [array](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/array/index.html)
 //! - [access traits](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/access/index.html)
-//! - [chunk maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/chunk_map/index.html)
-//! - [transform maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/transform_map/index.html)
-//! - [fn maps](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/func/index.html)
+//! - [chunk map](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/chunk_map/index.html)
+//! - [transform map](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/transform_map/index.html)
+//! - [fn map](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/func/index.html)
+//!
+//! After that, you might be interested in hierarchical structures to help you scale your voxel application. For that, you'll
+//! want to read the [multiresolution module doc
+//! page](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/multiresolution/index.html).
 //!
 //! ## Benchmarks
 //!

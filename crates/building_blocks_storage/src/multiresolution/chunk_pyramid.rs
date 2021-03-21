@@ -1,7 +1,7 @@
 use crate::{
     prelude::*, ArrayNx1, ChunkDownsampler, ChunkMap, ChunkMapBuilder, ChunkMapBuilderNx1,
-    ChunkMapNx1, FastArrayCompressionNx1, OctreeChunkIndex, OctreeNode, SmallKeyHashMap,
-    VisitStatus,
+    ChunkMapNx1, FastArrayCompressionNx1, LodChunkKey, OctreeChunkIndex, OctreeNode,
+    SmallKeyHashMap, VisitStatus,
 };
 
 use building_blocks_core::prelude::*;
@@ -53,6 +53,17 @@ impl<N, T, Store> ChunkPyramid<N, T, Store>
 where
     PointN<N>: IntegerPoint<N>,
     T: Clone,
+    Store: ChunkReadStorage<N, ArrayNx1<N, T>>,
+{
+    pub fn get_chunk(&self, key: LodChunkKey<N>) -> Option<&ArrayNx1<N, T>> {
+        self.levels[key.lod as usize].get_chunk(key.chunk_key)
+    }
+}
+
+impl<N, T, Store> ChunkPyramid<N, T, Store>
+where
+    PointN<N>: IntegerPoint<N>,
+    T: Clone,
     Store: ChunkWriteStorage<N, ArrayNx1<N, T>>,
 {
     /// Construct a new `ChunkPyramid` with height `num_levels`.
@@ -78,6 +89,10 @@ where
 
     pub fn ambient_value(&self) -> T {
         self.builder.ambient_value()
+    }
+
+    pub fn get_mut_chunk(&mut self, key: LodChunkKey<N>) -> Option<&mut ArrayNx1<N, T>> {
+        self.levels[key.lod as usize].get_mut_chunk(key.chunk_key)
     }
 
     /// Downsamples the chunk at `src_level` and `src_chunk_key` into the specified destination level `dst_level`.

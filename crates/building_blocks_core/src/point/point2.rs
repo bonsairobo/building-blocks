@@ -90,11 +90,11 @@ impl Point2f {
     }
 }
 
-impl AsIntegerPoint for Point2f {
+impl IntoIntegerPoint for Point2f {
     type IntPoint = Point2i;
 
     #[inline]
-    fn as_int(self) -> Self::IntPoint {
+    fn into_int(self) -> Self::IntPoint {
         PointN([self.x() as i32, self.y() as i32])
     }
 }

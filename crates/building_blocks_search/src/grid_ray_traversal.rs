@@ -23,12 +23,12 @@ impl<Ni, Nf> GridRayTraversal<Ni, Nf> {
     pub fn new(start: PointN<Nf>, velocity: PointN<Nf>) -> Self
     where
         PointN<Ni>: IntegerPoint<Ni>,
-        PointN<Nf>: AsIntegerPoint<IntPoint = PointN<Ni>> + FloatPoint<Nf>,
+        PointN<Nf>: IntoIntegerPoint<IntPoint = PointN<Ni>> + FloatPoint<Nf>,
         PointN<Nf>: From<PointN<Ni>>,
     {
-        let current_grid_point: PointN<Ni> = start.as_int();
+        let current_grid_point: PointN<Ni> = start.into_int();
         let vel_signs = velocity.signum();
-        let step = vel_signs.as_int();
+        let step = vel_signs.into_int();
         let t_delta = vel_signs / velocity;
 
         // For each axis, calculate the time delta we need to reach a pixel boundary on that axis. For a positive velocity, this

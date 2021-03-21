@@ -154,7 +154,7 @@ pub trait LatticeOrder {
     fn meet(self, other: Self) -> Self;
 }
 
-pub trait FloatPoint<N>: AsIntegerPoint + Point<Scalar = f32> {
+pub trait FloatPoint<N>: IntoIntegerPoint + Point<Scalar = f32> {
     fn round(self) -> Self;
 
     fn floor(self) -> Self;
@@ -166,19 +166,19 @@ pub trait FloatPoint<N>: AsIntegerPoint + Point<Scalar = f32> {
     /// Ensures that you floor before casting to integers, since this is not the default behavior for negative integers.
     #[inline]
     fn floor_int(self) -> Self::IntPoint {
-        self.floor().as_int()
+        self.floor().into_int()
     }
 }
 
-pub trait AsIntegerPoint {
+pub trait IntoIntegerPoint {
     type IntPoint;
 
-    fn as_int(self) -> Self::IntPoint;
+    fn into_int(self) -> Self::IntPoint;
 }
 
 impl<N> FloatPoint<N> for PointN<N>
 where
-    Self: AsIntegerPoint + Point<Scalar = f32>,
+    Self: IntoIntegerPoint + Point<Scalar = f32>,
 {
     #[inline]
     fn round(self) -> Self {

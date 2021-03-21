@@ -1,6 +1,6 @@
 [package]
 name = "building_blocks_storage"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2018"
 authors = ["Duncan <bonsairobo@gmail.com>"]
 license = "MIT"
@@ -23,7 +23,7 @@ num = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 slab = "0.4"
 
-building_blocks_core = { path = "../building_blocks_core", version = "0.5.0", default-features = false }
+building_blocks_core = { path = "../building_blocks_core", version = "0.6.0", default-features = false }
 
 # Optional, feature-gated.
 dot_vox = { version = "4.1", optional = true }

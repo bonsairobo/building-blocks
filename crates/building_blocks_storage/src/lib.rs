@@ -74,6 +74,7 @@ impl IsEmpty for bool {
 
 // Hash types to use for small keys like `PointN`.
 pub type SmallKeyHashMap<K, V> = ahash::AHashMap<K, V>;
+pub type SmallKeyHashSet<K> = ahash::AHashSet<K>;
 pub type SmallKeyBuildHasher = ahash::RandomState;
 
 pub mod prelude {

@@ -127,7 +127,7 @@ pub mod multichannel_aliases {
             pub type $name<'a, By, $( $chan ),+> = CompressibleChunkMapReader<
                 'a,
                 $dim,
-                A,
+                ($($chan,)+),
                 ChunkMapBuilderNxM<$dim, ($($chan,)+), ($(Channel<$chan>,)+)>,
                 FastArrayCompression<$dim, FastChannelsCompression<By, ($(Channel<$chan>,)+)>>,
             >;

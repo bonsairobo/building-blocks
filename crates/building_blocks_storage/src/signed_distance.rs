@@ -32,11 +32,6 @@ impl Sd16 {
     pub const ONE: Self = Self(std::i16::MAX);
 }
 
-impl Default for Sd8 {
-    fn default() -> Self {
-        Self::ONE
-    }
-}
 impl From<Sd8> for f32 {
     #[inline]
     fn from(s: Sd8) -> f32 {
@@ -56,12 +51,6 @@ impl SignedDistance for Sd8 {
     }
 }
 
-impl Default for Sd16 {
-    #[inline]
-    fn default() -> Self {
-        Self::ONE
-    }
-}
 impl From<Sd16> for f32 {
     #[inline]
     fn from(s: Sd16) -> f32 {

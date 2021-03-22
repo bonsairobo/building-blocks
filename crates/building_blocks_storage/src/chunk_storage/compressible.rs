@@ -40,6 +40,23 @@ pub type CompressedChunks<Compr> = Slab<Compressed<Compr>>;
 
 impl<N, Compr> CompressibleChunkStorage<N, Compr>
 where
+    Compr: Compression,
+{
+    pub fn cache(&self) -> &SmallKeyLruCache<PointN<N>, Compr::Data, CompressedLocation> {
+        &self.cache
+    }
+
+    pub fn compression(&self) -> &Compr {
+        &self.compression
+    }
+
+    pub fn compressed(&self) -> &CompressedChunks<Compr> {
+        &self.compressed
+    }
+}
+
+impl<N, Compr> CompressibleChunkStorage<N, Compr>
+where
     PointN<N>: Hash + IntegerPoint<N>,
     Compr: Compression,
 {
@@ -50,13 +67,7 @@ where
             compressed: Slab::new(),
         }
     }
-}
 
-impl<N, Compr> CompressibleChunkStorage<N, Compr>
-where
-    PointN<N>: Hash + IntegerPoint<N>,
-    Compr: Compression,
-{
     /// Returns a reader that implements `ChunkReadStorage`.
     pub fn reader<'a>(
         &'a self,

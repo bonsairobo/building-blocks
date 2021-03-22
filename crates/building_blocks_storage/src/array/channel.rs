@@ -180,6 +180,7 @@ impl<By, Chan> FromBytesCompression<By> for FastChannelsCompression<By, Chan> {
 }
 
 /// A compressed `Channel` that decompresses quickly but only on the same platform where it was compressed.
+#[derive(Clone)]
 pub struct FastCompressedChannel<T> {
     compressed_bytes: Vec<u8>,
     decompressed_length: usize, // TODO: we should be able to remove this with some refactoring of the Compression trait

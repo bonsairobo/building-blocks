@@ -133,21 +133,21 @@ where
     }
 }
 
-impl<'a, N, F, In, Out, B, Store> ReadExtent<'a, N>
-    for TransformMap<'a, ChunkMap<N, In, B, Store>, F>
+impl<'a, N, F, In, Out, Bldr, Store> ReadExtent<'a, N>
+    for TransformMap<'a, ChunkMap<N, In, Bldr, Store>, F>
 where
     F: Copy + Fn(In) -> Out,
     In: 'a,
-    B: ChunkMapBuilder<N, In>,
-    ChunkMap<N, In, B, Store>: ReadExtent<
+    Bldr: ChunkMapBuilder<N, In>,
+    ChunkMap<N, In, Bldr, Store>: ReadExtent<
         'a,
         N,
-        Src = ChunkCopySrc<N, In, &'a B::Chunk>,
-        SrcIter = ChunkCopySrcIter<N, In, &'a B::Chunk>,
+        Src = ChunkCopySrc<N, In, &'a Bldr::Chunk>,
+        SrcIter = ChunkCopySrcIter<N, In, &'a Bldr::Chunk>,
     >,
 {
-    type Src = TransformChunkCopySrc<'a, N, F, Out, B::Chunk>;
-    type SrcIter = TransformChunkCopySrcIter<'a, N, F, In, B::Chunk>;
+    type Src = TransformChunkCopySrc<'a, N, F, Out, Bldr::Chunk>;
+    type SrcIter = TransformChunkCopySrcIter<'a, N, F, In, Bldr::Chunk>;
 
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
         TransformChunkCopySrcIter {

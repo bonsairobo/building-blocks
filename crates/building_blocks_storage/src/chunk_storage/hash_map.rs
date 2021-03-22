@@ -59,12 +59,12 @@ where
 }
 
 /// A `ChunkMap` using `HashMap` as chunk storage.
-pub type ChunkHashMap<N, T, B> =
-    ChunkMap<N, T, B, SmallKeyHashMap<PointN<N>, <B as ChunkMapBuilder<N, T>>::Chunk>>;
+pub type ChunkHashMap<N, T, Bldr> =
+    ChunkMap<N, T, Bldr, SmallKeyHashMap<PointN<N>, <Bldr as ChunkMapBuilder<N, T>>::Chunk>>;
 /// A 2-dimensional `ChunkHashMap`.
-pub type ChunkHashMap2<T, B> = ChunkHashMap<[i32; 2], T, B>;
+pub type ChunkHashMap2<T, Bldr> = ChunkHashMap<[i32; 2], T, Bldr>;
 /// A 3-dimensional `ChunkHashMap`.
-pub type ChunkHashMap3<T, B> = ChunkHashMap<[i32; 3], T, B>;
+pub type ChunkHashMap3<T, Bldr> = ChunkHashMap<[i32; 3], T, Bldr>;
 
 pub mod multichannel_aliases {
     use super::*;

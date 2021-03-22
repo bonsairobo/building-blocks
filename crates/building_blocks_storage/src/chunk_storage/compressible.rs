@@ -247,17 +247,17 @@ where
     }
 }
 
-impl<N, T, B, Compr> CompressibleChunkMap<N, T, B, Compr>
+impl<N, T, Bldr, Compr> CompressibleChunkMap<N, T, Bldr, Compr>
 where
     PointN<N>: Hash + IntegerPoint<N>,
-    B: ChunkMapBuilder<N, T> + Clone,
-    Compr: Compression<Data = B::Chunk>,
+    Bldr: ChunkMapBuilder<N, T> + Clone,
+    Compr: Compression<Data = Bldr::Chunk>,
 {
     /// Construct a reader for this map.
     pub fn reader<'a>(
         &'a self,
-        local_cache: &'a LocalChunkCache<N, B::Chunk>,
-    ) -> CompressibleChunkMapReader<'a, N, T, B, Compr> {
+        local_cache: &'a LocalChunkCache<N, Bldr::Chunk>,
+    ) -> CompressibleChunkMapReader<'a, N, T, Bldr, Compr> {
         self.builder()
             .clone()
             .build_with_read_storage(self.storage().reader(local_cache))
@@ -273,8 +273,8 @@ pub type LruChunkCacheEntries<'a, N, Ch> = LruCacheEntries<'a, PointN<N>, Ch, Co
 pub type LruChunkCacheIntoIter<N, Ch> = LruCacheIntoIter<PointN<N>, Ch, CompressedLocation>;
 
 /// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
-pub type CompressibleChunkMap<N, T, B, Compr> =
-    ChunkMap<N, T, B, CompressibleChunkStorage<N, Compr>>;
+pub type CompressibleChunkMap<N, T, Bldr, Compr> =
+    ChunkMap<N, T, Bldr, CompressibleChunkStorage<N, Compr>>;
 
 pub mod multichannel_aliases {
     use super::*;

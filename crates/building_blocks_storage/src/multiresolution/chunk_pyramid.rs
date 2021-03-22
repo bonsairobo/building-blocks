@@ -305,18 +305,18 @@ fn two_elems_mut<T>(levels: &mut [T], level_a: u8, level_b: u8) -> [&mut T; 2] {
 }
 
 /// Downsamples all of `src_chunk` into the chunks of `dst_chunks` at level `dst_lod`.
-pub fn downsample_chunk_into_map<N, T, Samp, SrcCh, B, DstStore>(
+pub fn downsample_chunk_into_map<N, T, Samp, SrcCh, Bldr, DstStore>(
     sampler: &Samp,
     chunk_shape: PointN<N>,
     src_chunk_key: PointN<N>,
     src_chunk: &SrcCh,
     lod_delta: u8,
-    dst_chunks: &mut ChunkMap<N, T, B, DstStore>,
+    dst_chunks: &mut ChunkMap<N, T, Bldr, DstStore>,
 ) where
     PointN<N>: IntegerPoint<N>,
     Samp: ChunkDownsampler<N, T, SrcCh>,
-    B: ChunkMapBuilder<N, T, Chunk = ArrayNx1<N, T>>,
-    DstStore: ChunkWriteStorage<N, B::Chunk>,
+    Bldr: ChunkMapBuilder<N, T, Chunk = ArrayNx1<N, T>>,
+    DstStore: ChunkWriteStorage<N, Bldr::Chunk>,
 {
     let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_key, lod_delta);
     let dst_chunk = dst_chunks.get_mut_chunk_or_insert_ambient(dst.dst_chunk_key);

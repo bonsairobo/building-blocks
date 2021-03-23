@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// Translates from lattice coordinates to chunk key space.
 ///
 /// The key for a chunk is the minimum point of that chunk's extent.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct ChunkIndexer<N> {
     chunk_shape: PointN<N>,
     chunk_shape_mask: PointN<N>,

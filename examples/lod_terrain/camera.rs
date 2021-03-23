@@ -3,9 +3,8 @@ use utilities::bevy_util::camera::create_camera_bundle;
 
 pub fn create_camera_entity(commands: &mut Commands) -> Entity {
     commands
-        .spawn(create_camera_bundle(camera_transform(0.0)))
-        .current_entity()
-        .unwrap()
+        .spawn_bundle(create_camera_bundle(camera_transform(0.0)))
+        .id()
 }
 
 pub fn camera_control_system(time: Res<Time>, mut cameras: Query<(&Camera, &mut Transform)>) {

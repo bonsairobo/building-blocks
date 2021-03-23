@@ -17,9 +17,7 @@ use building_blocks::mesh::{
 use building_blocks::storage::{Array3x1, Get, IsEmpty};
 use camera_rotation::{camera_rotation_system, CameraRotationState};
 
-const APP_STAGE: &str = "app_stage";
-
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 enum AppState {
     Loading,
     Run,
@@ -34,15 +32,13 @@ fn main() {
     App::build()
         .add_plugins(DefaultPlugins)
         .insert_resource(State::new(AppState::Loading))
-        .add_stage_after(
-            CoreStage::Update,
-            APP_STAGE,
-            StateStage::<AppState>::default(),
+        .add_state(AppState::Loading)
+        .add_system_set(SystemSet::on_enter(AppState::Loading).with_system(load_assets.system()))
+        .add_system_set(SystemSet::on_update(AppState::Loading).with_system(check_loaded.system()))
+        .add_system_set(SystemSet::on_enter(AppState::Run).with_system(setup.system()))
+        .add_system_set(
+            SystemSet::on_update(AppState::Run).with_system(camera_rotation_system.system()),
         )
-        .on_state_enter(APP_STAGE, AppState::Loading, load_assets.system())
-        .on_state_update(APP_STAGE, AppState::Loading, check_loaded.system())
-        .on_state_enter(APP_STAGE, AppState::Run, setup.system())
-        .on_state_update(APP_STAGE, AppState::Run, camera_rotation_system.system())
         .run();
 }
 
@@ -195,21 +191,19 @@ fn setup(
         ))),
     }));
 
-    commands
-        .spawn(PbrBundle {
-            mesh: meshes.add(render_mesh),
-            render_pipelines: RenderPipelines::from_pipelines(vec![RenderPipeline::new(pipeline)]),
-            material: materials.add(texture_handle.0.clone().into()),
-            ..Default::default()
-        })
-        .spawn(LightBundle {
-            transform: Transform::from_translation(Vec3::new(0.0, 100.0, 100.0)),
-            ..Default::default()
-        });
+    commands.spawn_bundle(PbrBundle {
+        mesh: meshes.add(render_mesh),
+        render_pipelines: RenderPipelines::from_pipelines(vec![RenderPipeline::new(pipeline)]),
+        material: materials.add(texture_handle.0.clone().into()),
+        ..Default::default()
+    });
+    commands.spawn_bundle(LightBundle {
+        transform: Transform::from_translation(Vec3::new(0.0, 100.0, 100.0)),
+        ..Default::default()
+    });
     let camera = commands
-        .spawn(PerspectiveCameraBundle::default())
-        .current_entity()
-        .unwrap();
+        .spawn_bundle(PerspectiveCameraBundle::default())
+        .id();
 
     commands.insert_resource(CameraRotationState::new(camera));
 }

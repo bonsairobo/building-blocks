@@ -55,19 +55,23 @@ fn setup(
     );
     render_mesh.set_indices(Some(Indices::U32(mesh.indices)));
 
-    commands
-        .spawn(LightBundle {
-            transform: Transform::from_translation(Vec3::new(0.0, 100.0, 100.0)),
+    commands.spawn_bundle(LightBundle {
+        transform: Transform::from_translation(Vec3::new(0.0, 100.0, 100.0)),
+        light: Light {
+            range: 200.0,
+            intensity: 20000.0,
             ..Default::default()
-        })
-        .spawn(PerspectiveCameraBundle {
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 150.0))
-                .looking_at(Vec3::new(0.0, 10.0, 0.0), Vec3::Y),
-            ..Default::default()
-        })
-        .spawn(PbrBundle {
-            mesh: meshes.add(render_mesh),
-            material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
-            ..Default::default()
-        });
+        },
+        ..Default::default()
+    });
+    commands.spawn_bundle(PerspectiveCameraBundle {
+        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 150.0))
+            .looking_at(Vec3::new(0.0, 10.0, 0.0), Vec3::Y),
+        ..Default::default()
+    });
+    commands.spawn_bundle(PbrBundle {
+        mesh: meshes.add(render_mesh),
+        material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
+        ..Default::default()
+    });
 }

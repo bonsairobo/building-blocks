@@ -71,14 +71,21 @@ fn setup(
     commands.insert_resource(LodState::new(init_lod0_center));
     commands.insert_resource(map);
     commands.insert_resource(ChunkMeshes::default());
-    commands.insert_resource(MeshMaterial(
-        materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
-    ));
+
+    let mut material = StandardMaterial::from(Color::rgb(1.0, 0.0, 0.0));
+    material.roughness = 0.9;
+    commands.insert_resource(MeshMaterial(materials.add(material)));
 
     // Lights, camera, action!
     create_camera_entity(&mut commands);
-    commands.spawn(LightBundle {
-        transform: Transform::from_translation(Vec3::new(0.0, 250.0, 0.0)),
+    commands.spawn_bundle(LightBundle {
+        transform: Transform::from_translation(Vec3::new(0.0, 500.0, 0.0)),
+        light: Light {
+            intensity: 1000000.0,
+            depth: 0.1..1000000.0,
+            range: 1000000.0,
+            ..Default::default()
+        },
         ..Default::default()
     });
 }

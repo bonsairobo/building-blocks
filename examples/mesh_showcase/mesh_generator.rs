@@ -165,7 +165,7 @@ pub fn mesh_generator_system(
     if new_shape_requested || state.chunk_mesh_entities.is_empty() {
         // Delete the old meshes.
         for entity in state.chunk_mesh_entities.drain(..) {
-            commands.despawn(entity);
+            commands.entity(entity).despawn();
         }
 
         // Sample the new shape.
@@ -178,9 +178,8 @@ pub fn mesh_generator_system(
         for mesh in chunk_meshes.into_iter() {
             if let Some(mesh) = mesh {
                 let entity = commands
-                    .spawn(create_mesh_bundle(mesh, material.0.clone(), &mut meshes))
-                    .current_entity()
-                    .unwrap();
+                    .spawn_bundle(create_mesh_bundle(mesh, material.0.clone(), &mut meshes))
+                    .id();
                 state.chunk_mesh_entities.push(entity);
             }
         }

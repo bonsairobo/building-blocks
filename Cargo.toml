@@ -63,7 +63,7 @@ building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.6.0"
 building_blocks_search = { path = "crates/building_blocks_search", version = "0.6.0", default-features = false, optional = true }
 
 [dev-dependencies]
-bevy = { git = "https://github.com/bevyengine/bevy", rev = "785aad92", default-features = false, features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"] }
+bevy = { git = "https://github.com/bevyengine/bevy", rev = "9c252e904a92067", default-features = false, features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"] }
 simdnoise = "3.1"
 
 # Common code for tests and examples.

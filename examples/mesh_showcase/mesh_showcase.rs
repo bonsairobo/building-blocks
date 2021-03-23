@@ -42,20 +42,18 @@ fn setup(
 ) {
     wireframe_config.global = true;
 
-    commands.spawn(LightBundle {
+    commands.spawn_bundle(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.100, 150.0, 100.0)),
         ..Default::default()
     });
 
     let camera_entity = commands
-        .spawn(PerspectiveCameraBundle::default())
-        .current_entity()
-        .unwrap();
+        .spawn_bundle(PerspectiveCameraBundle::default())
+        .id();
 
-    commands
-        .insert_resource(CameraRotationState::new(camera_entity))
-        .insert_resource(MeshMaterial(
-            materials.add(Color::rgba(0.0, 0.0, 0.0, 1.0).into()),
-        ))
-        .insert_resource(MeshGeneratorState::new());
+    commands.insert_resource(CameraRotationState::new(camera_entity));
+    commands.insert_resource(MeshMaterial(
+        materials.add(Color::rgba(0.0, 0.0, 0.0, 1.0).into()),
+    ));
+    commands.insert_resource(MeshGeneratorState::new());
 }

@@ -108,7 +108,7 @@ fn apply_mesh_commands(
                     match update {
                         LodChunkUpdate3::Split(split) => {
                             if let Some(entity) = chunk_meshes.entities.remove(&split.old_chunk) {
-                                commands.despawn(entity);
+                                commands.entity(entity).despawn();
                             }
                             for &key in split.new_chunks.iter() {
                                 num_meshes_created += 1;
@@ -123,7 +123,7 @@ fn apply_mesh_commands(
                         LodChunkUpdate3::Merge(merge) => {
                             for key in merge.old_chunks.iter() {
                                 if let Some(entity) = chunk_meshes.entities.remove(&key) {
-                                    commands.despawn(entity);
+                                    commands.entity(entity).despawn();
                                 }
                             }
                             num_meshes_created += 1;
@@ -196,19 +196,18 @@ fn spawn_mesh_entities(
             chunk_meshes.entities.insert(
                 lod_chunk_key,
                 commands
-                    .spawn(create_mesh_bundle(
+                    .spawn_bundle(create_mesh_bundle(
                         mesh,
                         mesh_material.0.clone(),
                         mesh_assets,
                     ))
-                    .current_entity()
-                    .unwrap(),
+                    .id(),
             )
         } else {
             chunk_meshes.entities.remove(&lod_chunk_key)
         };
         if let Some(old_mesh) = old_mesh {
-            commands.despawn(old_mesh);
+            commands.entity(old_mesh).despawn();
         }
     }
 }

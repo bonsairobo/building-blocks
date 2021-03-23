@@ -66,7 +66,7 @@ impl Axis3 {
     }
 
     #[inline]
-    pub fn get_unit_vector(&self) -> Point3i {
+    pub const fn get_unit_vector(&self) -> Point3i {
         match self {
             Axis3::X => PointN([1, 0, 0]),
             Axis3::Y => PointN([0, 1, 0]),
@@ -89,7 +89,7 @@ pub enum Axis3Permutation {
 
 impl Axis3Permutation {
     #[inline]
-    pub fn even_with_normal_axis(axis: Axis3) -> Self {
+    pub const fn even_with_normal_axis(axis: Axis3) -> Self {
         match axis {
             Axis3::X => Axis3Permutation::XYZ,
             Axis3::Y => Axis3Permutation::YZX,
@@ -98,7 +98,7 @@ impl Axis3Permutation {
     }
 
     #[inline]
-    pub fn odd_with_normal_axis(axis: Axis3) -> Self {
+    pub const fn odd_with_normal_axis(axis: Axis3) -> Self {
         match axis {
             Axis3::X => Axis3Permutation::XZY,
             Axis3::Y => Axis3Permutation::YXZ,
@@ -107,7 +107,7 @@ impl Axis3Permutation {
     }
 
     #[inline]
-    pub fn sign(&self) -> i32 {
+    pub const fn sign(&self) -> i32 {
         match self {
             Axis3Permutation::XYZ => 1,
             Axis3Permutation::ZXY => 1,
@@ -119,7 +119,7 @@ impl Axis3Permutation {
     }
 
     #[inline]
-    pub fn axes(&self) -> [Axis3; 3] {
+    pub const fn axes(&self) -> [Axis3; 3] {
         match self {
             Axis3Permutation::XYZ => [Axis3::X, Axis3::Y, Axis3::Z],
             Axis3Permutation::ZXY => [Axis3::Z, Axis3::X, Axis3::Y],
@@ -139,7 +139,7 @@ pub struct SignedAxis3 {
 
 impl SignedAxis3 {
     #[inline]
-    pub fn new(sign: i32, axis: Axis3) -> Self {
+    pub const fn new(sign: i32, axis: Axis3) -> Self {
         Self { sign, axis }
     }
 
@@ -149,7 +149,7 @@ impl SignedAxis3 {
     }
 
     #[inline]
-    pub fn from_vector(v: Point3i) -> Option<Self> {
+    pub const fn from_vector(v: Point3i) -> Option<Self> {
         match v {
             PointN([x, 0, 0]) => Some(SignedAxis3::new(x, Axis3::X)),
             PointN([0, y, 0]) => Some(SignedAxis3::new(y, Axis3::Y)),

@@ -22,7 +22,10 @@ fn greedy_quads_terrace(c: &mut Criterion) {
                     }
 
                     // Do a single run first to allocate the buffer to the right size.
-                    let mut buffer = GreedyQuadsBuffer::new_with_y_up(*voxels.extent());
+                    let mut buffer = GreedyQuadsBuffer::new(
+                        *voxels.extent(),
+                        RIGHT_HANDED_Y_UP_CONFIG.quad_groups(),
+                    );
                     greedy_quads(&voxels, voxels.extent(), &mut buffer);
 
                     (voxels, buffer)

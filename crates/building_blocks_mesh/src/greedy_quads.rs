@@ -39,26 +39,51 @@ impl QuadGroup {
     }
 }
 
+/// A configuration of XYZ --> NUV axis mappings and orientations of the cube faces for a given coordinate system.
+#[derive(Clone)]
+pub struct QuadCoordinateConfig {
+    pub faces: [OrientedCubeFace; 6],
+    /// For a given coordinate system, one of the two axes that isn't UP must be flipped in the U texel coordinate direction to
+    /// avoid incorrect texture mirroring. For example, in a right-handed coordinate system with +Y pointing up, you should set
+    /// `u_flip_face` to `Axis3::X`, because those faces need their U coordinates to be flipped relative to the other faces.
+    pub u_flip_face: Axis3,
+}
+
+pub const RIGHT_HANDED_Y_UP_CONFIG: QuadCoordinateConfig = QuadCoordinateConfig {
+    // Y is always in the V direction when it's not the normal. When Y is the normal, right-handedness determines that
+    // we must use YZX permutations.
+    faces: [
+        OrientedCubeFace::new(-1, Axis3Permutation::XZY),
+        OrientedCubeFace::new(-1, Axis3Permutation::YZX),
+        OrientedCubeFace::new(-1, Axis3Permutation::ZXY),
+        OrientedCubeFace::new(1, Axis3Permutation::XZY),
+        OrientedCubeFace::new(1, Axis3Permutation::YZX),
+        OrientedCubeFace::new(1, Axis3Permutation::ZXY),
+    ],
+    u_flip_face: Axis3::X,
+};
+
+impl QuadCoordinateConfig {
+    pub fn quad_groups(self) -> [QuadGroup; 6] {
+        let [f0, f1, f2, f3, f4, f5] = self.faces;
+
+        [
+            QuadGroup::new(f0),
+            QuadGroup::new(f1),
+            QuadGroup::new(f2),
+            QuadGroup::new(f3),
+            QuadGroup::new(f4),
+            QuadGroup::new(f5),
+        ]
+    }
+}
+
 impl GreedyQuadsBuffer {
-    pub fn new_with_quad_groups(extent: Extent3i, quad_groups: [QuadGroup; 6]) -> Self {
+    pub fn new(extent: Extent3i, quad_groups: [QuadGroup; 6]) -> Self {
         Self {
             quad_groups,
             visited: Array3x1::fill(extent, false),
         }
-    }
-
-    pub fn new_with_y_up(extent: Extent3i) -> Self {
-        Self::new_with_quad_groups(
-            extent,
-            [
-                QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::XZY, false)),
-                QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::YXZ, false)),
-                QuadGroup::new(OrientedCubeFace::new(-1, Axis3Permutation::ZXY, true)),
-                QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::XZY, false)),
-                QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::YXZ, false)),
-                QuadGroup::new(OrientedCubeFace::new(1, Axis3Permutation::ZXY, true)),
-            ],
-        )
     }
 
     pub fn reset(&mut self, extent: Extent3i) {

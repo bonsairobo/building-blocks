@@ -12,6 +12,7 @@ use bevy::{
 use building_blocks::core::prelude::*;
 use building_blocks::mesh::{
     greedy_quads, GreedyQuadsBuffer, IsOpaque, MergeVoxel, OrientedCubeFace, UnorientedQuad,
+    RIGHT_HANDED_Y_UP_CONFIG,
 };
 use building_blocks::storage::{Array3x1, Get, IsEmpty};
 use camera_rotation::{camera_rotation_system, CameraRotationState};
@@ -96,13 +97,20 @@ struct MeshBuf {
 }
 
 impl MeshBuf {
-    fn add_quad(&mut self, face: &OrientedCubeFace, quad: &UnorientedQuad, layer: u32) {
+    fn add_quad(
+        &mut self,
+        face: &OrientedCubeFace,
+        quad: &UnorientedQuad,
+        u_flip_face: Axis3,
+        layer: u32,
+    ) {
         let start_index = self.positions.len() as u32;
         self.positions
             .extend_from_slice(&face.quad_mesh_positions(quad));
         self.normals.extend_from_slice(&face.quad_mesh_normals());
 
-        let mut uvs = face.simple_tex_coords(true, quad);
+        let flip_v = true;
+        let mut uvs = face.tex_coords(u_flip_face, flip_v, quad);
         for uv in uvs.iter_mut() {
             for c in uv.iter_mut() {
                 *c *= UV_SCALE;
@@ -144,14 +152,19 @@ fn setup(
         voxels.fill_extent(&level, Voxel((i % 4) as u8 + 1));
     }
 
-    let mut greedy_buffer = GreedyQuadsBuffer::new_with_y_up(extent);
+    let mut greedy_buffer = GreedyQuadsBuffer::new(extent, RIGHT_HANDED_Y_UP_CONFIG.quad_groups());
     greedy_quads(&voxels, &extent, &mut greedy_buffer);
 
     let mut mesh_buf = MeshBuf::default();
     for group in greedy_buffer.quad_groups.iter() {
         for quad in group.quads.iter() {
             let mat = voxels.get(quad.minimum);
-            mesh_buf.add_quad(&group.face, quad, mat.0 as u32 - 1);
+            mesh_buf.add_quad(
+                &group.face,
+                quad,
+                RIGHT_HANDED_Y_UP_CONFIG.u_flip_face,
+                mat.0 as u32 - 1,
+            );
         }
     }
 

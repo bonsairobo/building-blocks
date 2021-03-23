@@ -298,7 +298,10 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
                 let mut padded_chunk = Array3x1::fill(padded_chunk_extent, CubeVoxel(false));
                 copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
 
-                let mut buffer = GreedyQuadsBuffer::new_with_y_up(padded_chunk_extent);
+                let mut buffer = GreedyQuadsBuffer::new(
+                    padded_chunk_extent,
+                    RIGHT_HANDED_Y_UP_CONFIG.quad_groups(),
+                );
                 greedy_quads(&padded_chunk, &padded_chunk_extent, &mut buffer);
 
                 let mut mesh = PosNormMesh::default();

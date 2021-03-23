@@ -10,7 +10,7 @@ use bevy::{
 };
 use building_blocks::core::prelude::*;
 use building_blocks::mesh::{
-    greedy_quads, GreedyQuadsBuffer, IsOpaque, MergeVoxel, PosNormTexMesh,
+    greedy_quads, GreedyQuadsBuffer, IsOpaque, MergeVoxel, PosNormTexMesh, RIGHT_HANDED_Y_UP_CONFIG,
 };
 use building_blocks::storage::{Array3x1, IsEmpty};
 use camera_rotation::{camera_rotation_system, CameraRotationState};
@@ -105,15 +105,20 @@ fn setup(
     let mut voxels = Array3x1::fill(full_extent, Voxel::default());
     voxels.fill_extent(&interior_extent, Voxel(true));
 
-    let mut greedy_buffer = GreedyQuadsBuffer::new_with_y_up(full_extent);
+    let mut greedy_buffer =
+        GreedyQuadsBuffer::new(full_extent, RIGHT_HANDED_Y_UP_CONFIG.quad_groups());
     greedy_quads(&voxels, &full_extent, &mut greedy_buffer);
 
+    let flip_v = true;
     let mut mesh_buf = PosNormTexMesh::default();
     for group in greedy_buffer.quad_groups.iter() {
         for quad in group.quads.iter() {
-            group
-                .face
-                .add_quad_to_pos_norm_tex_mesh(true, quad, &mut mesh_buf);
+            group.face.add_quad_to_pos_norm_tex_mesh(
+                RIGHT_HANDED_Y_UP_CONFIG.u_flip_face,
+                flip_v,
+                quad,
+                &mut mesh_buf,
+            );
         }
     }
 

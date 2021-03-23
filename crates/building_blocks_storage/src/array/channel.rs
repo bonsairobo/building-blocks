@@ -135,11 +135,24 @@ impl_get_via_get_ref_and_clone!(Channel<T, Store>, T, Store);
 //  ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝
 
 /// Compresses a tuple of `Channel`s into a tuple of `FastCompressedChannel`s.
-#[derive(Clone, Copy)]
 pub struct FastChannelsCompression<By, Chan> {
     bytes_compression: By,
     marker: std::marker::PhantomData<Chan>,
 }
+
+impl<By, Chan> Clone for FastChannelsCompression<By, Chan>
+where
+    By: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            bytes_compression: self.bytes_compression.clone(),
+            marker: Default::default(),
+        }
+    }
+}
+
+impl<By, Chan> Copy for FastChannelsCompression<By, Chan> where By: Copy {}
 
 pub mod multichannel_aliases {
     use super::*;

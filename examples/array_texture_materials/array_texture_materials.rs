@@ -215,13 +215,13 @@ const VERTEX_SHADER: &str = r#"
 layout(location = 0) in vec3 Vertex_Position;
 layout(location = 1) in vec3 Vertex_Normal;
 layout(location = 2) in vec2 Vertex_Uv;
-layout(location = 3) in int Vertex_Layer; // New thing
+layout(location = 3) in uint Vertex_Layer; // New thing
 
 layout(location = 0) out vec3 v_Position;
 layout(location = 1) out vec3 v_Normal;
 layout(location = 2) out vec3 v_Uv;
 
-layout(set = 0, binding = 0) uniform Camera {
+layout(set = 0, binding = 0) uniform CameraViewProj {
     mat4 ViewProj;
 };
 
@@ -240,8 +240,6 @@ void main() {
 }
 "#;
 
-/// Modified from bevy's default PBR shader.
-/// How it works is not really important, the key part is using an array texture 2D
 const FRAGMENT_SHADER: &str = r#"
 #version 450
 
@@ -259,7 +257,7 @@ layout(location = 2) in vec3 v_Uv;
 
 layout(location = 0) out vec4 o_Target;
 
-layout(set = 0, binding = 0) uniform Camera {
+layout(set = 0, binding = 0) uniform CameraViewProj {
     mat4 ViewProj;
 };
 
@@ -269,46 +267,17 @@ layout(set = 1, binding = 0) uniform Lights {
     Light SceneLights[MAX_LIGHTS];
 };
 
-layout(set = 3, binding = 0) uniform StandardMaterial_albedo {
-    vec4 Albedo;
+layout(set = 3, binding = 0) uniform StandardMaterial_base_color {
+    vec4 base_color;
 };
 
-# ifdef STANDARDMATERIAL_ALBEDO_TEXTURE
-layout(set = 3, binding = 1) uniform texture2DArray StandardMaterial_albedo_texture;
-layout(set = 3, binding = 2) uniform sampler StandardMaterial_albedo_texture_sampler;
-# endif
+layout(set = 3, binding = 1) uniform texture2DArray StandardMaterial_base_color_texture;
+layout(set = 3, binding = 2) uniform sampler StandardMaterial_base_color_texture_sampler;
 
 void main() {
-    vec4 output_color = Albedo;
-# ifdef STANDARDMATERIAL_ALBEDO_TEXTURE
-    // Important part is here
-    output_color *= texture(
-        sampler2DArray(StandardMaterial_albedo_texture, StandardMaterial_albedo_texture_sampler), 
+    o_Target = base_color * texture(
+        sampler2DArray(StandardMaterial_base_color_texture, StandardMaterial_base_color_texture_sampler),
         v_Uv
     );
-
-# endif
-
-# ifndef STANDARDMATERIAL_UNLIT
-    vec3 normal = normalize(v_Normal);
-    // accumulate color
-    vec3 color = AmbientColor;
-    for (int i=0; i<int(NumLights.x) && i<MAX_LIGHTS; ++i) {
-        Light light = SceneLights[i];
-        // compute Lambertian diffuse term
-        vec3 light_dir = normalize(light.pos.xyz - v_Position);
-        float diffuse = max(0.0, dot(normal, light_dir));
-        // add light contribution
-        color += diffuse * light.color.xyz;
-    }
-
-    // average the lights so that we will never get something with > 1.0
-    color /= max(float(NumLights.x), 1.0);
-
-    output_color.xyz *= color;
-# endif
-
-    // multiply the light by material color
-    o_Target = output_color;
 }
 "#;

@@ -42,16 +42,8 @@ impl<N, Compr> CompressibleChunkStorage<N, Compr>
 where
     Compr: Compression,
 {
-    pub fn cache(&self) -> &SmallKeyLruCache<PointN<N>, Compr::Data, CompressedLocation> {
-        &self.cache
-    }
-
     pub fn compression(&self) -> &Compr {
         &self.compression
-    }
-
-    pub fn compressed(&self) -> &CompressedChunks<Compr> {
-        &self.compressed
     }
 }
 
@@ -66,6 +58,14 @@ where
             compression,
             compressed: Slab::new(),
         }
+    }
+
+    pub fn len_cached(&self) -> usize {
+        self.cache.len_cached()
+    }
+
+    pub fn len_compressed(&self) -> usize {
+        self.cache.len_cached()
     }
 
     /// Returns a reader that implements `ChunkReadStorage`.

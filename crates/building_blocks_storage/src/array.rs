@@ -142,7 +142,7 @@ mod coords;
 mod for_each;
 mod indexer;
 
-pub mod channel;
+pub mod channels;
 pub mod compression;
 
 #[cfg(feature = "dot_vox")]
@@ -150,7 +150,7 @@ mod dot_vox_conversions;
 #[cfg(feature = "image")]
 mod image_conversions;
 
-pub use channel::*;
+pub use channels::*;
 pub use compression::*;
 pub use coords::*;
 pub use for_each::*;

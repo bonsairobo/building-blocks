@@ -86,7 +86,7 @@ where
 
 pub mod multichannel_aliases {
     use super::*;
-    use crate::array::channel::multichannel_aliases::*;
+    use crate::array::channels::multichannel::multichannel_aliases::*;
 
     pub type FastArrayCompressionNx1<N, By, A> =
         FastArrayCompression<N, FastChannelsCompression1<By, A>>;

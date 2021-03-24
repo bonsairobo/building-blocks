@@ -26,6 +26,7 @@ fn main() {
     window_desc.title = "Building Blocks: LOD Terrain Example".to_string();
 
     App::build()
+        .insert_resource(window_desc)
         .insert_resource(Msaa { samples: 4 })
         // .insert_resource(WgpuOptions {
         //     features: WgpuFeatures {

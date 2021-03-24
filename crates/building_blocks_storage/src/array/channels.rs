@@ -4,6 +4,7 @@ pub mod multichannel;
 
 pub use channel::*;
 pub use compression::*;
+pub use multichannel::*;
 
 use crate::MultiMutPtr;
 

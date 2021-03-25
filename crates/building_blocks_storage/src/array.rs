@@ -260,7 +260,7 @@ impl<N, Chan> Array<N, Chan>
 where
     PointN<N>: IntegerPoint<N>,
 {
-    /// Sets the extent minimum to `p`.
+    /// Sets the extent minimum to `p`. This doesn't change the shape of the extent.
     #[inline]
     pub fn set_minimum(&mut self, p: PointN<N>) {
         self.extent.minimum = p;

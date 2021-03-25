@@ -1,12 +1,22 @@
 use std::sync::Arc;
 use thread_local::ThreadLocal;
 
-#[derive(Default)]
 pub struct ThreadLocalResource<T>
 where
     T: Send,
 {
     tls: Arc<ThreadLocal<T>>,
+}
+
+impl<T> Default for ThreadLocalResource<T>
+where
+    T: Send,
+{
+    fn default() -> Self {
+        Self {
+            tls: Default::default(),
+        }
+    }
 }
 
 impl<T> ThreadLocalResource<T>

@@ -160,29 +160,50 @@ fn create_mesh_for_chunk(
 
     let padded_chunk_extent =
         padded_surface_nets_chunk_extent(&chunks.indexer.extent_for_chunk_at_key(key.chunk_key));
-    let mut padded_chunk = Array3x1::fill(padded_chunk_extent, Sd8::ONE);
-    copy_extent(&padded_chunk_extent, chunks, &mut padded_chunk);
 
+    // Keep a thread-local cache of buffers to avoid expensive reallocations every time we want to mesh a chunk.
     let mesh_tls = local_mesh_buffers.get();
-    let mut surface_nets_buffer = mesh_tls.get_or_default().borrow_mut();
+    let mut surface_nets_buffers = mesh_tls
+        .get_or_create_with(|| {
+            RefCell::new(LocalSurfaceNetsBuffers {
+                mesh_buffer: Default::default(),
+                sdf_buffer: Array3x1::fill(padded_chunk_extent, Sd8::ONE),
+            })
+        })
+        .borrow_mut();
+    let LocalSurfaceNetsBuffers {
+        mesh_buffer,
+        sdf_buffer,
+    } = &mut *surface_nets_buffers;
+
+    // While the chunk shape doesn't change, we need to make sure that it's in the right position for each particular chunk.
+    sdf_buffer.set_minimum(padded_chunk_extent.minimum);
+
+    copy_extent(&padded_chunk_extent, chunks, sdf_buffer);
+
     let voxel_size = (1 << key.lod) as f32;
     surface_nets(
-        &padded_chunk,
+        sdf_buffer,
         &padded_chunk_extent,
         voxel_size,
-        &mut *surface_nets_buffer,
+        &mut *mesh_buffer,
     );
 
-    if surface_nets_buffer.mesh.indices.is_empty() {
+    if mesh_buffer.mesh.indices.is_empty() {
         None
     } else {
-        Some(surface_nets_buffer.mesh.clone())
+        Some(mesh_buffer.mesh.clone())
     }
 }
 
 // ThreadLocal doesn't let you get a mutable reference, so we need to use RefCell. We lock this down to only be used in this
 // module as a Local resource, so we know it's safe.
-type ThreadLocalMeshBuffers = ThreadLocalResource<RefCell<SurfaceNetsBuffer>>;
+type ThreadLocalMeshBuffers = ThreadLocalResource<RefCell<LocalSurfaceNetsBuffers>>;
+
+pub struct LocalSurfaceNetsBuffers {
+    mesh_buffer: SurfaceNetsBuffer,
+    sdf_buffer: Array3x1<Sd8>,
+}
 
 fn spawn_mesh_entities(
     new_chunk_meshes: Vec<(LodChunkKey3, Option<PosNormMesh>)>,

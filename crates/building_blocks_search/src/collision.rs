@@ -1,4 +1,4 @@
-use crate::octree_dbvt::{OctreeDBVT, OctreeDBVTVisitor};
+use crate::octree_dbvt::{OctreeDBVTVisitor, OctreeDbvt};
 
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{Octant, VisitStatus};
@@ -11,7 +11,7 @@ use ncollide3d::{
     shape::{Ball, Cuboid},
 };
 
-/// The result of a collision query against an `OctreeDBVT`.
+/// The result of a collision query against an `OctreeDbvt`.
 #[derive(Clone, Debug)]
 pub struct VoxelImpact<I> {
     /// The voxel point.
@@ -20,9 +20,9 @@ pub struct VoxelImpact<I> {
     pub impact: I,
 }
 
-/// The impact of a ray with an `OctreeDBVT`.
+/// The impact of a ray with an `OctreeDbvt`.
 pub type VoxelRayImpact = VoxelImpact<RayIntersection<f32>>;
-/// The impact of a sphere with an `OctreeDBVT`.
+/// The impact of a sphere with an `OctreeDbvt`.
 pub type VoxelSphereImpact = VoxelImpact<TOI<f32>>;
 
 // ██████╗  █████╗ ██╗   ██╗
@@ -40,7 +40,7 @@ pub type VoxelSphereImpact = VoxelImpact<TOI<f32>>;
 ///
 /// `predicate` can be used to filter voxels by returning `false`.
 pub fn voxel_ray_cast<K>(
-    octree: &OctreeDBVT<K>,
+    octree: &OctreeDbvt<K>,
     ray: Ray<f32>,
     max_toi: f32,
     predicate: impl Fn(Point3i) -> bool,
@@ -139,7 +139,7 @@ where
 ///
 /// `predicate` can be used to filter voxels by returning `false`.
 pub fn voxel_sphere_cast<K>(
-    octree: &OctreeDBVT<K>,
+    octree: &OctreeDbvt<K>,
     radius: f32,
     ray: Ray<f32>,
     max_toi: f32,
@@ -376,7 +376,7 @@ mod tests {
         assert_eq!(result.point, PointN([0, 0, 0]));
     }
 
-    fn bvt_with_voxels_filled(fill_points: &[Point3i]) -> OctreeDBVT<i32> {
+    fn bvt_with_voxels_filled(fill_points: &[Point3i]) -> OctreeDbvt<i32> {
         let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let mut voxels = Array3x1::fill(extent, Voxel(false));
         for &p in fill_points.iter() {
@@ -384,19 +384,19 @@ mod tests {
         }
 
         let octree = OctreeSet::from_array3(&voxels, *voxels.extent());
-        let mut bvt = OctreeDBVT::default();
+        let mut bvt = OctreeDbvt::default();
         let key = 0; // unimportant
         bvt.insert(key, octree);
 
         bvt
     }
 
-    fn bvt_with_all_voxels_filled() -> OctreeDBVT<i32> {
+    fn bvt_with_all_voxels_filled() -> OctreeDbvt<i32> {
         let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let voxels = Array3x1::fill(extent, Voxel(true));
 
         let octree = OctreeSet::from_array3(&voxels, *voxels.extent());
-        let mut bvt = OctreeDBVT::default();
+        let mut bvt = OctreeDbvt::default();
         let key = 0; // unimportant
         bvt.insert(key, octree);
 

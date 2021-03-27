@@ -4,7 +4,7 @@
 //!
 //! The `OctreeSet` has many uses.
 //!
-//! One possible use case is to construct one using `OctreeSet::from_array3`, then insert it into an `OctreeDBVT` in order to
+//! One possible use case is to construct one using `OctreeSet::from_array3`, then insert it into an `OctreeDbvt` in order to
 //! perform spatial queries like raycasting.
 //!
 //! The `OctreeSet` is also used in the `OctreeChunkIndex`, where each point represents a single chunk. This representation is

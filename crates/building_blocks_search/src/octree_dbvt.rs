@@ -1,7 +1,7 @@
 //! The analog of `ncollide3d::DBVT` for voxel octrees.
 //!
 //! This structure works well in tandem with a `ChunkMap3`, where an `Octree` can be generated from a chunk and subsequently
-//! placed into the `OctreeDBVT`.
+//! placed into the `OctreeDbvt`.
 
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{
@@ -16,12 +16,12 @@ use ncollide3d::{
 
 /// An ncollide `DBVT` containing `OctreeSet`s. This turns the bounded `Octree` into an unbounded acceleration structure. You
 /// may use whatever key type `K` to uniquely identify the octrees.
-pub struct OctreeDBVT<K> {
+pub struct OctreeDbvt<K> {
     dbvt: DBVT<f32, OctreeSet, AABB<f32>>,
     leaf_ids: SmallKeyHashMap<K, DBVTLeafId>,
 }
 
-impl<K> Default for OctreeDBVT<K> {
+impl<K> Default for OctreeDbvt<K> {
     fn default() -> Self {
         Self {
             dbvt: DBVT::new(),
@@ -30,7 +30,7 @@ impl<K> Default for OctreeDBVT<K> {
     }
 }
 
-impl<K> OctreeDBVT<K>
+impl<K> OctreeDbvt<K>
 where
     K: Eq + Hash,
 {

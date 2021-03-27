@@ -442,19 +442,20 @@ impl<T> LruList<T> {
     const OCCUPIED: usize = 1;
 
     fn new() -> LruList<T> {
-        let mut entries = Vec::with_capacity(2);
-        entries.push(ListEntry::<T> {
-            value: None,
-            next: 0,
-            prev: 0,
-        });
-        entries.push(ListEntry::<T> {
-            value: None,
-            next: 1,
-            prev: 1,
-        });
-
-        LruList { entries }
+        LruList {
+            entries: vec![
+                ListEntry::<T> {
+                    value: None,
+                    next: 0,
+                    prev: 0,
+                },
+                ListEntry::<T> {
+                    value: None,
+                    next: 1,
+                    prev: 1,
+                },
+            ],
+        }
     }
 
     fn unlink(&mut self, index: usize) {

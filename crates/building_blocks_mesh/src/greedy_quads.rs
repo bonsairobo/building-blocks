@@ -39,7 +39,7 @@ impl QuadGroup {
     }
 }
 
-/// A configuration of XYZ --> NUV axis mappings and orientations of the cube faces for a given coordinate system.
+/// A configuration of Xyz --> NUV axis mappings and orientations of the cube faces for a given coordinate system.
 #[derive(Clone)]
 pub struct QuadCoordinateConfig {
     pub faces: [OrientedCubeFace; 6],
@@ -51,14 +51,14 @@ pub struct QuadCoordinateConfig {
 
 pub const RIGHT_HANDED_Y_UP_CONFIG: QuadCoordinateConfig = QuadCoordinateConfig {
     // Y is always in the V direction when it's not the normal. When Y is the normal, right-handedness determines that
-    // we must use YZX permutations.
+    // we must use Yzx permutations.
     faces: [
-        OrientedCubeFace::new(-1, Axis3Permutation::XZY),
-        OrientedCubeFace::new(-1, Axis3Permutation::YZX),
-        OrientedCubeFace::new(-1, Axis3Permutation::ZXY),
-        OrientedCubeFace::new(1, Axis3Permutation::XZY),
-        OrientedCubeFace::new(1, Axis3Permutation::YZX),
-        OrientedCubeFace::new(1, Axis3Permutation::ZXY),
+        OrientedCubeFace::new(-1, Axis3Permutation::Xzy),
+        OrientedCubeFace::new(-1, Axis3Permutation::Yzx),
+        OrientedCubeFace::new(-1, Axis3Permutation::Zxy),
+        OrientedCubeFace::new(1, Axis3Permutation::Xzy),
+        OrientedCubeFace::new(1, Axis3Permutation::Yzx),
+        OrientedCubeFace::new(1, Axis3Permutation::Zxy),
     ],
     u_flip_face: Axis3::X,
 };

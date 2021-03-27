@@ -78,55 +78,55 @@ impl Axis3 {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Axis3Permutation {
     // Even permutations
-    XYZ,
-    ZXY,
-    YZX,
+    Xyz,
+    Zxy,
+    Yzx,
     // Odd permutations
-    ZYX,
-    XZY,
-    YXZ,
+    Zyx,
+    Xzy,
+    Yxz,
 }
 
 impl Axis3Permutation {
     #[inline]
     pub const fn even_with_normal_axis(axis: Axis3) -> Self {
         match axis {
-            Axis3::X => Axis3Permutation::XYZ,
-            Axis3::Y => Axis3Permutation::YZX,
-            Axis3::Z => Axis3Permutation::ZXY,
+            Axis3::X => Axis3Permutation::Xyz,
+            Axis3::Y => Axis3Permutation::Yzx,
+            Axis3::Z => Axis3Permutation::Zxy,
         }
     }
 
     #[inline]
     pub const fn odd_with_normal_axis(axis: Axis3) -> Self {
         match axis {
-            Axis3::X => Axis3Permutation::XZY,
-            Axis3::Y => Axis3Permutation::YXZ,
-            Axis3::Z => Axis3Permutation::ZYX,
+            Axis3::X => Axis3Permutation::Xzy,
+            Axis3::Y => Axis3Permutation::Yxz,
+            Axis3::Z => Axis3Permutation::Zyx,
         }
     }
 
     #[inline]
     pub const fn sign(&self) -> i32 {
         match self {
-            Axis3Permutation::XYZ => 1,
-            Axis3Permutation::ZXY => 1,
-            Axis3Permutation::YZX => 1,
-            Axis3Permutation::ZYX => -1,
-            Axis3Permutation::XZY => -1,
-            Axis3Permutation::YXZ => -1,
+            Axis3Permutation::Xyz => 1,
+            Axis3Permutation::Zxy => 1,
+            Axis3Permutation::Yzx => 1,
+            Axis3Permutation::Zyx => -1,
+            Axis3Permutation::Xzy => -1,
+            Axis3Permutation::Yxz => -1,
         }
     }
 
     #[inline]
     pub const fn axes(&self) -> [Axis3; 3] {
         match self {
-            Axis3Permutation::XYZ => [Axis3::X, Axis3::Y, Axis3::Z],
-            Axis3Permutation::ZXY => [Axis3::Z, Axis3::X, Axis3::Y],
-            Axis3Permutation::YZX => [Axis3::Y, Axis3::Z, Axis3::X],
-            Axis3Permutation::ZYX => [Axis3::Z, Axis3::Y, Axis3::X],
-            Axis3Permutation::XZY => [Axis3::X, Axis3::Z, Axis3::Y],
-            Axis3Permutation::YXZ => [Axis3::Y, Axis3::X, Axis3::Z],
+            Axis3Permutation::Xyz => [Axis3::X, Axis3::Y, Axis3::Z],
+            Axis3Permutation::Zxy => [Axis3::Z, Axis3::X, Axis3::Y],
+            Axis3Permutation::Yzx => [Axis3::Y, Axis3::Z, Axis3::X],
+            Axis3Permutation::Zyx => [Axis3::Z, Axis3::Y, Axis3::X],
+            Axis3Permutation::Xzy => [Axis3::X, Axis3::Z, Axis3::Y],
+            Axis3Permutation::Yxz => [Axis3::Y, Axis3::X, Axis3::Z],
         }
     }
 }

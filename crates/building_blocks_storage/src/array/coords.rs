@@ -40,11 +40,11 @@ impl<N> Local<N> {
     #[inline]
     pub fn localize_points_array<const LEN: usize>(points: &[PointN<N>; LEN]) -> [Local<N>; LEN]
     where
-        PointN<N>: Clone + ConstZero,
+        PointN<N>: ConstZero,
     {
         let mut locals = [Local(PointN::ZERO); LEN];
         for (l, p) in locals.iter_mut().zip(points.iter()) {
-            *l = Local(p.clone());
+            *l = Local(*p);
         }
 
         locals

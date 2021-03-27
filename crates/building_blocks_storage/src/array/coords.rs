@@ -1,4 +1,4 @@
-use building_blocks_core::PointN;
+use building_blocks_core::{ConstZero, PointN};
 
 use core::ops::{Add, AddAssign, Deref, Mul, Sub, SubAssign};
 use num::Zero;
@@ -27,13 +27,19 @@ where
 impl<N> Copy for Local<N> where PointN<N>: Copy {}
 
 impl<N> Local<N> {
-    /// Wraps all of the `points` using the `Local` constructor.
+    /// Wraps all of the `points` using the `Local` constructor. You must specify `LEN` to be number of elements to transform
+    /// from the `points` slice.
     #[inline]
-    pub fn localize_points(points: &[PointN<N>]) -> Vec<Local<N>>
+    pub fn localize_points<const LEN: usize>(points: &[PointN<N>]) -> [Local<N>; LEN]
     where
-        PointN<N>: Clone,
+        PointN<N>: Clone + ConstZero,
     {
-        points.iter().cloned().map(Local).collect()
+        let mut locals = [Local(PointN::ZERO); LEN];
+        for (l, p) in locals.iter_mut().zip(points.iter()) {
+            *l = Local(p.clone());
+        }
+
+        locals
     }
 }
 

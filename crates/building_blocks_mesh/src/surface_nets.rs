@@ -3,23 +3,20 @@ use super::PosNormMesh;
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{prelude::*, ArrayForEach};
 
-/// Pads the given chunk extent with exactly the amount of space required for running the
-/// `surface_nets` algorithm.
+/// Pads the given chunk extent with exactly the amount of space required for running the `surface_nets` algorithm.
 pub fn padded_surface_nets_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {
     chunk_extent.padded(1)
 }
 
-/// The output buffers used by `surface_nets`. These buffers can be reused to avoid reallocating
-/// memory.
+/// The output buffers used by `surface_nets`. These buffers can be reused to avoid reallocating memory.
 #[derive(Default)]
 pub struct SurfaceNetsBuffer {
-    /// The isosurface positions and normals. Parallel to `surface_points`. The normals are *not*
-    /// normalized, since that is done most efficiently on the GPU.
+    /// The isosurface positions and normals. Parallel to `surface_points`. The normals are *not* normalized, since that is done
+    /// most efficiently on the GPU.
     pub mesh: PosNormMesh,
     /// Global lattice coordinates of every voxel that intersects the isosurface.
     pub surface_points: Vec<Point3i>,
-    /// Stride of every voxel that intersects the isosurface. Can be used for efficient
-    /// post-processing.
+    /// Stride of every voxel that intersects the isosurface. Can be used for efficient post-processing.
     pub surface_strides: Vec<Stride>,
 
     // Used to map back from voxel stride to vertex index.
@@ -76,8 +73,8 @@ pub fn surface_nets<A, T>(
     make_all_quads(sdf, extent, output);
 }
 
-// Find all vertex positions and normals. Also generate a map from grid position to vertex index
-// to be used to look up vertices when generating quads.
+// Find all vertex positions and normals. Also generate a map from grid position to vertex index to be used to look up vertices
+// when generating quads.
 fn estimate_surface<A, T>(
     sdf: &A,
     extent: &Extent3i,
@@ -89,7 +86,7 @@ fn estimate_surface<A, T>(
 {
     // Precalculate these offsets to do faster linear indexing.
     let mut corner_offset_strides = [Stride(0); 8];
-    let corner_offsets = Local::localize_points(&Point3i::CUBE_CORNER_OFFSETS);
+    let corner_offsets = Local::localize_points::<8>(&Point3i::CUBE_CORNER_OFFSETS);
     sdf.strides_from_local_points(&corner_offsets, &mut corner_offset_strides);
 
     // Avoid accessing out of bounds with a 2x2x2 kernel.
@@ -130,11 +127,11 @@ const CUBE_EDGES: [[usize; 2]; 12] = [
     [0b110, 0b111],
 ];
 
-// Consider the grid-aligned cube where `point` is the minimal corner. Find a point inside this cube
-// that is approximately on the isosurface.
+// Consider the grid-aligned cube where `point` is the minimal corner. Find a point inside this cube that is approximately on
+// the isosurface.
 //
-// This is done by estimating, for each cube edge, where the isosurface crosses the edge (if it
-// does at all). Then the estimated surface point is the average of these edge crossings.
+// This is done by estimating, for each cube edge, where the isosurface crosses the edge (if it does at all). Then the estimated
+// surface point is the average of these edge crossings.
 fn estimate_surface_in_cube<A, T>(
     sdf: &A,
     voxel_size: f32,
@@ -225,10 +222,9 @@ fn sdf_gradient(dists: &[f32; 8], s: &Point3f) -> [f32; 3] {
     [dx, dy, dz]
 }
 
-// For every edge that crosses the isosurface, make a quad between the "centers" of the four cubes
-// touching that surface. The "centers" are actually the vertex positions found earlier. Also,
-// make sure the triangles are facing the right way. See the comments on `maybe_make_quad` to help
-// with understanding the indexing.
+// For every edge that crosses the isosurface, make a quad between the "centers" of the four cubes touching that surface. The
+// "centers" are actually the vertex positions found earlier. Also, make sure the triangles are facing the right way. See the
+// comments on `maybe_make_quad` to help with understanding the indexing.
 fn make_all_quads<A, T>(sdf: &A, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
     A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
@@ -242,9 +238,8 @@ where
     ];
     sdf.strides_from_local_points(&xyz, &mut xyz_strides);
 
-    // NOTE: The checks against max prevent us from making quads on the 3 maximal planes of the
-    // grid. This is necessary to avoid redundant quads when meshing adjacent chunks (assuming this
-    // will be used on a chunked voxel grid).
+    // NOTE: The checks against max prevent us from making quads on the 3 maximal planes of the grid. This is necessary to avoid
+    // redundant quads when meshing adjacent chunks (assuming this will be used on a chunked voxel grid).
     let min = extent.minimum;
     let max = extent.max();
 

@@ -15,7 +15,7 @@ where
     Local<N>: Copy,
 {
     // Precompute the strides for adjacency checks.
-    let vn_offsets = Local::localize_points(&PointN::von_neumann_offsets());
+    let vn_offsets = Local::localize_points::<6>(&PointN::von_neumann_offsets());
     let mut vn_strides = vec![Stride(0); vn_offsets.len()];
     map.strides_from_local_points(&vn_offsets, &mut vn_strides);
 

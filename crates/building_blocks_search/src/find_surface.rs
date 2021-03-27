@@ -1,9 +1,9 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{prelude::*, IsEmpty};
 
-/// Returns the "surface points" i.e. those points that are non-empty and Von-Neumann-adjacent to an
-/// empty point. Since this algorithm does adjacency checks for all points in `extent`, you must
-/// ensure that those points are within the bounds of `map`.
+/// Returns the "surface points" i.e. those points that are non-empty and Von-Neumann-adjacent to an empty point. Since this
+/// algorithm does adjacency checks for all points in `extent`, you must ensure that those points are within the bounds of
+/// `map`.
 pub fn find_surface_points<Map, N, T>(
     map: &Map,
     extent: &ExtentN<N>,
@@ -15,7 +15,7 @@ where
     Local<N>: Copy,
 {
     // Precompute the strides for adjacency checks.
-    let vn_offsets = Local::localize_points::<6>(&PointN::von_neumann_offsets());
+    let vn_offsets = Local::localize_points_slice(&PointN::von_neumann_offsets());
     let mut vn_strides = vec![Stride(0); vn_offsets.len()];
     map.strides_from_local_points(&vn_offsets, &mut vn_strides);
 

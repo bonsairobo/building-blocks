@@ -27,10 +27,18 @@ where
 impl<N> Copy for Local<N> where PointN<N>: Copy {}
 
 impl<N> Local<N> {
-    /// Wraps all of the `points` using the `Local` constructor. You must specify `LEN` to be number of elements to transform
-    /// from the `points` slice.
+    /// Wraps all of the `points` using the `Local` constructor.
     #[inline]
-    pub fn localize_points<const LEN: usize>(points: &[PointN<N>]) -> [Local<N>; LEN]
+    pub fn localize_points_slice(points: &[PointN<N>]) -> Vec<Local<N>>
+    where
+        PointN<N>: Clone,
+    {
+        points.iter().cloned().map(Local).collect()
+    }
+
+    /// Wraps all of the `points` using the `Local` constructor.
+    #[inline]
+    pub fn localize_points_array<const LEN: usize>(points: &[PointN<N>; LEN]) -> [Local<N>; LEN]
     where
         PointN<N>: Clone + ConstZero,
     {

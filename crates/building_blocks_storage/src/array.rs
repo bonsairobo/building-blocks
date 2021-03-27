@@ -55,7 +55,7 @@
 //! // Some of these offsets include negative coordinates, which would underflow when translated
 //! // into an unsigned index. That's OK though, because Stride is intended to be used with modular
 //! // arithmetic.
-//! let offsets = Local::localize_points::<6>(&Point3i::von_neumann_offsets());
+//! let offsets = Local::localize_points_array(&Point3i::VON_NEUMANN_OFFSETS);
 //! let mut neighbor_strides = [Stride(0); 6];
 //! array.strides_from_local_points(&offsets, &mut neighbor_strides);
 //!

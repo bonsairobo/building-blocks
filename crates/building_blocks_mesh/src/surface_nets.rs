@@ -86,7 +86,7 @@ fn estimate_surface<A, T>(
 {
     // Precalculate these offsets to do faster linear indexing.
     let mut corner_offset_strides = [Stride(0); 8];
-    let corner_offsets = Local::localize_points::<8>(&Point3i::CUBE_CORNER_OFFSETS);
+    let corner_offsets = Local::localize_points_array(&Point3i::CUBE_CORNER_OFFSETS);
     sdf.strides_from_local_points(&corner_offsets, &mut corner_offset_strides);
 
     // Avoid accessing out of bounds with a 2x2x2 kernel.

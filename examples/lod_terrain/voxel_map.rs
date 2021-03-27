@@ -22,9 +22,6 @@ pub fn generate_map(
     let mut pyramid = ChunkHashMapPyramid3::new(builder, || SmallKeyHashMap::new(), NUM_LODS);
     let lod0 = pyramid.level_mut(0);
 
-    let mut noise_extent = map_extent;
-    noise_extent.shape = noise_extent.shape * CHUNK_SHAPE;
-
     let chunks = pool.scope(|s| {
         for p in map_extent.iter_points() {
             s.spawn(async move {

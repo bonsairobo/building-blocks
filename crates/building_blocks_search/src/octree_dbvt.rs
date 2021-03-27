@@ -62,13 +62,13 @@ where
     /// representation. Upper nodes simply store a bounding volume (AABB), while octree nodes will provide both a bounding
     /// volume and an `Octant`, which is completely full for leaf nodes.
     pub fn visit(&self, visitor: &mut impl OctreeDBVTVisitor) {
-        self.dbvt.visit(&mut DBVTVisitorImpl(visitor));
+        self.dbvt.visit(&mut DbvtVisitorImpl(visitor));
     }
 }
 
-struct DBVTVisitorImpl<'a, V>(&'a mut V);
+struct DbvtVisitorImpl<'a, V>(&'a mut V);
 
-impl<'a, V> OctreeVisitor for DBVTVisitorImpl<'a, V>
+impl<'a, V> OctreeVisitor for DbvtVisitorImpl<'a, V>
 where
     V: OctreeDBVTVisitor,
 {
@@ -79,7 +79,7 @@ where
     }
 }
 
-impl<'a, V> nc_part::Visitor<OctreeSet, AABB<f32>> for DBVTVisitorImpl<'a, V>
+impl<'a, V> nc_part::Visitor<OctreeSet, AABB<f32>> for DbvtVisitorImpl<'a, V>
 where
     V: OctreeDBVTVisitor,
 {

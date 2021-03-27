@@ -1,4 +1,4 @@
-use crate::octree_dbvt::{OctreeDBVTVisitor, OctreeDbvt};
+use crate::octree_dbvt::{OctreeDbvt, OctreeDbvtVisitor};
 
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{Octant, VisitStatus};
@@ -79,7 +79,7 @@ impl<F> VoxelRayCast<F> {
     }
 }
 
-impl<F> OctreeDBVTVisitor for VoxelRayCast<F>
+impl<F> OctreeDbvtVisitor for VoxelRayCast<F>
 where
     F: Fn(Point3i) -> bool,
 {
@@ -200,7 +200,7 @@ impl<F> VoxelSphereCast<F> {
     }
 }
 
-impl<F> OctreeDBVTVisitor for VoxelSphereCast<F>
+impl<F> OctreeDbvtVisitor for VoxelSphereCast<F>
 where
     F: Fn(Point3i) -> bool,
 {

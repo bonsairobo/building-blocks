@@ -61,7 +61,7 @@ where
     /// Visit every bounding volume (AABB) in the DBVT. This is a heterogeneous tree, meaning that not all nodes have the same
     /// representation. Upper nodes simply store a bounding volume (AABB), while octree nodes will provide both a bounding
     /// volume and an `Octant`, which is completely full for leaf nodes.
-    pub fn visit(&self, visitor: &mut impl OctreeDBVTVisitor) {
+    pub fn visit(&self, visitor: &mut impl OctreeDbvtVisitor) {
         self.dbvt.visit(&mut DbvtVisitorImpl(visitor));
     }
 }
@@ -70,7 +70,7 @@ struct DbvtVisitorImpl<'a, V>(&'a mut V);
 
 impl<'a, V> OctreeVisitor for DbvtVisitorImpl<'a, V>
 where
-    V: OctreeDBVTVisitor,
+    V: OctreeDbvtVisitor,
 {
     fn visit_octant(&mut self, node: &OctreeNode) -> VisitStatus {
         let aabb = octant_aabb(&node.octant());
@@ -81,7 +81,7 @@ where
 
 impl<'a, V> nc_part::Visitor<OctreeSet, AABB<f32>> for DbvtVisitorImpl<'a, V>
 where
-    V: OctreeDBVTVisitor,
+    V: OctreeDbvtVisitor,
 {
     fn visit(&mut self, aabb: &AABB<f32>, octree: Option<&OctreeSet>) -> nc_part::VisitStatus {
         let status = if let Some(octree) = octree {
@@ -98,7 +98,7 @@ where
     }
 }
 
-pub trait OctreeDBVTVisitor {
+pub trait OctreeDbvtVisitor {
     /// `octant` is only `Some` when traversing an `Octree`. Otherwise, you are traversing an upper-level internal node.
     fn visit(&mut self, aabb: &AABB<f32>, octant: Option<&Octant>, is_full: bool) -> VisitStatus;
 }

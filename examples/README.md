@@ -59,10 +59,7 @@ cargo run --example lod_terrain
 
 ## Official Related Projects
 
-All of these are works in progress and likely to break as things change upstream.
-
 - [building-blocks-editor](https://github.com/bonsairobo/building-blocks-editor): A voxel map editor built with Bevy
-- [smooth-voxel-renderer](https://github.com/bonsairobo/smooth-voxel-renderer): A Bevy plugin for rendering textured, smooth voxel meshes
 
 ## Community Projects Using building-blocks
 

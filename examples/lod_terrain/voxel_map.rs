@@ -13,7 +13,7 @@ pub struct VoxelMap {
 
 pub fn generate_map(
     pool: &ComputeTaskPool,
-    map_extent: Extent3i,
+    chunks_extent: Extent3i,
     freq: f32,
     scale: f32,
     seed: i32,
@@ -23,13 +23,15 @@ pub fn generate_map(
     let lod0 = pyramid.level_mut(0);
 
     let chunks = pool.scope(|s| {
-        for p in map_extent.iter_points() {
+        for p in chunks_extent.iter_points() {
             s.spawn(async move {
                 let chunk_min = p * CHUNK_SHAPE;
                 let chunk_extent = Extent3i::from_min_and_shape(chunk_min, CHUNK_SHAPE);
                 let mut chunk_noise = Array3x1::fill(chunk_extent, Sd8::ONE);
 
                 let noise = noise_array(chunk_extent, freq, seed);
+
+                // Convert the f32 noise into Sd8.
                 let sdf_voxel_noise = TransformMap::new(&noise, |d: f32| Sd8::from(scale * d));
                 copy_extent(&chunk_extent, &sdf_voxel_noise, &mut chunk_noise);
 
@@ -41,9 +43,9 @@ pub fn generate_map(
         lod0.write_chunk(chunk_key, chunk);
     }
 
-    let index = OctreeChunkIndex::index_chunk_map(SUPERCHUNK_SHAPE, &lod0);
+    let index = OctreeChunkIndex::index_chunk_map(SUPERCHUNK_SHAPE, lod0);
 
-    let world_extent = map_extent * CHUNK_SHAPE;
+    let world_extent = chunks_extent * CHUNK_SHAPE;
     pyramid.downsample_chunks_with_index(&index, &SdfMeanDownsampler, &world_extent);
 
     VoxelMap { pyramid, index }

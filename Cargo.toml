@@ -12,11 +12,10 @@ keywords = ["voxel"]
 features = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "search"]
 
 [features]
-# All features (except "snappy") are default because we want them to be easily discoverable on docs.rs. You can define your own
-# list of features by disabling the defaults with "default-features = false".
-#
-# "snappy" is excluded because there are useful type aliases that rely on the compression backends being mutually exclusive.
-default = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "sdfu", "search"]
+# All features are default because we want them to be easily discoverable on
+# docs.rs. You can define your own list of features by disabling the defaults
+# with "default-features = false".
+default = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "sdfu", "search", "snappy"]
 
 # Optional crates.
 mesh = ["building_blocks_mesh"]

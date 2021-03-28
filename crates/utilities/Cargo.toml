@@ -9,5 +9,11 @@ building_blocks_core = { path = "../../crates/building_blocks_core", default-fea
 building_blocks_storage = { path = "../../crates/building_blocks_storage", default-features = false }
 building_blocks_mesh = { path = "../../crates/building_blocks_mesh", default-features = false }
 
-bevy = { git = "https://github.com/bevyengine/bevy", rev = "248ec1ed", default-features = false, features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"] }
 thread_local = "1.1"
+
+[dependencies.bevy]
+git = "https://github.com/bevyengine/bevy"
+rev = "94c41840"
+# path = "../../../bevy"
+default-features = false
+features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]

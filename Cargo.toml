@@ -63,11 +63,17 @@ building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.6.0"
 building_blocks_search = { path = "crates/building_blocks_search", version = "0.6.0", default-features = false, optional = true }
 
 [dev-dependencies]
-bevy = { git = "https://github.com/bevyengine/bevy", rev = "248ec1ed", default-features = false, features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"] }
 simdnoise = "3.1"
 
 # Common code for tests and examples.
 utilities = { path = "crates/utilities" }
+
+[dev-dependencies.bevy]
+git = "https://github.com/bevyengine/bevy"
+rev = "94c41840"
+# path = "../bevy"
+default-features = false
+features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]
 
 [[bin]]
 name = "measure_compression_rate"

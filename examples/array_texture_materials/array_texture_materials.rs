@@ -17,7 +17,7 @@ use building_blocks::mesh::{
 use building_blocks::storage::{Array3x1, Get, IsEmpty};
 use camera_rotation::{camera_rotation_system, CameraRotationState};
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum AppState {
     Loading,
     Run,
@@ -54,7 +54,7 @@ fn check_loaded(
     asset_server: Res<AssetServer>,
 ) {
     if let bevy::asset::LoadState::Loaded = asset_server.get_load_state(&handle.0) {
-        state.set_next(AppState::Run).unwrap();
+        state.set(AppState::Run).unwrap();
     }
 }
 

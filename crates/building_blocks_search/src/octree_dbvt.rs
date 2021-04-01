@@ -85,7 +85,7 @@ where
 {
     fn visit(&mut self, aabb: &AABB<f32>, octree: Option<&OctreeSet>) -> nc_part::VisitStatus {
         let status = if let Some(octree) = octree {
-            octree.visit_branches_and_leaves_in_preorder(self)
+            octree.visit_branches_and_fat_leaves_in_preorder(self)
         } else {
             self.0.visit(aabb, None, false)
         };

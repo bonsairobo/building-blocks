@@ -1,4 +1,15 @@
-//! The `OctreeSet` type is a memory-efficient set of points organized hierarchically.
+//! The `OctreeSet` type is a memory-efficient set of points organized hierarchically. Often referred to as a "hashed octree."
+//!
+//! Any node in the tree can be uniquely represented as an `Octant`, however this representation is not actually stored.
+//! Similarly, an `OctreeNode` can be used to represent any node during traversal of the tree, but neither is it used for
+//! storage.
+//!
+//! Every node is either a branch node or a leaf node. Branch nodes are the nodes that actually occupy a `(LocationCode, u8)`
+//! entry in the hash map, where the `u8` is a child bitmask. Leaf nodes do not take up any space, but they are implied by the
+//! structure of the branch nodes. When a branch node has a leaf node as a child, then we say that leaf node is "fat". A fat
+//! leaf node is a leaf node representing a full octant, i.e. all points in that octant are present in the set. The union of all
+//! fat leaf octants is equal to the whole set. We also say that fat leaf nodes can have children for the sake of iteration, and
+//! we call them "thin" leaf nodes.
 //!
 //! # Use Cases
 //!
@@ -27,7 +38,7 @@
 //! let voxels = Array3x1::fill(extent, true); // boring example
 //! let octree = OctreeSet::from_array3(&voxels, Extent3i::from_min_and_shape(Point3i::fill(8), Point3i::fill(16)));
 //!
-//! octree.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
+//! octree.visit_branches_and_fat_leaves_in_preorder(&mut |node: &OctreeNode| {
 //!     if some_condition(node) {
 //!         // Found a particular subtree, now narrow the search using a different algorithm.
 //!         node.visit_all_octants_in_preorder(&octree, &mut |_node: &OctreeNode| {
@@ -53,8 +64,7 @@ use std::fmt::Formatter;
 
 /// A sparse set of voxel coordinates (3D integer points). Supports spatial queries.
 ///
-/// The octree is a cube shape and the edge lengths can only be a power of 2, at most 64. When an entire octant is full, it will
-/// be stored in a collapsed representation, so the leaves of the tree can be differently sized octants.
+/// The octree is a cube shape and the edge lengths can only be a power of 2, at most 64.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct OctreeSet {
     extent: Extent3i,
@@ -225,35 +235,35 @@ impl OctreeSet {
         !self.root_exists
     }
 
-    /// Same as `visit_branches_and_leaves_in_preorder`, but visit only the octants that overlap `extent`.
-    pub fn visit_branches_and_leaves_for_extent_in_preorder(
+    /// Same as `visit_branches_and_fat_leaves_in_preorder`, but visit only the octants that overlap `extent`.
+    pub fn visit_branches_and_fat_leaves_for_extent_in_preorder(
         &self,
         extent: &Extent3i,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
-        self.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
+        self.visit_branches_and_fat_leaves_in_preorder(&mut |node: &OctreeNode| {
             Self::extent_visitor(extent, visitor, node)
         })
     }
 
-    /// Same as `visit_branches_and_leaves_in_postorder`, but visit only the octants that overlap `extent`.
-    pub fn visit_branches_and_leaves_for_extent_in_postorder(
+    /// Same as `visit_branches_and_fat_leaves_in_postorder`, but visit only the octants that overlap `extent`.
+    pub fn visit_branches_and_fat_leaves_for_extent_in_postorder(
         &self,
         extent: &Extent3i,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
-        self.visit_branches_and_leaves_in_postorder(
+        self.visit_branches_and_fat_leaves_in_postorder(
             &|node| Self::extent_predicate(extent, node),
             visitor,
         )
     }
 
-    /// Same as `visit_branches_and_leaves_in_preorder`, but descendants of collapsed octants are also visited.
+    /// Same as `visit_branches_and_fat_leaves_in_preorder`, but descendants of fat leaves are also visited.
     pub fn visit_all_octants_in_preorder(&self, visitor: &mut impl OctreeVisitor) -> VisitStatus {
         self._visit_all_octants_in_preorder(LocationCode::ROOT, self.octant(), visitor)
     }
 
-    /// Same as `visit_branches_and_leaves_in_postorder`, but descendants of collapsed octants are also visited.
+    /// Same as `visit_branches_and_fat_leaves_in_postorder`, but descendants of fat leaves are also visited.
     pub fn visit_all_octants_in_postorder(
         &self,
         predicate: &impl Fn(&OctreeNode) -> bool,
@@ -262,7 +272,7 @@ impl OctreeSet {
         self._visit_all_octants_in_postorder(LocationCode::ROOT, self.octant(), predicate, visitor)
     }
 
-    /// Same as `visit_all_octants_in_preorder`, but descendants of collapsed octants are also visited.
+    /// Same as `visit_all_octants_in_preorder`, but only for octants overlapping `extent`.
     pub fn visit_all_octants_for_extent_in_preorder(
         &self,
         extent: &Extent3i,
@@ -273,7 +283,7 @@ impl OctreeSet {
         })
     }
 
-    /// Same as `visit_all_octants_in_postorder`, but descendants of collapsed octants are also visited.
+    /// Same as `visit_all_octants_in_postorder`, but only for octants overlapping `extent`.
     pub fn visit_all_octants_for_extent_in_postorder(
         &self,
         extent: &Extent3i,
@@ -304,7 +314,7 @@ impl OctreeSet {
         octant: Octant,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
-        self._visit_branches_and_leaves_in_preorder(code, octant, &mut |node: &OctreeNode| {
+        self._visit_branches_and_fat_leaves_in_preorder(code, octant, &mut |node: &OctreeNode| {
             if node.is_full() {
                 node.octant.visit_self_and_descendants_in_preorder(visitor)
             } else {
@@ -320,7 +330,7 @@ impl OctreeSet {
         predicate: &impl Fn(&OctreeNode) -> bool,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
-        self._visit_branches_and_leaves_in_postorder(
+        self._visit_branches_and_fat_leaves_in_postorder(
             code,
             octant,
             predicate,
@@ -334,8 +344,8 @@ impl OctreeSet {
         )
     }
 
-    /// Visit every non-empty octant of the octree. This is a pre-order traversal.
-    pub fn visit_branches_and_leaves_in_preorder(
+    /// Visit every branch and fat leaf in the octree. This is a pre-order traversal.
+    pub fn visit_branches_and_fat_leaves_in_preorder(
         &self,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
@@ -343,11 +353,11 @@ impl OctreeSet {
             return VisitStatus::Continue;
         }
 
-        self._visit_branches_and_leaves_in_preorder(LocationCode::ROOT, self.octant(), visitor)
+        self._visit_branches_and_fat_leaves_in_preorder(LocationCode::ROOT, self.octant(), visitor)
     }
 
-    /// Visit every non-empty octant of the octree. This is a post-order traversal.
-    pub fn visit_branches_and_leaves_in_postorder(
+    /// Visit every branch and fat leaf in the octree. This is a post-order traversal.
+    pub fn visit_branches_and_fat_leaves_in_postorder(
         &self,
         predicate: &impl Fn(&OctreeNode) -> bool,
         visitor: &mut impl OctreeVisitor,
@@ -356,7 +366,7 @@ impl OctreeSet {
             return VisitStatus::Continue;
         }
 
-        self._visit_branches_and_leaves_in_postorder(
+        self._visit_branches_and_fat_leaves_in_postorder(
             LocationCode::ROOT,
             self.octant(),
             predicate,
@@ -366,7 +376,7 @@ impl OctreeSet {
 
     // TODO: should golf this repetitive code a bit
 
-    fn _visit_branches_and_leaves_in_preorder(
+    fn _visit_branches_and_fat_leaves_in_preorder(
         &self,
         code: LocationCode,
         octant: Octant,
@@ -404,7 +414,7 @@ impl OctreeSet {
 
             let child_octant = octant.child(child_index);
             let octant_code = extended_code.with_lowest_octant(child_index as u16);
-            if self._visit_branches_and_leaves_in_preorder(octant_code, child_octant, visitor)
+            if self._visit_branches_and_fat_leaves_in_preorder(octant_code, child_octant, visitor)
                 == VisitStatus::ExitEarly
             {
                 return VisitStatus::ExitEarly;
@@ -415,7 +425,7 @@ impl OctreeSet {
         VisitStatus::Continue
     }
 
-    fn _visit_branches_and_leaves_in_postorder(
+    fn _visit_branches_and_fat_leaves_in_postorder(
         &self,
         code: LocationCode,
         octant: Octant,
@@ -465,7 +475,7 @@ impl OctreeSet {
 
             let child_octant = octant.child(child_index);
             let octant_code = extended_code.with_lowest_octant(child_index as u16);
-            if self._visit_branches_and_leaves_in_postorder(
+            if self._visit_branches_and_fat_leaves_in_postorder(
                 octant_code,
                 child_octant,
                 predicate,
@@ -716,9 +726,9 @@ impl OctreeNode {
         self.child_bitmask
     }
 
-    /// Similar to `OctreeSet::visit_branches_and_leaves`, but only for the subtree at this `OctreeNode`.
+    /// Similar to `OctreeSet::visit_branches_and_fat_leaves`, but only for the subtree at this `OctreeNode`.
     #[inline]
-    pub fn visit_branches_and_leaves_in_preorder(
+    pub fn visit_branches_and_fat_leaves_in_preorder(
         &self,
         octree: &OctreeSet,
         visitor: &mut impl OctreeVisitor,
@@ -726,13 +736,13 @@ impl OctreeNode {
         if self.is_full() {
             visitor.visit_octant(self)
         } else {
-            octree._visit_branches_and_leaves_in_preorder(self.code, self.octant, visitor)
+            octree._visit_branches_and_fat_leaves_in_preorder(self.code, self.octant, visitor)
         }
     }
 
-    /// Similar to `OctreeSet::visit_branches_and_leaves`, but only for the subtree at this `OctreeNode`.
+    /// Similar to `OctreeSet::visit_branches_and_fat_leaves`, but only for the subtree at this `OctreeNode`.
     #[inline]
-    pub fn visit_branches_and_leaves_in_postorder(
+    pub fn visit_branches_and_fat_leaves_in_postorder(
         &self,
         octree: &OctreeSet,
         predicate: &impl Fn(&OctreeNode) -> bool,
@@ -741,7 +751,7 @@ impl OctreeNode {
         if self.is_full() {
             visitor.visit_octant(self)
         } else {
-            octree._visit_branches_and_leaves_in_postorder(
+            octree._visit_branches_and_fat_leaves_in_postorder(
                 self.code,
                 self.octant,
                 predicate,
@@ -1090,7 +1100,7 @@ mod tests {
         }
 
         fn fill_bool_array(set: &OctreeSet, array: &mut Array3x1<bool>) {
-            set.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
+            set.visit_branches_and_fat_leaves_in_preorder(&mut |node: &OctreeNode| {
                 if node.is_full() {
                     array.fill_extent(&Extent3i::from(*node.octant()), true);
                 }
@@ -1117,7 +1127,7 @@ mod tests {
 
         let mut octant_voxels = HashSet::new();
 
-        octree.visit_branches_and_leaves_in_preorder(&mut |node: &OctreeNode| {
+        octree.visit_branches_and_fat_leaves_in_preorder(&mut |node: &OctreeNode| {
             if node.is_full() {
                 for p in Extent3i::from(*node.octant()).iter_points() {
                     octant_voxels.insert(p);

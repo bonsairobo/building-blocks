@@ -65,7 +65,10 @@ fn decompress_array_with_fast_snappy(c: &mut Criterion) {
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
-                || FastArrayCompression::new(Snappy).compress(&set_up_array(size)),
+                || {
+                    FastArrayCompressionNx1::from_bytes_compression(Snappy)
+                        .compress(&set_up_array(size))
+                },
                 |compressed_array| {
                     compressed_array.decompress();
                 },

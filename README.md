@@ -8,14 +8,14 @@
 
 Building Blocks is a voxel library for real-time applications.
 
-![Meshing](https://github.com/bonsairobo/building-blocks/blob/main/examples/screenshots/mesh_showcase.gif)
+![Meshing](https://media.githubusercontent.com/media/bonsairobo/building-blocks/main/examples/screenshots/mesh_showcase.gif)
 
-![Wireframe](https://github.com/bonsairobo/building-blocks/blob/main/examples/screenshots/wireframe.png)
+![Wireframe](https://media.githubusercontent.com/media/bonsairobo/building-blocks/main/examples/screenshots/wireframe.png)
 
 ![LOD
-Terrain](https://github.com/bonsairobo/building-blocks/blob/main/examples/screenshots/lod_terrain.png)
+Terrain](https://media.githubusercontent.com/media/bonsairobo/building-blocks/main/examples/screenshots/lod_terrain.png)
 
-The primary focus is core data structures and algorithms. Features include:
+We focus on generally useful data structures and algorithms. Features include:
 
 - 2D and 3D data storage
   - a [`ChunkMap`](crate::storage::chunk_map) with generic chunk storage

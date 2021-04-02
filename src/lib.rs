@@ -13,7 +13,7 @@
 //! ![LOD
 //! Terrain](https://media.githubusercontent.com/media/bonsairobo/building-blocks/main/examples/screenshots/lod_terrain.png)
 //!
-//! The primary focus is core data structures and algorithms. Features include:
+//! We focus on generally useful data structures and algorithms. Features include:
 //!
 //! - 2D and 3D data storage
 //!   - a [`ChunkMap`](crate::storage::chunk_map) with generic chunk storage

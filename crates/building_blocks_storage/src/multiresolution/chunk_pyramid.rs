@@ -362,9 +362,9 @@ pub type ChunkHashMapPyramid3<T> = ChunkHashMapPyramid<[i32; 3], T>;
 pub type CompressibleChunkPyramid<N, By, T> =
     ChunkPyramid<N, T, CompressibleChunkStorage<N, FastArrayCompressionNx1<N, By, T>>>;
 /// 2-dimensional `CompressibleChunkPyramid`.
-pub type CompressibleChunkPyramid2<By, T> = CompressibleChunkPyramid<[i32; 2], T, By>;
+pub type CompressibleChunkPyramid2<By, T> = CompressibleChunkPyramid<[i32; 2], By, T>;
 /// 3-dimensional `CompressibleChunkPyramid`.
-pub type CompressibleChunkPyramid3<By, T> = CompressibleChunkPyramid<[i32; 3], T, By>;
+pub type CompressibleChunkPyramid3<By, T> = CompressibleChunkPyramid<[i32; 3], By, T>;
 
 // ████████╗███████╗███████╗████████╗
 // ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝

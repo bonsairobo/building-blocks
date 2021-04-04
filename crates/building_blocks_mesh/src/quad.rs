@@ -94,14 +94,14 @@ impl OrientedCubeFace {
         [minu_minv, maxu_minv, minu_maxv, maxu_maxv]
     }
 
-    pub fn quad_mesh_positions(&self, quad: &UnorientedQuad) -> [[f32; 3]; 4] {
+    pub fn quad_mesh_positions(&self, quad: &UnorientedQuad, voxel_size: f32) -> [[f32; 3]; 4] {
         let [c0, c1, c2, c3] = self.quad_corners(quad);
 
         [
-            Point3f::from(c0).0,
-            Point3f::from(c1).0,
-            Point3f::from(c2).0,
-            Point3f::from(c3).0,
+            (voxel_size * Point3f::from(c0)).0,
+            (voxel_size * Point3f::from(c1)).0,
+            (voxel_size * Point3f::from(c2)).0,
+            (voxel_size * Point3f::from(c3)).0,
         ]
     }
 
@@ -167,10 +167,15 @@ impl OrientedCubeFace {
     }
 
     /// Extends `mesh` with the given `quad` that belongs to this face.
-    pub fn add_quad_to_pos_norm_mesh(&self, quad: &UnorientedQuad, mesh: &mut PosNormMesh) {
+    pub fn add_quad_to_pos_norm_mesh(
+        &self,
+        quad: &UnorientedQuad,
+        voxel_size: f32,
+        mesh: &mut PosNormMesh,
+    ) {
         let start_index = mesh.positions.len() as u32;
         mesh.positions
-            .extend_from_slice(&self.quad_mesh_positions(quad));
+            .extend_from_slice(&self.quad_mesh_positions(quad, voxel_size));
         mesh.normals.extend_from_slice(&self.quad_mesh_normals());
         mesh.indices
             .extend_from_slice(&self.quad_mesh_indices(start_index));
@@ -184,11 +189,12 @@ impl OrientedCubeFace {
         u_flip_face: Axis3,
         flip_v: bool,
         quad: &UnorientedQuad,
+        voxel_size: f32,
         mesh: &mut PosNormTexMesh,
     ) {
         let start_index = mesh.positions.len() as u32;
         mesh.positions
-            .extend_from_slice(&self.quad_mesh_positions(quad));
+            .extend_from_slice(&self.quad_mesh_positions(quad, voxel_size));
         mesh.normals.extend_from_slice(&self.quad_mesh_normals());
         mesh.tex_coords
             .extend_from_slice(&self.tex_coords(u_flip_face, flip_v, quad));

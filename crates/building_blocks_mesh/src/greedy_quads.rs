@@ -20,6 +20,7 @@ pub struct GreedyQuadsBuffer {
 }
 
 /// A set of quads that share an orientation.
+#[derive(Clone)]
 pub struct QuadGroup {
     /// The quads themselves. We rely on the `face` metadata to interpret them.
     ///

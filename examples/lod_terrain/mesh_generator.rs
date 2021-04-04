@@ -1,9 +1,9 @@
-use crate::voxel_map::VoxelMap;
+use crate::voxel_map::{Voxel, VoxelMap};
 
 use building_blocks::{
     mesh::*,
     prelude::*,
-    storage::{LodChunkKey3, LodChunkUpdate3, Sd8, SmallKeyHashMap},
+    storage::{LodChunkKey3, LodChunkUpdate3, SmallKeyHashMap},
 };
 use utilities::bevy_util::{mesh::create_mesh_bundle, thread_local_resource::ThreadLocalResource};
 
@@ -159,40 +159,47 @@ fn create_mesh_for_chunk(
     let chunks = voxel_map.pyramid.level(key.lod);
 
     let padded_chunk_extent =
-        padded_surface_nets_chunk_extent(&chunks.indexer.extent_for_chunk_at_key(key.chunk_key));
+        padded_greedy_quads_chunk_extent(&chunks.indexer.extent_for_chunk_at_key(key.chunk_key));
 
     // Keep a thread-local cache of buffers to avoid expensive reallocations every time we want to mesh a chunk.
     let mesh_tls = local_mesh_buffers.get();
     let mut surface_nets_buffers = mesh_tls
         .get_or_create_with(|| {
             RefCell::new(LocalSurfaceNetsBuffers {
-                mesh_buffer: Default::default(),
-                sdf_buffer: Array3x1::fill(padded_chunk_extent, Sd8::ONE),
+                mesh_buffer: GreedyQuadsBuffer::new(
+                    padded_chunk_extent,
+                    RIGHT_HANDED_Y_UP_CONFIG.quad_groups(),
+                ),
+                neighborhood_buffer: Array3x1::fill(padded_chunk_extent, Voxel::EMPTY),
             })
         })
         .borrow_mut();
     let LocalSurfaceNetsBuffers {
         mesh_buffer,
-        sdf_buffer,
+        neighborhood_buffer,
     } = &mut *surface_nets_buffers;
 
     // While the chunk shape doesn't change, we need to make sure that it's in the right position for each particular chunk.
-    sdf_buffer.set_minimum(padded_chunk_extent.minimum);
+    neighborhood_buffer.set_minimum(padded_chunk_extent.minimum);
 
-    copy_extent(&padded_chunk_extent, chunks, sdf_buffer);
+    copy_extent(&padded_chunk_extent, chunks, neighborhood_buffer);
 
     let voxel_size = (1 << key.lod) as f32;
-    surface_nets(
-        sdf_buffer,
-        &padded_chunk_extent,
-        voxel_size,
-        &mut *mesh_buffer,
-    );
+    greedy_quads(neighborhood_buffer, &padded_chunk_extent, &mut *mesh_buffer);
 
-    if mesh_buffer.mesh.indices.is_empty() {
+    if mesh_buffer.num_quads() == 0 {
         None
     } else {
-        Some(mesh_buffer.mesh.clone())
+        let mut mesh = PosNormMesh::default();
+        for group in mesh_buffer.quad_groups.iter() {
+            for quad in group.quads.iter() {
+                group
+                    .face
+                    .add_quad_to_pos_norm_mesh(&quad, voxel_size, &mut mesh);
+            }
+        }
+
+        Some(mesh)
     }
 }
 
@@ -201,8 +208,8 @@ fn create_mesh_for_chunk(
 type ThreadLocalMeshBuffers = ThreadLocalResource<RefCell<LocalSurfaceNetsBuffers>>;
 
 pub struct LocalSurfaceNetsBuffers {
-    mesh_buffer: SurfaceNetsBuffer,
-    sdf_buffer: Array3x1<Sd8>,
+    mesh_buffer: GreedyQuadsBuffer,
+    neighborhood_buffer: Array3x1<Voxel>,
 }
 
 fn spawn_mesh_entities(

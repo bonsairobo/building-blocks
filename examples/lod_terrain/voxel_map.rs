@@ -1,13 +1,42 @@
 use bevy::tasks::ComputeTaskPool;
 use building_blocks::{
     prelude::*,
-    storage::{ChunkHashMapPyramid3, OctreeChunkIndex, Sd8, SdfMeanDownsampler, SmallKeyHashMap},
+    storage::{ChunkHashMapPyramid3, OctreeChunkIndex, SmallKeyHashMap},
 };
 
+use building_blocks_mesh::{IsOpaque, MergeVoxel};
 use simdnoise::NoiseBuilder;
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct Voxel(pub u8);
+
+impl Voxel {
+    pub const EMPTY: Self = Self(0);
+    pub const FILLED: Self = Self(1);
+}
+
+impl IsEmpty for Voxel {
+    fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+}
+
+impl IsOpaque for Voxel {
+    fn is_opaque(&self) -> bool {
+        true
+    }
+}
+
+impl MergeVoxel for Voxel {
+    type VoxelValue = u8;
+
+    fn voxel_merge_value(&self) -> Self::VoxelValue {
+        self.0
+    }
+}
+
 pub struct VoxelMap {
-    pub pyramid: ChunkHashMapPyramid3<Sd8>,
+    pub pyramid: ChunkHashMapPyramid3<Voxel>,
     pub index: OctreeChunkIndex,
 }
 
@@ -18,7 +47,7 @@ pub fn generate_map(
     scale: f32,
     seed: i32,
 ) -> VoxelMap {
-    let builder = ChunkMapBuilder3x1::new(CHUNK_SHAPE, Sd8::ONE);
+    let builder = ChunkMapBuilder3x1::new(CHUNK_SHAPE, Voxel::EMPTY);
     let mut pyramid = ChunkHashMapPyramid3::new(builder, || SmallKeyHashMap::new(), NUM_LODS);
     let lod0 = pyramid.level_mut(0);
 
@@ -27,12 +56,18 @@ pub fn generate_map(
             s.spawn(async move {
                 let chunk_min = p * CHUNK_SHAPE;
                 let chunk_extent = Extent3i::from_min_and_shape(chunk_min, CHUNK_SHAPE);
-                let mut chunk_noise = Array3x1::fill(chunk_extent, Sd8::ONE);
+                let mut chunk_noise = Array3x1::fill(chunk_extent, Voxel::EMPTY);
 
                 let noise = noise_array(chunk_extent, freq, seed);
 
-                // Convert the f32 noise into Sd8.
-                let sdf_voxel_noise = TransformMap::new(&noise, |d: f32| Sd8::from(scale * d));
+                // Convert the f32 noise into Voxels.
+                let sdf_voxel_noise = TransformMap::new(&noise, |d: f32| {
+                    if scale * d < 0.0 {
+                        Voxel::FILLED
+                    } else {
+                        Voxel::EMPTY
+                    }
+                });
                 copy_extent(&chunk_extent, &sdf_voxel_noise, &mut chunk_noise);
 
                 (chunk_min, chunk_noise)
@@ -46,7 +81,7 @@ pub fn generate_map(
     let index = OctreeChunkIndex::index_chunk_map(SUPERCHUNK_SHAPE, lod0);
 
     let world_extent = chunks_extent * CHUNK_SHAPE;
-    pyramid.downsample_chunks_with_index(&index, &SdfMeanDownsampler, &world_extent);
+    pyramid.downsample_chunks_with_index(&index, &PointDownsampler, &world_extent);
 
     VoxelMap { pyramid, index }
 }

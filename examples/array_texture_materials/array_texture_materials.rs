@@ -100,9 +100,10 @@ impl MeshBuf {
         u_flip_face: Axis3,
         layer: u32,
     ) {
+        let voxel_size = 1.0;
         let start_index = self.positions.len() as u32;
         self.positions
-            .extend_from_slice(&face.quad_mesh_positions(quad));
+            .extend_from_slice(&face.quad_mesh_positions(quad, voxel_size));
         self.normals.extend_from_slice(&face.quad_mesh_normals());
 
         let flip_v = true;

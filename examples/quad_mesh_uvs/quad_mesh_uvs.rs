@@ -106,6 +106,7 @@ fn setup(
     greedy_quads(&voxels, &full_extent, &mut greedy_buffer);
 
     let flip_v = true;
+    let voxel_size = 1.0;
     let mut mesh_buf = PosNormTexMesh::default();
     for group in greedy_buffer.quad_groups.iter() {
         for quad in group.quads.iter() {
@@ -113,6 +114,7 @@ fn setup(
                 RIGHT_HANDED_Y_UP_CONFIG.u_flip_face,
                 flip_v,
                 quad,
+                voxel_size,
                 &mut mesh_buf,
             );
         }

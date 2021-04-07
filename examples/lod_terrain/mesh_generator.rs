@@ -158,8 +158,8 @@ fn create_mesh_for_chunk(
 ) -> Option<PosNormMesh> {
     let chunks = voxel_map.pyramid.level(key.lod);
 
-    let padded_chunk_extent =
-        padded_greedy_quads_chunk_extent(&chunks.indexer.extent_for_chunk_at_key(key.chunk_key));
+    let chunk_extent = chunks.indexer.extent_for_chunk_at_key(key.chunk_key);
+    let padded_chunk_extent = padded_greedy_quads_chunk_extent(&chunk_extent);
 
     // Keep a thread-local cache of buffers to avoid expensive reallocations every time we want to mesh a chunk.
     let mesh_tls = local_mesh_buffers.get();
@@ -182,7 +182,8 @@ fn create_mesh_for_chunk(
     // While the chunk shape doesn't change, we need to make sure that it's in the right position for each particular chunk.
     neighborhood_buffer.set_minimum(padded_chunk_extent.minimum);
 
-    copy_extent(&padded_chunk_extent, chunks, neighborhood_buffer);
+    // Only copy the chunk_extent, leaving the padding empty so that we don't get holes on LOD boundaries.
+    copy_extent(&chunk_extent, chunks, neighborhood_buffer);
 
     let voxel_size = (1 << key.lod) as f32;
     greedy_quads(neighborhood_buffer, &padded_chunk_extent, &mut *mesh_buffer);

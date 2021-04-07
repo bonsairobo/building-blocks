@@ -68,8 +68,9 @@ simdnoise = "3.1"
 utilities = { path = "crates/utilities" }
 
 [dev-dependencies.bevy]
-git = "https://github.com/bevyengine/bevy"
-rev = "94c41840"
+version = "0.5"
+# git = "https://github.com/bevyengine/bevy"
+# rev = "94c41840"
 # path = "../bevy"
 default-features = false
 features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]

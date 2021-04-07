@@ -12,8 +12,9 @@ building_blocks_mesh = { path = "../../crates/building_blocks_mesh", default-fea
 thread_local = "1.1"
 
 [dependencies.bevy]
-git = "https://github.com/bevyengine/bevy"
-rev = "94c41840"
+version = "0.5"
+# git = "https://github.com/bevyengine/bevy"
+# rev = "94c41840"
 # path = "../../../bevy"
 default-features = false
 features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]

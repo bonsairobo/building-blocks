@@ -23,12 +23,13 @@ impl ClipMapConfig3 {
     }
 }
 
-/// Traverse `octree` to find the `LodChunkKey3`s that are "active" when the clipmap is centered at `lod0_center`.
+/// Traverse `octree` to find the `LodChunkKey3`s that are "active" when the clipmap is centered at `lod0_center`. `active_rx`
+/// is a callback that receives the chunk keys for active chunks.
 pub fn active_clipmap_lod_chunks(
     config: &ClipMapConfig3,
     octree: &OctreeSet,
     lod0_center: Point3i,
-    mut init_rx: impl FnMut(LodChunkKey3),
+    mut active_rx: impl FnMut(LodChunkKey3),
 ) {
     let chunk_log2 = config.chunk_edge_length_log2();
     let centers = all_lod_centers(lod0_center, config.num_lods);
@@ -46,7 +47,7 @@ pub fn active_clipmap_lod_chunks(
 
         if lod == 0 || offset_from_center >= high_lod_boundary {
             // This octant can be rendered at this level of detail.
-            init_rx(octant_lod_chunk_key(chunk_log2, &octant));
+            active_rx(octant_lod_chunk_key(chunk_log2, &octant));
 
             VisitStatus::Stop
         } else {

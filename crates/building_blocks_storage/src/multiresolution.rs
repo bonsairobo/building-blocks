@@ -26,7 +26,7 @@
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
 //! # use std::collections::HashSet;
-//!
+//! #
 //! // Constructing a pyramid is much the same as constructing a chunk map, except you need to supply a closure to construct
 //! // empty storages.
 //! let num_lods = 5; // Up to 6 supported for now.

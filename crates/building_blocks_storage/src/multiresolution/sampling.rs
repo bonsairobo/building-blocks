@@ -13,6 +13,7 @@ pub trait ChunkDownsampler<N, T, Src> {
     );
 }
 
+/// A `ChunkDownsampler` that just selects a single point from each `2x2x2` region, discarding the rest.
 pub struct PointDownsampler;
 
 impl<N, Src, T> ChunkDownsampler<N, T, Src> for PointDownsampler
@@ -43,6 +44,8 @@ where
     }
 }
 
+/// A `ChunkDownsampler` that takes the mean of each `2x2x2` region of a signed distance field. It also renormalizes the values
+/// to lie in the range `[-1.0, 1.0]`.
 pub struct SdfMeanDownsampler;
 
 impl<N, Src, T> ChunkDownsampler<N, T, Src> for SdfMeanDownsampler

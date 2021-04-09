@@ -205,7 +205,7 @@ impl OrientedCubeFace {
 
 /// Returns the vertex indices for a single quad (two triangles). The triangles may have either clockwise or counter-clockwise
 /// winding. `start` is the first index.
-pub fn quad_indices(start: u32, counter_clockwise: bool) -> [u32; 6] {
+fn quad_indices(start: u32, counter_clockwise: bool) -> [u32; 6] {
     if counter_clockwise {
         [start, start + 1, start + 2, start + 1, start + 3, start + 2]
     } else {

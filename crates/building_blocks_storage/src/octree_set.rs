@@ -297,7 +297,7 @@ impl OctreeSet {
         visitor: &mut impl OctreeVisitor,
         node: &OctreeNode,
     ) -> VisitStatus {
-        if Extent3i::from(node.octant).intersection(extent).is_empty() {
+        if Self::extent_predicate(extent, node) {
             return VisitStatus::Stop;
         }
 

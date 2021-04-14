@@ -5,8 +5,8 @@ use crate::{
 
 use building_blocks_core::prelude::*;
 
-/// When a lattice map implements `Array`, that means there is some underlying array with the location and shape dictated by the
-/// extent.
+/// When a lattice map implements `IndexedArray`, that means there is some underlying array with the location and shape dictated
+/// by the extent.
 ///
 /// For the sake of generic impls, if the same map also implements `Get*<Stride>`, it must use the same data layout as `Array`.
 pub trait IndexedArray<N> {

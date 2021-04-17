@@ -102,7 +102,6 @@ where
     #[inline]
     pub fn padded(&self, pad_amount: <PointN<N> as Point>::Scalar) -> Self
     where
-        PointN<N>: Ones,
         <PointN<N> as Point>::Scalar: Add<Output = <PointN<N> as Point>::Scalar>,
     {
         Self::from_min_and_shape(

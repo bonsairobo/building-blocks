@@ -239,14 +239,14 @@ where
     }
 }
 
-impl NormSquared for Point2i {
+impl Norm for Point2i {
     #[inline]
     fn norm_squared(self) -> f32 {
         self.dot(self) as f32
     }
 }
 
-impl NormSquared for Point2f {
+impl Norm for Point2f {
     #[inline]
     fn norm_squared(self) -> f32 {
         self.dot(self)

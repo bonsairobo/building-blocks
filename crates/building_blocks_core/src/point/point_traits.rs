@@ -83,19 +83,9 @@ pub trait Distance: Point {
     fn l2_distance_squared(self, other: Self) -> <Self as Point>::Scalar;
 }
 
-pub trait NormSquared {
+pub trait Norm: Sized {
     fn norm_squared(self) -> f32;
-}
 
-pub trait Norm {
-    fn norm(self) -> f32;
-}
-
-impl<T> Norm for T
-where
-    T: NormSquared,
-{
-    #[inline]
     fn norm(self) -> f32 {
         self.norm_squared().sqrt()
     }

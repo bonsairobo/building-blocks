@@ -112,6 +112,7 @@ impl OctreeChunkIndex {
         assert!(self.superchunk_octrees.indexer.chunk_shape().is_cube());
         assert!(self.chunk_shape().is_cube());
 
+        // Calculations assume the chunk shape is a cube.
         let superchunk_log2 = self
             .superchunk_octrees
             .indexer

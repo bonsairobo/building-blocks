@@ -86,6 +86,7 @@ pub trait Distance: Point {
 pub trait Norm: Sized {
     fn norm_squared(self) -> f32;
 
+    #[inline]
     fn norm(self) -> f32 {
         self.norm_squared().sqrt()
     }

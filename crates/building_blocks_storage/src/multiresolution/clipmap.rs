@@ -134,7 +134,7 @@ impl ClipMapUpdate3 {
                 && offset_from_center < self.high_lod_boundary
             {
                 // Increase the detail for this octant.
-                // Create the higher detail meshes in descendant octants.
+                // Create the higher detail in descendant octants.
                 let old_chunk = octant_lod_chunk_key(self.chunk_log2, &octant);
                 let new_chunks = find_merge_or_split_descendants(
                     self.chunk_log2,
@@ -153,7 +153,7 @@ impl ClipMapUpdate3 {
                 && old_offset_from_center < self.high_lod_boundary
             {
                 // Decrease the detail for this octant.
-                // Delete the higher detail meshes in descendant octants.
+                // Delete the higher detail in descendant octants.
                 let new_chunk = octant_lod_chunk_key(self.chunk_log2, &octant);
                 let old_chunks = find_merge_or_split_descendants(
                     self.chunk_log2,

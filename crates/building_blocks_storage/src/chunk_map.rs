@@ -467,6 +467,19 @@ where
             }
         }
     }
+
+    #[inline]
+    pub fn delete_chunk(&mut self, key: PointN<N>) {
+        debug_assert!(self.indexer.chunk_key_is_valid(key));
+        self.storage.delete(key);
+    }
+
+    #[inline]
+    pub fn pop_chunk(&mut self, key: PointN<N>) -> Option<Bldr::Chunk> {
+        debug_assert!(self.indexer.chunk_key_is_valid(key));
+
+        self.storage.pop(key)
+    }
 }
 
 impl<N, T, Bldr, Store, MutPtr> ChunkMap<N, T, Bldr, Store>

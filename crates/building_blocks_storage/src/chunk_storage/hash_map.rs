@@ -44,6 +44,16 @@ where
     fn write(&mut self, key: PointN<N>, chunk: Ch) {
         self.insert(key, chunk);
     }
+
+    #[inline]
+    fn delete(&mut self, key: PointN<N>) {
+        self.remove(&key);
+    }
+
+    #[inline]
+    fn pop(&mut self, key: PointN<N>) -> Option<Ch> {
+        self.pop(key)
+    }
 }
 
 impl<'a, N, Ch> IterChunkKeys<'a, N> for SmallKeyHashMap<PointN<N>, Ch>

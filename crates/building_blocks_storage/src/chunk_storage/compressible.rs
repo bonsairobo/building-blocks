@@ -220,6 +220,16 @@ where
     fn write(&mut self, key: PointN<N>, chunk: Compr::Data) {
         self.insert_chunk(key, chunk);
     }
+
+    #[inline]
+    fn delete(&mut self, key: PointN<N>) {
+        self.remove(key);
+    }
+
+    #[inline]
+    fn pop(&mut self, key: PointN<N>) -> Option<Compr::Data> {
+        self.remove(key).map(|ch| ch.into_decompressed())
+    }
 }
 
 impl<'a, N, Compr> IterChunkKeys<'a, N> for CompressibleChunkStorage<N, Compr>

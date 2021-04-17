@@ -31,6 +31,12 @@ pub trait ChunkWriteStorage<N, Ch> {
 
     /// Overwrite the chunk at `key` with `chunk`. Drops the previous value.
     fn write(&mut self, key: PointN<N>, chunk: Ch);
+
+    /// Removes and drops the chunk at `key`.
+    fn delete(&mut self, key: PointN<N>);
+
+    /// Removes and returns the chunk at `key`.
+    fn pop(&mut self, key: PointN<N>) -> Option<Ch>;
 }
 
 pub trait IterChunkKeys<'a, N>

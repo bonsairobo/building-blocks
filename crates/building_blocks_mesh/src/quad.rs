@@ -110,9 +110,10 @@ impl OrientedCubeFace {
     }
 
     /// Returns the 6 vertex indices for the quad in order to make two triangles in a mesh. Winding order depends on both the
-    /// sign of the surface normal and the permutation of the UVs.
-    pub fn quad_mesh_indices(&self, start: u32) -> [u32; 6] {
-        quad_indices(start, self.n_sign * self.permutation.sign() > 0)
+    /// sign of the surface normal and the permutation of the UVs. Swapping the diagonal can be used for altering the triangle
+    /// orientation to achieve more isotropic interpolation of vertex values such as ambient occlusion.
+    pub fn quad_mesh_indices(&self, start: u32, swap_diagonal: bool) -> [u32; 6] {
+        quad_indices(start, self.n_sign * self.permutation.sign() > 0, swap_diagonal)
     }
 
     /// Returns the UV coordinates of the 4 corners of the quad. Returns vertices in the same order as
@@ -178,7 +179,7 @@ impl OrientedCubeFace {
             .extend_from_slice(&self.quad_mesh_positions(quad, voxel_size));
         mesh.normals.extend_from_slice(&self.quad_mesh_normals());
         mesh.indices
-            .extend_from_slice(&self.quad_mesh_indices(start_index));
+            .extend_from_slice(&self.quad_mesh_indices(start_index, false));
     }
 
     /// Extends `mesh` with the given `quad` that belongs to this face.
@@ -199,17 +200,25 @@ impl OrientedCubeFace {
         mesh.tex_coords
             .extend_from_slice(&self.tex_coords(u_flip_face, flip_v, quad));
         mesh.indices
-            .extend_from_slice(&self.quad_mesh_indices(start_index));
+            .extend_from_slice(&self.quad_mesh_indices(start_index, false));
     }
 }
 
 /// Returns the vertex indices for a single quad (two triangles). The triangles may have either clockwise or counter-clockwise
 /// winding. `start` is the first index.
-fn quad_indices(start: u32, counter_clockwise: bool) -> [u32; 6] {
+fn quad_indices(start: u32, counter_clockwise: bool, swap_diagonal: bool) -> [u32; 6] {
     if counter_clockwise {
-        [start, start + 1, start + 2, start + 1, start + 3, start + 2]
+        if swap_diagonal {
+            [start, start + 1, start + 2, start + 1, start + 3, start + 2]
+        } else {
+            [start, start + 3, start + 2, start, start + 1, start + 3]
+        }
     } else {
-        [start, start + 2, start + 1, start + 1, start + 2, start + 3]
+        if swap_diagonal {
+            [start, start + 2, start + 3, start + 1, start, start + 3]
+        } else {
+            [start, start + 2, start + 1, start + 1, start + 2, start + 3]
+        }
     }
 }
 

@@ -459,5 +459,191 @@ impl<T> VoxelMerger<T> {
         quad_width
     }
 }
+pub struct VoxelAOMerger<T> {
+    marker: std::marker::PhantomData<T>,
+}
 
-// TODO: implement a MergeStrategy for voxels with an ambient occlusion value at each vertex
+impl<T> MergeStrategy for VoxelAOMerger<T>
+where
+    T: MergeVoxel + IsEmpty + IsOpaque,
+{
+    type Voxel = T;
+
+    fn find_quad<A>(
+        min_stride: Stride,
+        min_value: &T,
+        mut max_width: i32,
+        max_height: i32,
+        face_strides: &FaceStrides,
+        voxels: &A,
+        visited: &Array3x1<bool>,
+    ) -> (i32, i32)
+    where
+        A: Get<Stride, Item = T>,
+    {
+        // Greedily search for the biggest visible quad where all merge values are the same.
+        let quad_value = min_value.voxel_merge_value();
+
+        // Calculate minimum U edge AO values
+        let vaos = [
+            get_ao_at_vert(voxels, face_strides, min_stride),
+            get_ao_at_vert(voxels, face_strides, min_stride + face_strides.v_stride),
+        ];
+
+        // Start by finding the widest quad in the U direction.
+        let mut row_start_stride = min_stride;
+        let quad_width = Self::get_row_width(
+            voxels,
+            visited,
+            &quad_value,
+            &vaos,
+            face_strides.visibility_offset,
+            row_start_stride,
+            face_strides.u_stride,
+            face_strides,
+            max_width,
+        );
+
+        max_width = max_width.min(quad_width);
+        let mut quad_height = 1;
+
+        // If the 0th row minimum U edge ambient occlusion values match, we can merge in V
+        if vaos[0] == vaos[1] {
+            // Now see how tall we can make the quad in the V direction without changing the width.
+            row_start_stride += face_strides.v_stride;
+            while quad_height < max_height {
+                // Check if minimum U edge AO values match, if so we can merge vertically, otherwise we're done
+                let row_vaos = [
+                    get_ao_at_vert(voxels, face_strides, row_start_stride),
+                    get_ao_at_vert(
+                        voxels,
+                        face_strides,
+                        row_start_stride + face_strides.v_stride,
+                    ),
+                ];
+                if row_vaos[0] != row_vaos[1] {
+                    break;
+                }
+                let row_width = Self::get_row_width(
+                    voxels,
+                    visited,
+                    &quad_value,
+                    &row_vaos,
+                    face_strides.visibility_offset,
+                    row_start_stride,
+                    face_strides.u_stride,
+                    face_strides,
+                    max_width,
+                );
+                if row_width < quad_width {
+                    break;
+                }
+                quad_height += 1;
+                row_start_stride += face_strides.v_stride;
+            }
+        }
+
+        (quad_width, quad_height)
+    }
+}
+
+impl<T> VoxelAOMerger<T> {
+    fn get_row_width<A>(
+        voxels: &A,
+        visited: &Array3x1<bool>,
+        quad_merge_voxel_value: &T::VoxelValue,
+        vaos: &[i32],
+        visibility_offset: Stride,
+        start_stride: Stride,
+        delta_stride: Stride,
+        face_strides: &FaceStrides,
+        max_width: i32,
+    ) -> i32
+    where
+        A: Get<Stride, Item = T>,
+        T: IsEmpty + IsOpaque + MergeVoxel,
+    {
+        let mut quad_width = 0;
+        let mut row_stride = start_stride;
+        while quad_width < max_width {
+            if visited.get(row_stride) {
+                // Already have a quad for this voxel face.
+                break;
+            }
+
+            let voxel = voxels.get(row_stride);
+
+            if !face_needs_mesh(&voxel, row_stride, visibility_offset, voxels, visited) {
+                break;
+            }
+
+            if !voxel.voxel_merge_value().eq(quad_merge_voxel_value) {
+                // Voxel needs to be non-empty and match the quad merge value.
+                break;
+            }
+
+            quad_width += 1;
+
+            let next_vaos = [
+                get_ao_at_vert(voxels, face_strides, row_stride + face_strides.u_stride),
+                get_ao_at_vert(
+                    voxels,
+                    face_strides,
+                    row_stride + face_strides.u_stride + face_strides.v_stride,
+                ),
+            ];
+            if vaos[0] != next_vaos[0] || vaos[1] != next_vaos[1] {
+                // Ambient occlusion values must be constant across the row
+                // They are not so we cannot proceed to the next quad
+                break;
+            }
+
+            row_stride += delta_stride;
+        }
+
+        quad_width
+    }
+}
+
+fn get_ao_at_vert<A, T>(voxels: &A, face_strides: &FaceStrides, stride: Stride) -> i32
+where
+    A: Get<Stride, Item = T>,
+    T: IsEmpty + IsOpaque + MergeVoxel,
+{
+    let top0_loc = stride - face_strides.u_stride;
+    let top1_loc = stride - face_strides.n_stride;
+    let top2_loc = stride;
+    let top3_loc = stride - face_strides.n_stride - face_strides.u_stride;
+
+    let bot0_loc = stride - face_strides.u_stride - face_strides.v_stride;
+    let bot1_loc = stride - face_strides.n_stride - face_strides.v_stride;
+    let bot2_loc = stride - face_strides.v_stride;
+    let bot3_loc = stride - face_strides.n_stride - face_strides.u_stride - face_strides.v_stride;
+
+    let top0 = !voxels.get(top0_loc).is_empty();
+    let top1 = !voxels.get(top1_loc).is_empty();
+    let top2 = !voxels.get(top2_loc).is_empty();
+    let top3 = !voxels.get(top3_loc).is_empty();
+    let bot0 = !voxels.get(bot0_loc).is_empty();
+    let bot1 = !voxels.get(bot1_loc).is_empty();
+    let bot2 = !voxels.get(bot2_loc).is_empty();
+    let bot3 = !voxels.get(bot3_loc).is_empty();
+
+    let (side0, side1, corner) = if !top0 && bot0 {
+        (top2, top3, top1)
+    } else if !top1 && bot1 {
+        (top2, top3, top0)
+    } else if !top2 && bot2 {
+        (top0, top1, top3)
+    } else if !top3 && bot3 {
+        (top0, top1, top2)
+    } else {
+        return 0;
+    };
+
+    if side0 && side1 {
+        return 3;
+    } else {
+        return side0 as i32 + side1 as i32 + corner as i32;
+    }
+}

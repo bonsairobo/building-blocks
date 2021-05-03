@@ -52,7 +52,7 @@ where
 
     #[inline]
     fn pop(&mut self, key: PointN<N>) -> Option<Ch> {
-        self.pop(key)
+        self.remove(&key)
     }
 }
 

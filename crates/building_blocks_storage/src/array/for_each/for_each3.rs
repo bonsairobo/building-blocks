@@ -1,4 +1,4 @@
-use crate::array::{Local, Local3i, Stride};
+use crate::{Local, Local3i, Stride};
 
 use building_blocks_core::prelude::*;
 

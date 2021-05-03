@@ -76,7 +76,6 @@ where
 impl<N> ArrayForEach<N>
 where
     N: ArrayIndexer<N>,
-    PointN<N>: Copy,
 {
     pub fn for_each_point_and_stride(self, f: impl FnMut(PointN<N>, Stride)) {
         N::for_each_point_and_stride_unchecked(self, f)

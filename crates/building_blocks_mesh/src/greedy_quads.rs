@@ -521,7 +521,8 @@ where
                         row_start_stride + face_strides.v_stride,
                     ),
                 ];
-                if row_vaos[0] != row_vaos[1] {
+                if vaos[0] != row_vaos[0] || vaos[1] != row_vaos[1] {
+                    // AO values not constant along V
                     break;
                 }
                 let row_width = Self::get_row_width(

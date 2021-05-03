@@ -630,7 +630,7 @@ where
     let bot2 = !voxels.get(bot2_loc).is_empty();
     let bot3 = !voxels.get(bot3_loc).is_empty();
 
-    let (side0, side1, corner) = if !top0 && bot0 {
+    let (side1, side2, corner) = if !top0 && bot0 {
         (top2, top3, top1)
     } else if !top1 && bot1 {
         (top2, top3, top0)
@@ -639,7 +639,14 @@ where
     } else if !top3 && bot3 {
         (top0, top1, top2)
     } else {
+        return 3;
+    };
+
+    if side1 && side2 {
         return 0;
+    }
+    return 3 - (side1 as i32 + side2 as i32 + corner as i32);
+}
     };
 
     if side0 && side1 {

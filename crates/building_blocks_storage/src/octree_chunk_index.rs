@@ -120,7 +120,7 @@ impl OctreeChunkIndex {
             .x()
             .trailing_zeros() as u8;
         let chunk_log2 = self.chunk_shape().x().trailing_zeros() as u8;
-        let num_lods = superchunk_log2 - chunk_log2;
+        let num_lods = superchunk_log2 - chunk_log2 + 1;
 
         ClipMapConfig3 {
             num_lods,

@@ -108,7 +108,7 @@ where
                     );
 
                     if (self.predicate)(point) {
-                        self.earliest_impact = Some(VoxelImpact { impact, point });
+                        self.earliest_impact = Some(VoxelImpact { point, impact });
                     }
                 }
 
@@ -244,7 +244,7 @@ where
 
                     let point = impact_with_leaf_octant(&octant, &contact, &impact.normal2);
                     if (self.predicate)(point) {
-                        self.earliest_impact = Some(VoxelImpact { impact, point });
+                        self.earliest_impact = Some(VoxelImpact { point, impact });
                     }
                 }
             } else {

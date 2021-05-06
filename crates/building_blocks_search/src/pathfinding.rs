@@ -29,10 +29,7 @@ where
         vn_offsets
             .iter()
             .map(|offset| *p + *offset)
-            .filter_map(|p| match predicate(&p) {
-                Some(c) => Some((p, c)),
-                None => None,
-            })
+            .filter_map(|p| predicate(&p).map(|c| (p, c)))
             .collect::<Vec<(PointN<N>, C)>>()
     };
 

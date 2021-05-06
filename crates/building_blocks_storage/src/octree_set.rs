@@ -146,9 +146,9 @@ impl OctreeSet {
         );
 
         Self {
+            extent,
             power,
             root_exists,
-            extent,
             nodes,
         }
     }

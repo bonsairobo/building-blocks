@@ -219,7 +219,7 @@ impl<N, Chan> Array<N, Chan> {
     /// the length of the values `Vec`.
     pub fn new(extent: ExtentN<N>, channels: Chan) -> Self {
         // TODO: assert that channels has length matching extent
-        Self { extent, channels }
+        Self { channels, extent }
     }
 
     /// Moves the raw extent and values storage out of `self`.

@@ -291,8 +291,8 @@ where
         Self {
             indexer,
             storage,
-            ambient_value,
             builder,
+            ambient_value,
         }
     }
 }

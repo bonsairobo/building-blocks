@@ -61,7 +61,7 @@ impl<N> Deref for Local<N> {
 }
 
 /// The most efficient coordinates for slice-backed lattice maps. A single number that translates directly to a slice offset.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Stride(pub usize);
 
 impl Zero for Stride {

@@ -64,5 +64,14 @@ void main() {
 #endif
     gl_Position = ViewProj * world_position;
 
-    v_AO = Vertex_AO * 1.0 / 3.0;
+    vec4 ao_curve = vec4(0.0, 0.2, 0.4, 1.0);
+    if (Vertex_AO == 0.0) {
+        v_AO = ao_curve.x;
+    } else if (Vertex_AO == 1.0) {
+        v_AO = ao_curve.y;
+    } else if (Vertex_AO == 2.0) {
+        v_AO = ao_curve.z;
+    } else {
+        v_AO = ao_curve.w;
+    }
 }

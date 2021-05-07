@@ -157,7 +157,6 @@ pub fn greedy_quads<A, T>(voxels: &A, extent: &Extent3i, output: &mut GreedyQuad
 where
     A: IndexedArray<[i32; 3]>
         + ForEach<[i32; 3], (Point3i, Stride), Item = T>
-        + Get<Point3i, Item = T>
         + Get<Stride, Item = T>,
     T: IsEmpty + IsOpaque + MergeVoxel,
 {
@@ -172,7 +171,6 @@ pub fn greedy_quads_with_merge_strategy<A, T, Merger>(
 ) where
     A: IndexedArray<[i32; 3]>
         + ForEach<[i32; 3], (Point3i, Stride), Item = T>
-        + Get<Point3i, Item = T>
         + Get<Stride, Item = T>,
     T: IsEmpty + IsOpaque,
     Merger: MergeStrategy<Voxel = T>,
@@ -198,7 +196,6 @@ fn greedy_quads_for_group<A, T, Merger>(
 ) where
     A: IndexedArray<[i32; 3]>
         + ForEach<[i32; 3], (Point3i, Stride), Item = T>
-        + Get<Point3i, Item = T>
         + Get<Stride, Item = T>,
     T: IsEmpty + IsOpaque,
     Merger: MergeStrategy<Voxel = T>,
@@ -388,9 +385,7 @@ pub trait MergeStrategy {
         visited: &Array3x1<bool>,
     ) -> (i32, i32)
     where
-        A: IndexedArray<[i32; 3]>
-            + Get<Point3i, Item = Self::Voxel>
-            + Get<Stride, Item = Self::Voxel>,
+        A: IndexedArray<[i32; 3]> + Get<Stride, Item = Self::Voxel>,
         Self::Voxel: IsEmpty + IsOpaque;
 }
 
@@ -533,7 +528,7 @@ where
         visited: &Array3x1<bool>,
     ) -> (i32, i32)
     where
-        A: IndexedArray<[i32; 3]> + Get<Point3i, Item = T> + Get<Stride, Item = T>,
+        A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
     {
         println!(">>> find_quad");
         // Greedily search for the biggest visible quad where all merge values are the same.
@@ -685,7 +680,7 @@ impl<T> VoxelAOMerger<T> {
         max_width: i32,
     ) -> i32
     where
-        A: IndexedArray<[i32; 3]> + Get<Point3i, Item = T> + Get<Stride, Item = T>,
+        A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
         T: IsEmpty + IsOpaque + MergeVoxel,
     {
         println!(">>> get_row_width");
@@ -860,7 +855,7 @@ pub fn get_ao_at_vert<A, T>(
     face_vertex: FaceVertex,
 ) -> i32
 where
-    A: IndexedArray<[i32; 3]> + Get<Point3i, Item = T> + Get<Stride, Item = T>,
+    A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
     T: IsEmpty + IsOpaque + MergeVoxel,
 {
     let (ns, us, vs, vis) = (

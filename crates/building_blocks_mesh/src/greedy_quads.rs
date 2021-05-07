@@ -426,7 +426,7 @@ where
         visited: &Array3x1<bool>,
     ) -> (i32, i32)
     where
-        A: Get<Stride, Item = T>,
+        A: Get<Stride, Item = T> + IndexedArray<[i32; 3]>,
     {
         // Greedily search for the biggest visible quad where all merge values are the same.
         let quad_value = min_value.voxel_merge_value();
@@ -479,7 +479,7 @@ impl<T> VoxelMerger<T> {
         max_width: i32,
     ) -> i32
     where
-        A: Get<Stride, Item = T>,
+        A: Get<Stride, Item = T> + IndexedArray<[i32; 3]>,
         T: IsEmpty + IsOpaque + MergeVoxel,
     {
         let mut quad_width = 0;
@@ -492,9 +492,9 @@ impl<T> VoxelMerger<T> {
 
             let voxel = voxels.get(row_stride);
 
-            // if !face_needs_mesh(&voxel, row_stride, visibility_offset, voxels, visited) {
-            //     break;
-            // }
+            if !face_needs_mesh(&voxel, row_stride, visibility_offset, voxels, visited) {
+                break;
+            }
 
             if !voxel.voxel_merge_value().eq(quad_merge_voxel_value) {
                 // Voxel needs to be non-empty and match the quad merge value.

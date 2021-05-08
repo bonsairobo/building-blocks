@@ -50,46 +50,54 @@ pub struct QuadCoordinateConfig {
     pub u_flip_face: Axis3,
 }
 
-pub const RIGHT_HANDED_Y_UP_CONFIG: QuadCoordinateConfig = QuadCoordinateConfig {
-    // Y is always in the V direction when it's not the normal. When Y is the normal, right-handedness determines that
-    // we must use Yzx permutations.
-    faces: [
-        OrientedCubeFace::new(-1, Axis3Permutation::Xzy),
-        OrientedCubeFace::new(-1, Axis3Permutation::Yzx),
-        OrientedCubeFace::new(-1, Axis3Permutation::Zxy),
-        OrientedCubeFace::new(1, Axis3Permutation::Xzy),
-        OrientedCubeFace::new(1, Axis3Permutation::Yzx),
-        OrientedCubeFace::new(1, Axis3Permutation::Zxy),
-    ],
-    u_flip_face: Axis3::X,
-};
+pub fn right_handed_y_up_config() -> QuadCoordinateConfig {
+    QuadCoordinateConfig {
+        faces: [
+            // Front
+            OrientedCubeFace::new(PointN([1, 1, 1]), Axis3Permutation::Zxy),
+            // Top
+            OrientedCubeFace::new(PointN([1, 1, -1]), Axis3Permutation::Yxz),
+            // Right
+            OrientedCubeFace::new(PointN([1, -1, 1]), Axis3Permutation::Xzy),
+            // Back
+            OrientedCubeFace::new(PointN([-1, -1, 1]), Axis3Permutation::Zxy),
+            // Bottom
+            OrientedCubeFace::new(PointN([-1, 1, 1]), Axis3Permutation::Yxz),
+            // Left
+            OrientedCubeFace::new(PointN([-1, 1, 1]), Axis3Permutation::Xzy),
+        ],
+        u_flip_face: Axis3::X,
+    }
+}
 
-pub fn oriented_cube_face_to_cube_face(oriented_cube_face: OrientedCubeFace) -> CubeFace {
-    match oriented_cube_face.permutation {
-        Axis3Permutation::Zxy => {
-            if oriented_cube_face.n_sign > 0 {
-                CubeFace::Front
-            } else {
-                CubeFace::Back
-            }
-        }
-        Axis3Permutation::Yzx => {
-            if oriented_cube_face.n_sign > 0 {
-                CubeFace::Top
-            } else {
-                CubeFace::Bottom
-            }
-        }
-        Axis3Permutation::Xzy => {
-            if oriented_cube_face.n_sign > 0 {
-                CubeFace::Right
-            } else {
-                CubeFace::Left
-            }
-        }
-        _ => {
-            unreachable!();
-        }
+pub fn oriented_cube_face_to_face_strides<A>(
+    voxels: &A,
+    oriented_cube_face: &OrientedCubeFace,
+) -> FaceStrides
+where
+    A: IndexedArray<[i32; 3]>,
+{
+    let OrientedCubeFace { n, u, v, .. } = oriented_cube_face;
+    let n_stride = voxels.stride_from_local_point(Local(*n));
+    let u_stride = voxels.stride_from_local_point(Local(*u));
+    let v_stride = voxels.stride_from_local_point(Local(*v));
+    let max_stride = Stride(voxels.extent().shape.volume() as usize);
+    FaceStrides {
+        n_stride,
+        u_stride,
+        v_stride,
+        // The offset to the voxel sharing this cube face.
+        visibility_offset: n_stride,
+        u_offset: if u_stride > max_stride {
+            Stride(0) - u_stride
+        } else {
+            Stride(0)
+        },
+        v_offset: if v_stride > max_stride {
+            Stride(0) - v_stride
+        } else {
+            Stride(0)
+        },
     }
 }
 
@@ -201,57 +209,43 @@ fn greedy_quads_for_group<A, T, Merger>(
     Merger: MergeStrategy<Voxel = T>,
 {
     visited.reset_values(false);
+    println!("ORIENTED CUBE FACE: {:?}", quad_group.face);
 
-    let QuadGroup {
-        quads,
-        face:
-            OrientedCubeFace {
-                n_sign,
-                permutation,
-                n,
-                u,
-                v,
-                ..
-            },
-    } = quad_group;
-
-    println!("n: {:?}, u: {:?}, v: {:?}, n_sign: {}", n, u, v, n_sign);
-
-    let [n_axis, u_axis, v_axis] = permutation.axes();
+    let (n, u, v) = (quad_group.face.n, quad_group.face.u, quad_group.face.v);
+    let [n_axis, u_axis, v_axis] = quad_group.face.permutation.axes();
     let i_n = n_axis.index();
     let i_u = u_axis.index();
     let i_v = v_axis.index();
 
     let num_slices = interior.shape.at(i_n);
-    let slice_shape = *n + *u * interior.shape.at(i_u) + *v * interior.shape.at(i_v);
-    let mut slice_extent = Extent3i::from_min_and_shape(interior.minimum, slice_shape);
+    let (positive_n, positive_u, positive_v) = (n * n, u * u, v * v);
+    let slice_shape =
+        positive_n + positive_u * interior.shape.at(i_u) + positive_v * interior.shape.at(i_v);
+    let mut slice_extent = Extent3i::from_min_and_shape(
+        interior.minimum
+            + if n != positive_n {
+                (num_slices - 1) * positive_n
+            } else {
+                PointN([0, 0, 0])
+            },
+        slice_shape,
+    );
 
-    let n_stride = voxels.stride_from_local_point(Local(*n));
-    let u_stride = voxels.stride_from_local_point(Local(*u));
-    let v_stride = voxels.stride_from_local_point(Local(*v));
-    let face_strides = FaceStrides {
-        n_stride,
-        u_stride,
-        v_stride,
-        // The offset to the voxel sharing this cube face.
-        visibility_offset: if *n_sign > 0 {
-            n_stride
-        } else {
-            Stride(0) - n_stride
-        },
-    };
+    let face_strides = oriented_cube_face_to_face_strides(voxels, &quad_group.face);
 
     for _ in 0..num_slices {
         let slice_ub = slice_extent.least_upper_bound();
         let u_ub = slice_ub.at(i_u);
         let v_ub = slice_ub.at(i_v);
 
+        // FIXME: The min needs to start from the correct point according to the u and v directions
+        // otherwise for negative u / v, no merging will happen along those directions
         voxels.for_each(
             &slice_extent,
-            |(quad_min, quad_min_stride): (Point3i, Stride), quad_min_voxel| {
+            |(voxel_min, voxel_min_stride): (Point3i, Stride), voxel| {
                 if !face_needs_mesh(
-                    &quad_min_voxel,
-                    quad_min_stride,
+                    &voxel,
+                    voxel_min_stride,
                     face_strides.visibility_offset,
                     voxels,
                     visited,
@@ -261,12 +255,12 @@ fn greedy_quads_for_group<A, T, Merger>(
                 // We have at least one face that needs a mesh. We'll try to expand that face into the biggest quad we can find.
 
                 // These are the boundaries on quad width and height so it is contained in the slice.
-                let max_width = u_ub - quad_min.at(i_u);
-                let max_height = v_ub - quad_min.at(i_v);
+                let max_width = u_ub - voxel_min.at(i_u);
+                let max_height = v_ub - voxel_min.at(i_v);
 
                 let (quad_width, quad_height) = Merger::find_quad(
-                    quad_min_stride,
-                    &quad_min_voxel,
+                    voxel_min_stride,
+                    &voxel,
                     max_width,
                     max_height,
                     &face_strides,
@@ -279,12 +273,26 @@ fn greedy_quads_for_group<A, T, Merger>(
                 debug_assert!(quad_height <= max_height);
 
                 // Mark the quad as visited.
-                let quad_extent =
-                    Extent3i::from_min_and_shape(quad_min, *n + *u * quad_width + *v * quad_height);
+                let extent_minimum = voxel_min
+                    + if u != positive_u {
+                        u * (quad_width - 1)
+                    } else {
+                        PointN([0, 0, 0])
+                    }
+                    + if v != positive_v {
+                        v * (quad_height - 1)
+                    } else {
+                        PointN([0, 0, 0])
+                    };
+                let quad_extent = Extent3i::from_min_and_shape(
+                    extent_minimum,
+                    positive_n + positive_u * quad_width + positive_v * quad_height,
+                );
+                println!("MARKING {:?} VISITED", quad_extent);
                 visited.fill_extent(&quad_extent, true);
 
-                quads.push(UnorientedQuad {
-                    minimum: quad_min,
+                quad_group.quads.push(UnorientedQuad {
+                    minimum: voxel_min,
                     width: quad_width,
                     height: quad_height,
                 });
@@ -292,7 +300,7 @@ fn greedy_quads_for_group<A, T, Merger>(
         );
 
         // Move to the next slice.
-        slice_extent += *n;
+        slice_extent += n;
     }
 }
 
@@ -395,6 +403,8 @@ pub struct FaceStrides {
     pub u_stride: Stride,
     pub v_stride: Stride,
     pub visibility_offset: Stride,
+    pub u_offset: Stride,
+    pub v_offset: Stride,
 }
 
 /// A per-voxel value used for merging quads.
@@ -799,10 +809,10 @@ pub enum CubeFace {
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum FaceVertex {
-    TopLeft,
-    TopRight,
     BottomLeft,
     BottomRight,
+    TopRight,
+    TopLeft,
 }
 
 fn face_strides_to_cube_face(face_strides: &FaceStrides) -> CubeFace {
@@ -858,81 +868,21 @@ where
     A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
     T: IsEmpty + IsOpaque + MergeVoxel,
 {
-    let (ns, us, vs, vis) = (
+    let (n, u, v, vis, uoff, voff) = (
         face_strides.n_stride,
         face_strides.u_stride,
         face_strides.v_stride,
         face_strides.visibility_offset,
+        face_strides.u_offset,
+        face_strides.v_offset,
     );
-    let (side1_s, side2_s, corner_s) = match cube_face {
-        CubeFace::Top => match face_vertex {
-            FaceVertex::TopLeft => (stride + vis - vs, stride + vis - us, stride + vis - us - vs),
-            FaceVertex::TopRight => (stride + vis - us, stride + vis + vs, stride + vis - us + vs),
-            FaceVertex::BottomLeft => {
-                (stride + vis + us, stride + vis - vs, stride + vis + us - vs)
-            }
-            FaceVertex::BottomRight => {
-                (stride + vis + vs, stride + vis + us, stride + vis + us + vs)
-            }
-        },
-        CubeFace::Bottom => match face_vertex {
-            FaceVertex::TopLeft => (stride + vis + vs, stride + vis - us, stride + vis - us + vs),
-            FaceVertex::TopRight => (stride + vis - us, stride + vis - vs, stride + vis - us - vs),
-            FaceVertex::BottomLeft => {
-                (stride + vis + us, stride + vis + vs, stride + vis + us + vs)
-            }
-            FaceVertex::BottomRight => {
-                (stride + vis - vs, stride + vis + us, stride + vis + us - vs)
-            }
-        },
-        CubeFace::Left => match face_vertex {
-            FaceVertex::TopLeft => (stride + vis + vs, stride + vis - us, stride + vis - us + vs),
-            FaceVertex::TopRight => (stride + vis + us, stride + vis + vs, stride + vis + us + vs),
-            FaceVertex::BottomLeft => {
-                (stride + vis - us, stride + vis - vs, stride + vis - us - vs)
-            }
-            FaceVertex::BottomRight => {
-                (stride + vis - vs, stride + vis + us, stride + vis + us - vs)
-            }
-        },
-        CubeFace::Right => match face_vertex {
-            FaceVertex::TopLeft => (stride + vis + us, stride + vis + vs, stride + vis + us + vs),
-            FaceVertex::TopRight => (stride + vis + vs, stride + vis - us, stride + vis - us + vs),
-            FaceVertex::BottomLeft => {
-                (stride + vis - vs, stride + vis + us, stride + vis + us - vs)
-            }
-            FaceVertex::BottomRight => {
-                (stride + vis - us, stride + vis - vs, stride + vis - us - vs)
-            }
-        },
-        CubeFace::Back => match face_vertex {
-            FaceVertex::TopLeft => (stride + vis + us, stride + vis + vs, stride + vis + us + vs),
-            FaceVertex::TopRight => (stride + vis + vs, stride + vis - us, stride + vis - us + vs),
-            FaceVertex::BottomLeft => {
-                (stride + vis - vs, stride + vis + us, stride + vis + us - vs)
-            }
-            FaceVertex::BottomRight => {
-                (stride + vis - us, stride + vis - vs, stride + vis - us - vs)
-            }
-        },
-        CubeFace::Front => match face_vertex {
-            FaceVertex::TopLeft => (stride + vis - us, stride + vis + vs, stride + vis - us + vs),
-            FaceVertex::TopRight => (stride + vis + vs, stride + vis + us, stride + vis + us + vs),
-            FaceVertex::BottomLeft => {
-                (stride + vis - vs, stride + vis - us, stride + vis - us - vs)
-            }
-            FaceVertex::BottomRight => {
-                (stride + vis + us, stride + vis - vs, stride + vis + us - vs)
-            }
-        },
+    let s = stride + vis + uoff + voff;
+    let (side1_s, side2_s, corner_s) = match face_vertex {
+        FaceVertex::BottomLeft => (s - v, s - u, s - u - v),
+        FaceVertex::BottomRight => (s + u, s - v, s + u - v),
+        FaceVertex::TopRight => (s + v, s + u, s + u + v),
+        FaceVertex::TopLeft => (s - u, s + v, s - u + v),
     };
-    // println!(
-    //     "side1: {:?}, side2: {:?}, corner: {:?}",
-    //     stride_to_point(voxels.extent(), side1_s),
-    //     stride_to_point(voxels.extent(), side2_s),
-    //     stride_to_point(voxels.extent(), corner_s)
-    // );
-
     let (side1, side2, corner) = (
         !voxels.get(side1_s).is_empty(),
         !voxels.get(side2_s).is_empty(),

@@ -15,16 +15,17 @@ use bevy::{
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 use building_blocks::core::prelude::*;
 use building_blocks::mesh::{
-    greedy_quads_with_merge_strategy, GreedyQuadsBuffer, IsOpaque, MergeVoxel, PosNormTexMesh,
-    VoxelAOMerger, RIGHT_HANDED_Y_UP_CONFIG,
+    greedy_quads_with_merge_strategy, right_handed_y_up_config, GreedyQuadsBuffer, IsOpaque,
+    MergeVoxel, PosNormTexMesh, VoxelAOMerger,
 };
 use building_blocks::storage::{
     access_traits::{Get, GetMut},
     Array3x1, IsEmpty,
 };
+use building_blocks_core::Axis3Permutation;
 use building_blocks_mesh::{
-    get_ao_at_vert, oriented_cube_face_to_cube_face, CubeFace, FaceStrides, FaceVertex,
-    OrientedCubeFace, QuadGroup, UnorientedQuad,
+    get_ao_at_vert, greedy_quads, oriented_cube_face_to_face_strides, CubeFace, FaceStrides,
+    FaceVertex, OrientedCubeFace, QuadGroup, UnorientedQuad,
 };
 use building_blocks_storage::{IndexedArray, Local, Stride};
 
@@ -144,7 +145,6 @@ impl MeshBuf {
         face: &OrientedCubeFace,
         quad: &UnorientedQuad,
         voxel_size: f32,
-        u_flip_face: Axis3,
         ambient_occlusions: &[f32; 4],
     ) {
         let start_index = self.positions.len() as u32;
@@ -152,9 +152,8 @@ impl MeshBuf {
             .extend_from_slice(&face.quad_mesh_positions(quad, voxel_size));
         self.normals.extend_from_slice(&face.quad_mesh_normals());
 
-        let flip_v = true;
         self.tex_coords
-            .extend_from_slice(&face.tex_coords(u_flip_face, flip_v, quad));
+            .extend_from_slice(&face.tex_coords(quad));
 
         self.ambient_occlusion.extend_from_slice(ambient_occlusions);
         self.indices.extend_from_slice(&face.quad_mesh_indices(
@@ -166,52 +165,38 @@ impl MeshBuf {
     }
 }
 
-fn cube_face_to_face_strides<A>(voxels: &A, cube_face: CubeFace) -> FaceStrides
-where
-    A: IndexedArray<[i32; 3]>,
-{
-    let (xs, ys, zs) = (
-        voxels.stride_from_local_point(Local(PointN([1, 0, 0]))),
-        voxels.stride_from_local_point(Local(PointN([0, 1, 0]))),
-        voxels.stride_from_local_point(Local(PointN([0, 0, 1]))),
-    );
-    match cube_face {
-        CubeFace::Top => FaceStrides {
-            n_stride: ys,
-            u_stride: zs,
-            v_stride: xs,
-            visibility_offset: ys,
-        },
-        CubeFace::Bottom => FaceStrides {
-            n_stride: ys,
-            u_stride: zs,
-            v_stride: xs,
-            visibility_offset: Stride(0) - ys,
-        },
-        CubeFace::Left => FaceStrides {
-            n_stride: xs,
-            u_stride: zs,
-            v_stride: ys,
-            visibility_offset: Stride(0) - xs,
-        },
-        CubeFace::Right => FaceStrides {
-            n_stride: xs,
-            u_stride: zs,
-            v_stride: ys,
-            visibility_offset: xs,
-        },
-        CubeFace::Back => FaceStrides {
-            n_stride: zs,
-            u_stride: xs,
-            v_stride: ys,
-            visibility_offset: Stride(0) - zs,
-        },
-        CubeFace::Front => FaceStrides {
-            n_stride: zs,
-            u_stride: xs,
-            v_stride: ys,
-            visibility_offset: zs,
-        },
+fn oriented_cube_face_to_cube_face(oriented_cube_face: OrientedCubeFace) -> CubeFace {
+    match oriented_cube_face.permutation {
+        Axis3Permutation::Zxy => {
+            if oriented_cube_face.n.z() == 1 {
+                CubeFace::Front
+            } else if oriented_cube_face.n.z() == -1 {
+                CubeFace::Back
+            } else {
+                unreachable!();
+            }
+        }
+        Axis3Permutation::Xzy => {
+            if oriented_cube_face.n.x() == 1 {
+                CubeFace::Top
+            } else if oriented_cube_face.n.x() == -1 {
+                CubeFace::Bottom
+            } else {
+                unreachable!();
+            }
+        }
+        Axis3Permutation::Yxz => {
+            if oriented_cube_face.n.y() == 1 {
+                CubeFace::Top
+            } else if oriented_cube_face.n.y() == -1 {
+                CubeFace::Bottom
+            } else {
+                unreachable!();
+            }
+        }
+        _ => {
+            unreachable!();
+        }
     }
 }
 
@@ -224,27 +209,26 @@ fn setup(
 ) {
     let voxels = set_up_voxels();
 
-    let mut greedy_buffer =
-        GreedyQuadsBuffer::new(*voxels.extent(), RIGHT_HANDED_Y_UP_CONFIG.quad_groups());
-    greedy_quads_with_merge_strategy::<_, _, VoxelAOMerger<Voxel>>(
-        &voxels,
-        voxels.extent(),
-        &mut greedy_buffer,
-    );
+    let quad_coordinate_config = right_handed_y_up_config();
 
-    let flip_v = true;
+    let mut greedy_buffer =
+        GreedyQuadsBuffer::new(*voxels.extent(), quad_coordinate_config.quad_groups());
+    greedy_quads(&voxels, voxels.extent(), &mut greedy_buffer);
+    // greedy_quads_with_merge_strategy::<_, _, VoxelAOMerger<Voxel>>(
+    //     &voxels,
+    //     voxels.extent(),
+    //     &mut greedy_buffer,
+    // );
+
     let voxel_size = 1.0;
     let mut mesh_buf = MeshBuf::default();
     for group in greedy_buffer.quad_groups.iter() {
         let cube_face = oriented_cube_face_to_cube_face(group.face);
-        let face_strides = cube_face_to_face_strides(&voxels, cube_face);
+        let face_strides = oriented_cube_face_to_face_strides(&voxels, &group.face);
         for quad in group.quads.iter() {
             let stride =
                 voxels.stride_from_local_point(Local(quad.minimum - voxels.extent().minimum));
             println!("quad corners: {:?}", group.face.quad_corners(quad));
-            let corners = cube_face_to_quad_corners_as_face_vertices(
-                oriented_cube_face_to_cube_face(group.face),
-            );
             // FIXME - THESE HAVE TO USE THE QUAD WIDTH AND QUAD HEIGHT!!!
             let ao_values = [
                 get_ao_at_vert(
@@ -252,35 +236,34 @@ fn setup(
                     &face_strides,
                     stride,
                     cube_face,
-                    corners[0], // FIXME: SHOULD BE UV 0,0
+                    FaceVertex::BottomLeft,
                 ) as f32,
                 get_ao_at_vert(
                     &voxels,
                     &face_strides,
                     stride,
                     cube_face,
-                    corners[1], // FIXME: SHOULD BE UV 1,0
+                    FaceVertex::BottomRight,
                 ) as f32,
                 get_ao_at_vert(
                     &voxels,
                     &face_strides,
                     stride,
                     cube_face,
-                    corners[2], // FIXME: SHOULD BE UV 0,1
+                    FaceVertex::TopLeft,
                 ) as f32,
                 get_ao_at_vert(
                     &voxels,
                     &face_strides,
                     stride,
                     cube_face,
-                    corners[3], // FIXME: SHOULD BE UV 1,1
+                    FaceVertex::TopRight,
                 ) as f32,
             ];
             mesh_buf.add_quad(
                 &group.face,
                 quad,
                 voxel_size,
-                RIGHT_HANDED_Y_UP_CONFIG.u_flip_face,
                 &ao_values,
             );
         }
@@ -389,11 +372,11 @@ fn setup(
 }
 
 const CUBE_FACES: [CubeFace; 6] = [
-    CubeFace::Top,
     CubeFace::Front,
+    CubeFace::Top,
     CubeFace::Right,
-    CubeFace::Bottom,
     CubeFace::Back,
+    CubeFace::Bottom,
     CubeFace::Left,
 ];
 
@@ -409,15 +392,20 @@ fn populate_and_verify(
     positions: &[Point3i],
     offset: Point3i,
     vertex_aos: &HashMap<(Point3i, CubeFace, FaceVertex), i32>,
+    verify: bool,
 ) {
+    let quad_coordinate_config = right_handed_y_up_config();
     for position in positions {
         *voxels.get_mut(offset + *position) = Voxel(true);
     }
+    if verify {
     for position in positions {
         let stride =
             voxels.stride_from_local_point(Local(offset + *position - voxels.extent().minimum));
-        for cube_face in &CUBE_FACES {
-            let face_strides = cube_face_to_face_strides(&*voxels, *cube_face);
+            for (cube_face, oriented_cube_face) in
+                CUBE_FACES.iter().zip(quad_coordinate_config.faces.iter())
+            {
+                let face_strides = oriented_cube_face_to_face_strides(&*voxels, oriented_cube_face);
             for face_vertex in &FACE_VERTICES {
                 assert!(
                     get_ao_at_vert(&*voxels, &face_strides, stride, *cube_face, *face_vertex)
@@ -428,6 +416,7 @@ fn populate_and_verify(
             }
         }
     }
+}
 }
 
 fn set_up_voxels() -> Array3x1<Voxel> {

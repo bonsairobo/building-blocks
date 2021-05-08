@@ -399,24 +399,24 @@ fn populate_and_verify(
         *voxels.get_mut(offset + *position) = Voxel(true);
     }
     if verify {
-    for position in positions {
-        let stride =
-            voxels.stride_from_local_point(Local(offset + *position - voxels.extent().minimum));
+        for position in positions {
+            let stride =
+                voxels.stride_from_local_point(Local(offset + *position - voxels.extent().minimum));
             for (cube_face, oriented_cube_face) in
                 CUBE_FACES.iter().zip(quad_coordinate_config.faces.iter())
             {
                 let face_strides = oriented_cube_face_to_face_strides(&*voxels, oriented_cube_face);
-            for face_vertex in &FACE_VERTICES {
-                assert!(
-                    get_ao_at_vert(&*voxels, &face_strides, stride, *cube_face, *face_vertex)
-                        == *vertex_aos
-                            .get(&(*position, *cube_face, *face_vertex))
-                            .unwrap_or(&3)
-                );
+                for face_vertex in &FACE_VERTICES {
+                    assert!(
+                        get_ao_at_vert(&*voxels, &face_strides, stride, *cube_face, *face_vertex)
+                            == *vertex_aos
+                                .get(&(*position, *cube_face, *face_vertex))
+                                .unwrap_or(&3)
+                    );
+                }
             }
         }
     }
-}
 }
 
 fn set_up_voxels() -> Array3x1<Voxel> {
@@ -429,1437 +429,1485 @@ fn set_up_voxels() -> Array3x1<Voxel> {
     let col_step = PointN([5, 0, 0]);
     let mut offset = PointN([1, 1, 1]);
 
+    let tests = 0xffff; // 1 << 4;
+    let mut shift = 0;
+    let verify = false;
     // .
-    let positions = [PointN([1, 1, 1])];
-    populate_and_verify(&mut voxels, &positions, offset, &HashMap::new());
-    offset += row_step;
+    if (tests >> shift) & 1 == 1 {
+        let positions = [PointN([1, 1, 1])];
+        populate_and_verify(&mut voxels, &positions, offset, &HashMap::new(), verify);
+        offset += row_step;
+    }
+    shift += 1;
 
     // .  .  .
     //  . . .
-    let positions = [PointN([1, 1, 1]), PointN([0, 2, 1])];
-    let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
-        ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 2),
-        (
-            (PointN([1, 1, 1]), CubeFace::Top, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
-        ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
-        (
-            (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    populate_and_verify(&mut voxels, &positions, offset, &vertex_aos);
-    offset += col_step;
+    if (tests >> shift) & 1 == 1 {
+        let positions = [PointN([1, 1, 1]), PointN([0, 2, 1])];
+        let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
+            ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 2),
+            (
+                (PointN([1, 1, 1]), CubeFace::Top, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
+            ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
+            (
+                (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        populate_and_verify(&mut voxels, &positions, offset, &vertex_aos, verify);
+        offset += col_step;
+    }
+    shift += 1;
 
-    let positions = [PointN([1, 1, 1]), PointN([0, 2, 0])];
-    let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
-        ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 2),
-        ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
-        ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
-        (
-            (PointN([0, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([0, 2, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([0, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    populate_and_verify(&mut voxels, &positions, offset, &vertex_aos);
-    offset += col_step;
+    if (tests >> shift) & 1 == 1 {
+        let positions = [PointN([1, 1, 1]), PointN([0, 2, 0])];
+        let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
+            ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 2),
+            ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
+            ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
+            (
+                (PointN([0, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([0, 2, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([0, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        populate_and_verify(&mut voxels, &positions, offset, &vertex_aos, verify);
+        offset += col_step;
+    }
+    shift += 1;
 
-    let positions = [PointN([1, 1, 1]), PointN([1, 2, 0])];
-    let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
-        ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 2),
-        ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
-        ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
-        (
-            (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    populate_and_verify(&mut voxels, &positions, offset, &vertex_aos);
-    *offset.x_mut() = 1;
-    offset += row_step;
+    if (tests >> shift) & 1 == 1 {
+        let positions = [PointN([1, 1, 1]), PointN([1, 2, 0])];
+        let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
+            ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 2),
+            ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
+            ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
+            (
+                (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        populate_and_verify(&mut voxels, &positions, offset, &vertex_aos, verify);
+        *offset.x_mut() = 1;
+        offset += row_step;
+    }
+    shift += 1;
 
     //  .. ..
     //  .   .
-    let positions = [PointN([1, 1, 1]), PointN([0, 2, 0]), PointN([0, 2, 1])];
-    let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
-        ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
-        (
-            (PointN([1, 1, 1]), CubeFace::Top, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
-        ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
-        ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 1),
-        (
-            (PointN([0, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This is a hidden face
-        (
-            (PointN([0, 2, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([0, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    populate_and_verify(&mut voxels, &positions, offset, &vertex_aos);
-    offset += col_step;
+    if (tests >> shift) & 1 == 1 {
+        let positions = [PointN([1, 1, 1]), PointN([0, 2, 0]), PointN([0, 2, 1])];
+        let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
+            ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
+            (
+                (PointN([1, 1, 1]), CubeFace::Top, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
+            ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
+            ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 1),
+            (
+                (PointN([0, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This is a hidden face
+            (
+                (PointN([0, 2, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([0, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        populate_and_verify(&mut voxels, &positions, offset, &vertex_aos, verify);
+        offset += col_step;
+    }
+    shift += 1;
 
-    let positions = [PointN([1, 1, 1]), PointN([0, 2, 0]), PointN([1, 2, 0])];
-    let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
-        ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
-        ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
-        ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
-        ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
-        (
-            (PointN([0, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([0, 2, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This is a hidden face
-        (
-            (PointN([0, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    populate_and_verify(&mut voxels, &positions, offset, &vertex_aos);
-    *offset.x_mut() = 1;
-    offset += row_step;
+    if (tests >> shift) & 1 == 1 {
+        let positions = [PointN([1, 1, 1]), PointN([0, 2, 0]), PointN([1, 2, 0])];
+        let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
+            ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
+            ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
+            ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
+            ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
+            (
+                (PointN([0, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([0, 2, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This is a hidden face
+            (
+                (PointN([0, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        populate_and_verify(&mut voxels, &positions, offset, &vertex_aos, verify);
+        *offset.x_mut() = 1;
+        offset += row_step;
+    }
+    shift += 1;
 
     //  . ..
     // .. ..
-    let positions = [PointN([1, 1, 1]), PointN([0, 2, 1]), PointN([1, 2, 0])];
-    let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
-        ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 0),
-        ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
-        (
-            (PointN([1, 1, 1]), CubeFace::Top, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
-        ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
-        ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
-        (
-            (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomRight),
-            0,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([0, 2, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        (
-            (PointN([0, 2, 1]), CubeFace::Back, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([1, 2, 0]), CubeFace::Front, FaceVertex::TopLeft), 2),
-        (
-            (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            0,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([1, 2, 0]), CubeFace::Left, FaceVertex::TopRight), 2),
-        (
-            (PointN([1, 2, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    populate_and_verify(&mut voxels, &positions, offset, &vertex_aos);
-    offset += col_step;
+    if (tests >> shift) & 1 == 1 {
+        let positions = [PointN([1, 1, 1]), PointN([0, 2, 1]), PointN([1, 2, 0])];
+        let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
+            ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 0),
+            ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
+            (
+                (PointN([1, 1, 1]), CubeFace::Top, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
+            ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
+            ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
+            (
+                (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomRight),
+                0,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([0, 2, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            (
+                (PointN([0, 2, 1]), CubeFace::Back, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([1, 2, 0]), CubeFace::Front, FaceVertex::TopLeft), 2),
+            (
+                (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                0,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([1, 2, 0]), CubeFace::Left, FaceVertex::TopRight), 2),
+            (
+                (PointN([1, 2, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        populate_and_verify(&mut voxels, &positions, offset, &vertex_aos, verify);
+        offset += col_step;
+    }
+    shift += 1;
 
-    let positions = [
-        PointN([1, 1, 1]),
-        PointN([0, 2, 0]),
-        PointN([0, 2, 1]),
-        PointN([1, 2, 0]),
-    ];
-    let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
-        ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 0),
-        ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
-        (
-            (PointN([1, 1, 1]), CubeFace::Top, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
-        ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 1),
-        ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
-        (
-            (PointN([0, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([0, 2, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([0, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomRight),
-            0,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
-            2,
-        ),
-        (
-            (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([0, 2, 1]), CubeFace::Back, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        (
-            (PointN([0, 2, 1]), CubeFace::Back, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        ((PointN([1, 2, 0]), CubeFace::Front, FaceVertex::TopLeft), 2),
-        (
-            (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            0,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([1, 2, 0]), CubeFace::Left, FaceVertex::TopRight), 2), // NOTE: This face is hidden.
-        (
-            (PointN([1, 2, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    populate_and_verify(&mut voxels, &positions, offset, &vertex_aos);
-    *offset.x_mut() = 1;
-    offset += row_step;
+    if (tests >> shift) & 1 == 1 {
+        let positions = [
+            PointN([1, 1, 1]),
+            PointN([0, 2, 0]),
+            PointN([0, 2, 1]),
+            PointN([1, 2, 0]),
+        ];
+        let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
+            ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 0),
+            ((PointN([1, 1, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
+            (
+                (PointN([1, 1, 1]), CubeFace::Top, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            ((PointN([1, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
+            ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 1),
+            ((PointN([1, 1, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
+            (
+                (PointN([0, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([0, 2, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([0, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomRight),
+                0,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
+                2,
+            ),
+            (
+                (PointN([0, 2, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([0, 2, 1]), CubeFace::Back, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            (
+                (PointN([0, 2, 1]), CubeFace::Back, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            ((PointN([1, 2, 0]), CubeFace::Front, FaceVertex::TopLeft), 2),
+            (
+                (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                0,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([1, 2, 0]), CubeFace::Left, FaceVertex::TopRight), 2), // NOTE: This face is hidden.
+            (
+                (PointN([1, 2, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        populate_and_verify(&mut voxels, &positions, offset, &vertex_aos, verify);
+        *offset.x_mut() = 1;
+        offset += row_step;
+    }
+    shift += 1;
 
     // Looks like a 2-seater sofa and we want to check that the faces of the seat and backrests are NOT merged
     // as the ambient occlusion values on the edges are different than in the middle
-    let positions = [
-        // Left armrest
-        PointN([0, 1, 1]),
-        // Seat
-        PointN([1, 0, 1]),
-        PointN([2, 0, 1]),
-        // Back
-        PointN([1, 1, 0]),
-        PointN([2, 1, 0]),
-        // Right armrest
-        PointN([3, 1, 1]),
-    ];
-    let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
-        // Left armrest
-        (
-            (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ),
-        (
-            (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::BottomRight),
-            0,
-        ),
-        (
-            (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([0, 1, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
-            2,
-        ),
-        (
-            (PointN([0, 1, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([0, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        (
-            (PointN([0, 1, 1]), CubeFace::Back, FaceVertex::BottomLeft),
-            2,
-        ),
-        // Left seat
-        ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 0),
-        ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
-        (
-            (PointN([1, 0, 1]), CubeFace::Top, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([1, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ), // NOTE: This face is hidden.
-        ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
-        ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
-        ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
-        ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
-        // Right seat
-        ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
-        ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 0),
-        (
-            (PointN([2, 0, 1]), CubeFace::Top, FaceVertex::BottomRight),
-            2,
-        ),
-        ((PointN([2, 0, 1]), CubeFace::Right, FaceVertex::TopLeft), 2),
-        (
-            (PointN([2, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ),
-        ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
-        ((PointN([2, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        // Left back
-        ((PointN([1, 1, 0]), CubeFace::Front, FaceVertex::TopLeft), 2),
-        (
-            (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            0,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            1,
-        ),
-        ((PointN([1, 1, 0]), CubeFace::Left, FaceVertex::TopRight), 2),
-        (
-            (PointN([1, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ),
-        // Right back
-        (
-            (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::TopRight),
-            2,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            0,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            1,
-        ),
-        ((PointN([2, 1, 0]), CubeFace::Right, FaceVertex::TopLeft), 2),
-        (
-            (PointN([2, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        // Right arm rest
-        (
-            (PointN([3, 1, 1]), CubeFace::Bottom, FaceVertex::TopRight),
-            2,
-        ),
-        (
-            (PointN([3, 1, 1]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        ((PointN([3, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
-        (
-            (PointN([3, 1, 1]), CubeFace::Back, FaceVertex::BottomRight),
-            2,
-        ),
-        ((PointN([3, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
-        (
-            (PointN([3, 1, 1]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([3, 1, 1]), CubeFace::Left, FaceVertex::BottomLeft),
-            0,
-        ),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    populate_and_verify(&mut voxels, &positions, offset, &vertex_aos);
-    offset += PointN([6, 0, 0]);
+    if (tests >> shift) & 1 == 1 {
+        let positions = [
+            // Left armrest
+            PointN([0, 1, 1]),
+            // Seat
+            PointN([1, 0, 1]),
+            PointN([2, 0, 1]),
+            // Back
+            PointN([1, 1, 0]),
+            PointN([2, 1, 0]),
+            // Right armrest
+            PointN([3, 1, 1]),
+        ];
+        let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
+            // Left armrest
+            (
+                (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ),
+            (
+                (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::BottomRight),
+                0,
+            ),
+            (
+                (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([0, 1, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
+                2,
+            ),
+            (
+                (PointN([0, 1, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([0, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            (
+                (PointN([0, 1, 1]), CubeFace::Back, FaceVertex::BottomLeft),
+                2,
+            ),
+            // Left seat
+            ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 0),
+            ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
+            (
+                (PointN([1, 0, 1]), CubeFace::Top, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([1, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ), // NOTE: This face is hidden.
+            ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
+            ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
+            ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
+            ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
+            // Right seat
+            ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
+            ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 0),
+            (
+                (PointN([2, 0, 1]), CubeFace::Top, FaceVertex::BottomRight),
+                2,
+            ),
+            ((PointN([2, 0, 1]), CubeFace::Right, FaceVertex::TopLeft), 2),
+            (
+                (PointN([2, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ),
+            ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
+            ((PointN([2, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            // Left back
+            ((PointN([1, 1, 0]), CubeFace::Front, FaceVertex::TopLeft), 2),
+            (
+                (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                0,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                1,
+            ),
+            ((PointN([1, 1, 0]), CubeFace::Left, FaceVertex::TopRight), 2),
+            (
+                (PointN([1, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ),
+            // Right back
+            (
+                (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::TopRight),
+                2,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                0,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                1,
+            ),
+            ((PointN([2, 1, 0]), CubeFace::Right, FaceVertex::TopLeft), 2),
+            (
+                (PointN([2, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            // Right arm rest
+            (
+                (PointN([3, 1, 1]), CubeFace::Bottom, FaceVertex::TopRight),
+                2,
+            ),
+            (
+                (PointN([3, 1, 1]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            ((PointN([3, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
+            (
+                (PointN([3, 1, 1]), CubeFace::Back, FaceVertex::BottomRight),
+                2,
+            ),
+            ((PointN([3, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
+            (
+                (PointN([3, 1, 1]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([3, 1, 1]), CubeFace::Left, FaceVertex::BottomLeft),
+                0,
+            ),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        populate_and_verify(&mut voxels, &positions, offset, &vertex_aos, verify);
+        offset += PointN([6, 0, 0]);
+    }
+    shift += 1;
 
     // Looks like a 4-seater sofa and we want to check that the faces of the seat and backrests are
     // merged for the center two seats but not the left/right seats as the ambient occlusion values
     // on the edges are different than in the middle
-    let positions = [
-        // Left armrest
-        PointN([0, 1, 1]),
-        // Seat
-        PointN([1, 0, 1]),
-        PointN([2, 0, 1]),
-        PointN([3, 0, 1]),
-        PointN([4, 0, 1]),
-        // Back
-        PointN([1, 1, 0]),
-        PointN([2, 1, 0]),
-        PointN([3, 1, 0]),
-        PointN([4, 1, 0]),
-        // Right armrest
-        PointN([5, 1, 1]),
-    ];
-    let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
-        // Left armrest
-        (
-            (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ),
-        (
-            (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::BottomRight),
-            0,
-        ),
-        (
-            (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([0, 1, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
-            2,
-        ),
-        (
-            (PointN([0, 1, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([0, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        (
-            (PointN([0, 1, 1]), CubeFace::Back, FaceVertex::BottomLeft),
-            2,
-        ),
-        // Left seat
-        ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 0),
-        ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
-        (
-            (PointN([1, 0, 1]), CubeFace::Top, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([1, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ), // NOTE: This face is hidden.
-        ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
-        ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
-        ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
-        ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
-        // Second seat
-        ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
-        ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
-        (
-            (PointN([2, 0, 1]), CubeFace::Right, FaceVertex::TopRight), // NOTE: This face is hidden.
-            2,
-        ),
-        ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
-        ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
-        ((PointN([2, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        // Third seat
-        ((PointN([3, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
-        ((PointN([3, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
-        (
-            (PointN([3, 0, 1]), CubeFace::Right, FaceVertex::TopRight), // NOTE: This face is hidden.
-            2,
-        ),
-        ((PointN([3, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
-        ((PointN([3, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
-        ((PointN([3, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        // Right seat
-        ((PointN([4, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
-        ((PointN([4, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 0),
-        (
-            (PointN([4, 0, 1]), CubeFace::Top, FaceVertex::BottomRight),
-            2,
-        ),
-        ((PointN([4, 0, 1]), CubeFace::Right, FaceVertex::TopLeft), 2),
-        (
-            (PointN([4, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ),
-        ((PointN([4, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        ((PointN([4, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
-        ((PointN([4, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        // Left back
-        ((PointN([1, 1, 0]), CubeFace::Front, FaceVertex::TopLeft), 2),
-        (
-            (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            0,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            1,
-        ),
-        ((PointN([1, 1, 0]), CubeFace::Left, FaceVertex::TopRight), 2),
-        (
-            (PointN([1, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ),
-        // Second back
-        (
-            (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            1,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            1,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        // Third back
-        (
-            (PointN([3, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([3, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            1,
-        ),
-        (
-            (PointN([3, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([3, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([3, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            1,
-        ),
-        (
-            (PointN([3, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        // Right back
-        (
-            (PointN([4, 1, 0]), CubeFace::Front, FaceVertex::TopRight),
-            2,
-        ),
-        (
-            (PointN([4, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            0,
-        ),
-        (
-            (PointN([4, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            1,
-        ),
-        ((PointN([4, 1, 0]), CubeFace::Right, FaceVertex::TopLeft), 2),
-        (
-            (PointN([4, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([4, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([4, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([4, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        // Right arm rest
-        (
-            (PointN([5, 1, 1]), CubeFace::Bottom, FaceVertex::TopRight),
-            2,
-        ),
-        (
-            (PointN([5, 1, 1]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        ((PointN([5, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
-        (
-            (PointN([5, 1, 1]), CubeFace::Back, FaceVertex::BottomRight),
-            2,
-        ),
-        ((PointN([5, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
-        (
-            (PointN([5, 1, 1]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([5, 1, 1]), CubeFace::Left, FaceVertex::BottomLeft),
-            0,
-        ),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    populate_and_verify(&mut voxels, &positions, offset, &vertex_aos);
-    offset += PointN([8, 0, 0]);
+    if (tests >> shift) & 1 == 1 {
+        let positions = [
+            // Left armrest
+            PointN([0, 1, 1]),
+            // Seat
+            PointN([1, 0, 1]),
+            PointN([2, 0, 1]),
+            PointN([3, 0, 1]),
+            PointN([4, 0, 1]),
+            // Back
+            PointN([1, 1, 0]),
+            PointN([2, 1, 0]),
+            PointN([3, 1, 0]),
+            PointN([4, 1, 0]),
+            // Right armrest
+            PointN([5, 1, 1]),
+        ];
+        let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
+            // Left armrest
+            (
+                (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ),
+            (
+                (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::BottomRight),
+                0,
+            ),
+            (
+                (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([0, 1, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
+                2,
+            ),
+            (
+                (PointN([0, 1, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([0, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            (
+                (PointN([0, 1, 1]), CubeFace::Back, FaceVertex::BottomLeft),
+                2,
+            ),
+            // Left seat
+            ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 0),
+            ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
+            (
+                (PointN([1, 0, 1]), CubeFace::Top, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([1, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ), // NOTE: This face is hidden.
+            ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
+            ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
+            ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
+            ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
+            // Second seat
+            ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
+            ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
+            (
+                (PointN([2, 0, 1]), CubeFace::Right, FaceVertex::TopRight), // NOTE: This face is hidden.
+                2,
+            ),
+            ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
+            ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
+            ((PointN([2, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            // Third seat
+            ((PointN([3, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
+            ((PointN([3, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
+            (
+                (PointN([3, 0, 1]), CubeFace::Right, FaceVertex::TopRight), // NOTE: This face is hidden.
+                2,
+            ),
+            ((PointN([3, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
+            ((PointN([3, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
+            ((PointN([3, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            // Right seat
+            ((PointN([4, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
+            ((PointN([4, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 0),
+            (
+                (PointN([4, 0, 1]), CubeFace::Top, FaceVertex::BottomRight),
+                2,
+            ),
+            ((PointN([4, 0, 1]), CubeFace::Right, FaceVertex::TopLeft), 2),
+            (
+                (PointN([4, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ),
+            ((PointN([4, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            ((PointN([4, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
+            ((PointN([4, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            // Left back
+            ((PointN([1, 1, 0]), CubeFace::Front, FaceVertex::TopLeft), 2),
+            (
+                (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                0,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                1,
+            ),
+            ((PointN([1, 1, 0]), CubeFace::Left, FaceVertex::TopRight), 2),
+            (
+                (PointN([1, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ),
+            // Second back
+            (
+                (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                1,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                1,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            // Third back
+            (
+                (PointN([3, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([3, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                1,
+            ),
+            (
+                (PointN([3, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([3, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([3, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                1,
+            ),
+            (
+                (PointN([3, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            // Right back
+            (
+                (PointN([4, 1, 0]), CubeFace::Front, FaceVertex::TopRight),
+                2,
+            ),
+            (
+                (PointN([4, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                0,
+            ),
+            (
+                (PointN([4, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                1,
+            ),
+            ((PointN([4, 1, 0]), CubeFace::Right, FaceVertex::TopLeft), 2),
+            (
+                (PointN([4, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([4, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([4, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([4, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            // Right arm rest
+            (
+                (PointN([5, 1, 1]), CubeFace::Bottom, FaceVertex::TopRight),
+                2,
+            ),
+            (
+                (PointN([5, 1, 1]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            ((PointN([5, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
+            (
+                (PointN([5, 1, 1]), CubeFace::Back, FaceVertex::BottomRight),
+                2,
+            ),
+            ((PointN([5, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
+            (
+                (PointN([5, 1, 1]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([5, 1, 1]), CubeFace::Left, FaceVertex::BottomLeft),
+                0,
+            ),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        populate_and_verify(&mut voxels, &positions, offset, &vertex_aos, verify);
+        offset += PointN([8, 0, 0]);
+    }
+    shift += 1;
 
     // Looks like a 2-seater sofa without arm rests and we want to check that the faces of the seat and backrests are NOT merged
     // as the ambient occlusion values on the edges are different than in the middle
-    let positions = [
-        // Seat
-        PointN([0, 0, 1]),
-        PointN([1, 0, 1]),
-        // Back
-        PointN([0, 1, 0]),
-        PointN([1, 1, 0]),
-    ];
-    let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
-        // Left seat
-        ((PointN([0, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 2),
-        ((PointN([0, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
-        (
-            (PointN([0, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ), // NOTE: This face is hidden.
-        ((PointN([0, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
-        ((PointN([0, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
-        // Right seat
-        ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
-        ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
-        ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
-        ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        // Left back
-        (
-            (PointN([0, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([0, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([0, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([0, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([0, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            1,
-        ),
-        // Right back
-        (
-            (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            1,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    populate_and_verify(&mut voxels, &positions, offset, &vertex_aos);
-    offset += PointN([4, 0, 0]);
+    if (tests >> shift) & 1 == 1 {
+        let positions = [
+            // Seat
+            PointN([0, 0, 1]),
+            PointN([1, 0, 1]),
+            // Back
+            PointN([0, 1, 0]),
+            PointN([1, 1, 0]),
+        ];
+        let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
+            // Left seat
+            ((PointN([0, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 2),
+            ((PointN([0, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
+            (
+                (PointN([0, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ), // NOTE: This face is hidden.
+            ((PointN([0, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
+            ((PointN([0, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
+            // Right seat
+            ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
+            ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
+            ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
+            ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            // Left back
+            (
+                (PointN([0, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([0, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([0, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([0, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([0, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                1,
+            ),
+            // Right back
+            (
+                (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                1,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        populate_and_verify(&mut voxels, &positions, offset, &vertex_aos, verify);
+        offset += PointN([4, 0, 0]);
+    }
+    shift += 1;
 
     // Looks like a 4-seater sofa without arm rests and we want to check that the faces of the seat and backrests are
     // merged for the center two seats but not the left/right seats as the ambient occlusion values
     // on the edges are different than in the middle
-    let positions = [
-        // Seat
-        PointN([0, 0, 1]),
-        PointN([1, 0, 1]),
-        PointN([2, 0, 1]),
-        PointN([3, 0, 1]),
-        // Back
-        PointN([0, 1, 0]),
-        PointN([1, 1, 0]),
-        PointN([2, 1, 0]),
-        PointN([3, 1, 0]),
-    ];
-    let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
-        // Left seat
-        ((PointN([0, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 2),
-        ((PointN([0, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
-        (
-            (PointN([0, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ), // NOTE: This face is hidden.
-        ((PointN([0, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
-        ((PointN([0, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
-        // Second seat
-        ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
-        ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
-        (
-            (PointN([1, 0, 1]), CubeFace::Right, FaceVertex::TopRight), // NOTE: This face is hidden.
-            2,
-        ),
-        ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
-        ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
-        ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        // Third seat
-        ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
-        ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
-        (
-            (PointN([2, 0, 1]), CubeFace::Right, FaceVertex::TopRight), // NOTE: This face is hidden.
-            2,
-        ),
-        ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
-        ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
-        ((PointN([2, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        // Right seat
-        ((PointN([3, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
-        ((PointN([3, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
-        ((PointN([3, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        ((PointN([3, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
-        ((PointN([3, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        // Left back
-        (
-            (PointN([0, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([0, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([0, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([0, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([0, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            1,
-        ),
-        // Second back
-        (
-            (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            1,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            1,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        // Third back
-        (
-            (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            1,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            1,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        // Right back
-        (
-            (PointN([3, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([3, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            1,
-        ),
-        (
-            (PointN([3, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([3, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([3, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    populate_and_verify(&mut voxels, &positions, offset, &vertex_aos);
-    *offset.x_mut() = 1;
-    offset += row_step;
+    if (tests >> shift) & 1 == 1 {
+        let positions = [
+            // Seat
+            PointN([0, 0, 1]),
+            PointN([1, 0, 1]),
+            PointN([2, 0, 1]),
+            PointN([3, 0, 1]),
+            // Back
+            PointN([0, 1, 0]),
+            PointN([1, 1, 0]),
+            PointN([2, 1, 0]),
+            PointN([3, 1, 0]),
+        ];
+        let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
+            // Left seat
+            ((PointN([0, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 2),
+            ((PointN([0, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
+            (
+                (PointN([0, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ), // NOTE: This face is hidden.
+            ((PointN([0, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
+            ((PointN([0, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
+            // Second seat
+            ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
+            ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
+            (
+                (PointN([1, 0, 1]), CubeFace::Right, FaceVertex::TopRight), // NOTE: This face is hidden.
+                2,
+            ),
+            ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
+            ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
+            ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            // Third seat
+            ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
+            ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
+            (
+                (PointN([2, 0, 1]), CubeFace::Right, FaceVertex::TopRight), // NOTE: This face is hidden.
+                2,
+            ),
+            ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
+            ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
+            ((PointN([2, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            // Right seat
+            ((PointN([3, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
+            ((PointN([3, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
+            ((PointN([3, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            ((PointN([3, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
+            ((PointN([3, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            // Left back
+            (
+                (PointN([0, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([0, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([0, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([0, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([0, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                1,
+            ),
+            // Second back
+            (
+                (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                1,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                1,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            // Third back
+            (
+                (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                1,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                1,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            // Right back
+            (
+                (PointN([3, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([3, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                1,
+            ),
+            (
+                (PointN([3, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([3, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([3, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        populate_and_verify(&mut voxels, &positions, offset, &vertex_aos, verify);
+        *offset.x_mut() = 1;
+        offset += row_step;
+    }
+    shift += 1;
 
     // Looks like a 2-seater sofa with high back and large seat and we want to check that the faces of the seat and backrests are NOT merged
     // as the ambient occlusion values on the edges are different than in the middle
-    let positions = [
-        // Left armrest
-        PointN([0, 1, 1]),
-        // Seat
-        PointN([1, 0, 1]),
-        PointN([2, 0, 1]),
-        PointN([1, 0, 2]),
-        PointN([2, 0, 2]),
-        PointN([1, 0, 3]),
-        PointN([2, 0, 3]),
-        // Back
-        PointN([1, 1, 0]),
-        PointN([2, 1, 0]),
-        PointN([1, 2, 0]),
-        PointN([2, 2, 0]),
-        PointN([1, 3, 0]),
-        PointN([2, 3, 0]),
-        // Right armrest
-        PointN([3, 1, 1]),
-    ];
-    let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
-        // Left armrest
-        ((PointN([0, 1, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
-        (
-            (PointN([0, 1, 1]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::TopRight),
-            1,
-        ),
-        (
-            (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::BottomRight),
-            0,
-        ),
-        (
-            (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::BottomLeft),
-            1,
-        ),
-        (
-            (PointN([0, 1, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
-            2,
-        ),
-        (
-            (PointN([0, 1, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            1,
-        ),
-        ((PointN([0, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
-        (
-            (PointN([0, 1, 1]), CubeFace::Back, FaceVertex::BottomLeft),
-            2,
-        ),
-        // Left seat
-        ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 0),
-        ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
-        (
-            (PointN([1, 0, 1]), CubeFace::Top, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([1, 0, 1]), CubeFace::Front, FaceVertex::TopRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 0, 1]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        ((PointN([1, 0, 1]), CubeFace::Right, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        (
-            (PointN([1, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 0, 1]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
-        ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
-        ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
-        ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
-        // Right seat
-        ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
-        ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 0),
-        (
-            (PointN([2, 0, 1]), CubeFace::Top, FaceVertex::BottomRight),
-            2,
-        ),
-        ((PointN([2, 0, 1]), CubeFace::Front, FaceVertex::TopLeft), 2),
-        (
-            (PointN([2, 0, 1]), CubeFace::Front, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([2, 0, 1]), CubeFace::Right, FaceVertex::TopLeft), 2),
-        (
-            (PointN([2, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ),
-        ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
-        ((PointN([2, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        ((PointN([2, 0, 1]), CubeFace::Left, FaceVertex::TopRight), 2), // NOTE: This face is hidden.
-        (
-            (PointN([2, 0, 1]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        // Left seat first extension forward
-        ((PointN([1, 0, 2]), CubeFace::Top, FaceVertex::TopLeft), 2),
-        (
-            (PointN([1, 0, 2]), CubeFace::Front, FaceVertex::TopRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 0, 2]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        ((PointN([1, 0, 2]), CubeFace::Right, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        (
-            (PointN([1, 0, 2]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 0, 2]), CubeFace::Right, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 0, 2]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        ((PointN([1, 0, 2]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        ((PointN([1, 0, 2]), CubeFace::Back, FaceVertex::TopRight), 2),
-        (
-            (PointN([1, 0, 2]), CubeFace::Back, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([1, 0, 2]), CubeFace::Left, FaceVertex::TopLeft), 2),
-        // Right seat first extension forward
-        ((PointN([2, 0, 2]), CubeFace::Top, FaceVertex::TopRight), 2),
-        ((PointN([2, 0, 2]), CubeFace::Front, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        (
-            (PointN([2, 0, 2]), CubeFace::Front, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([2, 0, 2]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ), // NOTE: This face is hidden.
-        ((PointN([2, 0, 2]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        ((PointN([2, 0, 2]), CubeFace::Back, FaceVertex::TopRight), 2),
-        (
-            (PointN([2, 0, 2]), CubeFace::Back, FaceVertex::BottomRight),
-            2,
-        ),
-        ((PointN([2, 0, 2]), CubeFace::Left, FaceVertex::TopLeft), 2),
-        ((PointN([2, 0, 2]), CubeFace::Left, FaceVertex::TopRight), 2),
-        (
-            (PointN([2, 0, 2]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([2, 0, 2]), CubeFace::Left, FaceVertex::BottomLeft),
-            2,
-        ),
-        // Left seat second extension forward
-        (
-            (PointN([1, 0, 3]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 0, 3]), CubeFace::Right, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        ((PointN([1, 0, 3]), CubeFace::Back, FaceVertex::TopLeft), 2),
-        (
-            (PointN([1, 0, 3]), CubeFace::Back, FaceVertex::BottomLeft),
-            2,
-        ),
-        // Right seat second extension forward
-        ((PointN([2, 0, 3]), CubeFace::Back, FaceVertex::TopRight), 2),
-        (
-            (PointN([2, 0, 3]), CubeFace::Back, FaceVertex::BottomRight),
-            2,
-        ),
-        ((PointN([2, 0, 3]), CubeFace::Left, FaceVertex::TopLeft), 2),
-        (
-            (PointN([2, 0, 3]), CubeFace::Left, FaceVertex::BottomLeft),
-            2,
-        ),
-        // Left back
-        ((PointN([1, 1, 0]), CubeFace::Top, FaceVertex::TopRight), 2), // NOTE: This face is hidden.
-        (
-            (PointN([1, 1, 0]), CubeFace::Top, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        ((PointN([1, 1, 0]), CubeFace::Front, FaceVertex::TopLeft), 2),
-        (
-            (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            0,
-        ),
-        ((PointN([1, 1, 0]), CubeFace::Right, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        (
-            (PointN([1, 1, 0]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            1,
-        ),
-        ((PointN([1, 1, 0]), CubeFace::Left, FaceVertex::TopRight), 2),
-        (
-            (PointN([1, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ),
-        // Right back
-        ((PointN([2, 1, 0]), CubeFace::Top, FaceVertex::TopLeft), 2),
-        (
-            (PointN([2, 1, 0]), CubeFace::Top, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::TopRight),
-            2,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            0,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            1,
-        ),
-        ((PointN([2, 1, 0]), CubeFace::Right, FaceVertex::TopLeft), 2),
-        (
-            (PointN([2, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([2, 1, 0]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        ((PointN([2, 1, 0]), CubeFace::Left, FaceVertex::TopRight), 2), // NOTE: This face is hidden.
-        (
-            (PointN([2, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        // Left back first extension upward
-        ((PointN([1, 2, 0]), CubeFace::Top, FaceVertex::TopRight), 2), // NOTE: This face is hidden.
-        (
-            (PointN([1, 2, 0]), CubeFace::Top, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([1, 2, 0]), CubeFace::Right, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        (
-            (PointN([1, 2, 0]), CubeFace::Right, FaceVertex::TopRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 2, 0]), CubeFace::Right, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 2, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::TopLeft),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([1, 2, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ),
-        // Right back first extension upward
-        ((PointN([2, 2, 0]), CubeFace::Top, FaceVertex::TopLeft), 2),
-        (
-            (PointN([2, 2, 0]), CubeFace::Top, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([2, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([2, 2, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([2, 2, 0]), CubeFace::Bottom, FaceVertex::TopRight),
-            2,
-        ),
-        (
-            (PointN([2, 2, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        (
-            (PointN([2, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        ((PointN([2, 2, 0]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
-        ((PointN([2, 2, 0]), CubeFace::Left, FaceVertex::TopRight), 2), // NOTE: This face is hidden.
-        (
-            (PointN([2, 2, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([2, 2, 0]), CubeFace::Left, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        // Left back second extension upward
-        (
-            (PointN([1, 3, 0]), CubeFace::Right, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 3, 0]), CubeFace::Right, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([1, 3, 0]), CubeFace::Bottom, FaceVertex::TopLeft),
-            2,
-        ),
-        (
-            (PointN([1, 3, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
-            2,
-        ),
-        // Right back second extension upward
-        (
-            (PointN([2, 3, 0]), CubeFace::Left, FaceVertex::BottomRight),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([2, 3, 0]), CubeFace::Left, FaceVertex::BottomLeft),
-            2,
-        ), // NOTE: This face is hidden.
-        (
-            (PointN([2, 3, 0]), CubeFace::Bottom, FaceVertex::TopRight),
-            2,
-        ),
-        (
-            (PointN([2, 3, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
-            2,
-        ),
-        // Right arm rest
-        ((PointN([3, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 2),
-        (
-            (PointN([3, 1, 1]), CubeFace::Front, FaceVertex::BottomLeft),
-            2,
-        ),
-        (
-            (PointN([3, 1, 1]), CubeFace::Bottom, FaceVertex::TopRight),
-            2,
-        ),
-        (
-            (PointN([3, 1, 1]), CubeFace::Bottom, FaceVertex::BottomRight),
-            1,
-        ),
-        ((PointN([3, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
-        (
-            (PointN([3, 1, 1]), CubeFace::Back, FaceVertex::BottomRight),
-            2,
-        ),
-        ((PointN([3, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 1),
-        (
-            (PointN([3, 1, 1]), CubeFace::Left, FaceVertex::BottomRight),
-            1,
-        ),
-        (
-            (PointN([3, 1, 1]), CubeFace::Left, FaceVertex::BottomLeft),
-            0,
-        ),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    populate_and_verify(&mut voxels, &positions, offset, &vertex_aos);
-    offset += PointN([6, 0, 0]);
+    if (tests >> shift) & 1 == 1 {
+        let positions = [
+            // Left armrest
+            PointN([0, 1, 1]),
+            // Seat
+            PointN([1, 0, 1]),
+            PointN([2, 0, 1]),
+            PointN([1, 0, 2]),
+            PointN([2, 0, 2]),
+            PointN([1, 0, 3]),
+            PointN([2, 0, 3]),
+            // Back
+            PointN([1, 1, 0]),
+            PointN([2, 1, 0]),
+            PointN([1, 2, 0]),
+            PointN([2, 2, 0]),
+            PointN([1, 3, 0]),
+            PointN([2, 3, 0]),
+            // Right armrest
+            PointN([3, 1, 1]),
+        ];
+        let vertex_aos: HashMap<(Point3i, CubeFace, FaceVertex), i32> = [
+            // Left armrest
+            ((PointN([0, 1, 1]), CubeFace::Top, FaceVertex::TopRight), 2),
+            (
+                (PointN([0, 1, 1]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::TopRight),
+                1,
+            ),
+            (
+                (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::BottomRight),
+                0,
+            ),
+            (
+                (PointN([0, 1, 1]), CubeFace::Right, FaceVertex::BottomLeft),
+                1,
+            ),
+            (
+                (PointN([0, 1, 1]), CubeFace::Bottom, FaceVertex::TopLeft),
+                2,
+            ),
+            (
+                (PointN([0, 1, 1]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                1,
+            ),
+            ((PointN([0, 1, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
+            (
+                (PointN([0, 1, 1]), CubeFace::Back, FaceVertex::BottomLeft),
+                2,
+            ),
+            // Left seat
+            ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 0),
+            ((PointN([1, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 1),
+            (
+                (PointN([1, 0, 1]), CubeFace::Top, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([1, 0, 1]), CubeFace::Front, FaceVertex::TopRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 0, 1]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            ((PointN([1, 0, 1]), CubeFace::Right, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            (
+                (PointN([1, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 0, 1]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 1),
+            ((PointN([1, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 2),
+            ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2),
+            ((PointN([1, 0, 1]), CubeFace::Left, FaceVertex::TopRight), 2),
+            // Right seat
+            ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopLeft), 1),
+            ((PointN([2, 0, 1]), CubeFace::Top, FaceVertex::TopRight), 0),
+            (
+                (PointN([2, 0, 1]), CubeFace::Top, FaceVertex::BottomRight),
+                2,
+            ),
+            ((PointN([2, 0, 1]), CubeFace::Front, FaceVertex::TopLeft), 2),
+            (
+                (PointN([2, 0, 1]), CubeFace::Front, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([2, 0, 1]), CubeFace::Right, FaceVertex::TopLeft), 2),
+            (
+                (PointN([2, 0, 1]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ),
+            ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            ((PointN([2, 0, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
+            ((PointN([2, 0, 1]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            ((PointN([2, 0, 1]), CubeFace::Left, FaceVertex::TopRight), 2), // NOTE: This face is hidden.
+            (
+                (PointN([2, 0, 1]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            // Left seat first extension forward
+            ((PointN([1, 0, 2]), CubeFace::Top, FaceVertex::TopLeft), 2),
+            (
+                (PointN([1, 0, 2]), CubeFace::Front, FaceVertex::TopRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 0, 2]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            ((PointN([1, 0, 2]), CubeFace::Right, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            (
+                (PointN([1, 0, 2]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 0, 2]), CubeFace::Right, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 0, 2]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            ((PointN([1, 0, 2]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            ((PointN([1, 0, 2]), CubeFace::Back, FaceVertex::TopRight), 2),
+            (
+                (PointN([1, 0, 2]), CubeFace::Back, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([1, 0, 2]), CubeFace::Left, FaceVertex::TopLeft), 2),
+            // Right seat first extension forward
+            ((PointN([2, 0, 2]), CubeFace::Top, FaceVertex::TopRight), 2),
+            ((PointN([2, 0, 2]), CubeFace::Front, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            (
+                (PointN([2, 0, 2]), CubeFace::Front, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([2, 0, 2]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ), // NOTE: This face is hidden.
+            ((PointN([2, 0, 2]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            ((PointN([2, 0, 2]), CubeFace::Back, FaceVertex::TopRight), 2),
+            (
+                (PointN([2, 0, 2]), CubeFace::Back, FaceVertex::BottomRight),
+                2,
+            ),
+            ((PointN([2, 0, 2]), CubeFace::Left, FaceVertex::TopLeft), 2),
+            ((PointN([2, 0, 2]), CubeFace::Left, FaceVertex::TopRight), 2),
+            (
+                (PointN([2, 0, 2]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([2, 0, 2]), CubeFace::Left, FaceVertex::BottomLeft),
+                2,
+            ),
+            // Left seat second extension forward
+            (
+                (PointN([1, 0, 3]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 0, 3]), CubeFace::Right, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            ((PointN([1, 0, 3]), CubeFace::Back, FaceVertex::TopLeft), 2),
+            (
+                (PointN([1, 0, 3]), CubeFace::Back, FaceVertex::BottomLeft),
+                2,
+            ),
+            // Right seat second extension forward
+            ((PointN([2, 0, 3]), CubeFace::Back, FaceVertex::TopRight), 2),
+            (
+                (PointN([2, 0, 3]), CubeFace::Back, FaceVertex::BottomRight),
+                2,
+            ),
+            ((PointN([2, 0, 3]), CubeFace::Left, FaceVertex::TopLeft), 2),
+            (
+                (PointN([2, 0, 3]), CubeFace::Left, FaceVertex::BottomLeft),
+                2,
+            ),
+            // Left back
+            ((PointN([1, 1, 0]), CubeFace::Top, FaceVertex::TopRight), 2), // NOTE: This face is hidden.
+            (
+                (PointN([1, 1, 0]), CubeFace::Top, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            ((PointN([1, 1, 0]), CubeFace::Front, FaceVertex::TopLeft), 2),
+            (
+                (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                0,
+            ),
+            ((PointN([1, 1, 0]), CubeFace::Right, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            (
+                (PointN([1, 1, 0]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([1, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                1,
+            ),
+            ((PointN([1, 1, 0]), CubeFace::Left, FaceVertex::TopRight), 2),
+            (
+                (PointN([1, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ),
+            // Right back
+            ((PointN([2, 1, 0]), CubeFace::Top, FaceVertex::TopLeft), 2),
+            (
+                (PointN([2, 1, 0]), CubeFace::Top, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::TopRight),
+                2,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                0,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                1,
+            ),
+            ((PointN([2, 1, 0]), CubeFace::Right, FaceVertex::TopLeft), 2),
+            (
+                (PointN([2, 1, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([2, 1, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([2, 1, 0]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            ((PointN([2, 1, 0]), CubeFace::Left, FaceVertex::TopRight), 2), // NOTE: This face is hidden.
+            (
+                (PointN([2, 1, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            // Left back first extension upward
+            ((PointN([1, 2, 0]), CubeFace::Top, FaceVertex::TopRight), 2), // NOTE: This face is hidden.
+            (
+                (PointN([1, 2, 0]), CubeFace::Top, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 2, 0]), CubeFace::Front, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([1, 2, 0]), CubeFace::Right, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            (
+                (PointN([1, 2, 0]), CubeFace::Right, FaceVertex::TopRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 2, 0]), CubeFace::Right, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 2, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::TopLeft),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([1, 2, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ),
+            // Right back first extension upward
+            ((PointN([2, 2, 0]), CubeFace::Top, FaceVertex::TopLeft), 2),
+            (
+                (PointN([2, 2, 0]), CubeFace::Top, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([2, 2, 0]), CubeFace::Front, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([2, 2, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([2, 2, 0]), CubeFace::Bottom, FaceVertex::TopRight),
+                2,
+            ),
+            (
+                (PointN([2, 2, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            (
+                (PointN([2, 2, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            ((PointN([2, 2, 0]), CubeFace::Left, FaceVertex::TopLeft), 2), // NOTE: This face is hidden.
+            ((PointN([2, 2, 0]), CubeFace::Left, FaceVertex::TopRight), 2), // NOTE: This face is hidden.
+            (
+                (PointN([2, 2, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([2, 2, 0]), CubeFace::Left, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            // Left back second extension upward
+            (
+                (PointN([1, 3, 0]), CubeFace::Right, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 3, 0]), CubeFace::Right, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([1, 3, 0]), CubeFace::Bottom, FaceVertex::TopLeft),
+                2,
+            ),
+            (
+                (PointN([1, 3, 0]), CubeFace::Bottom, FaceVertex::BottomLeft),
+                2,
+            ),
+            // Right back second extension upward
+            (
+                (PointN([2, 3, 0]), CubeFace::Left, FaceVertex::BottomRight),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([2, 3, 0]), CubeFace::Left, FaceVertex::BottomLeft),
+                2,
+            ), // NOTE: This face is hidden.
+            (
+                (PointN([2, 3, 0]), CubeFace::Bottom, FaceVertex::TopRight),
+                2,
+            ),
+            (
+                (PointN([2, 3, 0]), CubeFace::Bottom, FaceVertex::BottomRight),
+                2,
+            ),
+            // Right arm rest
+            ((PointN([3, 1, 1]), CubeFace::Top, FaceVertex::TopLeft), 2),
+            (
+                (PointN([3, 1, 1]), CubeFace::Front, FaceVertex::BottomLeft),
+                2,
+            ),
+            (
+                (PointN([3, 1, 1]), CubeFace::Bottom, FaceVertex::TopRight),
+                2,
+            ),
+            (
+                (PointN([3, 1, 1]), CubeFace::Bottom, FaceVertex::BottomRight),
+                1,
+            ),
+            ((PointN([3, 1, 1]), CubeFace::Back, FaceVertex::TopRight), 1),
+            (
+                (PointN([3, 1, 1]), CubeFace::Back, FaceVertex::BottomRight),
+                2,
+            ),
+            ((PointN([3, 1, 1]), CubeFace::Left, FaceVertex::TopLeft), 1),
+            (
+                (PointN([3, 1, 1]), CubeFace::Left, FaceVertex::BottomRight),
+                1,
+            ),
+            (
+                (PointN([3, 1, 1]), CubeFace::Left, FaceVertex::BottomLeft),
+                0,
+            ),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        populate_and_verify(&mut voxels, &positions, offset, &vertex_aos, verify);
+        offset += PointN([6, 0, 0]);
+    }
+    shift += 1;
 
     // Looks like a 4-seater sofa and we want to check that the faces of the seat and backrests are
     // merged for the center two seats but not the left/right seats as the ambient occlusion values
     // on the edges are different than in the middle
-    // Left armrest
-    *voxels.get_mut(offset + PointN([0, 1, 1])) = Voxel(true);
-    // Seat
-    *voxels.get_mut(offset + PointN([1, 0, 1])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([2, 0, 1])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([3, 0, 1])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([4, 0, 1])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([1, 0, 2])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([2, 0, 2])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([3, 0, 2])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([4, 0, 2])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([1, 0, 3])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([2, 0, 3])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([3, 0, 3])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([4, 0, 3])) = Voxel(true);
-    // Back
-    *voxels.get_mut(offset + PointN([1, 1, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([2, 1, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([3, 1, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([4, 1, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([1, 2, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([2, 2, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([3, 2, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([4, 2, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([1, 3, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([2, 3, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([3, 3, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([4, 3, 0])) = Voxel(true);
-    // Right armrest
-    *voxels.get_mut(offset + PointN([5, 1, 1])) = Voxel(true);
-    offset += PointN([8, 0, 0]);
+    if (tests >> shift) & 1 == 1 {
+        // Left armrest
+        *voxels.get_mut(offset + PointN([0, 1, 1])) = Voxel(true);
+        // Seat
+        *voxels.get_mut(offset + PointN([1, 0, 1])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([2, 0, 1])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([3, 0, 1])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([4, 0, 1])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([1, 0, 2])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([2, 0, 2])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([3, 0, 2])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([4, 0, 2])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([1, 0, 3])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([2, 0, 3])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([3, 0, 3])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([4, 0, 3])) = Voxel(true);
+        // Back
+        *voxels.get_mut(offset + PointN([1, 1, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([2, 1, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([3, 1, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([4, 1, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([1, 2, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([2, 2, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([3, 2, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([4, 2, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([1, 3, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([2, 3, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([3, 3, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([4, 3, 0])) = Voxel(true);
+        // Right armrest
+        *voxels.get_mut(offset + PointN([5, 1, 1])) = Voxel(true);
+        offset += PointN([8, 0, 0]);
+    }
+    shift += 1;
 
     // Looks like a 2-seater sofa and we want to check that the faces of the seat and backrests are NOT merged
     // as the ambient occlusion values on the edges are different than in the middle
-    // Seat
-    *voxels.get_mut(offset + PointN([0, 0, 1])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([1, 0, 1])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([0, 0, 2])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([1, 0, 2])) = Voxel(true);
-    // Back
-    *voxels.get_mut(offset + PointN([0, 1, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([1, 1, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([0, 2, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([1, 2, 0])) = Voxel(true);
-    offset += PointN([4, 0, 0]);
+    if (tests >> shift) & 1 == 1 {
+        // Seat
+        *voxels.get_mut(offset + PointN([0, 0, 1])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([1, 0, 1])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([0, 0, 2])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([1, 0, 2])) = Voxel(true);
+        // Back
+        *voxels.get_mut(offset + PointN([0, 1, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([1, 1, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([0, 2, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([1, 2, 0])) = Voxel(true);
+        offset += PointN([4, 0, 0]);
 
-    // Looks like a 4-seater sofa and we want to check that the faces of the seat and backrests are
-    // merged for the center two seats but not the left/right seats as the ambient occlusion values
-    // on the edges are different than in the middle
-    // Seat
-    *voxels.get_mut(offset + PointN([0, 0, 1])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([1, 0, 1])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([2, 0, 1])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([3, 0, 1])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([0, 0, 2])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([1, 0, 2])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([2, 0, 2])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([3, 0, 2])) = Voxel(true);
-    // Back
-    *voxels.get_mut(offset + PointN([0, 1, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([1, 1, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([2, 1, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([3, 1, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([0, 2, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([1, 2, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([2, 2, 0])) = Voxel(true);
-    *voxels.get_mut(offset + PointN([3, 2, 0])) = Voxel(true);
-    *offset.x_mut() = 1;
-    offset += row_step;
+        // Looks like a 4-seater sofa and we want to check that the faces of the seat and backrests are
+        // merged for the center two seats but not the left/right seats as the ambient occlusion values
+        // on the edges are different than in the middle
+        // Seat
+        *voxels.get_mut(offset + PointN([0, 0, 1])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([1, 0, 1])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([2, 0, 1])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([3, 0, 1])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([0, 0, 2])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([1, 0, 2])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([2, 0, 2])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([3, 0, 2])) = Voxel(true);
+        // Back
+        *voxels.get_mut(offset + PointN([0, 1, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([1, 1, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([2, 1, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([3, 1, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([0, 2, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([1, 2, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([2, 2, 0])) = Voxel(true);
+        *voxels.get_mut(offset + PointN([3, 2, 0])) = Voxel(true);
+        *offset.x_mut() = 1;
+        offset += row_step;
+    }
+    shift += 1;
 
     println!("<<< set_up_voxels");
     voxels

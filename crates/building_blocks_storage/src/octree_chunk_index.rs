@@ -97,8 +97,8 @@ impl OctreeChunkIndex {
 
         // PERF: could be done in parallel
         let mut superchunk_octrees = SmallKeyHashMap::default();
-        for (lod_chunk_key, array) in superchunk_bitsets.into_iter() {
-            let octree = OctreeSet::from_array3(&array, *array.extent());
+        for (lod_chunk_key, bitset) in superchunk_bitsets.into_iter() {
+            let octree = OctreeSet::from_array3(&bitset, *bitset.extent());
             superchunk_octrees.insert(lod_chunk_key, octree);
         }
 

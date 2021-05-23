@@ -41,7 +41,7 @@ pub enum MeshCommand {
 }
 
 #[derive(Default)]
-pub struct MeshMaterial(pub Handle<StandardMaterial>);
+pub struct MeshMaterials(pub Vec<Handle<StandardMaterial>>);
 
 #[derive(Default)]
 pub struct ChunkMeshes {
@@ -55,7 +55,7 @@ pub fn mesh_generator_system(
     pool: Res<ComputeTaskPool>,
     voxel_map: Res<VoxelMap>,
     local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers>,
-    mesh_material: Res<MeshMaterial>,
+    mesh_materials: Res<MeshMaterials>,
     mut mesh_commands: ResMut<MeshCommandQueue>,
     mut mesh_assets: ResMut<Assets<Mesh>>,
     mut chunk_meshes: ResMut<ChunkMeshes>,
@@ -70,7 +70,7 @@ pub fn mesh_generator_system(
     );
     spawn_mesh_entities(
         new_chunk_meshes,
-        &*mesh_material,
+        &*mesh_materials,
         &mut commands,
         &mut *mesh_assets,
         &mut *chunk_meshes,
@@ -215,7 +215,7 @@ pub struct LocalSurfaceNetsBuffers {
 
 fn spawn_mesh_entities(
     new_chunk_meshes: Vec<(LodChunkKey3, Option<PosNormMesh>)>,
-    mesh_material: &MeshMaterial,
+    mesh_materials: &MeshMaterials,
     commands: &mut Commands,
     mesh_assets: &mut Assets<Mesh>,
     chunk_meshes: &mut ChunkMeshes,
@@ -227,7 +227,7 @@ fn spawn_mesh_entities(
                 commands
                     .spawn_bundle(create_mesh_bundle(
                         mesh,
-                        mesh_material.0.clone(),
+                        mesh_materials.0[lod_chunk_key.lod as usize].clone(),
                         mesh_assets,
                     ))
                     .id(),

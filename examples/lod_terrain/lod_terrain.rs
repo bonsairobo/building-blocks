@@ -6,7 +6,7 @@ mod voxel_map;
 use camera::{camera_control_system, camera_position, create_camera_entity};
 use level_of_detail::{level_of_detail_system, LodState};
 use mesh_generator::{
-    mesh_generator_system, ChunkMeshes, MeshCommand, MeshCommandQueue, MeshMaterial,
+    mesh_generator_system, ChunkMeshes, MeshCommand, MeshCommandQueue, MeshMaterials,
 };
 use voxel_map::{generate_map, CHUNK_LOG2, CLIP_BOX_RADIUS, WORLD_CHUNKS_EXTENT, WORLD_EXTENT};
 
@@ -73,9 +73,7 @@ fn setup(
     commands.insert_resource(map);
     commands.insert_resource(ChunkMeshes::default());
 
-    let mut material = StandardMaterial::from(Color::rgb(1.0, 0.0, 0.0));
-    material.roughness = 0.9;
-    commands.insert_resource(MeshMaterial(materials.add(material)));
+    commands.insert_resource(load_mesh_materials(&mut *materials));
 
     // Lights, camera, action!
     create_camera_entity(&mut commands);
@@ -89,4 +87,27 @@ fn setup(
         },
         ..Default::default()
     });
+}
+
+fn load_mesh_materials(materials: &mut Assets<StandardMaterial>) -> MeshMaterials {
+    let colors = [
+        Color::rgb(1.0, 0.0, 0.0),
+        Color::rgb(0.0, 1.0, 0.0),
+        Color::rgb(0.0, 0.0, 1.0),
+        Color::rgb(1.0, 1.0, 0.0),
+        Color::rgb(0.0, 1.0, 1.0),
+        Color::rgb(1.0, 0.0, 1.0),
+    ];
+
+    MeshMaterials(
+        colors
+            .iter()
+            .map(|c| {
+                let mut material = StandardMaterial::from(*c);
+                material.roughness = 0.9;
+
+                materials.add(material)
+            })
+            .collect(),
+    )
 }

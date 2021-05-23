@@ -1,6 +1,6 @@
 use crate::{
     mesh_generator::{MeshCommand, MeshCommandQueue},
-    voxel_map::{VoxelMap, CHUNK_LOG2, CLIP_BOX_RADIUS, WORLD_EXTENT},
+    voxel_map::{world_extent, VoxelMap, CHUNK_LOG2, CLIP_BOX_RADIUS},
 };
 
 use building_blocks::core::prelude::*;
@@ -40,7 +40,7 @@ pub fn level_of_detail_system(
     }
 
     voxel_map.index.find_clipmap_chunk_updates(
-        &WORLD_EXTENT,
+        &world_extent(),
         CLIP_BOX_RADIUS,
         lod_state.old_lod0_center,
         lod0_center,

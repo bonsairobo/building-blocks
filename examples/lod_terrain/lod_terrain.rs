@@ -8,7 +8,7 @@ use level_of_detail::{level_of_detail_system, LodState};
 use mesh_generator::{
     mesh_generator_system, ChunkMeshes, MeshCommand, MeshCommandQueue, MeshMaterials,
 };
-use voxel_map::{generate_map, CHUNK_LOG2, CLIP_BOX_RADIUS, WORLD_CHUNKS_EXTENT, WORLD_EXTENT};
+use voxel_map::{generate_map, world_extent, CHUNK_LOG2, CLIP_BOX_RADIUS, WORLD_CHUNKS_EXTENT};
 
 use building_blocks::core::prelude::*;
 
@@ -62,7 +62,7 @@ fn setup(
     let init_lod0_center = Point3f::from(camera_position(0.0)).in_voxel() >> CHUNK_LOG2;
     let mut mesh_commands = MeshCommandQueue::default();
     map.index.active_clipmap_lod_chunks(
-        &WORLD_EXTENT,
+        &world_extent(),
         CLIP_BOX_RADIUS,
         init_lod0_center,
         |chunk_key| mesh_commands.enqueue(MeshCommand::Create(chunk_key)),

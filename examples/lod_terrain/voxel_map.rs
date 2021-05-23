@@ -105,15 +105,15 @@ fn noise_array(extent: Extent3i, freq: f32, seed: i32) -> Array3x1<f32> {
 
 pub const CHUNK_LOG2: i32 = 4;
 pub const CHUNK_SHAPE: Point3i = PointN([1 << CHUNK_LOG2; 3]);
-pub const NUM_LODS: u8 = 5;
+pub const NUM_LODS: u8 = 6;
 pub const SUPERCHUNK_SHAPE: Point3i = PointN([1 << (CHUNK_LOG2 + NUM_LODS as i32 - 1); 3]);
-pub const CLIP_BOX_RADIUS: i32 = 16;
+pub const CLIP_BOX_RADIUS: i32 = 8;
 
 pub const WORLD_CHUNKS_EXTENT: Extent3i = Extent3i {
-    minimum: PointN([-50, 0, -50]),
-    shape: PointN([100, 1, 100]),
+    minimum: PointN([-100, 0, -100]),
+    shape: PointN([200, 1, 200]),
 };
-pub const WORLD_EXTENT: Extent3i = Extent3i {
-    minimum: PointN([-800, 0, -800]),
-    shape: PointN([1600, 16, 1600]),
-};
+
+pub fn world_extent() -> Extent3i {
+    WORLD_CHUNKS_EXTENT * CHUNK_SHAPE
+}

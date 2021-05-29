@@ -9,8 +9,10 @@ building_blocks_core = { path = "../../crates/building_blocks_core", default-fea
 building_blocks_storage = { path = "../../crates/building_blocks_storage", default-features = false }
 building_blocks_mesh = { path = "../../crates/building_blocks_mesh", default-features = false }
 
-simdnoise = "3.1"
 thread_local = "1.1"
+
+# Only needed for examples.
+simdnoise = { version = "3.1", optional = true }
 
 [dependencies.bevy]
 version = "0.5"

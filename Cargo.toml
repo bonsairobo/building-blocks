@@ -103,4 +103,4 @@ required-features = ["mesh"]
 [[example]]
 name = "lod_terrain"
 path = "examples/lod_terrain/lod_terrain.rs"
-required-features = ["glam", "mesh"]
+required-features = ["glam", "mesh", "utilities/simdnoise"]

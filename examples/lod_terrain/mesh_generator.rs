@@ -165,7 +165,7 @@ fn create_mesh_for_chunk(
     let mesh_tls = local_mesh_buffers.get();
     let mut surface_nets_buffers = mesh_tls
         .get_or_create_with(|| {
-            RefCell::new(LocalSurfaceNetsBuffers {
+            RefCell::new(LocalMeshBuffers {
                 mesh_buffer: GreedyQuadsBuffer::new(
                     padded_chunk_extent,
                     RIGHT_HANDED_Y_UP_CONFIG.quad_groups(),
@@ -174,7 +174,7 @@ fn create_mesh_for_chunk(
             })
         })
         .borrow_mut();
-    let LocalSurfaceNetsBuffers {
+    let LocalMeshBuffers {
         mesh_buffer,
         neighborhood_buffer,
     } = &mut *surface_nets_buffers;
@@ -206,9 +206,9 @@ fn create_mesh_for_chunk(
 
 // ThreadLocal doesn't let you get a mutable reference, so we need to use RefCell. We lock this down to only be used in this
 // module as a Local resource, so we know it's safe.
-type ThreadLocalMeshBuffers = ThreadLocalResource<RefCell<LocalSurfaceNetsBuffers>>;
+type ThreadLocalMeshBuffers = ThreadLocalResource<RefCell<LocalMeshBuffers>>;
 
-pub struct LocalSurfaceNetsBuffers {
+pub struct LocalMeshBuffers {
     mesh_buffer: GreedyQuadsBuffer,
     neighborhood_buffer: Array3x1<Voxel>,
 }

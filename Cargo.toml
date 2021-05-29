@@ -62,6 +62,7 @@ building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.6.0"
 building_blocks_search = { path = "crates/building_blocks_search", version = "0.6.0", default-features = false, optional = true }
 
 [dev-dependencies]
+bevy_fly_camera = "0.7"
 simdnoise = "3.1"
 
 # Common code for tests and examples.

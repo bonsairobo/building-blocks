@@ -1,11 +1,10 @@
 use bevy::tasks::ComputeTaskPool;
 use building_blocks::{
+    mesh::{IsOpaque, MergeVoxel},
     prelude::*,
     storage::{ChunkHashMapPyramid3, OctreeChunkIndex, SmallKeyHashMap},
 };
-
-use building_blocks_mesh::{IsOpaque, MergeVoxel};
-use simdnoise::NoiseBuilder;
+use utilities::noise::generate_noise_chunks;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Voxel(pub u8);
@@ -47,24 +46,14 @@ pub fn generate_map(
     scale: f32,
     seed: i32,
 ) -> VoxelMap {
+    let noise_chunks = generate_noise_chunks(pool, chunks_extent, CHUNK_SHAPE, freq, seed);
+
     let builder = ChunkMapBuilder3x1::new(CHUNK_SHAPE, Voxel::EMPTY);
     let mut pyramid = ChunkHashMapPyramid3::new(builder, || SmallKeyHashMap::new(), NUM_LODS);
     let lod0 = pyramid.level_mut(0);
 
-    let chunks = pool.scope(|s| {
-        for p in chunks_extent.iter_points() {
-            s.spawn(async move {
-                let chunk_min = p * CHUNK_SHAPE;
-                let chunk_extent = Extent3i::from_min_and_shape(chunk_min, CHUNK_SHAPE);
-
-                let noise = noise_array(chunk_extent, freq, seed);
-
-                (chunk_min, blocky_voxels_from_noise(&noise, scale))
-            });
-        }
-    });
-    for (chunk_key, chunk) in chunks.into_iter() {
-        lod0.write_chunk(chunk_key, chunk);
+    for (chunk_key, noise) in noise_chunks.into_iter() {
+        lod0.write_chunk(chunk_key, blocky_voxels_from_noise(&noise, scale));
     }
 
     let index = OctreeChunkIndex::index_chunk_map(SUPERCHUNK_SHAPE, lod0);
@@ -89,23 +78,6 @@ fn blocky_voxels_from_noise(noise: &Array3x1<f32>, scale: f32) -> Array3x1<Voxel
     copy_extent(noise.extent(), &sdf_voxel_noise, &mut voxels);
 
     voxels
-}
-
-fn noise_array(extent: Extent3i, freq: f32, seed: i32) -> Array3x1<f32> {
-    let min = Point3f::from(extent.minimum);
-    let (noise, _min_val, _max_val) = NoiseBuilder::fbm_3d_offset(
-        min.x(),
-        extent.shape.x() as usize,
-        min.y(),
-        extent.shape.y() as usize,
-        min.z(),
-        extent.shape.z() as usize,
-    )
-    .with_freq(freq)
-    .with_seed(seed)
-    .generate();
-
-    Array3x1::new_one_channel(extent, noise)
 }
 
 pub const CHUNK_LOG2: i32 = 4;

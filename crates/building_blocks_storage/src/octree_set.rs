@@ -434,14 +434,19 @@ impl OctreeSet {
     ) -> VisitStatus {
         // Precondition: OctreeNode exists.
 
-        // Base case where the octant is a single leaf voxel.
-        if octant.is_single_voxel() {
+        let mut handle_leaf = |octant: Octant| {
             let node = OctreeNode::leaf(octant);
-            return if predicate(&node) {
+
+            if predicate(&node) {
                 visitor.visit_octant(&node)
             } else {
-                VisitStatus::Stop
-            };
+                VisitStatus::Continue
+            }
+        };
+
+        // Base case where the octant is a single leaf voxel.
+        if octant.is_single_voxel() {
+            return handle_leaf(octant);
         }
 
         // Continue traversal of this branch.
@@ -451,21 +456,19 @@ impl OctreeSet {
         } else {
             // Since we know that OctreeNode exists, but it's not in the nodes map, this means that we can assume the entire
             // octant is full. This is an implicit leaf node.
-            let node = OctreeNode::leaf(octant);
-            return if predicate(&node) {
-                visitor.visit_octant(&node)
-            } else {
-                VisitStatus::Stop
-            };
+            return handle_leaf(octant);
         };
 
         // Definitely not at a leaf node.
         let node = OctreeNode::branch(octant, code, child_bitmask);
 
         if !predicate(&node) {
-            return VisitStatus::Stop;
+            // Even though this branch doesn't satisfy the predicate, this is postorder, so we might still want to visit
+            // ancestors.
+            return VisitStatus::Continue;
         }
 
+        let mut visit_ancestors = true;
         let extended_code = code.extend();
         for child_index in 0..8 {
             if (child_bitmask & (1 << child_index)) == 0 {
@@ -475,18 +478,28 @@ impl OctreeSet {
 
             let child_octant = octant.child(child_index);
             let octant_code = extended_code.with_lowest_octant(child_index as u16);
-            if self._visit_branches_and_fat_leaves_in_postorder(
+
+            let status = self._visit_branches_and_fat_leaves_in_postorder(
                 octant_code,
                 child_octant,
                 predicate,
                 visitor,
-            ) == VisitStatus::ExitEarly
-            {
-                return VisitStatus::ExitEarly;
+            );
+
+            match status {
+                VisitStatus::ExitEarly => return VisitStatus::ExitEarly,
+                VisitStatus::Stop => {
+                    visit_ancestors = false;
+                }
+                _ => (),
             }
         }
 
-        visitor.visit_octant(&node)
+        if visit_ancestors {
+            visitor.visit_octant(&node)
+        } else {
+            VisitStatus::ExitEarly
+        }
     }
 
     /// The `OctreeNode` of the root, if it exists.

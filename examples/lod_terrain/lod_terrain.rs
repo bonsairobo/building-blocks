@@ -1,9 +1,9 @@
 mod blocky_voxel_map;
 mod level_of_detail;
 mod mesh_generator;
+mod smooth_voxel_map;
 mod voxel_map;
 
-use blocky_voxel_map::BlockyVoxelMap;
 use level_of_detail::{level_of_detail_system, LodState};
 use mesh_generator::{
     mesh_generator_system, ChunkMeshes, MeshCommand, MeshCommandQueue, MeshMaterials,
@@ -21,7 +21,13 @@ use bevy::{
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 
 fn main() {
-    run_example::<BlockyVoxelMap>()
+    // Choose which kind of voxel map to use.
+
+    // use blocky_voxel_map::BlockyVoxelMap;
+    // run_example::<BlockyVoxelMap>()
+
+    use smooth_voxel_map::SmoothVoxelMap;
+    run_example::<SmoothVoxelMap>()
 }
 
 fn run_example<Map: VoxelMap>() {

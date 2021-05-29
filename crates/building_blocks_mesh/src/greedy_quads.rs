@@ -50,19 +50,56 @@ pub struct QuadCoordinateConfig {
     pub u_flip_face: Axis3,
 }
 
-pub const RIGHT_HANDED_Y_UP_CONFIG: QuadCoordinateConfig = QuadCoordinateConfig {
-    // Y is always in the V direction when it's not the normal. When Y is the normal, right-handedness determines that
-    // we must use Yzx permutations.
-    faces: [
-        OrientedCubeFace::new(-1, Axis3Permutation::Xzy),
-        OrientedCubeFace::new(-1, Axis3Permutation::Yzx),
-        OrientedCubeFace::new(-1, Axis3Permutation::Zxy),
-        OrientedCubeFace::new(1, Axis3Permutation::Xzy),
-        OrientedCubeFace::new(1, Axis3Permutation::Yzx),
-        OrientedCubeFace::new(1, Axis3Permutation::Zxy),
-    ],
-    u_flip_face: Axis3::X,
-};
+pub fn right_handed_y_up_config() -> QuadCoordinateConfig {
+    QuadCoordinateConfig {
+        faces: [
+            // Front
+            OrientedCubeFace::new(PointN([1, 1, 1]), Axis3Permutation::Zxy),
+            // Top
+            OrientedCubeFace::new(PointN([1, 1, -1]), Axis3Permutation::Yxz),
+            // Right
+            OrientedCubeFace::new(PointN([1, -1, 1]), Axis3Permutation::Xzy),
+            // Back
+            OrientedCubeFace::new(PointN([-1, -1, 1]), Axis3Permutation::Zxy),
+            // Bottom
+            OrientedCubeFace::new(PointN([-1, 1, 1]), Axis3Permutation::Yxz),
+            // Left
+            OrientedCubeFace::new(PointN([-1, 1, 1]), Axis3Permutation::Xzy),
+        ],
+        u_flip_face: Axis3::X,
+    }
+}
+
+pub fn oriented_cube_face_to_face_strides<A>(
+    voxels: &A,
+    oriented_cube_face: &OrientedCubeFace,
+) -> FaceStrides
+where
+    A: IndexedArray<[i32; 3]>,
+{
+    let OrientedCubeFace { n, u, v, .. } = oriented_cube_face;
+    let n_stride = voxels.stride_from_local_point(Local(*n));
+    let u_stride = voxels.stride_from_local_point(Local(*u));
+    let v_stride = voxels.stride_from_local_point(Local(*v));
+    let max_stride = Stride(voxels.extent().shape.volume() as usize);
+    FaceStrides {
+        n_stride,
+        u_stride,
+        v_stride,
+        // The offset to the voxel sharing this cube face.
+        visibility_offset: n_stride,
+        u_offset: if u_stride > max_stride {
+            Stride(0) - u_stride
+        } else {
+            Stride(0)
+        },
+        v_offset: if v_stride > max_stride {
+            Stride(0) - v_stride
+        } else {
+            Stride(0)
+        },
+    }
+}
 
 impl QuadCoordinateConfig {
     pub fn quad_groups(self) -> [QuadGroup; 6] {
@@ -172,55 +209,43 @@ fn greedy_quads_for_group<A, T, Merger>(
     Merger: MergeStrategy<Voxel = T>,
 {
     visited.reset_values(false);
+    println!("ORIENTED CUBE FACE: {:?}", quad_group.face);
 
-    let QuadGroup {
-        quads,
-        face:
-            OrientedCubeFace {
-                n_sign,
-                permutation,
-                n,
-                u,
-                v,
-                ..
-            },
-    } = quad_group;
-
-    let [n_axis, u_axis, v_axis] = permutation.axes();
+    let (n, u, v) = (quad_group.face.n, quad_group.face.u, quad_group.face.v);
+    let [n_axis, u_axis, v_axis] = quad_group.face.permutation.axes();
     let i_n = n_axis.index();
     let i_u = u_axis.index();
     let i_v = v_axis.index();
 
     let num_slices = interior.shape.at(i_n);
-    let slice_shape = *n + *u * interior.shape.at(i_u) + *v * interior.shape.at(i_v);
-    let mut slice_extent = Extent3i::from_min_and_shape(interior.minimum, slice_shape);
+    let (positive_n, positive_u, positive_v) = (n * n, u * u, v * v);
+    let slice_shape =
+        positive_n + positive_u * interior.shape.at(i_u) + positive_v * interior.shape.at(i_v);
+    let mut slice_extent = Extent3i::from_min_and_shape(
+        interior.minimum
+            + if n != positive_n {
+                (num_slices - 1) * positive_n
+            } else {
+                PointN([0, 0, 0])
+            },
+        slice_shape,
+    );
 
-    let n_stride = voxels.stride_from_local_point(Local(*n));
-    let u_stride = voxels.stride_from_local_point(Local(*u));
-    let v_stride = voxels.stride_from_local_point(Local(*v));
-    let face_strides = FaceStrides {
-        n_stride,
-        u_stride,
-        v_stride,
-        // The offset to the voxel sharing this cube face.
-        visibility_offset: if *n_sign > 0 {
-            n_stride
-        } else {
-            Stride(0) - n_stride
-        },
-    };
+    let face_strides = oriented_cube_face_to_face_strides(voxels, &quad_group.face);
 
     for _ in 0..num_slices {
         let slice_ub = slice_extent.least_upper_bound();
         let u_ub = slice_ub.at(i_u);
         let v_ub = slice_ub.at(i_v);
 
+        // FIXME: The min needs to start from the correct point according to the u and v directions
+        // otherwise for negative u / v, no merging will happen along those directions
         voxels.for_each(
             &slice_extent,
-            |(quad_min, quad_min_stride): (Point3i, Stride), quad_min_voxel| {
+            |(voxel_min, voxel_min_stride): (Point3i, Stride), voxel| {
                 if !face_needs_mesh(
-                    &quad_min_voxel,
-                    quad_min_stride,
+                    &voxel,
+                    voxel_min_stride,
                     face_strides.visibility_offset,
                     voxels,
                     visited,
@@ -230,12 +255,12 @@ fn greedy_quads_for_group<A, T, Merger>(
                 // We have at least one face that needs a mesh. We'll try to expand that face into the biggest quad we can find.
 
                 // These are the boundaries on quad width and height so it is contained in the slice.
-                let max_width = u_ub - quad_min.at(i_u);
-                let max_height = v_ub - quad_min.at(i_v);
+                let max_width = u_ub - voxel_min.at(i_u);
+                let max_height = v_ub - voxel_min.at(i_v);
 
                 let (quad_width, quad_height) = Merger::find_quad(
-                    quad_min_stride,
-                    &quad_min_voxel,
+                    voxel_min_stride,
+                    &voxel,
                     max_width,
                     max_height,
                     &face_strides,
@@ -248,12 +273,26 @@ fn greedy_quads_for_group<A, T, Merger>(
                 debug_assert!(quad_height <= max_height);
 
                 // Mark the quad as visited.
-                let quad_extent =
-                    Extent3i::from_min_and_shape(quad_min, *n + *u * quad_width + *v * quad_height);
+                let extent_minimum = voxel_min
+                    + if u != positive_u {
+                        u * (quad_width - 1)
+                    } else {
+                        PointN([0, 0, 0])
+                    }
+                    + if v != positive_v {
+                        v * (quad_height - 1)
+                    } else {
+                        PointN([0, 0, 0])
+                    };
+                let quad_extent = Extent3i::from_min_and_shape(
+                    extent_minimum,
+                    positive_n + positive_u * quad_width + positive_v * quad_height,
+                );
+                println!("MARKING {:?} VISITED", quad_extent);
                 visited.fill_extent(&quad_extent, true);
 
-                quads.push(UnorientedQuad {
-                    minimum: quad_min,
+                quad_group.quads.push(UnorientedQuad {
+                    minimum: voxel_min,
                     width: quad_width,
                     height: quad_height,
                 });
@@ -261,7 +300,7 @@ fn greedy_quads_for_group<A, T, Merger>(
         );
 
         // Move to the next slice.
-        slice_extent += *n;
+        slice_extent += n;
     }
 }
 
@@ -276,27 +315,44 @@ fn face_needs_mesh<A, T>(
     visited: &Array3x1<bool>,
 ) -> bool
 where
-    A: Get<Stride, Item = T>,
+    A: Get<Stride, Item = T> + IndexedArray<[i32; 3]>,
     T: IsEmpty + IsOpaque,
 {
     if voxel.is_empty() || visited.get(voxel_stride) {
+        // println!(
+        //     "face_needs_mesh: false -> voxel.is_empty(): {}, visited.get(voxel_stride): {}",
+        //     voxel.is_empty(),
+        //     visited.get(voxel_stride)
+        // );
         return false;
     }
 
     let adjacent_voxel = voxels.get(voxel_stride + visibility_offset);
 
     if adjacent_voxel.is_empty() {
+        println!(
+            "face_needs_mesh: true -> adjacent_voxel.is_empty(): {:?}",
+            stride_to_point(voxels.extent(), voxel_stride + visibility_offset)
+        );
         // Must be visible, opaque or transparent.
         return true;
     }
 
     if adjacent_voxel.is_opaque() {
+        println!(
+            "face_needs_mesh: true -> adjacent_voxel.is_opaque(): {:?}",
+            stride_to_point(voxels.extent(), voxel_stride + visibility_offset)
+        );
         // Fully occluded.
         return false;
     }
 
     // TODO: If the face lies between two transparent voxels, we choose not to mesh it. We might need to extend the IsOpaque
     // trait with different levels of transparency to support this.
+    println!(
+        "face_needs_mesh: {} -> voxel.is_opaque()",
+        voxel.is_opaque()
+    );
     voxel.is_opaque()
 }
 
@@ -341,11 +397,14 @@ pub trait MergeStrategy {
         Self::Voxel: IsEmpty + IsOpaque;
 }
 
+#[derive(Debug)]
 pub struct FaceStrides {
     pub n_stride: Stride,
     pub u_stride: Stride,
     pub v_stride: Stride,
     pub visibility_offset: Stride,
+    pub u_offset: Stride,
+    pub v_offset: Stride,
 }
 
 /// A per-voxel value used for merging quads.
@@ -377,7 +436,7 @@ where
         visited: &Array3x1<bool>,
     ) -> (i32, i32)
     where
-        A: Get<Stride, Item = T>,
+        A: Get<Stride, Item = T> + IndexedArray<[i32; 3]>,
     {
         // Greedily search for the biggest visible quad where all merge values are the same.
         let quad_value = min_value.voxel_merge_value();
@@ -430,7 +489,7 @@ impl<T> VoxelMerger<T> {
         max_width: i32,
     ) -> i32
     where
-        A: Get<Stride, Item = T>,
+        A: Get<Stride, Item = T> + IndexedArray<[i32; 3]>,
         T: IsEmpty + IsOpaque + MergeVoxel,
     {
         let mut quad_width = 0;
@@ -459,5 +518,742 @@ impl<T> VoxelMerger<T> {
         quad_width
     }
 }
+pub struct VoxelAOMerger<T> {
+    marker: std::marker::PhantomData<T>,
+}
 
-// TODO: implement a MergeStrategy for voxels with an ambient occlusion value at each vertex
+impl<T> MergeStrategy for VoxelAOMerger<T>
+where
+    T: MergeVoxel + IsEmpty + IsOpaque,
+{
+    type Voxel = T;
+
+    fn find_quad<A>(
+        min_stride: Stride,
+        min_value: &T,
+        mut max_width: i32,
+        max_height: i32,
+        face_strides: &FaceStrides,
+        voxels: &A,
+        visited: &Array3x1<bool>,
+    ) -> (i32, i32)
+    where
+        A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
+    {
+        println!(">>> find_quad");
+        // Greedily search for the biggest visible quad where all merge values are the same.
+        let quad_value = min_value.voxel_merge_value();
+
+        println!("face_strides: {:?}", face_strides);
+        let cube_face = face_strides_to_cube_face(face_strides);
+        println!("cube_face: {:?}", cube_face);
+        println!(
+            "find_quad for {:?}",
+            stride_to_point(voxels.extent(), min_stride)
+        );
+
+        // Start by finding the widest quad in the U direction.
+        let mut row_start_stride = min_stride;
+        let vaos = [
+            get_ao_at_vert(
+                voxels,
+                face_strides,
+                row_start_stride,
+                cube_face,
+                FaceVertex::TopLeft,
+            ),
+            get_ao_at_vert(
+                voxels,
+                face_strides,
+                row_start_stride,
+                cube_face,
+                FaceVertex::BottomLeft,
+            ),
+            get_ao_at_vert(
+                voxels,
+                face_strides,
+                row_start_stride,
+                cube_face,
+                FaceVertex::TopRight,
+            ),
+            get_ao_at_vert(
+                voxels,
+                face_strides,
+                row_start_stride,
+                cube_face,
+                FaceVertex::BottomRight,
+            ),
+        ];
+        let quad_width = Self::get_row_width(
+            voxels,
+            visited,
+            &quad_value,
+            &vaos,
+            face_strides.visibility_offset,
+            row_start_stride,
+            face_strides.u_stride,
+            face_strides,
+            cube_face,
+            max_width,
+        );
+
+        max_width = max_width.min(quad_width);
+        let mut quad_height = 1;
+
+        // If the 0th row ambient occlusion values are constant along V, we can merge in V
+        if vaos[0] == vaos[1] && vaos[2] == vaos[3] {
+            // Now see how tall we can make the quad in the V direction without changing the width.
+            row_start_stride += face_strides.v_stride;
+            while quad_height < max_height {
+                let p = stride_to_point(voxels.extent(), row_start_stride);
+                println!("quad_height: {}, p: {:?}", quad_height, p);
+                // Check if minimum U edge AO values match, if so we can merge vertically, otherwise we're done
+                let row_vaos = [
+                    get_ao_at_vert(
+                        voxels,
+                        face_strides,
+                        row_start_stride,
+                        cube_face,
+                        FaceVertex::TopLeft,
+                    ),
+                    get_ao_at_vert(
+                        voxels,
+                        face_strides,
+                        row_start_stride,
+                        cube_face,
+                        FaceVertex::BottomLeft,
+                    ),
+                    get_ao_at_vert(
+                        voxels,
+                        face_strides,
+                        row_start_stride,
+                        cube_face,
+                        FaceVertex::TopRight,
+                    ),
+                    get_ao_at_vert(
+                        voxels,
+                        face_strides,
+                        row_start_stride,
+                        cube_face,
+                        FaceVertex::BottomRight,
+                    ),
+                ];
+
+                if vaos[1] != row_vaos[0]
+                    || vaos[3] != row_vaos[2]
+                    || row_vaos[0] != row_vaos[1]
+                    || row_vaos[0] != row_vaos[2]
+                    || row_vaos[2] != row_vaos[3]
+                {
+                    // AO values not constant along V
+                    println!("AO values not constant along V");
+                    break;
+                }
+                let row_width = Self::get_row_width(
+                    voxels,
+                    visited,
+                    &quad_value,
+                    &row_vaos,
+                    face_strides.visibility_offset,
+                    row_start_stride,
+                    face_strides.u_stride,
+                    face_strides,
+                    cube_face,
+                    max_width,
+                );
+                if row_width < quad_width {
+                    println!("row_width {} < quad_width {}", row_width, quad_width);
+                    break;
+                }
+                quad_height += 1;
+                row_start_stride += face_strides.v_stride;
+            }
+        }
+
+        println!("quad_width: {}, quad_height: {}", quad_width, quad_height);
+        println!("<<< find_quad");
+        (quad_width, quad_height)
+    }
+}
+
+impl<T> VoxelAOMerger<T> {
+    fn get_row_width<A>(
+        voxels: &A,
+        visited: &Array3x1<bool>,
+        quad_merge_voxel_value: &T::VoxelValue,
+        vaos: &[i32],
+        visibility_offset: Stride,
+        start_stride: Stride,
+        delta_stride: Stride,
+        face_strides: &FaceStrides,
+        cube_face: CubeFace,
+        max_width: i32,
+    ) -> i32
+    where
+        A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
+        T: IsEmpty + IsOpaque + MergeVoxel,
+    {
+        println!(">>> get_row_width");
+        println!(
+            "start stride: {:?} = {:?}",
+            stride_to_point(voxels.extent(), start_stride),
+            vaos
+        );
+        let mut quad_width = 0;
+        let mut row_stride = start_stride;
+        while quad_width < max_width {
+            let padded_extent = *voxels.extent();
+            let p = stride_to_point(&padded_extent, row_stride) + padded_extent.minimum;
+            println!("p: {:?}", p);
+
+            if visited.get(row_stride) {
+                // Already have a quad for this voxel face.
+                println!("<<< Visited: {:?}", p);
+                break;
+            }
+
+            let voxel = voxels.get(row_stride);
+
+            if !face_needs_mesh(&voxel, row_stride, visibility_offset, voxels, visited) {
+                println!("Face does not need mesh: {:?}", p);
+                break;
+            }
+
+            if !voxel.voxel_merge_value().eq(quad_merge_voxel_value) {
+                // Voxel needs to be non-empty and match the quad merge value.
+                println!("Voxel value differs: {:?}", p);
+                break;
+            }
+
+            let next_vaos = [
+                get_ao_at_vert(
+                    voxels,
+                    face_strides,
+                    row_stride,
+                    cube_face,
+                    FaceVertex::TopLeft,
+                ),
+                get_ao_at_vert(
+                    voxels,
+                    face_strides,
+                    row_stride,
+                    cube_face,
+                    FaceVertex::BottomLeft,
+                ),
+                get_ao_at_vert(
+                    voxels,
+                    face_strides,
+                    row_stride,
+                    cube_face,
+                    FaceVertex::TopRight,
+                ),
+                get_ao_at_vert(
+                    voxels,
+                    face_strides,
+                    row_stride,
+                    cube_face,
+                    FaceVertex::BottomRight,
+                ),
+            ];
+            if vaos[2] != next_vaos[0]
+                || vaos[3] != next_vaos[1]
+                || next_vaos[0] != next_vaos[2]
+                || next_vaos[1] != next_vaos[3]
+            {
+                println!(
+                    "AO values differ: {:?} {:?}",
+                    p, face_strides.visibility_offset
+                );
+                // Ambient occlusion values must be constant across the row
+                // They are not so we cannot proceed to the next quad
+                if quad_width == 0 {
+                    quad_width = 1;
+                }
+                break;
+            }
+
+            quad_width += 1;
+            row_stride += delta_stride;
+        }
+
+        println!("quad_width: {}", quad_width);
+        println!("<<< get_row_width");
+        quad_width
+    }
+}
+
+fn stride_to_point(extent: &Extent3i, stride: Stride) -> Point3i {
+    let mut rem = stride.0 as i32;
+
+    let xy_area = extent.shape.x() * extent.shape.y();
+    let z = rem / xy_area;
+    rem %= xy_area;
+
+    let y = rem / extent.shape.x();
+    rem %= extent.shape.x();
+
+    let x = rem;
+
+    PointN([x, y, z]) + extent.minimum
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum CubeFace {
+    Top,
+    Bottom,
+    Left,
+    Right,
+    Back,
+    Front,
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum FaceVertex {
+    BottomLeft,
+    BottomRight,
+    TopRight,
+    TopLeft,
+}
+
+fn face_strides_to_cube_face(face_strides: &FaceStrides) -> CubeFace {
+    let (ns, us, vs, vis) = (
+        face_strides.n_stride,
+        face_strides.u_stride,
+        face_strides.v_stride,
+        face_strides.visibility_offset,
+    );
+    let n_sign = if vis == ns { 1 } else { -1 };
+    let (xs, ys, zs) = if ns >= us && us >= vs {
+        (vs, us, ns)
+    } else if ns >= vs && vs >= us {
+        (us, vs, ns)
+    } else if us >= ns && ns >= vs {
+        (vs, ns, us)
+    } else if us >= vs && vs >= ns {
+        (ns, vs, us)
+    } else if vs >= ns && ns >= us {
+        (us, ns, vs)
+    } else if vs >= us && us >= ns {
+        (ns, us, vs)
+    } else {
+        unreachable!();
+    };
+    if n_sign > 0 {
+        if ns == xs {
+            CubeFace::Right
+        } else if ns == ys {
+            CubeFace::Top
+        } else {
+            CubeFace::Front
+        }
+    } else {
+        if ns == xs {
+            CubeFace::Left
+        } else if ns == ys {
+            CubeFace::Bottom
+        } else {
+            CubeFace::Back
+        }
+    }
+}
+
+pub fn get_ao_at_vert<A, T>(
+    voxels: &A,
+    face_strides: &FaceStrides,
+    stride: Stride,
+    cube_face: CubeFace,
+    face_vertex: FaceVertex,
+) -> i32
+where
+    A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
+    T: IsEmpty + IsOpaque + MergeVoxel,
+{
+    let (n, u, v, vis, uoff, voff) = (
+        face_strides.n_stride,
+        face_strides.u_stride,
+        face_strides.v_stride,
+        face_strides.visibility_offset,
+        face_strides.u_offset,
+        face_strides.v_offset,
+    );
+    let s = stride + vis + uoff + voff;
+    let (side1_s, side2_s, corner_s) = match face_vertex {
+        FaceVertex::BottomLeft => (s - v, s - u, s - u - v),
+        FaceVertex::BottomRight => (s + u, s - v, s + u - v),
+        FaceVertex::TopRight => (s + v, s + u, s + u + v),
+        FaceVertex::TopLeft => (s - u, s + v, s - u + v),
+    };
+    let (side1, side2, corner) = (
+        !voxels.get(side1_s).is_empty(),
+        !voxels.get(side2_s).is_empty(),
+        !voxels.get(corner_s).is_empty() && voxels.get(corner_s).is_opaque(),
+    );
+    // println!("side1: {}, side2: {}, corner: {}", side1, side2, corner);
+    let ao_value = if side1 && side2 {
+        0
+    } else {
+        3 - (side1 as i32 + side2 as i32 + corner as i32)
+    };
+
+    println!(
+        "AO value for {:?} {:?} {:?} = {}",
+        stride_to_point(voxels.extent(), stride),
+        cube_face,
+        face_vertex,
+        ao_value
+    );
+
+    ao_value
+}
+
+// // ████████╗███████╗███████╗████████╗
+// // ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+// //    ██║   █████╗  ███████╗   ██║
+// //    ██║   ██╔══╝  ╚════██║   ██║
+// //    ██║   ███████╗███████║   ██║
+// //    ╚═╝   ╚══════╝╚══════╝   ╚═╝
+
+// #[cfg(test)]
+// mod tests {
+//     use std::collections::HashSet;
+
+//     use super::*;
+
+//     #[derive(Clone)]
+//     struct Voxel(u8);
+
+//     impl IsEmpty for Voxel {
+//         fn is_empty(&self) -> bool {
+//             self.0 == 0
+//         }
+//     }
+
+//     impl IsOpaque for Voxel {
+//         fn is_opaque(&self) -> bool {
+//             true
+//         }
+//     }
+
+//     impl MergeVoxel for Voxel {
+//         type VoxelValue = u8;
+
+//         fn voxel_merge_value(&self) -> Self::VoxelValue {
+//             self.0
+//         }
+//     }
+
+//     #[test]
+//     fn ambient_occlusion_one_voxel() {
+//         let extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([4, 4, 4]));
+//         let mut array = Array3x1::fill(extent, Voxel(0));
+//         *array.get_mut(PointN([1, 1, 1])) = Voxel(1);
+
+//         let mut output = GreedyQuadsBuffer::new(extent, RIGHT_HANDED_Y_UP_CONFIG.quad_groups());
+//         greedy_quads_with_merge_strategy::<_, _, VoxelAOMerger<Voxel>>(
+//             &array,
+//             &extent,
+//             &mut output,
+//         );
+
+//         for group in output.quad_groups.iter() {
+//             for quad in group.quads.iter() {
+//                 let mut ambient_occlusions = [0f32; 4];
+//                 for (i, vertex) in group.face.quad_corners(quad).iter().enumerate() {
+//                     ambient_occlusions[i] = get_ao_at_vert_pos(*vertex, &array, &extent) as f32;
+//                 }
+//                 let positions = group.face.quad_mesh_positions(quad, 1.0);
+//                 for (i, position) in positions.iter().enumerate() {
+//                     println!("position: {:?} = {}", position, ambient_occlusions[i]);
+//                     assert!(ambient_occlusions[i] == 0.0f32);
+//                 }
+//             }
+//         }
+//     }
+
+//     #[test]
+//     fn ambient_occlusion_two_voxels_a() {
+//         let extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([4, 4, 4]));
+//         let mut array = Array3x1::fill(extent, Voxel(0));
+//         *array.get_mut(PointN([1, 1, 1])) = Voxel(1);
+//         *array.get_mut(PointN([0, 2, 1])) = Voxel(1);
+
+//         let mut output = GreedyQuadsBuffer::new(extent, RIGHT_HANDED_Y_UP_CONFIG.quad_groups());
+//         greedy_quads_with_merge_strategy::<_, _, VoxelAOMerger<Voxel>>(
+//             &array,
+//             &extent,
+//             &mut output,
+//         );
+
+//         for group in output.quad_groups.iter() {
+//             for quad in group.quads.iter() {
+//                 let mut ambient_occlusions = [0f32; 4];
+//                 for (i, vertex) in group.face.quad_corners(quad).iter().enumerate() {
+//                     ambient_occlusions[i] = get_ao_at_vert_pos(*vertex, &array, &extent) as f32;
+//                 }
+//                 let positions = group.face.quad_mesh_positions(quad, 1.0);
+//                 for (i, position) in positions.iter().enumerate() {
+//                     println!("position: {:?} = {}", position, ambient_occlusions[i]);
+//                     assert!(
+//                         ambient_occlusions[i] == 0.0
+//                             || ((*position == [1.0, 2.0, 1.0] || *position == [1.0, 2.0, 2.0])
+//                                 && ambient_occlusions[i] == 1.0)
+//                     );
+//                 }
+//             }
+//         }
+//     }
+
+//     #[test]
+//     fn ambient_occlusion_two_voxels_b() {
+//         let extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([4, 4, 4]));
+//         let mut array = Array3x1::fill(extent, Voxel(0));
+//         *array.get_mut(PointN([1, 1, 1])) = Voxel(1);
+//         *array.get_mut(PointN([0, 2, 0])) = Voxel(1);
+
+//         let mut output = GreedyQuadsBuffer::new(extent, RIGHT_HANDED_Y_UP_CONFIG.quad_groups());
+//         greedy_quads_with_merge_strategy::<_, _, VoxelAOMerger<Voxel>>(
+//             &array,
+//             &extent,
+//             &mut output,
+//         );
+
+//         for group in output.quad_groups.iter() {
+//             for quad in group.quads.iter() {
+//                 let mut ambient_occlusions = [0f32; 4];
+//                 for (i, vertex) in group.face.quad_corners(quad).iter().enumerate() {
+//                     ambient_occlusions[i] = get_ao_at_vert_pos(*vertex, &array, &extent) as f32;
+//                 }
+//                 let positions = group.face.quad_mesh_positions(quad, 1.0);
+//                 for (i, position) in positions.iter().enumerate() {
+//                     println!("position: {:?} = {}", position, ambient_occlusions[i]);
+//                     assert!(
+//                         ambient_occlusions[i] == 0.0
+//                             || (*position == [1.0, 2.0, 1.0] && ambient_occlusions[i] == 1.0)
+//                     );
+//                 }
+//             }
+//         }
+//     }
+
+//     #[test]
+//     fn ambient_occlusion_two_voxels_c() {
+//         let extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([4, 4, 4]));
+//         let mut array = Array3x1::fill(extent, Voxel(0));
+//         *array.get_mut(PointN([1, 1, 1])) = Voxel(1);
+//         *array.get_mut(PointN([1, 2, 0])) = Voxel(1);
+
+//         let mut output = GreedyQuadsBuffer::new(extent, RIGHT_HANDED_Y_UP_CONFIG.quad_groups());
+//         greedy_quads_with_merge_strategy::<_, _, VoxelAOMerger<Voxel>>(
+//             &array,
+//             &extent,
+//             &mut output,
+//         );
+
+//         for group in output.quad_groups.iter() {
+//             for quad in group.quads.iter() {
+//                 let mut ambient_occlusions = [0f32; 4];
+//                 for (i, vertex) in group.face.quad_corners(quad).iter().enumerate() {
+//                     ambient_occlusions[i] = get_ao_at_vert_pos(*vertex, &array, &extent) as f32;
+//                 }
+//                 let positions = group.face.quad_mesh_positions(quad, 1.0);
+//                 for (i, position) in positions.iter().enumerate() {
+//                     println!("position: {:?} = {}", position, ambient_occlusions[i]);
+//                     assert!(
+//                         ambient_occlusions[i] == 0.0
+//                             || ((*position == [1.0, 2.0, 1.0] || *position == [2.0, 2.0, 1.0])
+//                                 && ambient_occlusions[i] == 1.0)
+//                     );
+//                 }
+//             }
+//         }
+//     }
+
+//     #[test]
+//     fn ambient_occlusion_three_voxels_a() {
+//         let extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([4, 4, 4]));
+//         let mut array = Array3x1::fill(extent, Voxel(0));
+//         *array.get_mut(PointN([1, 1, 1])) = Voxel(1);
+//         *array.get_mut(PointN([0, 2, 0])) = Voxel(1);
+//         *array.get_mut(PointN([0, 2, 1])) = Voxel(1);
+
+//         let mut output = GreedyQuadsBuffer::new(extent, RIGHT_HANDED_Y_UP_CONFIG.quad_groups());
+//         greedy_quads_with_merge_strategy::<_, _, VoxelAOMerger<Voxel>>(
+//             &array,
+//             &extent,
+//             &mut output,
+//         );
+
+//         for group in output.quad_groups.iter() {
+//             for quad in group.quads.iter() {
+//                 let mut ambient_occlusions = [0f32; 4];
+//                 for (i, vertex) in group.face.quad_corners(quad).iter().enumerate() {
+//                     ambient_occlusions[i] = get_ao_at_vert_pos(*vertex, &array, &extent) as f32;
+//                 }
+//                 let positions = group.face.quad_mesh_positions(quad, 1.0);
+//                 for (i, position) in positions.iter().enumerate() {
+//                     println!("position: {:?} = {}", position, ambient_occlusions[i]);
+//                     assert!(
+//                         ambient_occlusions[i] == 0.0
+//                             || (*position == [1.0, 2.0, 1.0] && ambient_occlusions[i] == 2.0)
+//                             || (*position == [1.0, 2.0, 2.0] && ambient_occlusions[i] == 1.0)
+//                     );
+//                 }
+//             }
+//         }
+//     }
+
+//     #[test]
+//     fn ambient_occlusion_three_voxels_b() {
+//         let extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([4, 4, 4]));
+//         let mut array = Array3x1::fill(extent, Voxel(0));
+//         *array.get_mut(PointN([1, 1, 1])) = Voxel(1);
+//         *array.get_mut(PointN([0, 2, 0])) = Voxel(1);
+//         *array.get_mut(PointN([1, 2, 0])) = Voxel(1);
+
+//         let mut output = GreedyQuadsBuffer::new(extent, RIGHT_HANDED_Y_UP_CONFIG.quad_groups());
+//         greedy_quads_with_merge_strategy::<_, _, VoxelAOMerger<Voxel>>(
+//             &array,
+//             &extent,
+//             &mut output,
+//         );
+
+//         for group in output.quad_groups.iter() {
+//             for quad in group.quads.iter() {
+//                 let mut ambient_occlusions = [0f32; 4];
+//                 for (i, vertex) in group.face.quad_corners(quad).iter().enumerate() {
+//                     ambient_occlusions[i] = get_ao_at_vert_pos(*vertex, &array, &extent) as f32;
+//                 }
+//                 let positions = group.face.quad_mesh_positions(quad, 1.0);
+//                 for (i, position) in positions.iter().enumerate() {
+//                     println!("position: {:?} = {}", position, ambient_occlusions[i]);
+//                     assert!(
+//                         ambient_occlusions[i] == 0.0
+//                             || (*position == [1.0, 2.0, 1.0] && ambient_occlusions[i] == 2.0)
+//                             || (*position == [2.0, 2.0, 1.0] && ambient_occlusions[i] == 1.0)
+//                     );
+//                 }
+//             }
+//         }
+//     }
+
+//     #[test]
+//     fn ambient_occlusion_three_voxels_c() {
+//         let extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([4, 4, 4]));
+//         let mut array = Array3x1::fill(extent, Voxel(0));
+//         *array.get_mut(PointN([1, 1, 1])) = Voxel(1);
+//         *array.get_mut(PointN([1, 2, 0])) = Voxel(1);
+//         *array.get_mut(PointN([0, 2, 1])) = Voxel(1);
+
+//         let mut output = GreedyQuadsBuffer::new(extent, RIGHT_HANDED_Y_UP_CONFIG.quad_groups());
+//         greedy_quads_with_merge_strategy::<_, _, VoxelAOMerger<Voxel>>(
+//             &array,
+//             &extent,
+//             &mut output,
+//         );
+
+//         for group in output.quad_groups.iter() {
+//             for quad in group.quads.iter() {
+//                 let mut ambient_occlusions = [0f32; 4];
+//                 for (i, vertex) in group.face.quad_corners(quad).iter().enumerate() {
+//                     ambient_occlusions[i] = get_ao_at_vert_pos(*vertex, &array, &extent) as f32;
+//                 }
+//                 let positions = group.face.quad_mesh_positions(quad, 1.0);
+//                 for (i, position) in positions.iter().enumerate() {
+//                     println!("position: {:?} = {}", position, ambient_occlusions[i]);
+//                     assert!(
+//                         ambient_occlusions[i] == 0.0
+//                             || (*position == [1.0, 2.0, 1.0] && ambient_occlusions[i] == 3.0)
+//                             || ((*position == [1.0, 2.0, 2.0]
+//                                 || *position == [2.0, 2.0, 1.0]
+//                                 || *position == [1.0, 3.0, 1.0])
+//                                 && ambient_occlusions[i] == 1.0)
+//                     );
+//                 }
+//             }
+//         }
+//     }
+
+//     #[test]
+//     fn ambient_occlusion_four_voxels() {
+//         let extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([4, 4, 4]));
+//         let mut array = Array3x1::fill(extent, Voxel(0));
+//         *array.get_mut(PointN([1, 1, 1])) = Voxel(1);
+//         *array.get_mut(PointN([1, 2, 0])) = Voxel(1);
+//         *array.get_mut(PointN([0, 2, 1])) = Voxel(1);
+//         *array.get_mut(PointN([0, 2, 0])) = Voxel(1);
+
+//         let mut output = GreedyQuadsBuffer::new(extent, RIGHT_HANDED_Y_UP_CONFIG.quad_groups());
+//         greedy_quads_with_merge_strategy::<_, _, VoxelAOMerger<Voxel>>(
+//             &array,
+//             &extent,
+//             &mut output,
+//         );
+
+//         for group in output.quad_groups.iter() {
+//             for quad in group.quads.iter() {
+//                 let mut ambient_occlusions = [0f32; 4];
+//                 for (i, vertex) in group.face.quad_corners(quad).iter().enumerate() {
+//                     ambient_occlusions[i] = get_ao_at_vert_pos(*vertex, &array, &extent) as f32;
+//                 }
+//                 let positions = group.face.quad_mesh_positions(quad, 1.0);
+//                 for (i, position) in positions.iter().enumerate() {
+//                     println!("position: {:?} = {}", position, ambient_occlusions[i]);
+//                     assert!(
+//                         ambient_occlusions[i] == 0.0
+//                             || (*position == [1.0, 2.0, 1.0] && ambient_occlusions[i] == 3.0)
+//                             || ((*position == [1.0, 2.0, 2.0]
+//                                 || *position == [2.0, 2.0, 1.0]
+//                                 || *position == [1.0, 3.0, 1.0])
+//                                 && ambient_occlusions[i] == 1.0)
+//                     );
+//                 }
+//             }
+//         }
+//     }
+
+//     #[test]
+//     fn ambient_occlusion_merge_corners() {
+//         let extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([8, 8, 8]));
+//         let mut array = Array3x1::fill(extent, Voxel(0));
+//         // Looks like a 2-seater sofa and we want to check that the faces of the seat and backrests are NOT merged
+//         // as the ambient occlusion values on the edges are different than in the middle
+//         // Left armrest
+//         *array.get_mut(PointN([1, 2, 2])) = Voxel(1);
+//         // Right armrest
+//         *array.get_mut(PointN([4, 2, 2])) = Voxel(1);
+//         // Seat
+//         *array.get_mut(PointN([2, 1, 2])) = Voxel(1);
+//         *array.get_mut(PointN([3, 1, 2])) = Voxel(1);
+//         // Back
+//         *array.get_mut(PointN([2, 2, 1])) = Voxel(1);
+//         *array.get_mut(PointN([3, 2, 1])) = Voxel(1);
+
+//         let mut output = GreedyQuadsBuffer::new(extent, RIGHT_HANDED_Y_UP_CONFIG.quad_groups());
+//         greedy_quads_with_merge_strategy::<_, _, VoxelAOMerger<Voxel>>(
+//             &array,
+//             &extent,
+//             &mut output,
+//         );
+
+//         let mut positions_set = HashSet::new();
+//         for group in output.quad_groups.iter() {
+//             for quad in group.quads.iter() {
+//                 let positions = group.face.quad_mesh_positions(quad, 1.0);
+//                 for position in positions.iter() {
+//                     println!("position: {:?}", position);
+//                     positions_set.insert(PointN([
+//                         position[0] as i32,
+//                         position[1] as i32,
+//                         position[2] as i32,
+//                     ]));
+//                 }
+//             }
+//         }
+//         // Front center of seat
+//         assert!(positions_set.contains(&PointN([3, 2, 3])));
+//         // Back center of seat
+//         assert!(positions_set.contains(&PointN([3, 2, 2])));
+//         // Center of back
+//         assert!(positions_set.contains(&PointN([3, 3, 2])));
+//     }
+// }

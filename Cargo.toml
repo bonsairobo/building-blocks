@@ -105,3 +105,8 @@ required-features = ["mesh"]
 name = "lod_terrain"
 path = "examples/lod_terrain/lod_terrain.rs"
 required-features = ["glam", "mesh"]
+
+[[example]]
+name = "blocky_ambient_occlusion"
+path = "examples/blocky_ambient_occlusion/blocky_ambient_occlusion.rs"
+required-features = ["mesh"]

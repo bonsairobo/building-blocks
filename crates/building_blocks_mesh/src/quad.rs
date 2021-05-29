@@ -8,37 +8,33 @@ use building_blocks_core::{
 /// Metadata that's used to aid in the geometric calculations for one of the 6 possible cube faces.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct OrientedCubeFace {
-    /// Determines the orientation of the plane.
-    pub n_sign: i32,
-
     /// Determines the {N, U, V} <--> {X, Y, Z} relation.
     pub permutation: Axis3Permutation,
 
-    /// First in the `permutation` of +X, +Y, and +Z.
+    /// Direction of the face normal
     pub n: Point3i,
-    /// Second in the `permutation` of +X, +Y, and +Z.
+    /// Direction of the face-space right-pointing U axis
     pub u: Point3i,
-    /// Third in the `permutation` of +X, +Y, and +Z.
+    /// Direction of the face-space up-pointing V axis
     pub v: Point3i,
 }
 
 impl OrientedCubeFace {
-    pub const fn new(n_sign: i32, permutation: Axis3Permutation) -> Self {
+    pub fn new(axis_signs: Point3i, permutation: Axis3Permutation) -> Self {
         let [n_axis, u_axis, v_axis] = permutation.axes();
 
         Self {
-            n_sign,
             permutation,
-            n: n_axis.get_unit_vector(),
-            u: u_axis.get_unit_vector(),
-            v: v_axis.get_unit_vector(),
+            n: axis_signs.x() * n_axis.get_unit_vector(),
+            u: axis_signs.y() * u_axis.get_unit_vector(),
+            v: axis_signs.z() * v_axis.get_unit_vector(),
         }
     }
 
     /// A cube face, using axes with an even permutation.
     pub fn canonical(normal: SignedAxis3) -> Self {
         Self::new(
-            normal.sign,
+            PointN([1, 1, 1]),
             Axis3Permutation::even_with_normal_axis(normal.axis),
         )
     }
@@ -56,7 +52,7 @@ impl OrientedCubeFace {
     }
 
     pub fn signed_normal(&self) -> Point3i {
-        self.n * self.n_sign
+        self.n
     }
 
     pub fn mesh_normal(&self) -> Point3f {
@@ -82,11 +78,18 @@ impl OrientedCubeFace {
         let w_vec = self.u * quad.width;
         let h_vec = self.v * quad.height;
 
-        let minu_minv = if self.n_sign > 0 {
-            quad.minimum + self.n
-        } else {
-            quad.minimum
-        };
+        let minu_minv = quad.minimum
+            + if self.n.x() == 1 {
+                self.n - self.u
+            } else if self.n.y() == 1 {
+                self.n - self.v
+            } else if self.n.z() == 1 {
+                self.n
+            } else if self.n.z() == -1 {
+                -self.u
+            } else {
+                PointN([0, 0, 0])
+            };
         let maxu_minv = minu_minv + w_vec;
         let minu_maxv = minu_minv + h_vec;
         let maxu_maxv = minu_minv + w_vec + h_vec;
@@ -110,15 +113,18 @@ impl OrientedCubeFace {
     }
 
     /// Returns the 6 vertex indices for the quad in order to make two triangles in a mesh. Winding order depends on both the
-    /// sign of the surface normal and the permutation of the UVs.
-    pub fn quad_mesh_indices(&self, start: u32) -> [u32; 6] {
-        quad_indices(start, self.n_sign * self.permutation.sign() > 0)
+    /// sign of the surface normal and the permutation of the UVs. Swapping the diagonal can be used for altering the triangle
+    /// orientation to achieve more isotropic interpolation of vertex values such as ambient occlusion.
+    pub fn quad_mesh_indices(&self, start: u32, swap_diagonal: bool) -> [u32; 6] {
+        quad_indices(
+            start,
+            true,
+            swap_diagonal,
+        )
     }
 
     /// Returns the UV coordinates of the 4 corners of the quad. Returns vertices in the same order as
     /// `OrientedCubeFace::quad_corners`.
-    ///
-    /// `u_flip_face` should correspond to the field on `QuadCoordinateConfig`. See the docs there for more info.
     ///
     /// This is just one way of assigning UVs to voxel quads. It assumes that each material has a single tile texture with
     /// wrapping coordinates, and each voxel face should show the entire texture. It also assumes a particular orientation for
@@ -127,43 +133,14 @@ impl OrientedCubeFace {
     /// If you need to use a texture atlas, you must calculate your own coordinates from the `Quad`.
     pub fn tex_coords(
         &self,
-        u_flip_face: Axis3,
-        flip_v: bool,
         quad: &UnorientedQuad,
     ) -> [[f32; 2]; 4] {
-        let face_normal_axis = self.permutation.axes()[0];
-        let flip_u = if self.n_sign < 0 {
-            u_flip_face != face_normal_axis
-        } else {
-            u_flip_face == face_normal_axis
-        };
-
-        match (flip_u, flip_v) {
-            (false, false) => [
-                [0.0, 0.0],
-                [quad.width as f32, 0.0],
-                [0.0, quad.height as f32],
-                [quad.width as f32, quad.height as f32],
-            ],
-            (true, false) => [
-                [quad.width as f32, 0.0],
-                [0.0, 0.0],
-                [quad.width as f32, quad.height as f32],
-                [0.0, quad.height as f32],
-            ],
-            (false, true) => [
-                [0.0, quad.height as f32],
-                [quad.width as f32, quad.height as f32],
-                [0.0, 0.0],
-                [quad.width as f32, 0.0],
-            ],
-            (true, true) => [
-                [quad.width as f32, quad.height as f32],
-                [0.0, quad.height as f32],
-                [quad.width as f32, 0.0],
-                [0.0, 0.0],
-            ],
-        }
+        [
+            [0.0, 0.0],
+            [quad.width as f32, 0.0],
+            [0.0, quad.height as f32],
+            [quad.width as f32, quad.height as f32],
+        ]
     }
 
     /// Extends `mesh` with the given `quad` that belongs to this face.
@@ -178,7 +155,7 @@ impl OrientedCubeFace {
             .extend_from_slice(&self.quad_mesh_positions(quad, voxel_size));
         mesh.normals.extend_from_slice(&self.quad_mesh_normals());
         mesh.indices
-            .extend_from_slice(&self.quad_mesh_indices(start_index));
+            .extend_from_slice(&self.quad_mesh_indices(start_index, false));
     }
 
     /// Extends `mesh` with the given `quad` that belongs to this face.
@@ -186,8 +163,6 @@ impl OrientedCubeFace {
     /// The texture coordinates come from `Quad::tex_coords`.
     pub fn add_quad_to_pos_norm_tex_mesh(
         &self,
-        u_flip_face: Axis3,
-        flip_v: bool,
         quad: &UnorientedQuad,
         voxel_size: f32,
         mesh: &mut PosNormTexMesh,
@@ -197,19 +172,27 @@ impl OrientedCubeFace {
             .extend_from_slice(&self.quad_mesh_positions(quad, voxel_size));
         mesh.normals.extend_from_slice(&self.quad_mesh_normals());
         mesh.tex_coords
-            .extend_from_slice(&self.tex_coords(u_flip_face, flip_v, quad));
+            .extend_from_slice(&self.tex_coords(quad));
         mesh.indices
-            .extend_from_slice(&self.quad_mesh_indices(start_index));
+            .extend_from_slice(&self.quad_mesh_indices(start_index, false));
     }
 }
 
 /// Returns the vertex indices for a single quad (two triangles). The triangles may have either clockwise or counter-clockwise
 /// winding. `start` is the first index.
-fn quad_indices(start: u32, counter_clockwise: bool) -> [u32; 6] {
+fn quad_indices(start: u32, counter_clockwise: bool, swap_diagonal: bool) -> [u32; 6] {
     if counter_clockwise {
-        [start, start + 1, start + 2, start + 1, start + 3, start + 2]
+        if swap_diagonal {
+            [start, start + 1, start + 2, start + 1, start + 3, start + 2]
+        } else {
+            [start, start + 3, start + 2, start, start + 1, start + 3]
+        }
     } else {
-        [start, start + 2, start + 1, start + 1, start + 2, start + 3]
+        if swap_diagonal {
+            [start, start + 2, start + 3, start + 1, start, start + 3]
+        } else {
+            [start, start + 2, start + 1, start + 1, start + 2, start + 3]
+        }
     }
 }
 

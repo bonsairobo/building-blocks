@@ -1,12 +1,14 @@
+mod blocky_voxel_map;
 mod level_of_detail;
 mod mesh_generator;
 mod voxel_map;
 
+use blocky_voxel_map::BlockyVoxelMap;
 use level_of_detail::{level_of_detail_system, LodState};
 use mesh_generator::{
     mesh_generator_system, ChunkMeshes, MeshCommand, MeshCommandQueue, MeshMaterials,
 };
-use voxel_map::{generate_map, world_extent, CLIP_BOX_RADIUS, WORLD_CHUNKS_EXTENT};
+use voxel_map::VoxelMap;
 
 use building_blocks::core::prelude::*;
 
@@ -19,6 +21,10 @@ use bevy::{
 use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 
 fn main() {
+    run_example::<BlockyVoxelMap>()
+}
+
+fn run_example<Map: VoxelMap>() {
     let mut window_desc = WindowDescriptor::default();
     window_desc.width = 1600.0;
     window_desc.height = 900.0;
@@ -37,13 +43,13 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(FlyCameraPlugin)
         // .add_plugin(WireframePlugin)
-        .add_startup_system(setup.system())
-        .add_system(level_of_detail_system.system())
-        .add_system(mesh_generator_system.system())
+        .add_startup_system(setup::<Map>.system())
+        .add_system(level_of_detail_system::<Map>.system())
+        .add_system(mesh_generator_system::<Map>.system())
         .run();
 }
 
-fn setup(
+fn setup<Map: VoxelMap>(
     mut commands: Commands,
     // mut wireframe_config: ResMut<WireframeConfig>,
     pool: Res<ComputeTaskPool>,
@@ -55,14 +61,14 @@ fn setup(
     let freq = 0.15;
     let scale = 20.0;
     let seed = 666;
-    let map = generate_map(&*pool, WORLD_CHUNKS_EXTENT, freq, scale, seed);
+    let map = Map::generate(&*pool, freq, scale, seed);
 
     // Queue up commands to initialize the chunk meshes to their appropriate LODs given the starting camera position.
     let init_lod0_center = Point3i::ZERO;
     let mut mesh_commands = MeshCommandQueue::default();
-    map.index.active_clipmap_lod_chunks(
-        &world_extent(),
-        CLIP_BOX_RADIUS,
+    map.chunk_index().active_clipmap_lod_chunks(
+        &Map::world_extent(),
+        Map::clip_box_radius(),
         init_lod0_center,
         |chunk_key| mesh_commands.enqueue(MeshCommand::Create(chunk_key)),
     );
@@ -76,9 +82,9 @@ fn setup(
 
     // Lights, camera, action!
     commands
-		.spawn()
-		.insert_bundle(PerspectiveCameraBundle::new_3d())
-		.insert(FlyCamera::default());
+        .spawn()
+        .insert_bundle(PerspectiveCameraBundle::new_3d())
+        .insert(FlyCamera::default());
     commands.spawn_bundle(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 500.0, 0.0)),
         light: Light {

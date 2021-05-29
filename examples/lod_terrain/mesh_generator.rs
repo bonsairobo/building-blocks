@@ -1,8 +1,7 @@
-use crate::voxel_map::{Voxel, VoxelMap};
+use crate::voxel_map::VoxelMap;
 
 use building_blocks::{
     mesh::*,
-    prelude::*,
     storage::{LodChunkKey3, LodChunkUpdate3, SmallKeyHashMap},
 };
 use utilities::bevy_util::{mesh::create_mesh_bundle, thread_local_resource::ThreadLocalResource};
@@ -50,11 +49,11 @@ pub struct ChunkMeshes {
 }
 
 /// Generates new meshes for all dirty chunks.
-pub fn mesh_generator_system(
+pub fn mesh_generator_system<Map: VoxelMap>(
     mut commands: Commands,
     pool: Res<ComputeTaskPool>,
-    voxel_map: Res<VoxelMap>,
-    local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers>,
+    voxel_map: Res<Map>,
+    local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers<Map>>,
     mesh_materials: Res<MeshMaterials>,
     mut mesh_commands: ResMut<MeshCommandQueue>,
     mut mesh_assets: ResMut<Assets<Mesh>>,
@@ -77,9 +76,9 @@ pub fn mesh_generator_system(
     );
 }
 
-fn apply_mesh_commands(
-    voxel_map: &VoxelMap,
-    local_mesh_buffers: &ThreadLocalMeshBuffers,
+fn apply_mesh_commands<Map: VoxelMap>(
+    voxel_map: &Map,
+    local_mesh_buffers: &ThreadLocalMeshBuffers<Map>,
     pool: &ComputeTaskPool,
     mesh_commands: &mut MeshCommandQueue,
     chunk_meshes: &mut ChunkMeshes,
@@ -97,10 +96,12 @@ fn apply_mesh_commands(
                     num_creates += 1;
                     num_meshes_created += 1;
                     s.spawn(async move {
-                        (
-                            key,
-                            create_mesh_for_chunk(key, voxel_map, local_mesh_buffers),
-                        )
+                        let mesh_tls = local_mesh_buffers.get();
+                        let mut mesh_buffers = mesh_tls
+                            .get_or_create_with(|| RefCell::new(Map::init_mesh_buffers()))
+                            .borrow_mut();
+
+                        (key, voxel_map.create_mesh_for_chunk(key, &mut mesh_buffers))
                     });
                 }
                 MeshCommand::Update(update) => {
@@ -113,10 +114,14 @@ fn apply_mesh_commands(
                             for &key in split.new_chunks.iter() {
                                 num_meshes_created += 1;
                                 s.spawn(async move {
-                                    (
-                                        key,
-                                        create_mesh_for_chunk(key, voxel_map, local_mesh_buffers),
-                                    )
+                                    let mesh_tls = local_mesh_buffers.get();
+                                    let mut mesh_buffers = mesh_tls
+                                        .get_or_create_with(|| {
+                                            RefCell::new(Map::init_mesh_buffers())
+                                        })
+                                        .borrow_mut();
+
+                                    (key, voxel_map.create_mesh_for_chunk(key, &mut mesh_buffers))
                                 });
                             }
                         }
@@ -128,13 +133,15 @@ fn apply_mesh_commands(
                             }
                             num_meshes_created += 1;
                             s.spawn(async move {
+                                let mesh_tls = local_mesh_buffers.get();
+                                let mut mesh_buffers = mesh_tls
+                                    .get_or_create_with(|| RefCell::new(Map::init_mesh_buffers()))
+                                    .borrow_mut();
+
                                 (
                                     merge.new_chunk,
-                                    create_mesh_for_chunk(
-                                        merge.new_chunk,
-                                        voxel_map,
-                                        local_mesh_buffers,
-                                    ),
+                                    voxel_map
+                                        .create_mesh_for_chunk(merge.new_chunk, &mut mesh_buffers),
                                 )
                             });
                         }
@@ -151,67 +158,9 @@ fn apply_mesh_commands(
     })
 }
 
-fn create_mesh_for_chunk(
-    key: LodChunkKey3,
-    voxel_map: &VoxelMap,
-    local_mesh_buffers: &ThreadLocalMeshBuffers,
-) -> Option<PosNormMesh> {
-    let chunks = voxel_map.pyramid.level(key.lod);
-
-    let chunk_extent = chunks.indexer.extent_for_chunk_at_key(key.chunk_key);
-    let padded_chunk_extent = padded_greedy_quads_chunk_extent(&chunk_extent);
-
-    // Keep a thread-local cache of buffers to avoid expensive reallocations every time we want to mesh a chunk.
-    let mesh_tls = local_mesh_buffers.get();
-    let mut surface_nets_buffers = mesh_tls
-        .get_or_create_with(|| {
-            RefCell::new(LocalMeshBuffers {
-                mesh_buffer: GreedyQuadsBuffer::new(
-                    padded_chunk_extent,
-                    RIGHT_HANDED_Y_UP_CONFIG.quad_groups(),
-                ),
-                neighborhood_buffer: Array3x1::fill(padded_chunk_extent, Voxel::EMPTY),
-            })
-        })
-        .borrow_mut();
-    let LocalMeshBuffers {
-        mesh_buffer,
-        neighborhood_buffer,
-    } = &mut *surface_nets_buffers;
-
-    // While the chunk shape doesn't change, we need to make sure that it's in the right position for each particular chunk.
-    neighborhood_buffer.set_minimum(padded_chunk_extent.minimum);
-
-    // Only copy the chunk_extent, leaving the padding empty so that we don't get holes on LOD boundaries.
-    copy_extent(&chunk_extent, chunks, neighborhood_buffer);
-
-    let voxel_size = (1 << key.lod) as f32;
-    greedy_quads(neighborhood_buffer, &padded_chunk_extent, &mut *mesh_buffer);
-
-    if mesh_buffer.num_quads() == 0 {
-        None
-    } else {
-        let mut mesh = PosNormMesh::default();
-        for group in mesh_buffer.quad_groups.iter() {
-            for quad in group.quads.iter() {
-                group
-                    .face
-                    .add_quad_to_pos_norm_mesh(&quad, voxel_size, &mut mesh);
-            }
-        }
-
-        Some(mesh)
-    }
-}
-
 // ThreadLocal doesn't let you get a mutable reference, so we need to use RefCell. We lock this down to only be used in this
 // module as a Local resource, so we know it's safe.
-type ThreadLocalMeshBuffers = ThreadLocalResource<RefCell<LocalMeshBuffers>>;
-
-pub struct LocalMeshBuffers {
-    mesh_buffer: GreedyQuadsBuffer,
-    neighborhood_buffer: Array3x1<Voxel>,
-}
+type ThreadLocalMeshBuffers<Map> = ThreadLocalResource<RefCell<<Map as VoxelMap>::MeshBuffers>>;
 
 fn spawn_mesh_entities(
     new_chunk_meshes: Vec<(LodChunkKey3, Option<PosNormMesh>)>,

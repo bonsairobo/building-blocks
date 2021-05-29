@@ -56,21 +56,10 @@ pub fn generate_map(
             s.spawn(async move {
                 let chunk_min = p * CHUNK_SHAPE;
                 let chunk_extent = Extent3i::from_min_and_shape(chunk_min, CHUNK_SHAPE);
-                let mut chunk_noise = Array3x1::fill(chunk_extent, Voxel::EMPTY);
 
                 let noise = noise_array(chunk_extent, freq, seed);
 
-                // Convert the f32 noise into Voxels.
-                let sdf_voxel_noise = TransformMap::new(&noise, |d: f32| {
-                    if scale * d < 0.0 {
-                        Voxel::FILLED
-                    } else {
-                        Voxel::EMPTY
-                    }
-                });
-                copy_extent(&chunk_extent, &sdf_voxel_noise, &mut chunk_noise);
-
-                (chunk_min, chunk_noise)
+                (chunk_min, blocky_voxels_from_noise(&noise, scale))
             });
         }
     });
@@ -84,6 +73,22 @@ pub fn generate_map(
     pyramid.downsample_chunks_with_index(&index, &PointDownsampler, &world_extent);
 
     VoxelMap { pyramid, index }
+}
+
+fn blocky_voxels_from_noise(noise: &Array3x1<f32>, scale: f32) -> Array3x1<Voxel> {
+    let mut voxels = Array3x1::fill(*noise.extent(), Voxel::EMPTY);
+
+    // Convert the f32 noise into Voxels.
+    let sdf_voxel_noise = TransformMap::new(noise, |d: f32| {
+        if scale * d < 0.0 {
+            Voxel::FILLED
+        } else {
+            Voxel::EMPTY
+        }
+    });
+    copy_extent(noise.extent(), &sdf_voxel_noise, &mut voxels);
+
+    voxels
 }
 
 fn noise_array(extent: Extent3i, freq: f32, seed: i32) -> Array3x1<f32> {

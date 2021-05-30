@@ -35,7 +35,7 @@ impl<N> ChunkKey<N> {
 }
 
 /// Methods for reading chunks from storage.
-#[auto_impl(&)]
+#[auto_impl(&, &mut)]
 pub trait ChunkReadStorage<N, Ch> {
     /// Borrow the chunk at `key`.
     fn get(&self, key: ChunkKey<N>) -> Option<&Ch>;
@@ -67,6 +67,7 @@ pub trait ChunkWriteStorage<N, Ch> {
     fn pop(&mut self, key: ChunkKey<N>) -> Option<Ch>;
 }
 
+#[auto_impl(&, &mut)]
 pub trait IterChunkKeys<'a, N>
 where
     ChunkKey<N>: 'a,

@@ -68,7 +68,7 @@ use auto_impl::auto_impl;
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-#[auto_impl(&)]
+#[auto_impl(&, &mut)]
 pub trait Get<L> {
     type Item;
 
@@ -76,7 +76,7 @@ pub trait Get<L> {
     fn get(&self, location: L) -> Self::Item;
 }
 
-#[auto_impl(&)]
+#[auto_impl(&, &mut)]
 pub trait GetRef<'a, L> {
     type Item;
 
@@ -197,6 +197,7 @@ impl_get_for_tuple! { a: A, b: B, c: C, d: D, e: E, f: F }
 // ██║     ╚██████╔╝██║  ██║    ███████╗██║  ██║╚██████╗██║  ██║
 // ╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
+#[auto_impl(&, &mut)]
 pub trait ForEach<N, Coord> {
     type Item;
 
@@ -205,6 +206,7 @@ pub trait ForEach<N, Coord> {
 
 /// An implementation detail of multichannel arrays that helps us get around compiler limitations w.r.t. HRTB.
 #[doc(hidden)]
+#[auto_impl(&mut)]
 pub trait ForEachMutPtr<N, Coord> {
     type Item;
 
@@ -213,6 +215,7 @@ pub trait ForEachMutPtr<N, Coord> {
     unsafe fn for_each_mut_ptr(&mut self, extent: &ExtentN<N>, f: impl FnMut(Coord, Self::Item));
 }
 
+#[auto_impl(&mut)]
 pub trait ForEachMut<'a, N, Coord> {
     // TODO: use GAT to remove unsafe lifetime workaround in impls
     type Item;
@@ -231,6 +234,7 @@ pub trait ForEachMut<'a, N, Coord> {
 ///
 /// Some lattice maps, like `ChunkMap`, have nonlinear layouts. This means that, in order for a writer to receive data
 /// efficiently, it must come as an iterator over multiple extents.
+#[auto_impl(&, &mut)]
 pub trait ReadExtent<'a, N> {
     type Src;
     type SrcIter: Iterator<Item = (ExtentN<N>, Self::Src)>;
@@ -240,6 +244,7 @@ pub trait ReadExtent<'a, N> {
 }
 
 /// A trait to facilitate the generic implementation of `copy_extent`.
+#[auto_impl(&mut)]
 pub trait WriteExtent<N, Src> {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src);
 }

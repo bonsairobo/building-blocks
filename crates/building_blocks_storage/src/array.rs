@@ -669,7 +669,6 @@ where
     Array<N, ChanSrc>: Get<Stride, Item = Data>,
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
-    ExtentN<N>: Copy,
     ChanSrc: Channels<Data = Data> + Slices<'a, Target = SrcSlices>,
     ChanDst: Channels<Data = Data> + CopyDestination<'a, Src = SrcSlices>,
 {
@@ -700,7 +699,6 @@ where
     Self: IndexedArray<N> + GetMutPtr<Stride, Item = Chan::Ptr>,
     TransformMap<'a, Delegate, F>: IndexedArray<N> + Get<Stride, Item = Chan::Data>,
     PointN<N>: IntegerPoint<N>,
-    ExtentN<N>: Copy,
     Chan: Channels,
 {
     fn write_extent(

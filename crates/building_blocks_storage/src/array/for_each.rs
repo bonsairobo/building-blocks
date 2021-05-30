@@ -3,8 +3,8 @@ mod for_each2;
 #[macro_use]
 mod for_each3;
 
-pub(crate) use for_each2::{for_each_stride_parallel_global_unchecked2, Array2x1ForEachState};
-pub(crate) use for_each3::{for_each_stride_parallel_global_unchecked3, Array3x1ForEachState};
+pub(crate) use for_each2::{for_each_stride_parallel_global_unchecked2, Array2ForEachState};
+pub(crate) use for_each3::{for_each_stride_parallel_global_unchecked3, Array3ForEachState};
 
 use crate::{ArrayIndexer, Local, Stride};
 

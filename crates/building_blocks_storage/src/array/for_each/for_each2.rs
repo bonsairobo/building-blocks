@@ -11,7 +11,7 @@ macro_rules! for_each2 {
             index_min,
         } = $for_each;
         let iter_lub = iter_extent.least_upper_bound();
-        let mut s = $crate::Array2x1ForEachState::new(array_shape, index_min);
+        let mut s = $crate::Array2ForEachState::new(array_shape, index_min);
         s.start_y();
         for $y in iter_extent.minimum.y()..iter_lub.y() {
             s.start_x();
@@ -36,8 +36,8 @@ pub(crate) fn for_each_stride_parallel_global_unchecked2(
     let min1 = iter_extent.minimum - array1_extent.minimum;
     let min2 = iter_extent.minimum - array2_extent.minimum;
 
-    let mut s1 = Array2x1ForEachState::new(array1_extent.shape, Local(min1));
-    let mut s2 = Array2x1ForEachState::new(array2_extent.shape, Local(min2));
+    let mut s1 = Array2ForEachState::new(array1_extent.shape, Local(min1));
+    let mut s2 = Array2ForEachState::new(array2_extent.shape, Local(min2));
 
     s1.start_y();
     s2.start_y();
@@ -55,7 +55,7 @@ pub(crate) fn for_each_stride_parallel_global_unchecked2(
     }
 }
 
-pub(crate) struct Array2x1ForEachState {
+pub(crate) struct Array2ForEachState {
     x_stride: usize,
     y_stride: usize,
     x_start: usize,
@@ -64,7 +64,7 @@ pub(crate) struct Array2x1ForEachState {
     y_i: usize,
 }
 
-impl Array2x1ForEachState {
+impl Array2ForEachState {
     pub(crate) fn new(array_shape: Point2i, index_min: Local2i) -> Self {
         let x_stride = 1usize;
         let y_stride = array_shape.x() as usize;

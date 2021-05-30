@@ -2,7 +2,7 @@ use bevy::{ecs, tasks::ComputeTaskPool};
 use building_blocks::{
     mesh::PosNormMesh,
     prelude::*,
-    storage::{LodChunkKey3, OctreeChunkIndex},
+    storage::{ChunkKey3, OctreeChunkIndex},
 };
 
 pub trait VoxelMap: ecs::component::Component {
@@ -21,7 +21,7 @@ pub trait VoxelMap: ecs::component::Component {
 
     fn create_mesh_for_chunk(
         &self,
-        key: LodChunkKey3,
+        key: ChunkKey3,
         mesh_buffers: &mut Self::MeshBuffers,
     ) -> Option<PosNormMesh>;
 }

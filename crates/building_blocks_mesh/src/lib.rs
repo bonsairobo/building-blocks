@@ -50,7 +50,7 @@
 //! for chunk_key in chunk_keys_to_update.into_iter() {
 //!     // It's crucial that we pad the chunk so we have access to adjacent points during meshing.
 //!     let padded_chunk_extent = padded_height_map_chunk_extent(
-//!         &map.indexer.extent_for_chunk_at_key(chunk_key)
+//!         &map.indexer.extent_for_chunk_with_min(chunk_key)
 //!     );
 //!     let mut padded_chunk = Array2x1::fill(padded_chunk_extent, 0.0);
 //!     copy_extent(&padded_chunk_extent, &map, &mut padded_chunk);

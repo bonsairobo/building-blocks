@@ -1,6 +1,6 @@
 use crate::{
-    prelude::*, ArrayNx1, ChunkDownsampler, ChunkMap, ChunkMapBuilder, ChunkMapBuilderNx1,
-    ChunkMapNx1, FastArrayCompressionNx1, LodChunkKey, OctreeChunkIndex, OctreeNode,
+    prelude::*, ArrayNx1, ChunkDownsampler, ChunkKey, ChunkMap, ChunkMapBuilder,
+    ChunkMapBuilderNx1, ChunkMapNx1, FastArrayCompressionNx1, OctreeChunkIndex, OctreeNode,
     SmallKeyHashMap, VisitStatus,
 };
 
@@ -55,8 +55,8 @@ where
     T: Clone,
     Store: ChunkReadStorage<N, ArrayNx1<N, T>>,
 {
-    pub fn get_chunk(&self, key: LodChunkKey<N>) -> Option<&ArrayNx1<N, T>> {
-        self.levels[key.lod as usize].get_chunk(key.chunk_key)
+    pub fn get_chunk(&self, key: ChunkKey<N>) -> Option<&ArrayNx1<N, T>> {
+        self.levels[key.lod as usize].get_chunk(key)
     }
 }
 
@@ -91,16 +91,15 @@ where
         self.builder.ambient_value()
     }
 
-    pub fn get_mut_chunk(&mut self, key: LodChunkKey<N>) -> Option<&mut ArrayNx1<N, T>> {
-        self.levels[key.lod as usize].get_mut_chunk(key.chunk_key)
+    pub fn get_mut_chunk(&mut self, key: ChunkKey<N>) -> Option<&mut ArrayNx1<N, T>> {
+        self.levels[key.lod as usize].get_mut_chunk(key)
     }
 
     /// Downsamples the chunk at `src_level` and `src_chunk_key` into the specified destination level `dst_level`.
     pub fn downsample_chunk<Samp>(
         &mut self,
         sampler: &Samp,
-        src_level: u8,
-        src_chunk_key: PointN<N>,
+        src_chunk_key: ChunkKey<N>,
         dst_level: u8,
     ) where
         Samp: ChunkDownsampler<N, T, ArrayNx1<N, T>>,
@@ -112,15 +111,16 @@ where
 
         // We don't strictly need to get_mut_chunk for src_chunks, but it's easier than supporting generic ChunkReadStorage when
         // self is already mutably borrowed.
-        let [src_chunks, dst_chunks] = two_elems_mut(levels, src_level, dst_level);
+        let [src_chunks, dst_chunks] = two_elems_mut(levels, src_chunk_key.lod, dst_level);
 
-        let lod_delta = dst_level - src_level;
+        let lod_delta = dst_level - src_chunk_key.lod;
+        let src_chunk_min = src_chunk_key.minimum;
 
         if let Some(src_chunk) = src_chunks.get_mut_chunk(src_chunk_key) {
             downsample_chunk_into_map(
                 sampler,
                 chunk_shape,
-                src_chunk_key,
+                src_chunk_min,
                 src_chunk,
                 lod_delta,
                 dst_chunks,
@@ -129,7 +129,7 @@ where
             Self::downsample_ambient(
                 builder.ambient_value(),
                 chunk_shape,
-                src_chunk_key,
+                src_chunk_min,
                 lod_delta,
                 dst_chunks,
             )
@@ -191,7 +191,8 @@ where
         ArrayNx1<N, T>: ForEachMutPtr<N, (), Item = *mut T>,
     {
         let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_key, lod_delta);
-        let dst_chunk = dst_chunks.get_mut_chunk_or_insert_ambient(dst.dst_chunk_key);
+        let dst_chunk =
+            dst_chunks.get_mut_chunk_or_insert_ambient(ChunkKey::new(0, dst.dst_chunk_min));
         let dst_extent = ExtentN::from_min_and_shape(
             dst_chunk.extent().minimum + dst.dst_offset.0,
             chunk_shape >> 1,
@@ -232,9 +233,13 @@ where
                         let src_lod = node.octant().power();
                         if src_lod < self.num_levels() - 1 {
                             let dst_lod = src_lod + 1;
-                            let src_chunk_key =
+                            let src_chunk_min =
                                 (node.octant().minimum() << chunk_log2) >> src_lod as i32;
-                            self.downsample_chunk(sampler, src_lod, src_chunk_key, dst_lod);
+                            self.downsample_chunk(
+                                sampler,
+                                ChunkKey::new(src_lod, src_chunk_min),
+                                dst_lod,
+                            );
                         }
 
                         VisitStatus::Continue
@@ -272,18 +277,22 @@ where
                         let src_lod = node.octant().power();
                         if src_lod < self.num_levels() - 1 {
                             let dst_lod = src_lod + 1;
-                            let src_chunk_key =
+                            let src_chunk_min =
                                 (node.octant().minimum() << chunk_log2) >> src_lod as i32;
 
                             if src_lod == 0 {
                                 self.downsample_lod0_chunk(
                                     &get_lod0_chunk,
                                     sampler,
-                                    src_chunk_key,
+                                    src_chunk_min,
                                     dst_lod,
                                 );
                             } else {
-                                self.downsample_chunk(sampler, src_lod, src_chunk_key, dst_lod);
+                                self.downsample_chunk(
+                                    sampler,
+                                    ChunkKey::new(src_lod, src_chunk_min),
+                                    dst_lod,
+                                );
                             }
                         }
 
@@ -308,7 +317,7 @@ fn two_elems_mut<T>(levels: &mut [T], level_a: u8, level_b: u8) -> [&mut T; 2] {
 pub fn downsample_chunk_into_map<N, T, Samp, SrcCh, Bldr, DstStore>(
     sampler: &Samp,
     chunk_shape: PointN<N>,
-    src_chunk_key: PointN<N>,
+    src_chunk_min: PointN<N>,
     src_chunk: &SrcCh,
     lod_delta: u8,
     dst_chunks: &mut ChunkMap<N, T, Bldr, DstStore>,
@@ -318,14 +327,14 @@ pub fn downsample_chunk_into_map<N, T, Samp, SrcCh, Bldr, DstStore>(
     Bldr: ChunkMapBuilder<N, T, Chunk = ArrayNx1<N, T>>,
     DstStore: ChunkWriteStorage<N, Bldr::Chunk>,
 {
-    let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_key, lod_delta);
-    let dst_chunk = dst_chunks.get_mut_chunk_or_insert_ambient(dst.dst_chunk_key);
+    let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_min, lod_delta);
+    let dst_chunk = dst_chunks.get_mut_chunk_or_insert_ambient(ChunkKey::new(0, dst.dst_chunk_min));
     sampler.downsample(src_chunk, dst_chunk, dst.dst_offset, lod_delta);
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct DownsampleDestination<N> {
-    dst_chunk_key: PointN<N>,
+    dst_chunk_min: PointN<N>,
     dst_offset: Local<N>,
 }
 
@@ -340,19 +349,20 @@ where
         let chunk_shape_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
         let level_up_log2 = chunk_shape_log2 + PointN::fill(lod_delta);
         let level_up_shape = chunk_shape << lod_delta;
-        let dst_chunk_key = (src_chunk_key >> level_up_log2) << chunk_shape_log2;
+        let dst_chunk_min = (src_chunk_key >> level_up_log2) << chunk_shape_log2;
         let offset = src_chunk_key % level_up_shape;
         let dst_offset = Local(offset >> lod_delta);
 
         Self {
-            dst_chunk_key,
+            dst_chunk_min,
             dst_offset,
         }
     }
 }
 
 /// A `ChunkPyramid` using `HashMap` as chunk storage.
-pub type ChunkHashMapPyramid<N, T> = ChunkPyramid<N, T, SmallKeyHashMap<PointN<N>, ArrayNx1<N, T>>>;
+pub type ChunkHashMapPyramid<N, T> =
+    ChunkPyramid<N, T, SmallKeyHashMap<ChunkKey<N>, ArrayNx1<N, T>>>;
 /// A 2-dimensional `ChunkHashMapPyramid`.
 pub type ChunkHashMapPyramid2<T> = ChunkHashMapPyramid<[i32; 2], T>;
 /// A 3-dimensional `ChunkHashMapPyramid`.
@@ -388,7 +398,7 @@ mod tests {
         assert_eq!(
             dst,
             DownsampleDestination {
-                dst_chunk_key: Point3i::ZERO,
+                dst_chunk_min: Point3i::ZERO,
                 dst_offset: Local(chunk_shape / 2),
             }
         );
@@ -398,7 +408,7 @@ mod tests {
         assert_eq!(
             dst,
             DownsampleDestination {
-                dst_chunk_key: chunk_shape,
+                dst_chunk_min: chunk_shape,
                 dst_offset: Local(Point3i::ZERO),
             }
         );
@@ -414,7 +424,7 @@ mod tests {
         assert_eq!(
             dst,
             DownsampleDestination {
-                dst_chunk_key: Point3i::ZERO,
+                dst_chunk_min: Point3i::ZERO,
                 dst_offset: Local(3 * chunk_shape / 4),
             }
         );
@@ -424,7 +434,7 @@ mod tests {
         assert_eq!(
             dst,
             DownsampleDestination {
-                dst_chunk_key: chunk_shape,
+                dst_chunk_min: chunk_shape,
                 dst_offset: Local(Point3i::ZERO),
             }
         );
@@ -452,7 +462,7 @@ mod tests {
 
         // Since we're downsampling multichannel chunks, we need to project them onto the one channel that we're downsampling.
         let get_lod0_chunk = |p| {
-            lod0.get_chunk(p)
+            lod0.get_chunk(ChunkKey::new(0, p))
                 .map(|chunk| chunk.borrow_channels(|(sd, _letter)| sd))
         };
 

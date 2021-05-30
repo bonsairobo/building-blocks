@@ -1,6 +1,6 @@
-use crate::{BincodeCompression, BytesCompression, ChunkWriteStorage, Compressed, Compression};
-
-use building_blocks_core::prelude::*;
+use crate::{
+    BincodeCompression, BytesCompression, ChunkKey, ChunkWriteStorage, Compressed, Compression,
+};
 
 use futures::future::join_all;
 use itertools::Itertools;
@@ -17,7 +17,7 @@ where
     Ch: DeserializeOwned + Serialize,
     B: BytesCompression,
 {
-    pub compressed_chunks: Vec<(PointN<N>, Compressed<BincodeCompression<Ch, B>>)>,
+    pub compressed_chunks: Vec<(ChunkKey<N>, Compressed<BincodeCompression<Ch, B>>)>,
 }
 
 impl<N, Ch, B> SerializableChunks<N, Ch, B>
@@ -30,7 +30,7 @@ where
     /// using some `B: BytesCompression`. This can be used to serialize any kind of `ChunkMap`, regardless of chunk storage.
     pub async fn from_iter(
         compression: BincodeCompression<Ch, B>,
-        chunks_iter: impl IntoIterator<Item = (PointN<N>, Ch)>,
+        chunks_iter: impl IntoIterator<Item = (ChunkKey<N>, Ch)>,
     ) -> Self
     where
         B: Copy,
@@ -86,7 +86,9 @@ where
 mod test {
     use super::*;
 
-    use crate::{prelude::*, ChunkMapBuilder3x1, SmallKeyHashMap};
+    use crate::{prelude::*, ChunkKey3, ChunkMapBuilder3x1, SmallKeyHashMap};
+
+    use building_blocks_core::prelude::*;
 
     #[cfg(feature = "lz4")]
     #[test]
@@ -131,7 +133,7 @@ mod test {
     fn do_serialize_and_deserialize_round_trip_test<B, Store>(storage: Store, compression: B)
     where
         Store: ChunkWriteStorage<[i32; 3], Array3x1<i32>>
-            + IntoIterator<Item = (Point3i, Array3x1<i32>)>,
+            + IntoIterator<Item = (ChunkKey3, Array3x1<i32>)>,
         B: BytesCompression + Copy + DeserializeOwned + Serialize,
     {
         let mut map = BUILDER.build_with_write_storage(storage);

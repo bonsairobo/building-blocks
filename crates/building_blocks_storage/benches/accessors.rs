@@ -246,10 +246,10 @@ where
             continue;
         }
 
-        let chunk_key = chunk_p * CHUNK_SHAPE;
+        let chunk_min = chunk_p * CHUNK_SHAPE;
         map.write_chunk(
-            chunk_key,
-            Array3x1::fill(Extent3i::from_min_and_shape(chunk_key, CHUNK_SHAPE), 1),
+            ChunkKey::new(0, chunk_min),
+            Array3x1::fill(Extent3i::from_min_and_shape(chunk_min, CHUNK_SHAPE), 1),
         );
     }
 

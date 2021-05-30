@@ -1,10 +1,8 @@
 use crate::{
-    CacheEntry, Channel, ChunkMap, ChunkReadStorage, CompressedChunks, CompressibleChunkStorage,
-    Compression, IterChunkKeys, LocalCache, LruChunkCacheEntries, LruChunkCacheKeys,
-    SmallKeyBuildHasher,
+    CacheEntry, Channel, ChunkKey, ChunkMap, ChunkReadStorage, CompressedChunks,
+    CompressibleChunkStorage, Compression, IterChunkKeys, LocalCache, LruChunkCacheEntries,
+    LruChunkCacheKeys, SmallKeyBuildHasher,
 };
-
-use building_blocks_core::prelude::*;
 
 use core::hash::Hash;
 
@@ -22,11 +20,11 @@ where
 
 impl<'a, N, Compr> ChunkReadStorage<N, Compr::Data> for CompressibleChunkStorageReader<'a, N, Compr>
 where
-    PointN<N>: Hash + IntegerPoint<N>,
+    ChunkKey<N>: Clone + Eq + Hash,
     Compr: Compression,
 {
     #[inline]
-    fn get(&self, key: PointN<N>) -> Option<&Compr::Data> {
+    fn get(&self, key: ChunkKey<N>) -> Option<&Compr::Data> {
         let Self {
             storage: CompressibleChunkStorage {
                 cache, compressed, ..
@@ -44,7 +42,7 @@ where
 
 impl<'a, N, Compr> IterChunkKeys<'a, N> for CompressibleChunkStorageReader<'a, N, Compr>
 where
-    PointN<N>: Hash + IntegerPoint<N>,
+    ChunkKey<N>: Clone + Eq + Hash,
     Compr: Compression,
 {
     type Iter = LruChunkCacheKeys<'a, N, Compr::Data>;
@@ -56,11 +54,11 @@ where
 
 impl<'a, N, Compr> IntoIterator for &'a CompressibleChunkStorageReader<'a, N, Compr>
 where
-    PointN<N>: Hash + IntegerPoint<N>,
+    ChunkKey<N>: Clone + Eq + Hash,
     Compr: Compression,
 {
     type IntoIter = CompressibleChunkStorageReaderIntoIter<'a, N, Compr>;
-    type Item = (&'a PointN<N>, &'a Compr::Data);
+    type Item = (&'a ChunkKey<N>, &'a Compr::Data);
 
     fn into_iter(self) -> Self::IntoIter {
         let &CompressibleChunkStorageReader {
@@ -87,10 +85,10 @@ where
 
 impl<'a, N, Compr> Iterator for CompressibleChunkStorageReaderIntoIter<'a, N, Compr>
 where
-    PointN<N>: Hash + IntegerPoint<N>,
+    ChunkKey<N>: Clone + Eq + Hash,
     Compr: Compression,
 {
-    type Item = (&'a PointN<N>, &'a Compr::Data);
+    type Item = (&'a ChunkKey<N>, &'a Compr::Data);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.cache_entries
@@ -99,7 +97,7 @@ where
                 CacheEntry::Cached(chunk) => (key, chunk),
                 CacheEntry::Evicted(location) => (
                     key,
-                    self.local_cache.get_or_insert_with(*key, || {
+                    self.local_cache.get_or_insert_with(key.clone(), || {
                         self.compressed.get(location.0).unwrap().decompress()
                     }),
                 ),
@@ -108,7 +106,7 @@ where
 }
 
 /// A `LocalCache` of chunks.
-pub type LocalChunkCache<N, Ch> = LocalCache<PointN<N>, Ch, SmallKeyBuildHasher>;
+pub type LocalChunkCache<N, Ch> = LocalCache<ChunkKey<N>, Ch, SmallKeyBuildHasher>;
 /// A `LocalCache` of 2D chunks.
 pub type LocalChunkCache2<Ch> = LocalChunkCache<[i32; 2], Ch>;
 /// A `LocalCache` of 3D chunks.

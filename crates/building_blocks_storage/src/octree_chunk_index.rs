@@ -1,7 +1,6 @@
 use crate::{
-    active_clipmap_lod_chunks, Array3x1, ChunkMap3, ChunkedOctreeSet, ClipMapConfig3,
-    ClipMapUpdate3, GetMut, IterChunkKeys, LodChunkKey3, LodChunkUpdate3, OctreeSet,
-    SmallKeyHashMap,
+    active_clipmap_lod_chunks, Array3x1, ChunkKey3, ChunkMap3, ChunkedOctreeSet, ClipMapConfig3,
+    ClipMapUpdate3, GetMut, IterChunkKeys, LodChunkUpdate3, OctreeSet, SmallKeyHashMap,
 };
 
 use building_blocks_core::prelude::*;
@@ -56,7 +55,7 @@ impl OctreeChunkIndex {
     pub fn index_chunks<'a>(
         superchunk_shape: Point3i,
         chunk_shape: Point3i,
-        chunk_keys: impl Iterator<Item = &'a Point3i>,
+        chunk_keys: impl Iterator<Item = &'a ChunkKey3>,
     ) -> Self {
         assert!(superchunk_shape.dimensions_are_powers_of_2());
         assert!(chunk_shape.dimensions_are_powers_of_2());
@@ -81,8 +80,8 @@ impl OctreeChunkIndex {
         let superchunk_mask = !(superchunk_shape - Point3i::ONES);
 
         let mut superchunk_bitsets = SmallKeyHashMap::default();
-        for &chunk_key in chunk_keys {
-            let superchunk_key = chunk_key & superchunk_mask;
+        for chunk_key in chunk_keys {
+            let superchunk_key = chunk_key.minimum & superchunk_mask;
             let bitset = superchunk_bitsets.entry(superchunk_key).or_insert_with(|| {
                 Array3x1::fill(
                     Extent3i::from_min_and_shape(
@@ -92,7 +91,7 @@ impl OctreeChunkIndex {
                     false,
                 )
             });
-            *bitset.get_mut(chunk_key >> chunk_log2) = true;
+            *bitset.get_mut(chunk_key.minimum >> chunk_log2) = true;
         }
 
         // PERF: could be done in parallel
@@ -129,14 +128,14 @@ impl OctreeChunkIndex {
         }
     }
 
-    /// Traverses all octree nodes overlapping `extent` to find the `LodChunkKey3`s that are "active" when the clipmap is
+    /// Traverses all octree nodes overlapping `extent` to find the `ChunkKey3`s that are "active" when the clipmap is
     /// centered at `lod0_center`.
     pub fn active_clipmap_lod_chunks(
         &self,
         extent: &Extent3i,
         clip_box_radius: i32,
         lod0_center: Point3i,
-        mut init_rx: impl FnMut(LodChunkKey3),
+        mut init_rx: impl FnMut(ChunkKey3),
     ) {
         let config = self.clipmap_config(clip_box_radius);
         self.superchunk_octrees

@@ -204,7 +204,7 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
         for chunk_key in map_ref.storage().keys() {
             s.spawn(async move {
                 let padded_chunk_extent = padded_surface_nets_chunk_extent(
-                    &map_ref.indexer.extent_for_chunk_at_key(*chunk_key),
+                    &map_ref.indexer.extent_for_chunk_with_min(chunk_key.minimum),
                 );
                 let mut padded_chunk = Array3x1::fill(padded_chunk_extent, Sd16(0));
                 copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
@@ -249,7 +249,7 @@ fn generate_chunk_meshes_from_height_map(
         for chunk_key in map_ref.storage().keys() {
             s.spawn(async move {
                 let padded_chunk_extent = padded_height_map_chunk_extent(
-                    &map_ref.indexer.extent_for_chunk_at_key(*chunk_key),
+                    &map_ref.indexer.extent_for_chunk_with_min(chunk_key.minimum),
                 )
                 // Ignore the ambient values outside the sample extent.
                 .intersection(&sample_extent);
@@ -291,7 +291,7 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
         for chunk_key in map_ref.storage().keys() {
             s.spawn(async move {
                 let padded_chunk_extent = padded_greedy_quads_chunk_extent(
-                    &map_ref.indexer.extent_for_chunk_at_key(*chunk_key),
+                    &map_ref.indexer.extent_for_chunk_with_min(chunk_key.minimum),
                 );
 
                 let mut padded_chunk = Array3x1::fill(padded_chunk_extent, CubeVoxel(false));

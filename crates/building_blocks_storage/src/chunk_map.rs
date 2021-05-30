@@ -112,9 +112,10 @@
 //! ```
 
 use crate::{
-    Array, ArrayCopySrc, ArrayIndexer, Channel, ChunkHashMap, ChunkIndexer, ChunkReadStorage,
-    ChunkWriteStorage, FillChannels, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetRef,
-    IntoMultiMut, IterChunkKeys, MultiMutPtr, MultiRef, ReadExtent, SmallKeyHashMap, WriteExtent,
+    Array, ArrayCopySrc, ArrayIndexer, Channel, ChunkHashMap, ChunkIndexer, ChunkKey,
+    ChunkReadStorage, ChunkWriteStorage, FillChannels, ForEach, ForEachMut, ForEachMutPtr, Get,
+    GetMut, GetRef, IntoMultiMut, IterChunkKeys, MultiMutPtr, MultiRef, ReadExtent,
+    SmallKeyHashMap, WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
@@ -226,7 +227,8 @@ pub trait ChunkMapBuilder<N, T>: Sized {
     /// Create a new `ChunkMap` using a `SmallKeyHashMap` as the chunk storage.
     fn build_with_hash_map_storage(self) -> ChunkHashMap<N, T, Self>
     where
-        PointN<N>: Hash + IntegerPoint<N>,
+        PointN<N>: IntegerPoint<N>,
+        ChunkKey<N>: Eq + Hash,
     {
         Self::build_with_rw_storage(self, SmallKeyHashMap::default())
     }
@@ -358,8 +360,8 @@ where
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    pub fn get_chunk(&self, key: PointN<N>) -> Option<&Bldr::Chunk> {
-        debug_assert!(self.indexer.chunk_key_is_valid(key));
+    pub fn get_chunk(&self, key: ChunkKey<N>) -> Option<&Bldr::Chunk> {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.storage.get(key)
     }
@@ -371,11 +373,11 @@ where
         extent: &ExtentN<N>,
         mut visitor: impl FnMut(Either<&Bldr::Chunk, (&ExtentN<N>, AmbientExtent<N, T>)>),
     ) {
-        for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
-            if let Some(chunk) = self.get_chunk(chunk_key) {
+        for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
+            if let Some(chunk) = self.get_chunk(ChunkKey::new(0, chunk_min)) {
                 visitor(Either::Left(chunk))
             } else {
-                let chunk_extent = self.indexer.extent_for_chunk_at_key(chunk_key);
+                let chunk_extent = self.indexer.extent_for_chunk_with_min(chunk_min);
                 visitor(Either::Right((
                     &chunk_extent,
                     AmbientExtent::new(self.builder.ambient_value()),
@@ -391,8 +393,8 @@ where
         extent: &ExtentN<N>,
         mut visitor: impl FnMut(&Bldr::Chunk),
     ) {
-        for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
-            if let Some(chunk) = self.get_chunk(chunk_key) {
+        for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
+            if let Some(chunk) = self.get_chunk(ChunkKey::new(0, chunk_min)) {
                 visitor(chunk)
             }
         }
@@ -409,8 +411,8 @@ where
     ///
     /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
     #[inline]
-    pub fn write_chunk(&mut self, key: PointN<N>, chunk: Bldr::Chunk) {
-        debug_assert!(self.indexer.chunk_key_is_valid(key));
+    pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Bldr::Chunk) {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.storage.write(key, chunk);
     }
@@ -419,8 +421,8 @@ where
     ///
     /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
     #[inline]
-    pub fn replace_chunk(&mut self, key: PointN<N>, chunk: Bldr::Chunk) -> Option<Bldr::Chunk> {
-        debug_assert!(self.indexer.chunk_key_is_valid(key));
+    pub fn replace_chunk(&mut self, key: ChunkKey<N>, chunk: Bldr::Chunk) -> Option<Bldr::Chunk> {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.storage.replace(key, chunk)
     }
@@ -429,8 +431,8 @@ where
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    pub fn get_mut_chunk(&mut self, key: PointN<N>) -> Option<&mut Bldr::Chunk> {
-        debug_assert!(self.indexer.chunk_key_is_valid(key));
+    pub fn get_mut_chunk(&mut self, key: ChunkKey<N>) -> Option<&mut Bldr::Chunk> {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.storage.get_mut(key)
     }
@@ -441,10 +443,10 @@ where
     #[inline]
     pub fn get_mut_chunk_or_insert_with(
         &mut self,
-        key: PointN<N>,
+        key: ChunkKey<N>,
         create_chunk: impl FnOnce() -> Bldr::Chunk,
     ) -> &mut Bldr::Chunk {
-        debug_assert!(self.indexer.chunk_key_is_valid(key));
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.storage.get_mut_or_insert_with(key, create_chunk)
     }
@@ -453,8 +455,8 @@ where
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    pub fn get_mut_chunk_or_insert_ambient(&mut self, key: PointN<N>) -> &mut Bldr::Chunk {
-        debug_assert!(self.indexer.chunk_key_is_valid(key));
+    pub fn get_mut_chunk_or_insert_ambient(&mut self, key: ChunkKey<N>) -> &mut Bldr::Chunk {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         let Self {
             indexer,
@@ -462,9 +464,10 @@ where
             builder,
             ..
         } = self;
+        let chunk_min = key.minimum.clone();
 
         storage.get_mut_or_insert_with(key, || {
-            builder.new_ambient(indexer.extent_for_chunk_at_key(key))
+            builder.new_ambient(indexer.extent_for_chunk_with_min(chunk_min))
         })
     }
 
@@ -475,8 +478,8 @@ where
         extent: &ExtentN<N>,
         mut visitor: impl FnMut(&mut Bldr::Chunk),
     ) {
-        for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
-            visitor(self.get_mut_chunk_or_insert_ambient(chunk_key));
+        for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
+            visitor(self.get_mut_chunk_or_insert_ambient(ChunkKey::new(0, chunk_min)));
         }
     }
 
@@ -487,22 +490,22 @@ where
         extent: &ExtentN<N>,
         mut visitor: impl FnMut(&mut Bldr::Chunk),
     ) {
-        for chunk_key in self.indexer.chunk_keys_for_extent(extent) {
-            if let Some(chunk) = self.get_mut_chunk(chunk_key) {
+        for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
+            if let Some(chunk) = self.get_mut_chunk(ChunkKey::new(0, chunk_min)) {
                 visitor(chunk)
             }
         }
     }
 
     #[inline]
-    pub fn delete_chunk(&mut self, key: PointN<N>) {
-        debug_assert!(self.indexer.chunk_key_is_valid(key));
+    pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
         self.storage.delete(key);
     }
 
     #[inline]
-    pub fn pop_chunk(&mut self, key: PointN<N>) -> Option<Bldr::Chunk> {
-        debug_assert!(self.indexer.chunk_key_is_valid(key));
+    pub fn pop_chunk(&mut self, key: ChunkKey<N>) -> Option<Bldr::Chunk> {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.storage.pop(key)
     }
@@ -532,7 +535,7 @@ where
     /// The smallest extent that bounds all chunks.
     pub fn bounding_extent(&'a self) -> ExtentN<N> {
         bounding_extent(self.storage.chunk_keys().flat_map(|key| {
-            let chunk_extent = self.indexer.extent_for_chunk_at_key(*key);
+            let chunk_extent = self.indexer.extent_for_chunk_with_min(key.minimum);
 
             vec![chunk_extent.minimum, chunk_extent.max()].into_iter()
         }))
@@ -595,9 +598,9 @@ where
 
     #[inline]
     fn get(&self, p: PointN<N>) -> Self::Item {
-        let key = self.indexer.chunk_key_containing_point(p);
+        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
 
-        self.get_chunk(key)
+        self.get_chunk(ChunkKey::new(0, chunk_min))
             .map(|chunk| chunk.array().get(p))
             .unwrap_or_else(|| self.ambient_value.clone())
     }
@@ -615,9 +618,9 @@ where
 
     #[inline]
     fn get_ref(&'a self, p: PointN<N>) -> Self::Item {
-        let key = self.indexer.chunk_key_containing_point(p);
+        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
 
-        self.get_chunk(key)
+        self.get_chunk(ChunkKey::new(0, chunk_min))
             .map(|chunk| chunk.array().get_ref(p))
             .unwrap_or_else(|| Ref::from_data_ref(&self.ambient_value))
     }
@@ -634,8 +637,8 @@ where
 
     #[inline]
     fn get_mut(&'a mut self, p: PointN<N>) -> Self::Item {
-        let key = self.indexer.chunk_key_containing_point(p);
-        let chunk = self.get_mut_chunk_or_insert_ambient(key);
+        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
+        let chunk = self.get_mut_chunk_or_insert_ambient(ChunkKey::new(0, chunk_min));
 
         chunk.array_mut().get_mut(p)
     }
@@ -730,14 +733,14 @@ where
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
         let chunk_iters = self
             .indexer
-            .chunk_keys_for_extent(extent)
-            .map(|key| {
-                let chunk_extent = self.indexer.extent_for_chunk_at_key(key);
+            .chunk_mins_for_extent(extent)
+            .map(|chunk_min| {
+                let chunk_extent = self.indexer.extent_for_chunk_with_min(chunk_min);
                 let intersection = extent.intersection(&chunk_extent);
 
                 (
                     intersection,
-                    self.get_chunk(key)
+                    self.get_chunk(ChunkKey::new(0, chunk_min))
                         .map(|chunk| Either::Left(ArrayCopySrc(chunk)))
                         .unwrap_or_else(|| {
                             Either::Right(AmbientExtent::new(self.builder.ambient_value()))

@@ -1,67 +1,65 @@
 use crate::{ChunkMap, ChunkMapBuilder, SmallKeyHashMap};
 
-use super::{ChunkReadStorage, ChunkWriteStorage, IterChunkKeys};
-
-use building_blocks_core::prelude::*;
+use super::{ChunkKey, ChunkReadStorage, ChunkWriteStorage, IterChunkKeys};
 
 use core::hash::Hash;
 use std::collections::hash_map;
 
-impl<N, Ch> ChunkReadStorage<N, Ch> for SmallKeyHashMap<PointN<N>, Ch>
+impl<N, Ch> ChunkReadStorage<N, Ch> for SmallKeyHashMap<ChunkKey<N>, Ch>
 where
-    PointN<N>: Hash + Eq,
+    ChunkKey<N>: Hash + Eq,
 {
     #[inline]
-    fn get(&self, key: PointN<N>) -> Option<&Ch> {
+    fn get(&self, key: ChunkKey<N>) -> Option<&Ch> {
         self.get(&key)
     }
 }
 
-impl<N, Ch> ChunkWriteStorage<N, Ch> for SmallKeyHashMap<PointN<N>, Ch>
+impl<N, Ch> ChunkWriteStorage<N, Ch> for SmallKeyHashMap<ChunkKey<N>, Ch>
 where
-    PointN<N>: Hash + Eq,
+    ChunkKey<N>: Hash + Eq,
 {
     #[inline]
-    fn get_mut(&mut self, key: PointN<N>) -> Option<&mut Ch> {
+    fn get_mut(&mut self, key: ChunkKey<N>) -> Option<&mut Ch> {
         self.get_mut(&key)
     }
 
     #[inline]
     fn get_mut_or_insert_with(
         &mut self,
-        key: PointN<N>,
+        key: ChunkKey<N>,
         create_chunk: impl FnOnce() -> Ch,
     ) -> &mut Ch {
         self.entry(key).or_insert_with(create_chunk)
     }
 
     #[inline]
-    fn replace(&mut self, key: PointN<N>, chunk: Ch) -> Option<Ch> {
+    fn replace(&mut self, key: ChunkKey<N>, chunk: Ch) -> Option<Ch> {
         self.insert(key, chunk)
     }
 
     #[inline]
-    fn write(&mut self, key: PointN<N>, chunk: Ch) {
+    fn write(&mut self, key: ChunkKey<N>, chunk: Ch) {
         self.insert(key, chunk);
     }
 
     #[inline]
-    fn delete(&mut self, key: PointN<N>) {
+    fn delete(&mut self, key: ChunkKey<N>) {
         self.remove(&key);
     }
 
     #[inline]
-    fn pop(&mut self, key: PointN<N>) -> Option<Ch> {
+    fn pop(&mut self, key: ChunkKey<N>) -> Option<Ch> {
         self.remove(&key)
     }
 }
 
-impl<'a, N, Ch> IterChunkKeys<'a, N> for SmallKeyHashMap<PointN<N>, Ch>
+impl<'a, N, Ch> IterChunkKeys<'a, N> for SmallKeyHashMap<ChunkKey<N>, Ch>
 where
-    PointN<N>: 'a,
+    ChunkKey<N>: 'a,
     Ch: 'a,
 {
-    type Iter = hash_map::Keys<'a, PointN<N>, Ch>;
+    type Iter = hash_map::Keys<'a, ChunkKey<N>, Ch>;
 
     fn chunk_keys(&'a self) -> Self::Iter {
         self.keys()
@@ -70,7 +68,7 @@ where
 
 /// A `ChunkMap` using `HashMap` as chunk storage.
 pub type ChunkHashMap<N, T, Bldr> =
-    ChunkMap<N, T, Bldr, SmallKeyHashMap<PointN<N>, <Bldr as ChunkMapBuilder<N, T>>::Chunk>>;
+    ChunkMap<N, T, Bldr, SmallKeyHashMap<ChunkKey<N>, <Bldr as ChunkMapBuilder<N, T>>::Chunk>>;
 /// A 2-dimensional `ChunkHashMap`.
 pub type ChunkHashMap2<T, Bldr> = ChunkHashMap<[i32; 2], T, Bldr>;
 /// A 3-dimensional `ChunkHashMap`.

@@ -2,7 +2,7 @@ use crate::voxel_map::VoxelMap;
 
 use building_blocks::{
     mesh::*,
-    storage::{LodChunkKey3, LodChunkUpdate3, SmallKeyHashMap},
+    storage::{ChunkKey3, LodChunkUpdate3, SmallKeyHashMap},
 };
 use utilities::bevy_util::{mesh::create_mesh_bundle, thread_local_resource::ThreadLocalResource};
 
@@ -35,7 +35,7 @@ impl MeshCommandQueue {
 // PERF: try to eliminate the use of multiple Vecs
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MeshCommand {
-    Create(LodChunkKey3),
+    Create(ChunkKey3),
     Update(LodChunkUpdate3),
 }
 
@@ -45,7 +45,7 @@ pub struct MeshMaterials(pub Vec<Handle<StandardMaterial>>);
 #[derive(Default)]
 pub struct ChunkMeshes {
     // Map from chunk key to mesh entity.
-    entities: SmallKeyHashMap<LodChunkKey3, Entity>,
+    entities: SmallKeyHashMap<ChunkKey3, Entity>,
 }
 
 /// Generates new meshes for all dirty chunks.
@@ -83,7 +83,7 @@ fn apply_mesh_commands<Map: VoxelMap>(
     mesh_commands: &mut MeshCommandQueue,
     chunk_meshes: &mut ChunkMeshes,
     commands: &mut Commands,
-) -> Vec<(LodChunkKey3, Option<PosNormMesh>)> {
+) -> Vec<(ChunkKey3, Option<PosNormMesh>)> {
     let num_chunks_to_mesh = mesh_commands.len().min(max_mesh_creations_per_frame(pool));
 
     let mut num_creates = 0;
@@ -163,7 +163,7 @@ fn apply_mesh_commands<Map: VoxelMap>(
 type ThreadLocalMeshBuffers<Map> = ThreadLocalResource<RefCell<<Map as VoxelMap>::MeshBuffers>>;
 
 fn spawn_mesh_entities(
-    new_chunk_meshes: Vec<(LodChunkKey3, Option<PosNormMesh>)>,
+    new_chunk_meshes: Vec<(ChunkKey3, Option<PosNormMesh>)>,
     mesh_materials: &MeshMaterials,
     commands: &mut Commands,
     mesh_assets: &mut Assets<Mesh>,

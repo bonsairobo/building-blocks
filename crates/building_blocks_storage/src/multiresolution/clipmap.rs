@@ -1,4 +1,4 @@
-use crate::{LodChunkKey, LodChunkKey3, Octant, OctreeNode, OctreeSet, VisitStatus};
+use crate::{ChunkKey, ChunkKey3, Octant, OctreeNode, OctreeSet, VisitStatus};
 
 use building_blocks_core::prelude::*;
 
@@ -23,13 +23,13 @@ impl ClipMapConfig3 {
     }
 }
 
-/// Traverse `octree` to find the `LodChunkKey3`s that are "active" when the clipmap is centered at `lod0_center`. `active_rx`
+/// Traverse `octree` to find the `ChunkKey3`s that are "active" when the clipmap is centered at `lod0_center`. `active_rx`
 /// is a callback that receives the chunk keys for active chunks.
 pub fn active_clipmap_lod_chunks(
     config: &ClipMapConfig3,
     octree: &OctreeSet,
     lod0_center: Point3i,
-    mut active_rx: impl FnMut(LodChunkKey3),
+    mut active_rx: impl FnMut(ChunkKey3),
 ) {
     let chunk_log2 = config.chunk_edge_length_log2();
     let centers = all_lod_centers(lod0_center, config.num_lods);
@@ -72,16 +72,16 @@ pub type LodChunkUpdate3 = LodChunkUpdate<[i32; 3]>;
 /// moved.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SplitChunk<N> {
-    pub old_chunk: LodChunkKey<N>,
-    pub new_chunks: Vec<LodChunkKey<N>>,
+    pub old_chunk: ChunkKey<N>,
+    pub new_chunks: Vec<ChunkKey<N>>,
 }
 
 /// Merge many `old_chunks` into `new_chunk`. The number of old chunks depends on how many levels of detail the octant has
 /// moved.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MergeChunks<N> {
-    pub old_chunks: Vec<LodChunkKey<N>>,
-    pub new_chunk: LodChunkKey<N>,
+    pub old_chunks: Vec<ChunkKey<N>>,
+    pub new_chunk: ChunkKey<N>,
 }
 
 /// A transient object used for running the `find_chunk_updates` method on multiple octrees.
@@ -194,7 +194,7 @@ fn find_merge_or_split_descendants(
     node: &OctreeNode,
     centers: &[Point3i],
     high_lod_boundary: i32,
-) -> Vec<LodChunkKey3> {
+) -> Vec<ChunkKey3> {
     let mut matching_chunks = Vec::with_capacity(8);
     node.visit_all_octants_in_preorder(octree, &mut |node: &OctreeNode| {
         let lod = node.octant().power();
@@ -219,11 +219,11 @@ fn get_offset_from_lod_center(octant: &Octant, centers: &[Point3i]) -> i32 {
     (lod_p - lod_center).abs().max_component()
 }
 
-fn octant_lod_chunk_key(chunk_log2: i32, octant: &Octant) -> LodChunkKey3 {
+fn octant_lod_chunk_key(chunk_log2: i32, octant: &Octant) -> ChunkKey3 {
     let lod = octant.power();
 
-    LodChunkKey {
+    ChunkKey {
         lod,
-        chunk_key: (octant.minimum() << chunk_log2) >> lod as i32,
+        minimum: (octant.minimum() << chunk_log2) >> lod as i32,
     }
 }

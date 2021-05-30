@@ -61,7 +61,7 @@ where
 
 impl<N, C> Compression for FastArrayCompression<N, C>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: Copy,
     C: Compression,
 {
     type Data = Array<N, C::Data>;

@@ -9,7 +9,7 @@
 //! - [ChunkDownsampler](self::ChunkDownsampler): an algorithm for downsampling one chunk
 //!
 //! You will generally want to have a `ChunkPyramid` and a corresponding `OctreeChunkIndex` that tracks the set of chunks that
-//! exist. Each node in the `OctreeChunkIndex` corresponds to a chunk at a particular level, i.e. an `LodChunkKey`. There is
+//! exist. Each node in the `OctreeChunkIndex` corresponds to a chunk at a particular level, i.e. an `ChunkKey`. There is
 //! currently no enforcement of occupancy in the `ChunkPyramid`.
 //!
 //! `OctreeChunkIndex` is "unbounded" because it is actually a collection of `OctreeSet`s stored in a map. Each entry of that
@@ -53,7 +53,7 @@
 //!             // Chunks are the single-voxel leaves. Remember this octree is indexing in a space where 1 voxel = 1 chunk.
 //!             if node.octant().is_single_voxel() {
 //!                 // The octree coordinates are downscaled by the chunk shape.
-//!                 chunk_keys.insert(node.octant().minimum() * chunk_shape);
+//!                 chunk_keys.insert(ChunkKey::new(0, node.octant().minimum() * chunk_shape));
 //!             }
 //!             VisitStatus::Continue
 //!         });
@@ -74,17 +74,3 @@ pub mod sampling;
 pub use chunk_pyramid::*;
 pub use clipmap::*;
 pub use sampling::*;
-
-use building_blocks_core::PointN;
-
-/// The chunk key for a chunk at a particular level of detail.
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
-pub struct LodChunkKey<N> {
-    pub chunk_key: PointN<N>,
-    pub lod: u8,
-}
-
-/// A 2-dimensional `LodChunkKey`.
-pub type LodChunkKey2 = LodChunkKey<[i32; 2]>;
-/// A 3-dimensional `LodChunkKey`.
-pub type LodChunkKey3 = LodChunkKey<[i32; 3]>;

@@ -7,7 +7,7 @@ use building_blocks::{
         PosNormMesh, RIGHT_HANDED_Y_UP_CONFIG,
     },
     prelude::*,
-    storage::{ChunkHashMapPyramid3, LodChunkKey3, OctreeChunkIndex, SmallKeyHashMap},
+    storage::{ChunkHashMapPyramid3, ChunkKey3, OctreeChunkIndex, SmallKeyHashMap},
 };
 use utilities::noise::generate_noise_chunks;
 
@@ -66,8 +66,11 @@ impl VoxelMap for BlockyVoxelMap {
         let mut pyramid = ChunkHashMapPyramid3::new(builder, || SmallKeyHashMap::new(), NUM_LODS);
         let lod0 = pyramid.level_mut(0);
 
-        for (chunk_key, noise) in noise_chunks.into_iter() {
-            lod0.write_chunk(chunk_key, blocky_voxels_from_noise(&noise, scale));
+        for (chunk_min, noise) in noise_chunks.into_iter() {
+            lod0.write_chunk(
+                ChunkKey::new(0, chunk_min),
+                blocky_voxels_from_noise(&noise, scale),
+            );
         }
 
         let index = OctreeChunkIndex::index_chunk_map(SUPERCHUNK_SHAPE, lod0);
@@ -109,12 +112,12 @@ impl VoxelMap for BlockyVoxelMap {
 
     fn create_mesh_for_chunk(
         &self,
-        key: LodChunkKey3,
+        key: ChunkKey3,
         mesh_buffers: &mut Self::MeshBuffers,
     ) -> Option<PosNormMesh> {
         let chunks = self.pyramid.level(key.lod);
 
-        let chunk_extent = chunks.indexer.extent_for_chunk_at_key(key.chunk_key);
+        let chunk_extent = chunks.indexer.extent_for_chunk_with_min(key.minimum);
         let padded_chunk_extent = padded_greedy_quads_chunk_extent(&chunk_extent);
 
         // Keep a thread-local cache of buffers to avoid expensive reallocations every time we want to mesh a chunk.

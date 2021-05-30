@@ -868,6 +868,29 @@ mod tests {
     }
 
     #[test]
+    fn multichannel_get_with_slice_storage() {
+        let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
+        let mut chan1 = vec![0; extent.num_points()];
+        let mut chan2 = vec!['a'; extent.num_points()];
+        let mut array = Array3x2::new(
+            extent,
+            (Channel::new(&mut chan1[..]), Channel::new(&mut chan2[..])),
+        );
+
+        assert_eq!(array.get(Stride(0)), (0, 'a'));
+        assert_eq!(array.get_ref(Stride(0)), (&0, &'a'));
+        assert_eq!(array.get_mut(Stride(0)), (&mut 0, &mut 'a'));
+
+        assert_eq!(array.get(Local(Point3i::fill(0))), (0, 'a'));
+        assert_eq!(array.get_ref(Local(Point3i::fill(0))), (&0, &'a'));
+        assert_eq!(array.get_mut(Local(Point3i::fill(0))), (&mut 0, &mut 'a'));
+
+        assert_eq!(array.get(Point3i::fill(0)), (0, 'a'));
+        assert_eq!(array.get_ref(Point3i::fill(0)), (&0, &'a'));
+        assert_eq!(array.get_mut(Point3i::fill(0)), (&mut 0, &mut 'a'));
+    }
+
+    #[test]
     fn multichannel_for_each() {
         let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
         let mut array = Array3x2::fill(extent, (0, 'a'));

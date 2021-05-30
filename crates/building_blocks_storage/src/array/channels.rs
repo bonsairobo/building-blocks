@@ -8,10 +8,31 @@ pub use multichannel::*;
 
 use crate::MultiMutPtr;
 
+/// Implemented by any tuple of `Channel`s to indicate the types of data being stored.
 pub trait Channels {
     type Data;
     type Ptr: MultiMutPtr<Data = Self::Data>;
     type UninitSelf: UninitChannels;
+}
+
+/// Converts a tuple of channels into a tuple of slices.
+pub trait Slices<'a> {
+    type Target;
+
+    fn slices(&'a self) -> Self::Target;
+}
+
+/// Converts a tuple of channels into a tuple of mutable slices.
+pub trait SlicesMut<'a> {
+    type Target;
+
+    fn slices_mut(&'a mut self) -> Self::Target;
+}
+
+pub trait CopyDestination<'a> {
+    type Src;
+
+    fn copy(&mut self, src: Self::Src);
 }
 
 /// Converts a tuple of channels that own their data into a tuple of channels that borrow their data.

@@ -1,6 +1,6 @@
 use crate::{
-    BorrowChannels, BorrowChannelsMut, Channel, Channels, Compressed, Compression,
-    FastChannelsCompression, FillChannels, UninitChannels,
+    BorrowChannels, BorrowChannelsMut, Channel, Channels, Compressed, Compression, CopyDestination,
+    FastChannelsCompression, FillChannels, Slices, SlicesMut, UninitChannels,
 };
 
 macro_rules! impl_channels_for_tuple {
@@ -13,6 +13,46 @@ macro_rules! impl_channels_for_tuple {
             type Data = ($($t::Data,)+);
             type Ptr = ($(*mut $t::Data,)+);
             type UninitSelf = ($($t::UninitSelf,)+);
+        }
+
+        impl<'a, $($t),+> Slices<'a> for ($($t,)+)
+        where
+            $($t: Slices<'a>),+
+        {
+            type Target = ($($t::Target,)+);
+
+            fn slices(&'a self) -> Self::Target {
+                let ($($var1,)+) = self;
+
+                ($($var1.slices(),)+)
+            }
+        }
+
+        impl<'a, $($t),+> SlicesMut<'a> for ($($t,)+)
+        where
+            $($t: SlicesMut<'a>),+
+        {
+            type Target = ($($t::Target,)+);
+
+            fn slices_mut(&'a mut self) -> Self::Target {
+                let ($($var1,)+) = self;
+
+                ($($var1.slices_mut(),)+)
+            }
+        }
+
+        impl<'a, $($t),+> CopyDestination<'a> for ($($t,)+)
+        where
+            $($t: CopyDestination<'a>),+
+        {
+            type Src = ($($t::Src,)+);
+
+            fn copy(&mut self, src: Self::Src) {
+                let ($($var1,)+) = src;
+                let ($($var2,)+) = self;
+
+                $( $var2.copy($var1); )+
+            }
         }
 
         impl<'a, $($t),+> BorrowChannels<'a> for ($($t,)+)

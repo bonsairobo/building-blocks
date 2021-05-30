@@ -1,6 +1,6 @@
 use crate::{
-    AsRawBytes, BorrowChannels, BorrowChannelsMut, Channels, FillChannels, GetMut, GetMutPtr,
-    GetRef, UninitChannels,
+    AsRawBytes, BorrowChannels, BorrowChannelsMut, Channels, CopyDestination, FillChannels, GetMut,
+    GetMutPtr, GetRef, Slices, SlicesMut, UninitChannels,
 };
 
 use core::mem::MaybeUninit;
@@ -72,25 +72,65 @@ where
     }
 }
 
-impl<T> Channels for Channel<T> {
+impl<T, Store> Channels for Channel<T, Store> {
     type Data = T;
     type Ptr = *mut T;
     type UninitSelf = Channel<MaybeUninit<T>>;
 }
 
-impl<'a, T: 'a> BorrowChannels<'a> for Channel<T> {
-    type Borrowed = Channel<T, &'a [T]>;
+impl<'a, T: 'a, Store> Slices<'a> for Channel<T, Store>
+where
+    Store: Deref<Target = [T]>,
+{
+    type Target = &'a [T];
 
-    fn borrow(&'a self) -> Self::Borrowed {
-        Channel::new(self.store.as_slice())
+    fn slices(&'a self) -> Self::Target {
+        self.store.deref()
     }
 }
 
-impl<'a, T: 'a> BorrowChannelsMut<'a> for Channel<T> {
+impl<'a, T: 'a, Store> SlicesMut<'a> for Channel<T, Store>
+where
+    Store: DerefMut<Target = [T]>,
+{
+    type Target = &'a [T];
+
+    fn slices_mut(&'a mut self) -> Self::Target {
+        self.store.deref_mut()
+    }
+}
+
+impl<'a, T: 'a, Store> CopyDestination<'a> for Channel<T, Store>
+where
+    T: Copy,
+    Store: DerefMut<Target = [T]>,
+{
+    type Src = &'a [T];
+
+    fn copy(&mut self, src: Self::Src) {
+        self.store.copy_from_slice(src)
+    }
+}
+
+impl<'a, T: 'a, Store> BorrowChannels<'a> for Channel<T, Store>
+where
+    Store: Deref<Target = [T]>,
+{
+    type Borrowed = Channel<T, &'a [T]>;
+
+    fn borrow(&'a self) -> Self::Borrowed {
+        Channel::new(self.store.deref())
+    }
+}
+
+impl<'a, T: 'a, Store> BorrowChannelsMut<'a> for Channel<T, Store>
+where
+    Store: DerefMut<Target = [T]>,
+{
     type Borrowed = Channel<T, &'a mut [T]>;
 
     fn borrow_mut(&'a mut self) -> Self::Borrowed {
-        Channel::new(self.store.as_mut())
+        Channel::new(self.store.deref_mut())
     }
 }
 

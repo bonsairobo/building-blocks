@@ -376,7 +376,7 @@ pub type CompressibleChunkPyramid3<By, T> = CompressibleChunkPyramid<[i32; 3], B
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Sd8, SdfMeanDownsampler, TransformMap};
+    use crate::{Sd8, SdfMeanDownsampler};
 
     #[test]
     fn downsample_destination_for_one_level_up() {
@@ -453,7 +453,7 @@ mod tests {
         // Since we're downsampling multichannel chunks, we need to project them onto the one channel that we're downsampling.
         let get_lod0_chunk = |p| {
             lod0.get_chunk(p)
-                .map(|chunk| TransformMap::new(chunk, |(sd, _letter): (Sd8, char)| sd))
+                .map(|chunk| chunk.borrow_channels(|(sd, _letter)| sd))
         };
 
         pyramid.downsample_chunks_with_lod0_and_index(

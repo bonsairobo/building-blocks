@@ -131,9 +131,9 @@
 //! });
 //!
 //! // And if we want to copy just one of those channels into another map, we can
-//! // use `TransformMap` to select the channel.
+//! // create a new array that borrows just one of the channels.
 //! let mut dst = Array3x1::fill(extent, 0.0);
-//! let src_select = TransformMap::new(&array, |(_id, dist): (VoxelId, f32)| dist);
+//! let src_select = array.borrow_channels(|(_id, dist)| dist);
 //! copy_extent(&extent, &src_select, &mut dst);
 //! ```
 
@@ -662,15 +662,22 @@ where
     }
 }
 
-impl<'a, N, Chan> WriteExtent<N, ArrayCopySrc<&'a Self>> for Array<N, Chan>
+impl<'a, N, Data, SrcSlices, ChanSrc, ChanDst> WriteExtent<N, ArrayCopySrc<&'a Array<N, ChanSrc>>>
+    for Array<N, ChanDst>
 where
-    Self: Get<Stride, Item = Chan::Data> + GetMutPtr<Stride, Item = Chan::Ptr>,
+    Self: GetMutPtr<Stride, Item = ChanDst::Ptr>,
+    Array<N, ChanSrc>: Get<Stride, Item = Data>,
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     ExtentN<N>: Copy,
-    Chan: Channels + Clone,
+    ChanSrc: Channels<Data = Data> + Slices<'a, Target = SrcSlices>,
+    ChanDst: Channels<Data = Data> + CopyDestination<'a, Src = SrcSlices>,
 {
-    fn write_extent(&mut self, extent: &ExtentN<N>, src_array: ArrayCopySrc<&'a Self>) {
+    fn write_extent(
+        &mut self,
+        extent: &ExtentN<N>,
+        src_array: ArrayCopySrc<&'a Array<N, ChanSrc>>,
+    ) {
         // It is assumed by the interface that extent is a subset of the src array, so we only need to intersect with the
         // destination.
         let in_bounds_extent = extent.intersection(self.extent());
@@ -680,7 +687,7 @@ where
 
         if copy_entire_array {
             // Fast path, mostly for copying entire chunks between chunk maps.
-            self.channels = src_array.0.channels.clone();
+            self.channels.copy(src_array.0.channels.slices());
         } else {
             unchecked_copy_extent_between_arrays(self, src_array.0, &in_bounds_extent);
         }
@@ -894,7 +901,7 @@ mod tests {
     }
 
     #[test]
-    fn multichannel_get_with_borrowed_storage() {
+    fn multichannel_access_with_borrowed_storage() {
         let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
         let mut array = Array3x2::fill(extent, (0, 'a'));
 
@@ -906,6 +913,11 @@ mod tests {
 
         assert_eq!(borrowed.get(Local(Point3i::fill(0))), ('a', 0));
         assert_eq!(borrowed.get_ref(Local(Point3i::fill(0))), (&'a', &0));
+
+        borrowed.for_each(&extent, |_: (), x| assert_eq!(x, ('a', 0)));
+
+        let mut other = Array3x2::fill(extent, ('b', 1));
+        copy_extent(&extent, &borrowed, &mut other);
 
         let mut borrowed = array.borrow_channels_mut(|(c1, c2)| (c2, c1));
 
@@ -919,6 +931,10 @@ mod tests {
             borrowed.get_mut(Local(Point3i::fill(0))),
             (&mut 'a', &mut 0)
         );
+
+        borrowed.for_each_mut(&extent, |_: (), x| assert_eq!(x, (&mut 'a', &mut 0)));
+
+        copy_extent(&extent, &other, &mut borrowed);
     }
 
     #[test]

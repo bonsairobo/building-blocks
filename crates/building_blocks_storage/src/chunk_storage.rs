@@ -8,6 +8,7 @@ pub use hash_map::*;
 
 use building_blocks_core::prelude::*;
 
+use auto_impl::auto_impl;
 use serde::{Deserialize, Serialize};
 
 /// The key for a chunk at a particular level of detail.
@@ -34,12 +35,14 @@ impl<N> ChunkKey<N> {
 }
 
 /// Methods for reading chunks from storage.
+#[auto_impl(&)]
 pub trait ChunkReadStorage<N, Ch> {
     /// Borrow the chunk at `key`.
     fn get(&self, key: ChunkKey<N>) -> Option<&Ch>;
 }
 
 /// Methods for writing chunks from storage.
+#[auto_impl(&mut)]
 pub trait ChunkWriteStorage<N, Ch> {
     /// Mutably borrow the chunk at `key`.
     fn get_mut(&mut self, key: ChunkKey<N>) -> Option<&mut Ch>;

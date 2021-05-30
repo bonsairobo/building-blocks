@@ -112,16 +112,42 @@
 //! ```
 
 use crate::{
-    Array, ArrayCopySrc, ArrayIndexer, Channel, Chunk, ChunkHashMap, ChunkIndexer,
-    ChunkReadStorage, ChunkWriteStorage, FillChannels, ForEach, ForEachMut, ForEachMutPtr, Get,
-    GetMut, GetRef, IntoMultiMut, IterChunkKeys, MultiMutPtr, MultiRef, ReadExtent,
-    SmallKeyHashMap, WriteExtent,
+    Array, ArrayCopySrc, ArrayIndexer, Channel, ChunkHashMap, ChunkIndexer, ChunkReadStorage,
+    ChunkWriteStorage, FillChannels, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetRef,
+    IntoMultiMut, IterChunkKeys, MultiMutPtr, MultiRef, ReadExtent, SmallKeyHashMap, WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
 
 use core::hash::Hash;
 use either::Either;
+
+/// One piece of a chunked lattice map.
+pub trait Chunk {
+    /// The inner array type. This makes it easier for `Chunk` implementations to satisfy access trait bounds by inheriting them
+    /// from existing array types like `Array`.
+    type Array;
+
+    /// Borrow the inner array.
+    fn array(&self) -> &Self::Array;
+
+    /// Mutably borrow the inner array.
+    fn array_mut(&mut self) -> &mut Self::Array;
+}
+
+impl<N, Chan> Chunk for Array<N, Chan> {
+    type Array = Self;
+
+    #[inline]
+    fn array(&self) -> &Self::Array {
+        self
+    }
+
+    #[inline]
+    fn array_mut(&mut self) -> &mut Self::Array {
+        self
+    }
+}
 
 /// A lattice map made up of same-shaped `Array` chunks. It takes a value at every possible `PointN`, because accesses made
 /// outside of the stored chunks will return some ambient value specified on creation.

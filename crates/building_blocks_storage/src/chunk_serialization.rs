@@ -26,8 +26,8 @@ where
     Ch: DeserializeOwned + Serialize,
     B: BytesCompression,
 {
-    /// Returns a serializable version of this map. All chunks are serialized with `bincode`, then compressed using some
-    /// `BytesCompression`. This can be used to serialize any kind of `ChunkMap`, regardless of chunk storage.
+    /// Returns a serializable version of this collection of chunks. All chunks are serialized with `bincode`, then compressed
+    /// using some `B: BytesCompression`. This can be used to serialize any kind of `ChunkMap`, regardless of chunk storage.
     pub async fn from_iter(
         compression: BincodeCompression<Ch, B>,
         chunks_iter: impl IntoIterator<Item = (PointN<N>, Ch)>,
@@ -54,7 +54,7 @@ where
         Self { compressed_chunks }
     }
 
-    /// Returns a new map from the serialized, compressed version. This will decompress each chunk and insert it into the given
+    /// Fills `storage` from the serialized, compressed chunks. This will decompress each chunk and insert it into the given
     /// `storage`.
     pub async fn fill_storage<Store>(self, storage: &mut Store)
     where

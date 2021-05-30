@@ -116,7 +116,7 @@ where
         let lod_delta = dst_level - src_chunk_key.lod;
         let src_chunk_min = src_chunk_key.minimum;
 
-        if let Some(src_chunk) = src_chunks.get_mut_chunk(src_chunk_key) {
+        if let Some(src_chunk) = src_chunks.get_mut_chunk(ChunkKey::new(0, src_chunk_key.minimum)) {
             downsample_chunk_into_map(
                 sampler,
                 chunk_shape,

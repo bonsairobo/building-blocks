@@ -169,20 +169,20 @@ fn spawn_mesh_entities(
     mesh_assets: &mut Assets<Mesh>,
     chunk_meshes: &mut ChunkMeshes,
 ) {
-    for (lod_chunk_key, item) in new_chunk_meshes.into_iter() {
+    for (chunk_key, item) in new_chunk_meshes.into_iter() {
         let old_mesh = if let Some(mesh) = item {
             chunk_meshes.entities.insert(
-                lod_chunk_key,
+                chunk_key,
                 commands
                     .spawn_bundle(create_mesh_bundle(
                         mesh,
-                        mesh_materials.0[lod_chunk_key.lod as usize].clone(),
+                        mesh_materials.0[chunk_key.lod as usize].clone(),
                         mesh_assets,
                     ))
                     .id(),
             )
         } else {
-            chunk_meshes.entities.remove(&lod_chunk_key)
+            chunk_meshes.entities.remove(&chunk_key)
         };
         if let Some(old_mesh) = old_mesh {
             commands.entity(old_mesh).despawn();

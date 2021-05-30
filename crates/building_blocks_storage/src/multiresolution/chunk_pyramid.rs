@@ -376,7 +376,7 @@ pub type CompressibleChunkPyramid3<By, T> = CompressibleChunkPyramid<[i32; 3], B
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Sd8, SdfMeanDownsampler, TransformMap};
+    use crate::{ModalDownsampler, Sd8, SdfMeanDownsampler, TransformMap};
 
     #[test]
     fn downsample_destination_for_one_level_up() {
@@ -462,5 +462,33 @@ mod tests {
             &SdfMeanDownsampler,
             &lod0_extent,
         );
+    }
+
+    #[test]
+    fn downsample_modal_chunks_with_index() {
+        let num_lods = 2;
+        let chunk_shape = Point3i::fill(16);
+        let superchunk_shape = Point3i::fill(32);
+
+        let lod0_extent =
+            Extent3i::from_min_and_shape(Point3i::ZERO, superchunk_shape);
+
+        // Build a chunk map for LOD0.
+        let ambient = 0;
+        let pyramid_builder = ChunkMapBuilder3x1::new(chunk_shape, ambient);
+        let mut pyramid = ChunkPyramid3::new(pyramid_builder, || SmallKeyHashMap::new(), num_lods);
+        let lod0 = pyramid.level_mut(0);
+        lod0.fill_extent(&Extent3i::from_min_and_shape(Point3i::ZERO, chunk_shape + PointN([chunk_shape.x(), chunk_shape.y(), 0])), 1);
+        *lod0.get_mut(chunk_shape) = 1;
+
+        let index = OctreeChunkIndex::index_chunk_map(superchunk_shape, &lod0);
+
+        pyramid.downsample_chunks_with_index(
+            &index,
+            &ModalDownsampler,
+            &lod0_extent,
+        );
+
+        assert_eq!(pyramid.level(1).get(PointN([0, 0, 0])), 1);
     }
 }

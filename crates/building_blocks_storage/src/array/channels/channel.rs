@@ -1,4 +1,7 @@
-use crate::{AsRawBytes, Channels, FillChannels, GetMut, GetMutPtr, GetRef, UninitChannels};
+use crate::{
+    AsRawBytes, BorrowChannels, BorrowChannelsMut, Channels, FillChannels, GetMut, GetMutPtr,
+    GetRef, UninitChannels,
+};
 
 use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
@@ -73,6 +76,22 @@ impl<T> Channels for Channel<T> {
     type Data = T;
     type Ptr = *mut T;
     type UninitSelf = Channel<MaybeUninit<T>>;
+}
+
+impl<'a, T: 'a> BorrowChannels<'a> for Channel<T> {
+    type Borrowed = Channel<T, &'a [T]>;
+
+    fn borrow(&'a self) -> Self::Borrowed {
+        Channel::new(self.store.as_slice())
+    }
+}
+
+impl<'a, T: 'a> BorrowChannelsMut<'a> for Channel<T> {
+    type Borrowed = Channel<T, &'a mut [T]>;
+
+    fn borrow_mut(&'a mut self) -> Self::Borrowed {
+        Channel::new(self.store.as_mut())
+    }
 }
 
 impl<T> FillChannels for Channel<T>

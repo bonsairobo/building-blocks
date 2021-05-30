@@ -1,6 +1,6 @@
 use crate::{
-    Channel, Channels, Compressed, Compression, FastChannelsCompression, FillChannels,
-    UninitChannels,
+    BorrowChannels, BorrowChannelsMut, Channel, Channels, Compressed, Compression,
+    FastChannelsCompression, FillChannels, UninitChannels,
 };
 
 macro_rules! impl_channels_for_tuple {
@@ -13,6 +13,32 @@ macro_rules! impl_channels_for_tuple {
             type Data = ($($t::Data,)+);
             type Ptr = ($(*mut $t::Data,)+);
             type UninitSelf = ($($t::UninitSelf,)+);
+        }
+
+        impl<'a, $($t),+> BorrowChannels<'a> for ($($t,)+)
+        where
+            $($t: BorrowChannels<'a>),+
+        {
+            type Borrowed = ($($t::Borrowed,)+);
+
+            fn borrow(&'a self) -> Self::Borrowed {
+                let ($($var1,)+) = self;
+
+                ($($var1.borrow(),)+)
+            }
+        }
+
+        impl<'a, $($t),+> BorrowChannelsMut<'a> for ($($t,)+)
+        where
+            $($t: BorrowChannelsMut<'a>),+
+        {
+            type Borrowed = ($($t::Borrowed,)+);
+
+            fn borrow_mut(&'a mut self) -> Self::Borrowed {
+                let ($($var1,)+) = self;
+
+                ($($var1.borrow_mut(),)+)
+            }
         }
 
         impl<$($t),+> FillChannels for ($($t,)+)

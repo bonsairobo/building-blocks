@@ -260,6 +260,32 @@ impl<N, Chan> Array<N, Chan>
 where
     PointN<N>: IntegerPoint<N>,
 {
+    /// Creates a new `Array` from the return value of `selector`. `selector` takes a tuple of `Channel`s that borrow their
+    /// storage.
+    #[inline]
+    pub fn borrow_channels<'a, NewChan>(
+        &'a self,
+        selector: impl Fn(Chan::Borrowed) -> NewChan,
+    ) -> Array<N, NewChan>
+    where
+        Chan: BorrowChannels<'a>,
+    {
+        Array::new(self.extent, selector(self.channels().borrow()))
+    }
+
+    /// Creates a new `Array` from the return value of `selector`. `selector` takes a tuple of `Channel`s that mutably borrow
+    /// their storage.
+    #[inline]
+    pub fn borrow_channels_mut<'a, NewChan>(
+        &'a mut self,
+        selector: impl Fn(Chan::Borrowed) -> NewChan,
+    ) -> Array<N, NewChan>
+    where
+        Chan: BorrowChannelsMut<'a>,
+    {
+        Array::new(self.extent, selector(self.channels_mut().borrow_mut()))
+    }
+
     /// Sets the extent minimum to `p`. This doesn't change the shape of the extent.
     #[inline]
     pub fn set_minimum(&mut self, p: PointN<N>) {
@@ -868,26 +894,31 @@ mod tests {
     }
 
     #[test]
-    fn multichannel_get_with_slice_storage() {
+    fn multichannel_get_with_borrowed_storage() {
         let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(10));
-        let mut chan1 = vec![0; extent.num_points()];
-        let mut chan2 = vec!['a'; extent.num_points()];
-        let mut array = Array3x2::new(
-            extent,
-            (Channel::new(&mut chan1[..]), Channel::new(&mut chan2[..])),
+        let mut array = Array3x2::fill(extent, (0, 'a'));
+
+        // Swap the order.
+        let borrowed = array.borrow_channels(|(c1, c2)| (c2, c1));
+
+        assert_eq!(borrowed.get(Stride(0)), ('a', 0));
+        assert_eq!(borrowed.get_ref(Stride(0)), (&'a', &0));
+
+        assert_eq!(borrowed.get(Local(Point3i::fill(0))), ('a', 0));
+        assert_eq!(borrowed.get_ref(Local(Point3i::fill(0))), (&'a', &0));
+
+        let mut borrowed = array.borrow_channels_mut(|(c1, c2)| (c2, c1));
+
+        assert_eq!(borrowed.get(Stride(0)), ('a', 0));
+        assert_eq!(borrowed.get_ref(Stride(0)), (&'a', &0));
+        assert_eq!(borrowed.get_mut(Stride(0)), (&mut 'a', &mut 0));
+
+        assert_eq!(borrowed.get(Local(Point3i::fill(0))), ('a', 0));
+        assert_eq!(borrowed.get_ref(Local(Point3i::fill(0))), (&'a', &0));
+        assert_eq!(
+            borrowed.get_mut(Local(Point3i::fill(0))),
+            (&mut 'a', &mut 0)
         );
-
-        assert_eq!(array.get(Stride(0)), (0, 'a'));
-        assert_eq!(array.get_ref(Stride(0)), (&0, &'a'));
-        assert_eq!(array.get_mut(Stride(0)), (&mut 0, &mut 'a'));
-
-        assert_eq!(array.get(Local(Point3i::fill(0))), (0, 'a'));
-        assert_eq!(array.get_ref(Local(Point3i::fill(0))), (&0, &'a'));
-        assert_eq!(array.get_mut(Local(Point3i::fill(0))), (&mut 0, &mut 'a'));
-
-        assert_eq!(array.get(Point3i::fill(0)), (0, 'a'));
-        assert_eq!(array.get_ref(Point3i::fill(0)), (&0, &'a'));
-        assert_eq!(array.get_mut(Point3i::fill(0)), (&mut 0, &mut 'a'));
     }
 
     #[test]

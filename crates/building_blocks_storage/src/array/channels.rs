@@ -14,6 +14,20 @@ pub trait Channels {
     type UninitSelf: UninitChannels;
 }
 
+/// Converts a tuple of channels that own their data into a tuple of channels that borrow their data.
+pub trait BorrowChannels<'a> {
+    type Borrowed;
+
+    fn borrow(&'a self) -> Self::Borrowed;
+}
+
+/// Converts a tuple of channels that own their data into a tuple of channels that mutably borrow their data.
+pub trait BorrowChannelsMut<'a> {
+    type Borrowed;
+
+    fn borrow_mut(&'a mut self) -> Self::Borrowed;
+}
+
 pub trait FillChannels: Channels {
     fn fill(value: Self::Data, length: usize) -> Self;
     fn reset_values(&mut self, value: Self::Data);

@@ -1,5 +1,5 @@
 use crate::{
-    BorrowChannels, BorrowChannelsMut, Channel, Channels, Compressed, Compression, CopyDestination,
+    BorrowChannels, BorrowChannelsMut, Channel, Channels, Compressed, Compression, CopySlices,
     FastChannelsCompression, FillChannels, Slices, SlicesMut, UninitChannels,
 };
 
@@ -41,17 +41,17 @@ macro_rules! impl_channels_for_tuple {
             }
         }
 
-        impl<'a, $($t),+> CopyDestination<'a> for ($($t,)+)
+        impl<'a, $($t),+> CopySlices<'a> for ($($t,)+)
         where
-            $($t: CopyDestination<'a>),+
+            $($t: CopySlices<'a>),+
         {
             type Src = ($($t::Src,)+);
 
-            fn copy(&mut self, src: Self::Src) {
+            fn copy_slices(&mut self, src: Self::Src) {
                 let ($($var1,)+) = src;
                 let ($($var2,)+) = self;
 
-                $( $var2.copy($var1); )+
+                $( $var2.copy_slices($var1); )+
             }
         }
 

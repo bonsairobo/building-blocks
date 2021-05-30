@@ -1,5 +1,5 @@
 use crate::{
-    AsRawBytes, BorrowChannels, BorrowChannelsMut, Channels, CopyDestination, FillChannels, GetMut,
+    AsRawBytes, BorrowChannels, BorrowChannelsMut, Channels, CopySlices, FillChannels, GetMut,
     GetMutPtr, GetRef, Slices, SlicesMut, UninitChannels,
 };
 
@@ -100,15 +100,15 @@ where
     }
 }
 
-impl<'a, T: 'a, Store> CopyDestination<'a> for Channel<T, Store>
+impl<'a, T: 'a, Store> CopySlices<'a> for Channel<T, Store>
 where
-    T: Copy,
+    T: Clone,
     Store: DerefMut<Target = [T]>,
 {
     type Src = &'a [T];
 
-    fn copy(&mut self, src: Self::Src) {
-        self.store.copy_from_slice(src)
+    fn copy_slices(&mut self, src: Self::Src) {
+        self.store.clone_from_slice(src)
     }
 }
 

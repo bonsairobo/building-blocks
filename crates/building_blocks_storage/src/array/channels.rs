@@ -29,10 +29,10 @@ pub trait SlicesMut<'a> {
     fn slices_mut(&'a mut self) -> Self::Target;
 }
 
-pub trait CopyDestination<'a> {
+pub trait CopySlices<'a> {
     type Src;
 
-    fn copy(&mut self, src: Self::Src);
+    fn copy_slices(&mut self, src: Self::Src);
 }
 
 /// Converts a tuple of channels that own their data into a tuple of channels that borrow their data.

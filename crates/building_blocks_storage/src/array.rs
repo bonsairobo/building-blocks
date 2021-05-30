@@ -670,7 +670,7 @@ where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     ChanSrc: Channels<Data = Data> + Slices<'a, Target = SrcSlices>,
-    ChanDst: Channels<Data = Data> + CopyDestination<'a, Src = SrcSlices>,
+    ChanDst: Channels<Data = Data> + CopySlices<'a, Src = SrcSlices>,
 {
     fn write_extent(
         &mut self,
@@ -686,7 +686,7 @@ where
 
         if copy_entire_array {
             // Fast path, mostly for copying entire chunks between chunk maps.
-            self.channels.copy(src_array.0.channels.slices());
+            self.channels.copy_slices(src_array.0.channels.slices());
         } else {
             unchecked_copy_extent_between_arrays(self, src_array.0, &in_bounds_extent);
         }

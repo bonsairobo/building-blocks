@@ -142,7 +142,7 @@ where
         &mut self,
         get_lod0_chunk: impl Fn(PointN<N>) -> Option<Lod0Ch>,
         sampler: &Samp,
-        src_chunk_key: PointN<N>,
+        src_chunk_min: PointN<N>,
         dst_lod: u8,
     ) where
         // Need to get tricky here to support both chunk references and TransformMaps returned from a closure.
@@ -160,11 +160,11 @@ where
 
         let dst_chunks = &mut levels[dst_level as usize];
 
-        if let Some(src_chunk) = get_lod0_chunk(src_chunk_key) {
+        if let Some(src_chunk) = get_lod0_chunk(src_chunk_min) {
             downsample_chunk_into_map(
                 sampler,
                 chunk_shape,
-                src_chunk_key,
+                src_chunk_min,
                 src_chunk.borrow(),
                 lod_delta,
                 dst_chunks,
@@ -173,7 +173,7 @@ where
             Self::downsample_ambient(
                 builder.ambient_value(),
                 chunk_shape,
-                src_chunk_key,
+                src_chunk_min,
                 lod_delta,
                 dst_chunks,
             )
@@ -184,13 +184,13 @@ where
     fn downsample_ambient(
         ambient_value: T,
         chunk_shape: PointN<N>,
-        src_chunk_key: PointN<N>,
+        src_chunk_min: PointN<N>,
         lod_delta: u8,
         dst_chunks: &mut ChunkMapNx1<N, T, Store>,
     ) where
         ArrayNx1<N, T>: ForEachMutPtr<N, (), Item = *mut T>,
     {
-        let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_key, lod_delta);
+        let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_min, lod_delta);
         let dst_chunk =
             dst_chunks.get_mut_chunk_or_insert_ambient(ChunkKey::new(0, dst.dst_chunk_min));
         let dst_extent = ExtentN::from_min_and_shape(
@@ -344,13 +344,13 @@ where
 {
     /// When downsampling a chunk at level `N`, the samples are used at the returned destination within level `N + level_delta`
     /// in the clipmap.
-    fn for_source_chunk(chunk_shape: PointN<N>, src_chunk_key: PointN<N>, lod_delta: u8) -> Self {
+    fn for_source_chunk(chunk_shape: PointN<N>, src_chunk_min: PointN<N>, lod_delta: u8) -> Self {
         let lod_delta = lod_delta as i32;
         let chunk_shape_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
         let level_up_log2 = chunk_shape_log2 + PointN::fill(lod_delta);
         let level_up_shape = chunk_shape << lod_delta;
-        let dst_chunk_min = (src_chunk_key >> level_up_log2) << chunk_shape_log2;
-        let offset = src_chunk_key % level_up_shape;
+        let dst_chunk_min = (src_chunk_min >> level_up_log2) << chunk_shape_log2;
+        let offset = src_chunk_min % level_up_shape;
         let dst_offset = Local(offset >> lod_delta);
 
         Self {

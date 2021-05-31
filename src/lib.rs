@@ -129,7 +129,7 @@
 //!
 //! ```toml
 //! [dependencies.building-blocks]
-//! version = "0.5"
+//! version = "0.6"
 //! default-features = false
 //! features = ["foo", "bar"]
 //! ```

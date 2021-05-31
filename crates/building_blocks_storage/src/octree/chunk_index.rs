@@ -5,6 +5,7 @@
 //! You might wonder why the `OctreeChunkIndex` is necessary at all. It's main utility is for optimizing iteration over large
 //! regions of the map. Without one, the best you could do is hash every single `ChunkKey` that overlaps your query extent to
 //! see if it exists in the `ChunkMap`. It is also a natural structure for implementing a clipmap.
+//!
 //! ## Indexing and Downsampling a `ChunkMap`
 //!
 //! ```

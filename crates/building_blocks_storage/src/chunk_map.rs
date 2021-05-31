@@ -155,19 +155,19 @@ impl<N, Chan> Chunk for Array<N, Chan> {
     }
 }
 
-/// A lattice map made up of same-shaped `Array` chunks. It takes a value at every possible `PointN`, because accesses made
-/// outside of the stored chunks will return some ambient value specified on creation.
+/// A lattice map made up of same-shaped `Array` chunks. For each level of detail, it takes a value at every possible `PointN`,
+/// because accesses made outside of the stored chunks will return some ambient value specified on creation.
 ///
 /// `ChunkMap` is generic over the type used to actually store the `Chunk`s. You can use any storage that implements
-/// `ChunkReadStorage` or `ChunkWriteStorage`. Being a lattice map, `ChunkMap` will implement various access traits, depending
-/// on the capabilities of the chunk storage.
+/// `ChunkReadStorage` or `ChunkWriteStorage`. Being a lattice map, `ChunkMapLodView` will implement various access traits,
+/// depending on the capabilities of the chunk storage.
 ///
-/// If the chunk storage implements `ChunkReadStorage`, then `ChunkMap` will implement:
+/// If the chunk storage implements `ChunkReadStorage`, then `ChunkMapLodView` will implement:
 /// - `Get`
 /// - `ForEach`
 /// - `ReadExtent`
 ///
-/// If the chunk storage implements `ChunkWriteStorage`, then `ChunkMap` will implement:
+/// If the chunk storage implements `ChunkWriteStorage`, then `ChunkMapLodView` will implement:
 /// - `GetMut`
 /// - `ForEachMut`
 /// - `WriteExtent`

@@ -10,16 +10,13 @@
 //! implement the `SignedDistance` trait required for smooth meshing.
 //!
 //! The core storage types are:
-//!   - `Array`: N-dimensional, dense array
-//!   - `ChunkHashMap`: N-dimensional, sparse array
-//!   - `CompressibleChunkMap`: N-dimensional, sparse array with chunk compression
+//!   - `Array`: N-dimensional, single resolution, dense array
+//!   - `ChunkMap`: N-dimensional, multiple resolution, sparse array
+//!     - Backed by generic chunk storage, including `HashMap` or `CompressibleChunkStorage`
 //!
 //! Then there are "meta" lattice maps that provide some extra utility:
 //!   - `TransformMap`: a wrapper of any kind of lattice map that performs an arbitrary transformation
-//!   - `Fn(PointN<N>)`: some lattice map traits are implemented for functions (like SDFs)
-//!
-//! For multiresolution voxel data, there is an extension of `ChunkMap` called the `ChunkPyramid` which supports generic chunk
-//! downsampling via the `ChunkDownsampler` trait.
+//!   - `Func`: some lattice map traits are implemented for closures (like SDFs)
 //!
 //! For spatial indexing, there is the bounded `OctreeSet` and corresponding unbounded `ChunkedOctreeSet`. Specifically for
 //! indexing chunk keys and interacting with clipmaps, there is an `OctreeChunkIndex`.

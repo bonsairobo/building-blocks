@@ -37,7 +37,7 @@ impl VoxelMap for SmoothVoxelMap {
         for (chunk_min, noise) in noise_chunks.into_iter() {
             chunks.write_chunk(
                 ChunkKey::new(0, chunk_min),
-                blocky_voxels_from_noise(&noise, scale),
+                smooth_voxels_from_noise(&noise, scale),
             );
         }
 
@@ -117,7 +117,7 @@ impl VoxelMap for SmoothVoxelMap {
     }
 }
 
-fn blocky_voxels_from_noise(noise: &Array3x1<f32>, scale: f32) -> Array3x1<Sd16> {
+fn smooth_voxels_from_noise(noise: &Array3x1<f32>, scale: f32) -> Array3x1<Sd16> {
     let mut voxels = Array3x1::fill(*noise.extent(), Sd16::ONE);
 
     // Convert the f32 noise into Sd16s.

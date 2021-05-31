@@ -18,11 +18,10 @@ Terrain](https://media.githubusercontent.com/media/bonsairobo/building-blocks/ma
 We focus on generally useful data structures and algorithms. Features include:
 
 - 2D and 3D data storage
-  - a [`ChunkMap`](crate::storage::chunk_map) with generic chunk storage
-  - chunk compression and caching
   - structure-of-arrays (SoA) storage of multiple data channels per spatial dimension
-  - [`OctreeSet`](crate::storage::octree_set) hierarchical set of voxel points
-  - all storages are serializable with [`serde`](https://serde.rs/)
+  - a [`ChunkMap`](crate::storage::chunk_map) with generic chunk storage
+  - chunk caching, compression, and serialization
+  - [`OctreeSet`](crate::storage::octree_set) hierarchical bitset of voxel points
 - mesh generation
   - Surface Nets isosurface extraction
   - Minecraft-style greedy meshing
@@ -33,9 +32,8 @@ We focus on generally useful data structures and algorithms. Features include:
   - Amanatides and Woo ray grid traversal
   - pathfinding
 - level of detail
-  - `OctreeChunkIndex` as a hierarchical index of chunk IDs
-  - `ChunkMap` supports multiresolution voxel data and downsampling
-  - algorithms for finding active chunks and updates to a 3D clipmap
+  - `ChunkMap` can downsample chunks into lower resolutions within the same storage
+  - dynamic 3D clipmap for keeping high detail close to a focal point
   - multiresolution Surface Nets (TODO)
 - procedural generation
   - sampling signed distance fields

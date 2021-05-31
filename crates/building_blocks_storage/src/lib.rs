@@ -10,32 +10,28 @@
 //! implement the `SignedDistance` trait required for smooth meshing.
 //!
 //! The core storage types are:
-//!   - `Array`: N-dimensional, single resolution, dense array
-//!   - `ChunkMap`: N-dimensional, multiple resolution, sparse array
-//!     - Backed by generic chunk storage, including `HashMap` or `CompressibleChunkStorage`
+//!   - [Array](crate::Array): N-dimensional, single resolution, bounded, dense array
+//!   - [ChunkMap](crate::ChunkMap): N-dimensional, multiple resolution, unbounded, sparse array
+//!     - Backed by generic chunk storage, with `HashMap` or `CompressibleChunkStorage` implementations
 //!
 //! Then there are "meta" lattice maps that provide some extra utility:
-//!   - `TransformMap`: a wrapper of any kind of lattice map that performs an arbitrary transformation
-//!   - `Func`: some lattice map traits are implemented for closures (like SDFs)
+//!   - [TransformMap](crate::TransformMap): a wrapper of any kind of lattice map that performs an arbitrary transformation
+//!   - [Func](crate::Func): some lattice map traits are implemented for closures (like SDFs)
 //!
-//! For spatial indexing, there is the bounded `OctreeSet` and corresponding unbounded `ChunkedOctreeSet`. Specifically for
-//! indexing chunk keys and interacting with clipmaps, there is an `OctreeChunkIndex`.
+//! For hierarchical indexing and level of detail:
+//!   - [OctreeSet](crate::OctreeSet): bounded bitset of points
+//!   - [ChunkedOctreeSet](crate::ChunkedOctreeSet): unbounded bitset of points
+//!   - [OctreeChunkIndex](crate::OctreeChunkIndex): just a `ChunkedOctreeSet` that tracks chunks and provides clipmap functionality
 
 #[macro_use]
 pub mod access_traits;
 pub mod array;
 pub mod caching;
-pub mod chunk_indexer;
-pub mod chunk_map;
-pub mod chunk_serialization;
-pub mod chunk_storage;
-pub mod chunked_octree_set;
+pub mod chunk;
 pub mod compression;
 pub mod func;
 pub mod multi_ptr;
-pub mod multiresolution;
-pub mod octree_chunk_index;
-pub mod octree_set;
+pub mod octree;
 pub mod raw_bytes;
 pub mod signed_distance;
 pub mod transform_map;
@@ -43,17 +39,11 @@ pub mod transform_map;
 pub use access_traits::*;
 pub use array::*;
 pub use caching::*;
-pub use chunk_indexer::*;
-pub use chunk_map::*;
-pub use chunk_serialization::*;
-pub use chunk_storage::*;
-pub use chunked_octree_set::*;
+pub use chunk::*;
 pub use compression::*;
 pub use func::*;
 pub use multi_ptr::*;
-pub use multiresolution::*;
-pub use octree_chunk_index::*;
-pub use octree_set::*;
+pub use octree::*;
 pub use raw_bytes::*;
 pub use signed_distance::*;
 pub use transform_map::*;
@@ -76,22 +66,21 @@ pub type SmallKeyBuildHasher = ahash::RandomState;
 
 pub mod prelude {
     pub use super::{
-        copy_extent, Chunk, ChunkHashMapPyramid2, ChunkHashMapPyramid3, ChunkKey, ChunkKey2,
-        ChunkKey3, ChunkMapBuilder, ChunkReadStorage, ChunkWriteStorage, Compressed,
-        CompressibleChunkMap, CompressibleChunkMapReader, CompressibleChunkStorage,
-        CompressibleChunkStorageReader, Compression, FastCompressibleChunkStorage,
-        FromBytesCompression, Func, IndexedArray, IsEmpty, IterChunkKeys, Local, LocalChunkCache2,
-        LocalChunkCache3, OctreeChunkIndex, OctreeNode, OctreeSet, PointDownsampler, Sd16, Sd8,
-        SdfMeanDownsampler, SerializableChunks, SignedDistance, SmallKeyHashMap, Stride,
-        TransformMap, VisitStatus,
+        copy_extent, Chunk, ChunkKey, ChunkKey2, ChunkKey3, ChunkMapBuilder, ChunkReadStorage,
+        ChunkWriteStorage, Compressed, CompressibleChunkMap, CompressibleChunkMapReader,
+        CompressibleChunkStorage, CompressibleChunkStorageReader, Compression,
+        FastCompressibleChunkStorage, FromBytesCompression, Func, IndexedArray, IsEmpty,
+        IterChunkKeys, Local, LocalChunkCache2, LocalChunkCache3, OctreeChunkIndex, OctreeNode,
+        OctreeSet, PointDownsampler, Sd16, Sd8, SdfMeanDownsampler, SerializableChunks,
+        SignedDistance, SmallKeyHashMap, Stride, TransformMap, VisitStatus,
     };
 
     pub use super::access_traits::*;
     pub use super::array::multichannel_aliases::*;
-    pub use super::chunk_map::multichannel_aliases::*;
-    pub use super::chunk_storage::compressible::multichannel_aliases::*;
-    pub use super::chunk_storage::compressible_reader::multichannel_aliases::*;
-    pub use super::chunk_storage::hash_map::multichannel_aliases::*;
+    pub use super::chunk::map::multichannel_aliases::*;
+    pub use super::chunk::storage::compressible::multichannel_aliases::*;
+    pub use super::chunk::storage::compressible_reader::multichannel_aliases::*;
+    pub use super::chunk::storage::hash_map::multichannel_aliases::*;
 
     #[cfg(feature = "lz4")]
     pub use super::Lz4;

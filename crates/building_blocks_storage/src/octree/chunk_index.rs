@@ -1,3 +1,54 @@
+//! `OctreeChunkIndex` is "unbounded" because it is actually a collection of `OctreeSet`s stored in a map. Each entry of that
+//! map is called a "super chunk." You can think if it like a `ChunkMap`, except instead of `Array`s, it stores `OctreeSet`s.
+//! Every superchunk is the same shape, and each is resonsible for a sparse set of chunks in a bounded region.
+//!
+//! You might wonder why the `OctreeChunkIndex` is necessary at all. It's main utility is for optimizing iteration over large
+//! regions of the map. Without one, the best you could do is hash every single `ChunkKey` that overlaps your query extent to
+//! see if it exists in the `ChunkMap`. It is also a natural structure for implementing a clipmap.
+//! ## Indexing and Downsampling a `ChunkMap`
+//!
+//! ```
+//! # use building_blocks_core::prelude::*;
+//! # use building_blocks_storage::prelude::*;
+//! # use std::collections::HashSet;
+//! #
+//! let chunk_shape = Point3i::fill(16);
+//! let ambient_value = 0;
+//! let builder = ChunkMapBuilder3x1::new(chunk_shape, ambient_value);
+//! let mut map = builder.build_with_hash_map_storage();
+//!
+//! // Populate LOD0, the highest resolution.
+//! let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(100));
+//! map.fill_extent(0, &extent, 1);
+//!
+//! // Now we index the currently populated set of chunks.
+//! let superchunk_shape = Point3i::fill(512);
+//! let mut index = OctreeChunkIndex::index_chunk_map(superchunk_shape, &map);
+//!
+//! // Just make sure everything's here. A unit test to help you understand this structure.
+//! let mut chunk_keys = HashSet::new();
+//! index.superchunk_octrees.visit_octrees(
+//!     &extent,
+//!     &mut |octree: &OctreeSet| {
+//!         octree.visit_all_octants_in_preorder(&mut |node: &OctreeNode| {
+//!             // Chunks are the single-voxel leaves. Remember this octree is indexing in a space where 1 voxel = 1 chunk.
+//!             if node.octant().is_single_voxel() {
+//!                 // The octree coordinates are downscaled by the chunk shape.
+//!                 chunk_keys.insert(ChunkKey::new(0, node.octant().minimum() * chunk_shape));
+//!             }
+//!             VisitStatus::Continue
+//!         });
+//!     }
+//! );
+//! assert_eq!(chunk_keys, map.storage().chunk_keys().cloned().collect());
+//!
+//! // Now let's downsample those chunks into every LOD of the map. This goes bottom-up in post-order. The
+//! // `PointDownsampler` simply takes one point for each 2x2x2 region being sampled. There is also an `SdfMeanDownsampler` that
+//! // works on any voxels types that implement `SignedDistance`. Or you can define your own downsampler!
+//! let num_lods = 5; // Up to 6 supported for now.
+//! map.downsample_chunks_with_index(num_lods, &index, &PointDownsampler, &extent);
+//! ```
+
 use crate::{
     active_clipmap_lod_chunks, Array3x1, ChunkKey3, ChunkMap3, ChunkedOctreeSet, ClipMapConfig3,
     ClipMapUpdate3, GetMut, IterChunkKeys, LodChunkUpdate3, OctreeSet, SmallKeyHashMap,
@@ -7,7 +58,7 @@ use building_blocks_core::prelude::*;
 
 use serde::{Deserialize, Serialize};
 
-/// A `ChunkedOctreeSet` that indexes the chunks of a `ChunkMap` or a `ChunkPyramid`. Useful for representing a clipmap.
+/// A `ChunkedOctreeSet` that indexes the chunks of a `ChunkMap`. Useful for representing a clipmap.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct OctreeChunkIndex {
     /// An unbounded set of chunk keys, but scaled down to be contiguous. For example, if the chunk shape is `16^3`, then the

@@ -34,7 +34,7 @@ We focus on generally useful data structures and algorithms. Features include:
   - pathfinding
 - level of detail
   - `OctreeChunkIndex` as a hierarchical index of chunk IDs
-  - `ChunkPyramid` for multiresolution voxel data and downsampling
+  - `ChunkMap` supports multiresolution voxel data and downsampling
   - algorithms for finding active chunks and updates to a 3D clipmap
   - multiresolution Surface Nets (TODO)
 - procedural generation
@@ -102,14 +102,11 @@ To learn the basics about lattice maps, start with these doc pages:
 - [point](https://docs.rs/building_blocks_core/latest/building_blocks_core/point/struct.PointN.html)
 - [extent](https://docs.rs/building_blocks_core/latest/building_blocks_core/extent/struct.ExtentN.html)
 - [array](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/array/index.html)
-- [access traits](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/access_traits/index.html)
+- [access traits](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/access/index.html)
 - [chunk map](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/chunk_map/index.html)
 - [transform map](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/transform_map/index.html)
 - [fn map](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/func/index.html)
-
-After that, you might be interested in hierarchical structures to help you scale your voxel application. For that, you'll
-want to read the [multiresolution module doc
-page](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/multiresolution/index.html).
+- TODO: octree and clipmap stuff
 
 ### Benchmarks
 

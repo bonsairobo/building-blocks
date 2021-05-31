@@ -19,8 +19,7 @@
 //! perform spatial queries like raycasting.
 //!
 //! The `OctreeSet` is also used in the `OctreeChunkIndex`, where each point represents a single chunk. This representation is
-//! useful for level of detail algorithms like clipmap traversal because inner nodes may correspond to downsampled chunks stored
-//! in a `ChunkPyramid`.
+//! useful for level of detail algorithms like clipmap traversal because inner nodes may correspond to downsampled chunks.
 //!
 //! # Traversal
 //!
@@ -32,7 +31,7 @@
 //! ```
 //! # let some_condition = |_: &OctreeNode| true;
 //! use building_blocks_core::prelude::*;
-//! use building_blocks_storage::{octree_set::*, prelude::*};
+//! use building_blocks_storage::{octree::set::*, prelude::*};
 //!
 //! let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
 //! let voxels = Array3x1::fill(extent, true); // boring example

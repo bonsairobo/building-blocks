@@ -96,13 +96,12 @@ which brought about the current feature set:
     makes it so `ChunkMap`s can work with any kind of backing storage, be it a
     simple hash map or something more complex.
   - Due to the requirement for level of detail, some hierarchical storage types
-    were introduced. The `ChunkPyramid` is very simple: just an array of `ChunkMap`s,
-    one for each level of detail. It supports some helper functions for
-    downsampling chunks. There is also an `OctreeSet` which is a sparse, hierarchical
-    set of `Point3i`s. This supports many kinds of traversal, so it can be used
-    to efficiently visit large regions of chunk keys. Because the `OctreeSet` has
-    a maximum size, the `OctreeChunkIndex` is a hash map of `OctreeSet`s where
-    each set manages an extent that we call a "superchunk" (a multitude of chunks).
+    were introduced. The `ChunkMap` and chunk storages were extended to support
+    storing chunks at multiple levels of detail. There is also an `OctreeSet` which
+    is a sparse, hierarchical set of `Point3i`s. This supports many kinds of traversal,
+    so it can be used to efficiently visit large regions of chunk keys. Because the
+    `OctreeSet` has a maximum size, the `OctreeChunkIndex` is a hash map of `OctreeSet`s
+    where each set manages an extent that we call a "superchunk" (a multitude of chunks).
     Some algorithms, like clipmap traversal, have been implemented using these octrees.
 - **Meshing**
   - There are many ways of generating meshes from voxel data. You can make each

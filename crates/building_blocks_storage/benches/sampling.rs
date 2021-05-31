@@ -1,7 +1,7 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{
-    Array3x1, ChunkDownsampler, ChunkMapBuilder3x1, ChunkPyramid3, Local, OctreeChunkIndex,
-    PointDownsampler, Sd8, SdfMeanDownsampler, SmallKeyHashMap,
+    Array3x1, ChunkDownsampler, ChunkMapBuilder, ChunkMapBuilder3x1, Local, OctreeChunkIndex,
+    PointDownsampler, Sd8, SdfMeanDownsampler,
 };
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
@@ -52,8 +52,10 @@ fn sdf_mean_downsample3(c: &mut Criterion) {
     group.finish();
 }
 
-fn sdf_mean_downsample_chunk_pyramid(c: &mut Criterion) {
-    let mut group = c.benchmark_group("sdf_mean_downsample_chunk_pyramid_with_index");
+fn sdf_mean_downsample_chunk_map(c: &mut Criterion) {
+    let mut group = c.benchmark_group("sdf_mean_downsample_chunk_map_with_index");
+
+    let num_lods = 6;
     for map_chunks in [1, 2, 4, 8].iter() {
         group.bench_with_input(
             BenchmarkId::from_parameter(map_chunks),
@@ -61,27 +63,24 @@ fn sdf_mean_downsample_chunk_pyramid(c: &mut Criterion) {
             |b, &map_chunks| {
                 b.iter_with_setup(
                     || {
-                        let num_lods = 6;
                         let chunk_shape = Point3i::fill(16);
                         let superchunk_shape = Point3i::fill((1 << (num_lods - 1)) * 16);
 
                         let builder = ChunkMapBuilder3x1::new(chunk_shape, Sd8::ONE);
-                        let mut pyramid =
-                            ChunkPyramid3::new(builder, || SmallKeyHashMap::new(), num_lods);
-
-                        let lod0_map = pyramid.level_mut(0);
+                        let mut map = builder.build_with_hash_map_storage();
 
                         let map_extent =
                             Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(map_chunks))
                                 * chunk_shape;
-                        lod0_map.fill_extent(0, &map_extent, Sd8::NEG_ONE);
+                        map.fill_extent(0, &map_extent, Sd8::NEG_ONE);
 
-                        let index = OctreeChunkIndex::index_chunk_map(superchunk_shape, &lod0_map);
+                        let index = OctreeChunkIndex::index_chunk_map(superchunk_shape, &map);
 
-                        (pyramid, index, map_extent)
+                        (map, index, map_extent)
                     },
-                    |(mut pyramid, index, map_extent)| {
-                        pyramid.downsample_chunks_with_index(
+                    |(mut map, index, map_extent)| {
+                        map.downsample_chunks_with_index(
+                            num_lods,
                             &index,
                             &SdfMeanDownsampler,
                             &map_extent,
@@ -98,7 +97,7 @@ criterion_group!(
     benches,
     point_downsample3,
     sdf_mean_downsample3,
-    sdf_mean_downsample_chunk_pyramid
+    sdf_mean_downsample_chunk_map
 );
 criterion_main!(benches);
 

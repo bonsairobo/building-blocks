@@ -242,10 +242,10 @@ mod tests {
         let src_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let src_array = Array3x1::fill(src_extent, 1);
         let mut src = INT_BUILDER.build_with_hash_map_storage();
-        let mut src_view = src.lod_view_mut(0);
-        copy_extent(&src_extent, &src_array, &mut src_view);
+        let mut src_lod0 = src.lod_view_mut(0);
+        copy_extent(&src_extent, &src_array, &mut src_lod0);
 
-        let tfm = TransformMap::new(&src_view, |value: i32| value + 1);
+        let tfm = TransformMap::new(&src_lod0, |value: i32| value + 1);
 
         let dst_extent = Extent3i::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
         let mut dst = INT_BUILDER.build_with_hash_map_storage();

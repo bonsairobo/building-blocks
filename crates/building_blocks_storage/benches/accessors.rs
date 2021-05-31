@@ -97,9 +97,9 @@ fn chunk_hash_map_point_indexing(c: &mut Criterion) {
             b.iter_with_setup(
                 || set_up_chunk_map(SmallKeyHashMap::default(), size),
                 |(chunk_map, iter_extent)| {
-                    let view = chunk_map.lod_view(0);
+                    let lod0 = chunk_map.lod_view(0);
                     for p in iter_extent.iter_points() {
-                        black_box(view.get(p));
+                        black_box(lod0.get(p));
                     }
                 },
             );
@@ -139,9 +139,9 @@ fn compressible_chunk_map_point_indexing(c: &mut Criterion) {
                 |(chunk_map, iter_extent)| {
                     let local_cache = LocalChunkCache3::new();
                     let reader = chunk_map.reader(&local_cache);
-                    let view = reader.lod_view(0);
+                    let lod0 = reader.lod_view(0);
                     for p in iter_extent.iter_points() {
-                        black_box(view.get(p));
+                        black_box(lod0.get(p));
                     }
                 },
             );

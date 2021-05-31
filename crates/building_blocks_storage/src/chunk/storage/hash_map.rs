@@ -76,7 +76,7 @@ pub type ChunkHashMap3<T, Bldr> = ChunkHashMap<[i32; 3], T, Bldr>;
 
 pub mod multichannel_aliases {
     use super::*;
-    use crate::chunk_map::multichannel_aliases::*;
+    use crate::chunk::map::multichannel_aliases::*;
 
     /// An N-dimensional, 1-channel `ChunkHashMap`.
     pub type ChunkHashMapNx1<N, A> = ChunkHashMap<N, A, ChunkMapBuilderNx1<N, A>>;

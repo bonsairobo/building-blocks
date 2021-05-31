@@ -7,7 +7,7 @@ use building_blocks::{
         PosNormMesh, RIGHT_HANDED_Y_UP_CONFIG,
     },
     prelude::*,
-    storage::{ChunkHashMapPyramid3, ChunkKey3, OctreeChunkIndex, SmallKeyHashMap},
+    storage::{ChunkHashMap3x1, ChunkKey3, OctreeChunkIndex},
 };
 use utilities::noise::generate_noise_chunks;
 
@@ -51,7 +51,7 @@ impl MergeVoxel for Voxel {
 }
 
 pub struct BlockyVoxelMap {
-    pyramid: ChunkHashMapPyramid3<Voxel>,
+    chunks: ChunkHashMap3x1<Voxel>,
     index: OctreeChunkIndex,
 }
 
@@ -63,22 +63,21 @@ impl VoxelMap for BlockyVoxelMap {
             generate_noise_chunks(pool, Self::world_chunks_extent(), CHUNK_SHAPE, freq, seed);
 
         let builder = ChunkMapBuilder3x1::new(CHUNK_SHAPE, Voxel::EMPTY);
-        let mut pyramid = ChunkHashMapPyramid3::new(builder, || SmallKeyHashMap::new(), NUM_LODS);
-        let lod0 = pyramid.level_mut(0);
+        let mut chunks = builder.build_with_hash_map_storage();
 
         for (chunk_min, noise) in noise_chunks.into_iter() {
-            lod0.write_chunk(
+            chunks.write_chunk(
                 ChunkKey::new(0, chunk_min),
                 blocky_voxels_from_noise(&noise, scale),
             );
         }
 
-        let index = OctreeChunkIndex::index_chunk_map(SUPERCHUNK_SHAPE, lod0);
+        let index = OctreeChunkIndex::index_chunk_map(SUPERCHUNK_SHAPE, &chunks);
 
         let world_extent = Self::world_chunks_extent() * CHUNK_SHAPE;
-        pyramid.downsample_chunks_with_index(&index, &PointDownsampler, &world_extent);
+        chunks.downsample_chunks_with_index(NUM_LODS, &index, &PointDownsampler, &world_extent);
 
-        Self { pyramid, index }
+        Self { chunks, index }
     }
 
     fn chunk_log2() -> i32 {
@@ -115,9 +114,7 @@ impl VoxelMap for BlockyVoxelMap {
         key: ChunkKey3,
         mesh_buffers: &mut Self::MeshBuffers,
     ) -> Option<PosNormMesh> {
-        let chunks = self.pyramid.level(key.lod);
-
-        let chunk_extent = chunks.indexer.extent_for_chunk_with_min(key.minimum);
+        let chunk_extent = self.chunks.indexer.extent_for_chunk_with_min(key.minimum);
         let padded_chunk_extent = padded_greedy_quads_chunk_extent(&chunk_extent);
 
         // Keep a thread-local cache of buffers to avoid expensive reallocations every time we want to mesh a chunk.
@@ -130,7 +127,11 @@ impl VoxelMap for BlockyVoxelMap {
         neighborhood_buffer.set_minimum(padded_chunk_extent.minimum);
 
         // Only copy the chunk_extent, leaving the padding empty so that we don't get holes on LOD boundaries.
-        copy_extent(&chunk_extent, &chunks.lod_view(0), neighborhood_buffer);
+        copy_extent(
+            &chunk_extent,
+            &self.chunks.lod_view(key.lod),
+            neighborhood_buffer,
+        );
 
         let voxel_size = (1 << key.lod) as f32;
         greedy_quads(neighborhood_buffer, &padded_chunk_extent, &mut *mesh_buffer);

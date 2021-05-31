@@ -53,7 +53,7 @@
 //!         &map.indexer.extent_for_chunk_with_min(chunk_key)
 //!     );
 //!     let mut padded_chunk = Array2x1::fill(padded_chunk_extent, 0.0);
-//!     copy_extent(&padded_chunk_extent, &map, &mut padded_chunk);
+//!     copy_extent(&padded_chunk_extent, &map.lod_view(0), &mut padded_chunk);
 //!
 //!     let mut hm_buffer = HeightMapMeshBuffer::default();
 //!     triangulate_height_map(&padded_chunk, &padded_chunk_extent, &mut hm_buffer);

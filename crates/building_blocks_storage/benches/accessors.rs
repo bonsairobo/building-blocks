@@ -61,9 +61,11 @@ fn chunk_hash_map_for_each_point(c: &mut Criterion) {
             b.iter_with_setup(
                 || set_up_chunk_map(SmallKeyHashMap::default(), size),
                 |(chunk_map, iter_extent)| {
-                    chunk_map.for_each(&iter_extent, |p: Point3i, value| {
-                        black_box((p, value));
-                    });
+                    chunk_map
+                        .lod_view(0)
+                        .for_each(&iter_extent, |p: Point3i, value| {
+                            black_box((p, value));
+                        });
                 },
             );
         });
@@ -95,8 +97,9 @@ fn chunk_hash_map_point_indexing(c: &mut Criterion) {
             b.iter_with_setup(
                 || set_up_chunk_map(SmallKeyHashMap::default(), size),
                 |(chunk_map, iter_extent)| {
+                    let view = chunk_map.lod_view(0);
                     for p in iter_extent.iter_points() {
-                        black_box(chunk_map.get(p));
+                        black_box(view.get(p));
                     }
                 },
             );
@@ -112,7 +115,7 @@ fn chunk_hash_map_visit_chunks_sparse(c: &mut Criterion) {
             b.iter_with_setup(
                 || set_up_sparse_chunk_map(SmallKeyHashMap::default(), size, 3),
                 |(chunk_map, iter_extent)| {
-                    chunk_map.visit_occupied_chunks(&iter_extent, |chunk| {
+                    chunk_map.visit_occupied_chunks(0, &iter_extent, |chunk| {
                         black_box(chunk);
                     });
                 },
@@ -136,8 +139,9 @@ fn compressible_chunk_map_point_indexing(c: &mut Criterion) {
                 |(chunk_map, iter_extent)| {
                     let local_cache = LocalChunkCache3::new();
                     let reader = chunk_map.reader(&local_cache);
+                    let view = reader.lod_view(0);
                     for p in iter_extent.iter_points() {
-                        black_box(reader.get(p));
+                        black_box(view.get(p));
                     }
                 },
             );
@@ -178,14 +182,14 @@ fn chunk_hash_map_copy(c: &mut Criterion) {
                 || {
                     let cp_extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
                     let mut src = BUILDER.build_with_rw_storage(SmallKeyHashMap::default());
-                    src.fill_extent(&cp_extent, 1);
+                    src.fill_extent(0, &cp_extent, 1);
 
                     let dst = BUILDER.build_with_rw_storage(SmallKeyHashMap::default());
 
                     (src, dst, cp_extent)
                 },
                 |(src, mut dst, cp_extent)| {
-                    copy_extent(&cp_extent, &src, &mut dst);
+                    copy_extent(&cp_extent, &src.lod_view(0), &mut dst.lod_view_mut(0));
                 },
             );
         });
@@ -225,7 +229,7 @@ where
 {
     let mut map = BUILDER.build_with_write_storage(storage);
     let iter_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
-    map.fill_extent(&iter_extent, 1);
+    map.fill_extent(0, &iter_extent, 1);
 
     (map, iter_extent)
 }

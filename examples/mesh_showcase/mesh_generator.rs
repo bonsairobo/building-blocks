@@ -195,7 +195,7 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
     // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
     let builder = ChunkMapBuilder3x1::new(PointN([16; 3]), Sd16::ONE);
     let mut map = builder.build_with_hash_map_storage();
-    copy_extent(&sample_extent, &Func(sdf), &mut map);
+    copy_extent(&sample_extent, &Func(sdf), &mut map.lod_view_mut(0));
 
     // Generate the chunk meshes.
     let map_ref = &map;
@@ -207,7 +207,11 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
                     &map_ref.indexer.extent_for_chunk_with_min(chunk_key.minimum),
                 );
                 let mut padded_chunk = Array3x1::fill(padded_chunk_extent, Sd16(0));
-                copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
+                copy_extent(
+                    &padded_chunk_extent,
+                    &map_ref.lod_view(0),
+                    &mut padded_chunk,
+                );
 
                 let mut surface_nets_buffer = SurfaceNetsBuffer::default();
                 let voxel_size = 1.0;
@@ -240,7 +244,7 @@ fn generate_chunk_meshes_from_height_map(
     // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
     let builder = ChunkMapBuilder2x1::new(PointN([16; 2]), 0.0);
     let mut map = builder.build_with_hash_map_storage();
-    copy_extent(&sample_extent, &Func(height_map), &mut map);
+    copy_extent(&sample_extent, &Func(height_map), &mut map.lod_view_mut(0));
 
     // Generate the chunk meshes.
     let map_ref = &map;
@@ -255,7 +259,11 @@ fn generate_chunk_meshes_from_height_map(
                 .intersection(&sample_extent);
 
                 let mut padded_chunk = Array2x1::fill(padded_chunk_extent, 0.0);
-                copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
+                copy_extent(
+                    &padded_chunk_extent,
+                    &map_ref.lod_view(0),
+                    &mut padded_chunk,
+                );
 
                 let mut height_map_mesh_buffer = HeightMapMeshBuffer::default();
                 triangulate_height_map(
@@ -282,7 +290,7 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
     // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
     let builder = ChunkMapBuilder3x1::new(PointN([16; 3]), CubeVoxel::default());
     let mut map = builder.build_with_hash_map_storage();
-    copy_extent(voxels.extent(), &voxels, &mut map);
+    copy_extent(voxels.extent(), &voxels, &mut map.lod_view_mut(0));
 
     // Generate the chunk meshes.
     let map_ref = &map;
@@ -295,7 +303,11 @@ fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option
                 );
 
                 let mut padded_chunk = Array3x1::fill(padded_chunk_extent, CubeVoxel(false));
-                copy_extent(&padded_chunk_extent, map_ref, &mut padded_chunk);
+                copy_extent(
+                    &padded_chunk_extent,
+                    &map_ref.lod_view(0),
+                    &mut padded_chunk,
+                );
 
                 let mut buffer = GreedyQuadsBuffer::new(
                     padded_chunk_extent,

@@ -453,7 +453,7 @@ mod tests {
         let ambient = (Sd8::ONE, 'a');
         let lod0_builder = ChunkMapBuilder3x2::new(chunk_shape, ambient);
         let mut lod0 = lod0_builder.build_with_hash_map_storage();
-        lod0.fill_extent(&lod0_extent, ambient);
+        lod0.fill_extent(0, &lod0_extent, ambient);
 
         let pyramid_builder = ChunkMapBuilder3x1::new(chunk_shape, Sd8::ONE);
         let mut pyramid = ChunkPyramid3::new(pyramid_builder, || SmallKeyHashMap::new(), num_lods);

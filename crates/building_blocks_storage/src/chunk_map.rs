@@ -1,11 +1,11 @@
-//! A sparse lattice map made of up array chunks.
+//! A sparse lattice map made of up array chunks. Designed for random access. Supports multiple levels of detail.
 //!
 //! # Indexing and Iteration
 //!
-//! The data can either be addressed by chunk key with the `get_chunk*` methods or by individual points using the `Get*` and
-//! `ForEach*` trait impls. The map of chunks uses `Point3i` keys. The key for a chunk is the minimum point in that chunk, which
-//! is always a multiple of the chunk shape. Chunk shape dimensions must be powers of 2, which allows for efficiently
-//! calculating a chunk key from any point in the chunk.
+//! The data can either be addressed by `ChunkKey` with the `get_chunk*` methods or by individual points using the `Get*` and
+//! `ForEach*` trait impls on a `ChunkMapLodView`. At a given level of detail, the key for a chunk is the minimum point in that
+//! chunk, which is always a multiple of the chunk shape. Chunk shape dimensions must be powers of 2, which allows for
+//! efficiently calculating a chunk minimum from any point in the chunk.
 //!
 //! If you require iteration over large, but very sparse regions, you might want an additional `OctreeChunkIndex` to track the
 //! set of occupied chunks. Traversing that index can be faster than doing hash map lookups on all of the possible chunks in a
@@ -33,18 +33,22 @@
 //! let builder = ChunkMapBuilder3x1::new(chunk_shape, ambient_value);
 //! let mut map = builder.build_with_hash_map_storage();
 //!
+//! // We need to focus on a specific level of detail to use the access traits.
+//! let mut map_view = map.lod_view_mut(0);
+//!
 //! // Although we only write 3 points, 3 whole dense chunks will be inserted.
 //! let write_points = [Point3i::fill(-100), Point3i::ZERO, Point3i::fill(100)];
 //! for &p in write_points.iter() {
-//!     *map.get_mut(p) = 1;
+//!     *map_view.get_mut(p) = 1;
 //! }
 //!
 //! // Even though the map is sparse, we can get the smallest extent that bounds all of the occupied
-//! // chunks.
-//! let bounding_extent = map.bounding_extent();
+//! // chunks in LOD0.
+//! let bounding_extent = map.bounding_extent(0);
 //!
 //! // Now we can read back the values.
-//! map.for_each(&bounding_extent, |p, value| {
+//! let map_view = map.lod_view(0);
+//! map_view.for_each(&bounding_extent, |p, value| {
 //!     if write_points.iter().position(|pw| p == *pw) != None {
 //!         assert_eq!(value, 1);
 //!     } else {
@@ -58,9 +62,9 @@
 //! // You can also access individual points like you can with an `Array`. This is
 //! // slower than iterating, because it hashes the chunk coordinates for every access.
 //! for &p in write_points.iter() {
-//!     assert_eq!(map.get(p), 1);
+//!     assert_eq!(map_view.get(p), 1);
 //! }
-//! assert_eq!(map.get(Point3i::fill(1)), 0);
+//! assert_eq!(map_view.get(Point3i::fill(1)), 0);
 //!
 //! // Sometimes you need to implement very fast algorithms (like kernel-based methods) that do a
 //! // lot of random access. In this case it's most efficient to use `Stride`s, but `ChunkMap`
@@ -68,7 +72,7 @@
 //! // chunks, you should copy the extent into a dense map first. (The copy is fast).
 //! let query_extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(32));
 //! let mut dense_map = Array3x1::fill(query_extent, ambient_value);
-//! copy_extent(&query_extent, &map, &mut dense_map);
+//! copy_extent(&query_extent, &map_view, &mut dense_map);
 //! ```
 //!
 //! # Example `CompressibleChunkMap` Usage
@@ -83,11 +87,12 @@
 //! let mut map = builder.build_with_write_storage(
 //!     FastCompressibleChunkStorageNx1::with_bytes_compression(Lz4 { level: 10 })
 //! );
+//! let mut map_view = map.lod_view_mut(0);
 //!
 //! // You can write voxels the same as any other `ChunkMap`. As chunks are created, they will be placed in an LRU cache.
 //! let write_points = [Point3i::fill(-100), Point3i::ZERO, Point3i::fill(100)];
 //! for &p in write_points.iter() {
-//!     *map.get_mut(p) = 1;
+//!     *map_view.get_mut(p) = 1;
 //! }
 //!
 //! // Save some space by compressing the least recently used chunks. On further access to the compressed chunks, they will get
@@ -98,8 +103,8 @@
 //! let local_cache = LocalChunkCache3::new();
 //! let reader = map.reader(&local_cache);
 //!
-//! let bounding_extent = reader.bounding_extent();
-//! reader.for_each(&bounding_extent, |p, value| {
+//! let bounding_extent = reader.bounding_extent(0);
+//! reader.lod_view(0).for_each(&bounding_extent, |p, value| {
 //!     if write_points.iter().position(|pw| p == *pw) != None {
 //!         assert_eq!(value, 1);
 //!     } else {
@@ -112,16 +117,16 @@
 //! ```
 
 use crate::{
-    Array, ArrayCopySrc, ArrayIndexer, Channel, ChunkHashMap, ChunkIndexer, ChunkKey,
-    ChunkReadStorage, ChunkWriteStorage, FillChannels, ForEach, ForEachMut, ForEachMutPtr, Get,
-    GetMut, GetRef, IntoMultiMut, IterChunkKeys, MultiMutPtr, MultiRef, ReadExtent,
-    SmallKeyHashMap, WriteExtent,
+    Array, ArrayCopySrc, Channel, ChunkHashMap, ChunkIndexer, ChunkKey, ChunkReadStorage,
+    ChunkWriteStorage, FillChannels, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetRef,
+    IntoMultiMut, IterChunkKeys, MultiMutPtr, MultiRef, ReadExtent, SmallKeyHashMap, WriteExtent,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
 
 use core::hash::Hash;
 use either::Either;
+use std::ops::{Deref, DerefMut};
 
 /// One piece of a chunked lattice map.
 pub trait Chunk {
@@ -348,6 +353,24 @@ impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store> {
     pub fn builder(&self) -> &Bldr {
         &self.builder
     }
+
+    /// Get an immutable view of a single level of detail `lod` in order to use the access traits.
+    #[inline]
+    pub fn lod_view<'a>(&'a self, lod: u8) -> ChunkMapLodView<&'a Self> {
+        ChunkMapLodView {
+            delegate: self,
+            lod,
+        }
+    }
+
+    /// Get a mutable view of a single level of detail `lod` in order to use the access traits.
+    #[inline]
+    pub fn lod_view_mut<'a>(&'a mut self, lod: u8) -> ChunkMapLodView<&'a mut Self> {
+        ChunkMapLodView {
+            delegate: self,
+            lod,
+        }
+    }
 }
 
 impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store>
@@ -366,15 +389,44 @@ where
         self.storage.get(key)
     }
 
+    /// Get the values at point `p` in level of detail `lod`.
+    #[inline]
+    pub fn clone_point(&self, lod: u8, p: PointN<N>) -> T
+    where
+        T: Clone,
+        <Bldr::Chunk as Chunk>::Array: Get<PointN<N>, Item = T>,
+    {
+        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
+
+        self.get_chunk(ChunkKey::new(lod, chunk_min))
+            .map(|chunk| chunk.array().get(p))
+            .unwrap_or_else(|| self.ambient_value.clone())
+    }
+
+    /// Get a reference to the values at point `p` in level of detail `lod`.
+    #[inline]
+    pub fn get_point<'a, Ref>(&'a self, lod: u8, p: PointN<N>) -> Ref
+    where
+        <Bldr::Chunk as Chunk>::Array: GetRef<'a, PointN<N>, Item = Ref>,
+        Ref: MultiRef<'a, Data = T>,
+    {
+        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
+
+        self.get_chunk(ChunkKey::new(lod, chunk_min))
+            .map(|chunk| chunk.array().get_ref(p))
+            .unwrap_or_else(|| Ref::from_data_ref(&self.ambient_value))
+    }
+
     /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be represented by an `AmbientExtent`.
     #[inline]
     pub fn visit_chunks(
         &self,
+        lod: u8,
         extent: &ExtentN<N>,
         mut visitor: impl FnMut(Either<&Bldr::Chunk, (&ExtentN<N>, AmbientExtent<N, T>)>),
     ) {
         for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
-            if let Some(chunk) = self.get_chunk(ChunkKey::new(0, chunk_min)) {
+            if let Some(chunk) = self.get_chunk(ChunkKey::new(lod, chunk_min)) {
                 visitor(Either::Left(chunk))
             } else {
                 let chunk_extent = self.indexer.extent_for_chunk_with_min(chunk_min);
@@ -390,11 +442,12 @@ where
     #[inline]
     pub fn visit_occupied_chunks(
         &self,
+        lod: u8,
         extent: &ExtentN<N>,
         mut visitor: impl FnMut(&Bldr::Chunk),
     ) {
         for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
-            if let Some(chunk) = self.get_chunk(ChunkKey::new(0, chunk_min)) {
+            if let Some(chunk) = self.get_chunk(ChunkKey::new(lod, chunk_min)) {
                 visitor(chunk)
             }
         }
@@ -471,15 +524,28 @@ where
         })
     }
 
+    /// Get a mutable reference to the values at point `p` in level of detail `lod`.
+    #[inline]
+    pub fn get_mut_point<'a, Mut>(&'a mut self, lod: u8, p: PointN<N>) -> Mut
+    where
+        <Bldr::Chunk as Chunk>::Array: GetMut<'a, PointN<N>, Item = Mut>,
+    {
+        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
+        let chunk = self.get_mut_chunk_or_insert_ambient(ChunkKey::new(lod, chunk_min));
+
+        chunk.array_mut().get_mut(p)
+    }
+
     /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be created first with ambient value.
     #[inline]
     pub fn visit_mut_chunks(
         &mut self,
+        lod: u8,
         extent: &ExtentN<N>,
         mut visitor: impl FnMut(&mut Bldr::Chunk),
     ) {
         for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
-            visitor(self.get_mut_chunk_or_insert_ambient(ChunkKey::new(0, chunk_min)));
+            visitor(self.get_mut_chunk_or_insert_ambient(ChunkKey::new(lod, chunk_min)));
         }
     }
 
@@ -487,11 +553,12 @@ where
     #[inline]
     pub fn visit_occupied_mut_chunks(
         &mut self,
+        lod: u8,
         extent: &ExtentN<N>,
         mut visitor: impl FnMut(&mut Bldr::Chunk),
     ) {
         for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
-            if let Some(chunk) = self.get_mut_chunk(ChunkKey::new(0, chunk_min)) {
+            if let Some(chunk) = self.get_mut_chunk(ChunkKey::new(lod, chunk_min)) {
                 visitor(chunk)
             }
         }
@@ -513,16 +580,17 @@ where
 
 impl<N, T, Bldr, Store, MutPtr> ChunkMap<N, T, Bldr, Store>
 where
-    Self: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
+    for<'r> ChunkMapLodView<&'r mut Self>: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
     T: Clone,
     MutPtr: MultiMutPtr<Data = T>,
 {
     /// Fill all of `extent` with the same `value`.
     #[inline]
-    pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: T) {
+    pub fn fill_extent(&mut self, lod: u8, extent: &ExtentN<N>, value: T) {
+        let mut view = self.lod_view_mut(lod);
         // PERF: write whole chunks using a fast path
         unsafe {
-            self.for_each_mut_ptr(extent, |_p, ptr| ptr.write(value.clone()));
+            view.for_each_mut_ptr(extent, |_p, ptr| ptr.write(value.clone()));
         }
     }
 }
@@ -532,13 +600,18 @@ where
     PointN<N>: IntegerPoint<N>,
     Store: IterChunkKeys<'a, N>,
 {
-    /// The smallest extent that bounds all chunks.
-    pub fn bounding_extent(&'a self) -> ExtentN<N> {
-        bounding_extent(self.storage.chunk_keys().flat_map(|key| {
-            let chunk_extent = self.indexer.extent_for_chunk_with_min(key.minimum);
+    /// The smallest extent that bounds all chunks in level of detail `lod`.
+    pub fn bounding_extent(&'a self, lod: u8) -> ExtentN<N> {
+        bounding_extent(
+            self.storage
+                .chunk_keys()
+                .filter(|key| key.lod == lod)
+                .flat_map(|key| {
+                    let chunk_extent = self.indexer.extent_for_chunk_with_min(key.minimum);
 
-            vec![chunk_extent.minimum, chunk_extent.max()].into_iter()
-        }))
+                    vec![chunk_extent.minimum, chunk_extent.max()].into_iter()
+                }),
+        )
     }
 }
 
@@ -579,6 +652,19 @@ where
     }
 }
 
+/// A view of a single level of detail in a `ChunkMap` for the unambiguous implementation of access traits.
+pub struct ChunkMapLodView<Delegate> {
+    delegate: Delegate,
+    lod: u8,
+}
+
+impl<Delegate> ChunkMapLodView<Delegate> {
+    #[inline]
+    pub fn lod(&self) -> u8 {
+        self.lod
+    }
+}
+
 //  ██████╗ ███████╗████████╗████████╗███████╗██████╗ ███████╗
 // ██╔════╝ ██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗██╔════╝
 // ██║  ███╗█████╗     ██║      ██║   █████╗  ██████╔╝███████╗
@@ -586,8 +672,9 @@ where
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<'a, N, T, Bldr, Store> Get<PointN<N>> for ChunkMap<N, T, Bldr, Store>
+impl<'a, Delegate, N, T, Bldr, Store> Get<PointN<N>> for ChunkMapLodView<Delegate>
 where
+    Delegate: Deref<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     T: Clone,
     Bldr: ChunkMapBuilder<N, T>,
@@ -598,49 +685,40 @@ where
 
     #[inline]
     fn get(&self, p: PointN<N>) -> Self::Item {
-        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
-
-        self.get_chunk(ChunkKey::new(0, chunk_min))
-            .map(|chunk| chunk.array().get(p))
-            .unwrap_or_else(|| self.ambient_value.clone())
+        self.delegate.clone_point(self.lod, p)
     }
 }
 
-impl<'a, N, T, Bldr, Store, Ref> GetRef<'a, PointN<N>> for ChunkMap<N, T, Bldr, Store>
+impl<'a, Delegate, N, T: 'a, Bldr, Store, Ref> GetRef<'a, PointN<N>> for ChunkMapLodView<Delegate>
 where
+    Delegate: Deref<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
-    Bldr: ChunkMapBuilder<N, T>,
+    Bldr: 'a + ChunkMapBuilder<N, T>,
     <Bldr::Chunk as Chunk>::Array: GetRef<'a, PointN<N>, Item = Ref>,
-    Store: ChunkReadStorage<N, Bldr::Chunk>,
+    Store: 'a + ChunkReadStorage<N, Bldr::Chunk>,
     Ref: MultiRef<'a, Data = T>,
 {
     type Item = Ref;
 
     #[inline]
     fn get_ref(&'a self, p: PointN<N>) -> Self::Item {
-        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
-
-        self.get_chunk(ChunkKey::new(0, chunk_min))
-            .map(|chunk| chunk.array().get_ref(p))
-            .unwrap_or_else(|| Ref::from_data_ref(&self.ambient_value))
+        self.delegate.get_point(self.lod, p)
     }
 }
 
-impl<'a, N, T, Bldr, Store, Mut> GetMut<'a, PointN<N>> for ChunkMap<N, T, Bldr, Store>
+impl<'a, Delegate, N, T: 'a, Bldr, Store, Mut> GetMut<'a, PointN<N>> for ChunkMapLodView<Delegate>
 where
+    Delegate: DerefMut<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
-    Bldr: ChunkMapBuilder<N, T>,
+    Bldr: 'a + ChunkMapBuilder<N, T>,
     <Bldr::Chunk as Chunk>::Array: GetMut<'a, PointN<N>, Item = Mut>,
-    Store: ChunkWriteStorage<N, Bldr::Chunk>,
+    Store: 'a + ChunkWriteStorage<N, Bldr::Chunk>,
 {
     type Item = Mut;
 
     #[inline]
     fn get_mut(&'a mut self, p: PointN<N>) -> Self::Item {
-        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
-        let chunk = self.get_mut_chunk_or_insert_ambient(ChunkKey::new(0, chunk_min));
-
-        chunk.array_mut().get_mut(p)
+        self.delegate.get_mut_point(self.lod, p)
     }
 }
 
@@ -651,31 +729,34 @@ where
 // ██║     ╚██████╔╝██║  ██║    ███████╗██║  ██║╚██████╗██║  ██║
 // ╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
-impl<N, T, Bldr, Store> ForEach<N, PointN<N>> for ChunkMap<N, T, Bldr, Store>
+impl<Delegate, N, T, Bldr, Store> ForEach<N, PointN<N>> for ChunkMapLodView<Delegate>
 where
+    Delegate: Deref<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     Bldr: ChunkMapBuilder<N, T>,
     <Bldr::Chunk as Chunk>::Array: ForEach<N, PointN<N>, Item = T>,
-    T: Copy,
+    T: Clone,
     Store: ChunkReadStorage<N, Bldr::Chunk>,
 {
     type Item = T;
 
     #[inline]
     fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Item)) {
-        self.visit_chunks(extent, |chunk| match chunk {
-            Either::Left(chunk) => {
-                chunk.array().for_each(extent, |p, value| f(p, value));
-            }
-            Either::Right((chunk_extent, ambient)) => {
-                ambient.for_each(&extent.intersection(&chunk_extent), |p, value| f(p, value))
-            }
-        });
+        self.delegate
+            .visit_chunks(self.lod, extent, |chunk| match chunk {
+                Either::Left(chunk) => {
+                    chunk.array().for_each(extent, |p, value| f(p, value));
+                }
+                Either::Right((chunk_extent, ambient)) => {
+                    ambient.for_each(&extent.intersection(&chunk_extent), |p, value| f(p, value))
+                }
+            });
     }
 }
 
-impl<N, T, Bldr, Store, MutPtr> ForEachMutPtr<N, PointN<N>> for ChunkMap<N, T, Bldr, Store>
+impl<Delegate, N, T, Bldr, Store, MutPtr> ForEachMutPtr<N, PointN<N>> for ChunkMapLodView<Delegate>
 where
+    Delegate: DerefMut<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     Bldr: ChunkMapBuilder<N, T>,
     <Bldr::Chunk as Chunk>::Array: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
@@ -689,7 +770,7 @@ where
         extent: &ExtentN<N>,
         mut f: impl FnMut(PointN<N>, Self::Item),
     ) {
-        self.visit_mut_chunks(extent, |chunk| {
+        self.delegate.visit_mut_chunks(self.lod, extent, |chunk| {
             chunk
                 .array_mut()
                 .for_each_mut_ptr(extent, |p, ptr| f(p, ptr))
@@ -697,8 +778,7 @@ where
     }
 }
 
-impl<'a, N, T, Bldr, Store, Mut, MutPtr> ForEachMut<'a, N, PointN<N>>
-    for ChunkMap<N, T, Bldr, Store>
+impl<'a, Delegate, N, Mut, MutPtr> ForEachMut<'a, N, PointN<N>> for ChunkMapLodView<Delegate>
 where
     Self: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
     MutPtr: IntoMultiMut<'a, MultiMut = Mut>,
@@ -718,32 +798,33 @@ where
 // ╚██████╗╚██████╔╝██║        ██║
 //  ╚═════╝ ╚═════╝ ╚═╝        ╚═╝
 
-impl<'a, N, T, Bldr, Store> ReadExtent<'a, N> for ChunkMap<N, T, Bldr, Store>
+impl<'a, Delegate, N, T, Bldr, Store> ReadExtent<'a, N> for ChunkMapLodView<Delegate>
 where
-    N: ArrayIndexer<N>,
+    Delegate: Deref<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
-    Bldr: ChunkMapBuilder<N, T>,
-    Bldr::Chunk: 'a,
-    T: 'a + Copy,
-    Store: ChunkReadStorage<N, Bldr::Chunk>,
+    Bldr: 'a + ChunkMapBuilder<N, T>,
+    T: 'a + Clone,
+    Store: 'a + ChunkReadStorage<N, Bldr::Chunk>,
 {
     type Src = ChunkCopySrc<N, T, &'a Bldr::Chunk>;
     type SrcIter = ChunkCopySrcIter<N, T, &'a Bldr::Chunk>;
 
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
         let chunk_iters = self
+            .delegate
             .indexer
             .chunk_mins_for_extent(extent)
             .map(|chunk_min| {
-                let chunk_extent = self.indexer.extent_for_chunk_with_min(chunk_min);
+                let chunk_extent = self.delegate.indexer.extent_for_chunk_with_min(chunk_min);
                 let intersection = extent.intersection(&chunk_extent);
 
                 (
                     intersection,
-                    self.get_chunk(ChunkKey::new(0, chunk_min))
+                    self.delegate
+                        .get_chunk(ChunkKey::new(self.lod, chunk_min))
                         .map(|chunk| Either::Left(ArrayCopySrc(chunk)))
                         .unwrap_or_else(|| {
-                            Either::Right(AmbientExtent::new(self.builder.ambient_value()))
+                            Either::Right(AmbientExtent::new(self.delegate.builder.ambient_value()))
                         }),
                 )
             })
@@ -754,16 +835,19 @@ where
 }
 
 // If `Array` supports writing from type Src, then so does ChunkMap.
-impl<N, T, Bldr, Store, Src> WriteExtent<N, Src> for ChunkMap<N, T, Bldr, Store>
+impl<Delegate, N, T, Bldr, Store, Src> WriteExtent<N, Src> for ChunkMapLodView<Delegate>
 where
+    Delegate: DerefMut<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     Bldr: ChunkMapBuilder<N, T>,
     <Bldr::Chunk as Chunk>::Array: WriteExtent<N, Src>,
     Store: ChunkWriteStorage<N, Bldr::Chunk>,
-    Src: Copy,
+    Src: Clone,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src) {
-        self.visit_mut_chunks(extent, |chunk| chunk.array_mut().write_extent(extent, src));
+        self.delegate.visit_mut_chunks(self.lod, extent, |chunk| {
+            chunk.array_mut().write_extent(extent, src.clone())
+        });
     }
 }
 
@@ -794,6 +878,8 @@ mod tests {
     fn write_and_read_points() {
         let mut map = BUILDER.build_with_hash_map_storage();
 
+        let mut view = map.lod_view_mut(0);
+
         let points = [
             [0, 0, 0],
             [1, 2, 3],
@@ -805,9 +891,9 @@ mod tests {
         ];
 
         for p in points.iter().cloned() {
-            assert_eq!(map.get_mut(PointN(p)), &mut 0);
-            *map.get_mut(PointN(p)) = 1;
-            assert_eq!(map.get_mut(PointN(p)), &mut 1);
+            assert_eq!(view.get_mut(PointN(p)), &mut 0);
+            *view.get_mut(PointN(p)) = 1;
+            assert_eq!(view.get_mut(PointN(p)), &mut 1);
         }
     }
 
@@ -815,15 +901,17 @@ mod tests {
     fn write_extent_with_for_each_then_read() {
         let mut map = BUILDER.build_with_hash_map_storage();
 
+        let mut view = map.lod_view_mut(0);
+
         let write_extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(80));
-        map.for_each_mut(&write_extent, |_p, value| *value = 1);
+        view.for_each_mut(&write_extent, |_p, value| *value = 1);
 
         let read_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(100));
         for p in read_extent.iter_points() {
             if write_extent.contains(p) {
-                assert_eq!(map.get(p), 1);
+                assert_eq!(view.get(p), 1);
             } else {
-                assert_eq!(map.get(p), 0);
+                assert_eq!(view.get(p), 0);
             }
         }
     }
@@ -835,14 +923,16 @@ mod tests {
 
         let mut map = BUILDER.build_with_hash_map_storage();
 
-        copy_extent(&extent_to_copy, &array, &mut map);
+        let mut view = map.lod_view_mut(0);
+
+        copy_extent(&extent_to_copy, &array, &mut view);
 
         let read_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(100));
         for p in read_extent.iter_points() {
             if extent_to_copy.contains(p) {
-                assert_eq!(map.get(p), 1);
+                assert_eq!(view.get(p), 1);
             } else {
-                assert_eq!(map.get(p), 0);
+                assert_eq!(view.get(p), 0);
             }
         }
     }
@@ -852,23 +942,25 @@ mod tests {
         let builder = ChunkMapBuilder3x2::new(CHUNK_SHAPE, (0, 'a'));
         let mut map = builder.build_with_hash_map_storage();
 
-        assert_eq!(map.get(Point3i::fill(1)), (0, 'a'));
-        assert_eq!(map.get_ref(Point3i::fill(1)), (&0, &'a'));
-        assert_eq!(map.get_mut(Point3i::fill(1)), (&mut 0, &mut 'a'));
+        let mut view = map.lod_view_mut(0);
+
+        assert_eq!(view.get(Point3i::fill(1)), (0, 'a'));
+        assert_eq!(view.get_ref(Point3i::fill(1)), (&0, &'a'));
+        assert_eq!(view.get_mut(Point3i::fill(1)), (&mut 0, &mut 'a'));
 
         let extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(80));
 
-        map.for_each_mut(&extent, |_p, (num, letter)| {
+        view.for_each_mut(&extent, |_p, (num, letter)| {
             *num = 1;
             *letter = 'b';
         });
 
-        map.for_each(&extent, |_p, (num, letter)| {
+        view.for_each(&extent, |_p, (num, letter)| {
             assert_eq!(num, 1);
             assert_eq!(letter, 'b');
         });
 
-        map.fill_extent(&extent, (1, 'b'));
+        map.fill_extent(0, &extent, (1, 'b'));
     }
 
     #[cfg(feature = "lz4")]
@@ -881,21 +973,24 @@ mod tests {
             FastCompressibleChunkStorageNx2::with_bytes_compression(Lz4 { level: 10 }),
         );
 
-        assert_eq!(map.get_mut(Point3i::fill(1)), (&mut 0, &mut 'a'));
+        let mut view = map.lod_view_mut(0);
+
+        assert_eq!(view.get_mut(Point3i::fill(1)), (&mut 0, &mut 'a'));
 
         let extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(80));
 
-        map.for_each_mut(&extent, |_p, (num, letter)| {
+        view.for_each_mut(&extent, |_p, (num, letter)| {
             *num = 1;
             *letter = 'b';
         });
 
         let local_cache = LocalChunkCache::new();
         let reader = map.reader(&local_cache);
-        assert_eq!(reader.get(Point3i::fill(1)), (0, 'a'));
-        assert_eq!(reader.get_ref(Point3i::fill(1)), (&0, &'a'));
+        let view = reader.lod_view(0);
+        assert_eq!(view.get(Point3i::fill(1)), (0, 'a'));
+        assert_eq!(view.get_ref(Point3i::fill(1)), (&0, &'a'));
 
-        reader.for_each(&extent, |_p, (num, letter)| {
+        view.for_each(&extent, |_p, (num, letter)| {
             assert_eq!(num, 1);
             assert_eq!(letter, 'b');
         });

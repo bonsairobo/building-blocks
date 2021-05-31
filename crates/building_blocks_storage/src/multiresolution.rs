@@ -38,7 +38,7 @@
 //! // Populate LOD0, the highest resolution.
 //! let mut lod0 = pyramid.level_mut(0);
 //! let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(100));
-//! lod0.fill_extent(&extent, 1);
+//! lod0.fill_extent(0, &extent, 1);
 //!
 //! // Now we index the currently populated set of chunks.
 //! let superchunk_shape = Point3i::fill(512);

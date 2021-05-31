@@ -130,7 +130,7 @@ impl VoxelMap for BlockyVoxelMap {
         neighborhood_buffer.set_minimum(padded_chunk_extent.minimum);
 
         // Only copy the chunk_extent, leaving the padding empty so that we don't get holes on LOD boundaries.
-        copy_extent(&chunk_extent, chunks, neighborhood_buffer);
+        copy_extent(&chunk_extent, &chunks.lod_view(0), neighborhood_buffer);
 
         let voxel_size = (1 << key.lod) as f32;
         greedy_quads(neighborhood_buffer, &padded_chunk_extent, &mut *mesh_buffer);

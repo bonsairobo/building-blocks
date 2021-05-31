@@ -50,8 +50,8 @@
 //! let chunk_shape = Point3i::fill(16);
 //! let builder = ChunkMapBuilder3x1::new(chunk_shape, 0);
 //! let mut other_map = builder.build_with_hash_map_storage();
-//! copy_extent(&subextent, &map, &mut other_map);
-//! copy_extent(&subextent, &other_map, &mut map);
+//! copy_extent(&subextent, &map, &mut other_map.lod_view_mut(0));
+//! copy_extent(&subextent, &other_map.lod_view(0), &mut map);
 //!
 //! // You can even copy from a `Fn(Point3i) -> T`.
 //! copy_extent(&subextent, &Func(|p: Point3i| p.x()), &mut map);

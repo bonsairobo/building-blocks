@@ -74,7 +74,7 @@ fn sdf_mean_downsample_chunk_pyramid(c: &mut Criterion) {
                         let map_extent =
                             Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(map_chunks))
                                 * chunk_shape;
-                        lod0_map.fill_extent(&map_extent, Sd8::NEG_ONE);
+                        lod0_map.fill_extent(0, &map_extent, Sd8::NEG_ONE);
 
                         let index = OctreeChunkIndex::index_chunk_map(superchunk_shape, &lod0_map);
 

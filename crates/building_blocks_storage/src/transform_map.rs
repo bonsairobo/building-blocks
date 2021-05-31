@@ -35,17 +35,18 @@
 //! let builder = ChunkMapBuilder3x1::new(chunk_shape, 0);
 //! let mut dst = builder.build_with_hash_map_storage();
 //! let tfm = TransformMap::new(&src, |value: i32| value + 1);
-//! copy_extent(&extent, &tfm, &mut dst);
+//! copy_extent(&extent, &tfm, &mut dst.lod_view_mut(0));
 //! ```
 
 use crate::{
     AmbientExtent, Array, ArrayCopySrc, ChunkCopySrc, ChunkCopySrcIter, ChunkMap, ChunkMapBuilder,
-    ForEach, Get, IndexedArray, ReadExtent,
+    ChunkMapLodView, ChunkReadStorage, ForEach, Get, IndexedArray, ReadExtent,
 };
 
 use building_blocks_core::prelude::*;
 
 use core::iter::{once, Once};
+use std::ops::Deref;
 
 /// A lattice map that delegates look-ups to a different lattice map, then transforms the result
 /// using some `Fn(In) -> Out`.
@@ -133,18 +134,15 @@ where
     }
 }
 
-impl<'a, N, F, In, Out, Bldr, Store> ReadExtent<'a, N>
-    for TransformMap<'a, ChunkMap<N, In, Bldr, Store>, F>
+impl<'a, Delegate, N, F, In, Out, Bldr, Store> ReadExtent<'a, N>
+    for TransformMap<'a, ChunkMapLodView<Delegate>, F>
 where
+    Delegate: Deref<Target = ChunkMap<N, In, Bldr, Store>>,
+    PointN<N>: IntegerPoint<N>,
+    Bldr: 'a + ChunkMapBuilder<N, In>,
+    In: 'a + Copy,
+    Store: 'a + ChunkReadStorage<N, Bldr::Chunk>,
     F: Copy + Fn(In) -> Out,
-    In: 'a,
-    Bldr: ChunkMapBuilder<N, In>,
-    ChunkMap<N, In, Bldr, Store>: ReadExtent<
-        'a,
-        N,
-        Src = ChunkCopySrc<N, In, &'a Bldr::Chunk>,
-        SrcIter = ChunkCopySrcIter<N, In, &'a Bldr::Chunk>,
-    >,
 {
     type Src = TransformChunkCopySrc<'a, N, F, Out, Bldr::Chunk>;
     type SrcIter = TransformChunkCopySrcIter<'a, N, F, In, Bldr::Chunk>;
@@ -235,7 +233,7 @@ mod tests {
         let src = Array3x1::fill(extent, 0);
         let mut dst: ChunkHashMap3x1<f32> = FLOAT_BUILDER.build_with_hash_map_storage();
         let tfm = TransformMap::new(&src, |value: i32| value as f32 + 1.0);
-        copy_extent(&extent, &tfm, &mut dst);
+        copy_extent(&extent, &tfm, &mut dst.lod_view_mut(0));
     }
 
     #[cfg(feature = "lz4")]
@@ -244,12 +242,13 @@ mod tests {
         let src_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let src_array = Array3x1::fill(src_extent, 1);
         let mut src = INT_BUILDER.build_with_hash_map_storage();
-        copy_extent(&src_extent, &src_array, &mut src);
+        let mut src_view = src.lod_view_mut(0);
+        copy_extent(&src_extent, &src_array, &mut src_view);
 
-        let tfm = TransformMap::new(&src, |value: i32| value + 1);
+        let tfm = TransformMap::new(&src_view, |value: i32| value + 1);
 
         let dst_extent = Extent3i::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
         let mut dst = INT_BUILDER.build_with_hash_map_storage();
-        copy_extent(&dst_extent, &tfm, &mut dst);
+        copy_extent(&dst_extent, &tfm, &mut dst.lod_view_mut(0));
     }
 }

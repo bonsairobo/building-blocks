@@ -138,7 +138,7 @@ mod test {
     {
         let mut map = BUILDER.build_with_write_storage(storage);
         let filled_extent = Extent3i::from_min_and_shape(Point3i::fill(-100), Point3i::fill(200));
-        map.fill_extent(&filled_extent, 1);
+        map.fill_extent(0, &filled_extent, 1);
         let serializable = futures::executor::block_on(SerializableChunks::from_iter(
             BincodeCompression::new(compression),
             map.take_storage(),
@@ -150,7 +150,8 @@ mod test {
         let mut storage = SmallKeyHashMap::default();
         futures::executor::block_on(deserialized.fill_storage(&mut storage));
         let map = BUILDER.build_with_rw_storage(storage);
-        map.for_each(&filled_extent, |_p, val| assert_eq!(val, 1));
+        map.lod_view(0)
+            .for_each(&filled_extent, |_p, val| assert_eq!(val, 1));
     }
 
     const BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1::new(PointN([16; 3]), 0);

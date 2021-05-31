@@ -98,7 +98,11 @@ impl VoxelMap for SmoothVoxelMap {
         // While the chunk shape doesn't change, we need to make sure that it's in the right position for each particular chunk.
         neighborhood_buffer.set_minimum(padded_chunk_extent.minimum);
 
-        copy_extent(&padded_chunk_extent, chunks, neighborhood_buffer);
+        copy_extent(
+            &padded_chunk_extent,
+            &chunks.lod_view(0),
+            neighborhood_buffer,
+        );
 
         let voxel_size = (1 << key.lod) as f32;
         surface_nets(

@@ -6,9 +6,10 @@
 //! data at LOD0, but if you need to downsample this to save resources where coarser resolution is acceptable, then you can use
 //! a `ChunkDownsampler` and the `ChunkMap::downsample_*` methods to populate higher levels.
 //!
-//! *NOTE*: The LOD feature is still in progress. At the moment, `ChunkDownsampler` only supports single-channel data. This
-//! doesn't mean you can't downsample individual channels of a multi-channel `ChunkMap`, but you might need to store the
-//! downsampled data in a separate `ChunkMap`.
+//! *NOTE*: If you want your downsampled data to have different number of channels than LOD0, then you will need to store the
+//! downsampled chunks in a different `ChunkMap`. You will need to use specialized methods for this use case:
+//! - `ChunkMap::downsample_external_chunk`
+//! - `ChunkMap::downsample_chunks_with_lod0_and_index`
 //!
 //! # Indexing and Iteration
 //!

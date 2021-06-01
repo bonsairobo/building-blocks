@@ -9,15 +9,9 @@ use crate::{prelude::*, ArrayNx1, ChunkMap3x1, ChunkMapNx1};
 use building_blocks_core::prelude::*;
 use std::borrow::Borrow;
 
-pub trait ChunkDownsampler<N, T, Src> {
+pub trait ChunkDownsampler<N, T, Src, Dst> {
     /// Samples `src_chunk` in order to write out just a portion of `dst_chunk`, starting at `dst_min`.
-    fn downsample(
-        &self,
-        src_chunk: &Src,
-        dst_chunk: &mut ArrayNx1<N, T>,
-        dst_min: Local<N>,
-        lod_delta: u8,
-    );
+    fn downsample(&self, src_chunk: &Src, dst_chunk: &mut Dst, dst_min: Local<N>, lod_delta: u8);
 }
 
 impl<N, T, Store> ChunkMapNx1<N, T, Store>
@@ -35,7 +29,7 @@ where
         src_chunk_key: ChunkKey<N>,
         dst_lod: u8,
     ) where
-        Samp: ChunkDownsampler<N, T, ArrayNx1<N, T>>,
+        Samp: ChunkDownsampler<N, T, ArrayNx1<N, T>, ArrayNx1<N, T>>,
     {
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
         if let Some(src_chunk) = self.pop_chunk(src_chunk_key) {
@@ -54,7 +48,7 @@ where
         src_chunk: &Src,
         dst_lod: u8,
     ) where
-        Samp: ChunkDownsampler<N, T, Src>,
+        Samp: ChunkDownsampler<N, T, Src, ArrayNx1<N, T>>,
     {
         assert!(dst_lod > src_chunk_key.lod);
 
@@ -103,7 +97,7 @@ where
         sampler: &Samp,
         extent: &Extent3i,
     ) where
-        Samp: ChunkDownsampler<[i32; 3], T, Array3x1<T>>,
+        Samp: ChunkDownsampler<[i32; 3], T, Array3x1<T>, Array3x1<T>>,
     {
         let chunk_shape = self.builder().chunk_shape();
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
@@ -147,8 +141,8 @@ where
         extent: &Extent3i,
     ) where
         Lod0Ch: Borrow<Lod0ChBorrow>,
-        Samp: ChunkDownsampler<[i32; 3], T, Array3x1<T>>
-            + ChunkDownsampler<[i32; 3], T, Lod0ChBorrow>,
+        Samp: ChunkDownsampler<[i32; 3], T, Array3x1<T>, Array3x1<T>>
+            + ChunkDownsampler<[i32; 3], T, Lod0ChBorrow, Array3x1<T>>,
     {
         let chunk_shape = self.builder().chunk_shape();
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);

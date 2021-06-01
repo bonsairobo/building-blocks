@@ -1,4 +1,4 @@
-use crate::{ArrayIndexer, ArrayNx1, ChunkDownsampler, Get, GetMut, IndexedArray, Local};
+use crate::{ArrayIndexer, ChunkDownsampler, Get, GetMut, IndexedArray, Local};
 
 use building_blocks_core::prelude::*;
 
@@ -6,21 +6,16 @@ use building_blocks_core::prelude::*;
 /// to lie in the range `[-1.0, 1.0]`.
 pub struct SdfMeanDownsampler;
 
-impl<N, Src, T> ChunkDownsampler<N, T, Src> for SdfMeanDownsampler
+impl<N, Src, Dst, T> ChunkDownsampler<N, T, Src, Dst> for SdfMeanDownsampler
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     T: 'static + Clone + From<f32>,
     f32: From<T>,
     Src: Get<Local<N>, Item = T> + IndexedArray<N>,
+    Dst: for<'r> GetMut<'r, Local<N>, Item = &'r mut T> + IndexedArray<N>,
 {
-    fn downsample(
-        &self,
-        src_chunk: &Src,
-        dst_chunk: &mut ArrayNx1<N, T>,
-        dst_min: Local<N>,
-        lod_delta: u8,
-    ) {
+    fn downsample(&self, src_chunk: &Src, dst_chunk: &mut Dst, dst_min: Local<N>, lod_delta: u8) {
         // PERF: the access pattern here might not be very cache friendly
 
         debug_assert!(lod_delta > 0);

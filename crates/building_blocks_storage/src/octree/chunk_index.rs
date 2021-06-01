@@ -81,7 +81,7 @@ impl OctreeChunkIndex {
         self.superchunk_octrees.indexer.chunk_shape()
     }
 
-    /// Same as `index_chunks`, but using the chunk keys and chunk shape from `chunk_map`.
+    /// Same as `index_lod0_chunks`, but using the chunk keys and chunk shape from `chunk_map`.
     pub fn index_chunk_map<T, Ch, Store>(
         superchunk_shape: Point3i,
         chunk_map: &ChunkMap3<T, Ch, Store>,
@@ -91,10 +91,10 @@ impl OctreeChunkIndex {
     {
         let chunk_shape = chunk_map.indexer.chunk_shape();
 
-        Self::index_chunks(
+        Self::index_lod0_chunks(
             superchunk_shape,
             chunk_shape,
-            chunk_map.storage().chunk_keys(),
+            chunk_map.storage().chunk_keys().filter(|k| k.lod == 0),
         )
     }
 
@@ -104,7 +104,7 @@ impl OctreeChunkIndex {
     /// Because of the static limitations on `OctreeSet` size, you can only have up to 6 levels of detail. This means
     /// `superchunk_shape / chunk_shape` must be less than `2 ^ [6, 6, 6] = [64, 64, 64]`. For example, if your chunk shape is
     /// `[16, 16, 16]`, then your superchunk shape can be at most `[512, 512, 512]`.
-    pub fn index_chunks<'a>(
+    pub fn index_lod0_chunks<'a>(
         superchunk_shape: Point3i,
         chunk_shape: Point3i,
         chunk_keys: impl Iterator<Item = &'a ChunkKey3>,

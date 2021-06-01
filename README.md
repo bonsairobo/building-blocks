@@ -19,9 +19,9 @@ We focus on generally useful data structures and algorithms. Features include:
 
 - 2D and 3D data storage
   - structure-of-arrays (SoA) storage of multiple data channels per spatial dimension
-  - a [`ChunkMap`](crate::storage::chunk_map) with generic chunk storage
+  - a [`ChunkMap`](crate::storage::chunk::map) with generic chunk storage
   - chunk caching, compression, and serialization
-  - [`OctreeSet`](crate::storage::octree_set) hierarchical bitset of voxel points
+  - [`OctreeSet`](crate::storage::octree::set) hierarchical bitset of voxel points
 - mesh generation
   - Surface Nets isosurface extraction
   - Minecraft-style greedy meshing

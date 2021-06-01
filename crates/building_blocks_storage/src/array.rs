@@ -157,8 +157,8 @@ pub use for_each::*;
 pub use indexer::*;
 
 use crate::{
-    ChunkCopySrc, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetMutPtr, GetRef, IntoMultiMut,
-    IntoMultiMutPtr, MultiMutPtr, ReadExtent, TransformMap, WriteExtent,
+    ChunkCopySrc, FillExtent, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetMutPtr, GetRef,
+    IntoMultiMut, IntoMultiMutPtr, MultiMutPtr, ReadExtent, TransformMap, WriteExtent,
 };
 
 use building_blocks_core::prelude::*;
@@ -305,17 +305,17 @@ where
     }
 }
 
-impl<N, Chan> Array<N, Chan>
+impl<N, Chan> FillExtent<N> for Array<N, Chan>
 where
     Self: ForEachMutPtr<N, (), Item = Chan::Ptr>,
     PointN<N>: IntegerPoint<N>,
     Chan: FillChannels,
+    Chan::Data: Clone,
 {
+    type Item = Chan::Data;
+
     /// Fill the entire `extent` with the same `value`.
-    pub fn fill_extent(&mut self, extent: &ExtentN<N>, value: Chan::Data)
-    where
-        Chan::Data: Clone,
-    {
+    fn fill_extent(&mut self, extent: &ExtentN<N>, value: Self::Item) {
         if self.extent.eq(extent) {
             self.channels.reset_values(value);
         } else {

@@ -4,7 +4,7 @@ pub mod sdf_mean;
 pub use point::*;
 pub use sdf_mean::*;
 
-use crate::{prelude::*, ArrayNx1, ChunkMap3x1, ChunkMapNx1};
+use crate::{prelude::*, ChunkMap, ChunkMap3x1};
 
 use building_blocks_core::prelude::*;
 use std::borrow::Borrow;
@@ -14,13 +14,14 @@ pub trait ChunkDownsampler<N, T, Src, Dst> {
     fn downsample(&self, src_chunk: &Src, dst_chunk: &mut Dst, dst_min: Local<N>, lod_delta: u8);
 }
 
-impl<N, T, Store> ChunkMapNx1<N, T, Store>
+impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
     ChunkKey<N>: Copy,
     T: Clone,
-    Store: ChunkWriteStorage<N, ArrayNx1<N, T>>,
-    ArrayNx1<N, T>: ForEachMutPtr<N, (), Item = *mut T>,
+    Bldr: ChunkMapBuilder<N, T>,
+    Bldr::Chunk: FillExtent<N, Item = T> + IndexedArray<N>,
+    Store: ChunkWriteStorage<N, Bldr::Chunk>,
 {
     /// Downsamples the chunk at `src_chunk_key` into the specified destination level `dst_lod`.
     pub fn downsample_chunk<Samp>(
@@ -29,7 +30,7 @@ where
         src_chunk_key: ChunkKey<N>,
         dst_lod: u8,
     ) where
-        Samp: ChunkDownsampler<N, T, ArrayNx1<N, T>, ArrayNx1<N, T>>,
+        Samp: ChunkDownsampler<N, T, Bldr::Chunk, Bldr::Chunk>,
     {
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
         if let Some(src_chunk) = self.pop_chunk(src_chunk_key) {
@@ -48,7 +49,7 @@ where
         src_chunk: &Src,
         dst_lod: u8,
     ) where
-        Samp: ChunkDownsampler<N, T, Src, ArrayNx1<N, T>>,
+        Samp: ChunkDownsampler<N, T, Src, Bldr::Chunk>,
     {
         assert!(dst_lod > src_chunk_key.lod);
 

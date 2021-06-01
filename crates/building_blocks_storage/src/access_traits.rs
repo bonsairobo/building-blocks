@@ -223,6 +223,13 @@ pub trait ForEachMut<'a, N, Coord> {
     fn for_each_mut(&'a mut self, extent: &ExtentN<N>, f: impl FnMut(Coord, Self::Item));
 }
 
+#[auto_impl(&mut)]
+pub trait FillExtent<N> {
+    type Item;
+
+    fn fill_extent(&mut self, extent: &ExtentN<N>, value: Self::Item);
+}
+
 //  ██████╗ ██████╗ ██████╗ ██╗   ██╗
 // ██╔════╝██╔═══██╗██╔══██╗╚██╗ ██╔╝
 // ██║     ██║   ██║██████╔╝ ╚████╔╝

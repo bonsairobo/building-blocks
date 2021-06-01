@@ -69,9 +69,9 @@ pub mod prelude {
         copy_extent, Chunk, ChunkKey, ChunkKey2, ChunkKey3, ChunkMapBuilder, ChunkReadStorage,
         ChunkWriteStorage, Compressed, CompressibleChunkMap, CompressibleChunkMapReader,
         CompressibleChunkStorage, CompressibleChunkStorageReader, Compression,
-        FastCompressibleChunkStorage, FromBytesCompression, Func, IndexedArray, IsEmpty,
-        IterChunkKeys, Local, LocalChunkCache2, LocalChunkCache3, OctreeChunkIndex, OctreeNode,
-        OctreeSet, PointDownsampler, Sd16, Sd8, SdfMeanDownsampler, SerializableChunks,
+        FastCompressibleChunkStorage, FillExtent, FromBytesCompression, Func, IndexedArray,
+        IsEmpty, IterChunkKeys, Local, LocalChunkCache2, LocalChunkCache3, OctreeChunkIndex,
+        OctreeNode, OctreeSet, PointDownsampler, Sd16, Sd8, SdfMeanDownsampler, SerializableChunks,
         SignedDistance, SmallKeyHashMap, Stride, TransformMap, VisitStatus,
     };
 

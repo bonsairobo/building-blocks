@@ -14,7 +14,7 @@ use building_blocks::mesh::{
     greedy_quads, GreedyQuadsBuffer, IsOpaque, MergeVoxel, OrientedCubeFace, UnorientedQuad,
     RIGHT_HANDED_Y_UP_CONFIG,
 };
-use building_blocks::storage::{Array3x1, Get, IsEmpty};
+use building_blocks::storage::prelude::*;
 use camera_rotation::{camera_rotation_system, CameraRotationState};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

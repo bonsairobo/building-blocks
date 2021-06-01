@@ -138,8 +138,8 @@ pub use lod_view::*;
 pub use sampling::*;
 
 use crate::{
-    Array, ChunkIndexer, ChunkKey, ChunkReadStorage, ChunkWriteStorage, ForEach, ForEachMutPtr,
-    Get, GetMut, GetRef, IterChunkKeys, MultiMutPtr, MultiRef,
+    Array, ChunkIndexer, ChunkKey, ChunkReadStorage, ChunkWriteStorage, FillExtent, ForEach, Get,
+    GetMut, GetRef, IterChunkKeys, MultiRef,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
@@ -478,20 +478,14 @@ where
     }
 }
 
-impl<N, T, Bldr, Store, MutPtr> ChunkMap<N, T, Bldr, Store>
+impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
-    for<'r> ChunkMapLodView<&'r mut Self>: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
-    T: Clone,
-    MutPtr: MultiMutPtr<Data = T>,
+    for<'r> ChunkMapLodView<&'r mut Self>: FillExtent<N, Item = T>,
 {
     /// Fill all of `extent` with the same `value`.
     #[inline]
     pub fn fill_extent(&mut self, lod: u8, extent: &ExtentN<N>, value: T) {
-        let mut view = self.lod_view_mut(lod);
-        // PERF: write whole chunks using a fast path
-        unsafe {
-            view.for_each_mut_ptr(extent, |_p, ptr| ptr.write(value.clone()));
-        }
+        self.lod_view_mut(lod).fill_extent(extent, value)
     }
 }
 

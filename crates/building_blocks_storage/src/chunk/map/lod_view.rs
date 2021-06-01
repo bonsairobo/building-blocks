@@ -1,7 +1,7 @@
 use crate::{
     AmbientExtent, ArrayCopySrc, Chunk, ChunkKey, ChunkMap, ChunkMapBuilder, ChunkReadStorage,
-    ChunkWriteStorage, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetRef, IntoMultiMut,
-    MultiRef, ReadExtent, WriteExtent,
+    ChunkWriteStorage, FillExtent, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetRef,
+    IntoMultiMut, MultiMutPtr, MultiRef, ReadExtent, WriteExtent,
 };
 
 use building_blocks_core::{ExtentN, IntegerPoint, PointN};
@@ -145,6 +145,24 @@ where
     #[inline]
     fn for_each_mut(&'a mut self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Item)) {
         unsafe { self.for_each_mut_ptr(extent, |p, ptr| f(p, ptr.into_multi_mut())) }
+    }
+}
+
+impl<Delegate, N, T, MutPtr> FillExtent<N> for ChunkMapLodView<Delegate>
+where
+    Self: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
+    MutPtr: MultiMutPtr<Data = T>,
+    T: Clone,
+{
+    type Item = T;
+
+    /// Fill all of `extent` with the same `value`.
+    #[inline]
+    fn fill_extent(&mut self, extent: &ExtentN<N>, value: T) {
+        // PERF: write whole chunks using a fast path
+        unsafe {
+            self.for_each_mut_ptr(extent, |_p, ptr| ptr.write(value.clone()));
+        }
     }
 }
 

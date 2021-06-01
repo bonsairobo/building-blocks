@@ -4,7 +4,7 @@ pub mod sdf_mean;
 pub use point::*;
 pub use sdf_mean::*;
 
-use crate::{prelude::*, ChunkMap, ChunkMap3x1};
+use crate::{prelude::*, ChunkMap, ChunkMap3};
 
 use building_blocks_core::prelude::*;
 use std::borrow::Borrow;
@@ -81,10 +81,12 @@ where
     }
 }
 
-impl<T, Store> ChunkMap3x1<T, Store>
+impl<T, Bldr, Store> ChunkMap3<T, Bldr, Store>
 where
     T: Clone,
-    Store: ChunkWriteStorage<[i32; 3], Array3x1<T>>,
+    Bldr: ChunkMapBuilder<[i32; 3], T>,
+    Bldr::Chunk: FillExtent<[i32; 3], Item = T> + IndexedArray<[i32; 3]>,
+    Store: ChunkWriteStorage<[i32; 3], Bldr::Chunk>,
 {
     /// Downsamples all chunks that both:
     ///   1. overlap `extent`
@@ -98,7 +100,7 @@ where
         sampler: &Samp,
         extent: &Extent3i,
     ) where
-        Samp: ChunkDownsampler<[i32; 3], T, Array3x1<T>, Array3x1<T>>,
+        Samp: ChunkDownsampler<[i32; 3], T, Bldr::Chunk, Bldr::Chunk>,
     {
         let chunk_shape = self.builder().chunk_shape();
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
@@ -142,8 +144,8 @@ where
         extent: &Extent3i,
     ) where
         Lod0Ch: Borrow<Lod0ChBorrow>,
-        Samp: ChunkDownsampler<[i32; 3], T, Array3x1<T>, Array3x1<T>>
-            + ChunkDownsampler<[i32; 3], T, Lod0ChBorrow, Array3x1<T>>,
+        Samp: ChunkDownsampler<[i32; 3], T, Bldr::Chunk, Bldr::Chunk>
+            + ChunkDownsampler<[i32; 3], T, Lod0ChBorrow, Bldr::Chunk>,
     {
         let chunk_shape = self.builder().chunk_shape();
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);

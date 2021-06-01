@@ -22,7 +22,7 @@ impl ChunkedOctreeSet {
         }
     }
 
-    pub fn empty(chunk_shape: Point3i) -> Self {
+    pub fn new_empty(chunk_shape: Point3i) -> Self {
         Self::new(chunk_shape, SmallKeyHashMap::default())
     }
 

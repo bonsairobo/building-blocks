@@ -47,7 +47,7 @@ pub fn active_clipmap_lod_chunks(
 
         if lod == 0 || offset_from_center >= high_lod_boundary {
             // This octant can be rendered at this level of detail.
-            active_rx(octant_lod_chunk_key(chunk_log2, &octant));
+            active_rx(octant_chunk_key(chunk_log2, &octant));
 
             VisitStatus::Stop
         } else {
@@ -135,7 +135,7 @@ impl ClipMapUpdate3 {
             {
                 // Increase the detail for this octant.
                 // Create the higher detail in descendant octants.
-                let old_chunk = octant_lod_chunk_key(self.chunk_log2, &octant);
+                let old_chunk = octant_chunk_key(self.chunk_log2, &octant);
                 let new_chunks = find_merge_or_split_descendants(
                     self.chunk_log2,
                     octree,
@@ -154,7 +154,7 @@ impl ClipMapUpdate3 {
             {
                 // Decrease the detail for this octant.
                 // Delete the higher detail in descendant octants.
-                let new_chunk = octant_lod_chunk_key(self.chunk_log2, &octant);
+                let new_chunk = octant_chunk_key(self.chunk_log2, &octant);
                 let old_chunks = find_merge_or_split_descendants(
                     self.chunk_log2,
                     octree,
@@ -200,7 +200,7 @@ fn find_merge_or_split_descendants(
         let lod = node.octant().power();
         let old_offset_from_center = get_offset_from_lod_center(node.octant(), centers);
         if lod == 0 || old_offset_from_center >= high_lod_boundary {
-            matching_chunks.push(octant_lod_chunk_key(chunk_log2, node.octant()));
+            matching_chunks.push(octant_chunk_key(chunk_log2, node.octant()));
 
             VisitStatus::Stop
         } else {
@@ -219,7 +219,7 @@ fn get_offset_from_lod_center(octant: &Octant, centers: &[Point3i]) -> i32 {
     (lod_p - lod_center).abs().max_component()
 }
 
-fn octant_lod_chunk_key(chunk_log2: i32, octant: &Octant) -> ChunkKey3 {
+fn octant_chunk_key(chunk_log2: i32, octant: &Octant) -> ChunkKey3 {
     let lod = octant.power();
 
     ChunkKey {

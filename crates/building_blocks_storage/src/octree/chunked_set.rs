@@ -27,8 +27,8 @@ impl ChunkedOctreeSet {
     }
 
     pub fn visit_octrees(&self, extent: &Extent3i, visitor: &mut impl FnMut(&OctreeSet)) {
-        for chunk_key in self.indexer.chunk_mins_for_extent(extent) {
-            if let Some(octree) = self.octrees.get(&chunk_key) {
+        for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
+            if let Some(octree) = self.octrees.get(&chunk_min) {
                 (visitor)(octree);
             }
         }
@@ -39,9 +39,9 @@ impl ChunkedOctreeSet {
             octrees, indexer, ..
         } = self;
 
-        for chunk_key in indexer.chunk_mins_for_extent(extent) {
-            let octree = octrees.entry(chunk_key).or_insert_with(|| {
-                let domain = Extent3i::from_min_and_shape(chunk_key, indexer.chunk_shape());
+        for chunk_min in indexer.chunk_mins_for_extent(extent) {
+            let octree = octrees.entry(chunk_min).or_insert_with(|| {
+                let domain = Extent3i::from_min_and_shape(chunk_min, indexer.chunk_shape());
 
                 OctreeSet::new_empty(domain)
             });
@@ -55,16 +55,16 @@ impl ChunkedOctreeSet {
         } = self;
 
         let mut remove_chunks = Vec::new();
-        for chunk_key in indexer.chunk_mins_for_extent(extent) {
-            if let Some(octree) = octrees.get_mut(&chunk_key) {
+        for chunk_min in indexer.chunk_mins_for_extent(extent) {
+            if let Some(octree) = octrees.get_mut(&chunk_min) {
                 octree.subtract_extent(extent);
                 if octree.is_empty() {
-                    remove_chunks.push(chunk_key);
+                    remove_chunks.push(chunk_min);
                 }
             }
         }
-        for chunk_key in remove_chunks.into_iter() {
-            octrees.remove(&chunk_key);
+        for chunk_min in remove_chunks.into_iter() {
+            octrees.remove(&chunk_min);
         }
     }
 }

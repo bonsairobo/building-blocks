@@ -64,8 +64,8 @@ fn setup<Map: VoxelMap>(
     // wireframe_config.global = true;
 
     // Generate a voxel map from noise.
-    let freq = 0.15;
-    let scale = 20.0;
+    let freq = 0.2;
+    let scale = 1.0;
     let seed = 666;
     let map = Map::generate(&*pool, freq, scale, seed);
 

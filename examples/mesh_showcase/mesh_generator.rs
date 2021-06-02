@@ -5,7 +5,7 @@ use building_blocks::core::{
 use building_blocks::mesh::*;
 use building_blocks::storage::{prelude::*, IsEmpty, Sd16};
 
-use utilities::bevy_util::mesh::create_mesh_bundle;
+use utilities::{bevy_util::mesh::create_mesh_bundle, noise::generate_noise_chunks};
 
 use bevy::{
     prelude::*,
@@ -29,6 +29,7 @@ impl MeshGeneratorState {
 #[derive(Clone, Copy, Debug)]
 enum Shape {
     Sdf(Sdf),
+    SdfNoise,
     HeightMap(HeightMap),
     Cubic(Cubic),
 }
@@ -136,8 +137,9 @@ fn choose_shape(index: i32) -> Shape {
         0 => Shape::Sdf(Sdf::Cube),
         1 => Shape::Sdf(Sdf::Sphere),
         2 => Shape::Sdf(Sdf::Torus),
-        3 => Shape::HeightMap(HeightMap::Wave),
-        4 => Shape::Cubic(Cubic::Terrace),
+        3 => Shape::SdfNoise,
+        4 => Shape::HeightMap(HeightMap::Wave),
+        5 => Shape::Cubic(Cubic::Terrace),
         _ => panic!("bad shape index"),
     }
 }
@@ -171,6 +173,7 @@ pub fn mesh_generator_system(
         // Sample the new shape.
         let chunk_meshes = match choose_shape(state.current_shape_index) {
             Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(sdf, &pool.0),
+            Shape::SdfNoise => generate_chunk_meshes_from_sdf_noise(&pool.0),
             Shape::HeightMap(hm) => generate_chunk_meshes_from_height_map(hm, &pool.0),
             Shape::Cubic(cubic) => generate_chunk_meshes_from_cubic(cubic, &pool.0),
         };
@@ -197,21 +200,39 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
     let mut map = builder.build_with_hash_map_storage();
     copy_extent(&sample_extent, &Func(sdf), &mut map.lod_view_mut(0));
 
-    // Generate the chunk meshes.
-    let map_ref = &map;
+    generate_surface_nets_meshes(pool, &map)
+}
 
+fn generate_chunk_meshes_from_sdf_noise(pool: &TaskPool) -> Vec<Option<PosNormMesh>> {
+    let chunks_extent = Extent3i::from_min_and_lub(PointN::fill(-1), PointN::fill(2));
+    let freq = 0.1;
+    let seed = 666;
+    let noise_chunks = generate_noise_chunks(pool, chunks_extent, PointN::fill(16), freq, seed);
+
+    // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
+    // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
+    let builder = ChunkMapBuilder3x1::new(PointN([16; 3]), 99999.0);
+    let mut map = builder.build_with_hash_map_storage();
+    for (chunk_min, chunk) in noise_chunks.into_iter() {
+        map.write_chunk(ChunkKey::new(0, chunk_min), chunk);
+    }
+
+    generate_surface_nets_meshes(pool, &map)
+}
+
+fn generate_surface_nets_meshes<T: 'static + Clone + Send + Sync + SignedDistance>(
+    pool: &TaskPool,
+    map: &ChunkHashMap3x1<T>,
+) -> Vec<Option<PosNormMesh>> {
     pool.scope(|s| {
-        for chunk_key in map_ref.storage().keys() {
+        for chunk_key in map.storage().keys() {
             s.spawn(async move {
                 let padded_chunk_extent = padded_surface_nets_chunk_extent(
-                    &map_ref.indexer.extent_for_chunk_with_min(chunk_key.minimum),
+                    &map.indexer.extent_for_chunk_with_min(chunk_key.minimum),
                 );
-                let mut padded_chunk = Array3x1::fill(padded_chunk_extent, Sd16(0));
-                copy_extent(
-                    &padded_chunk_extent,
-                    &map_ref.lod_view(0),
-                    &mut padded_chunk,
-                );
+                let mut padded_chunk =
+                    Array3x1::fill(padded_chunk_extent, map.builder().ambient_value());
+                copy_extent(&padded_chunk_extent, &map.lod_view(0), &mut padded_chunk);
 
                 let mut surface_nets_buffer = SurfaceNetsBuffer::default();
                 let voxel_size = 1.0;

@@ -1,10 +1,10 @@
-use bevy::tasks::ComputeTaskPool;
+use bevy::tasks::TaskPool;
 use building_blocks_core::prelude::*;
 use building_blocks_storage::Array3x1;
 use simdnoise::NoiseBuilder;
 
 pub fn generate_noise_chunks(
-    pool: &ComputeTaskPool,
+    pool: &TaskPool,
     chunks_extent: Extent3i,
     chunk_shape: Point3i,
     freq: f32,

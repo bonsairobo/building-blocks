@@ -19,8 +19,10 @@ const WORLD_CHUNKS_EXTENT: Extent3i = Extent3i {
     shape: PointN([200, 1, 200]),
 };
 
+const AMBIENT_VALUE: f32 = 99999999.0;
+
 pub struct SmoothVoxelMap {
-    chunks: ChunkHashMap3x1<Sd16>,
+    chunks: ChunkHashMap3x1<f32>,
     index: OctreeChunkIndex,
 }
 
@@ -31,7 +33,7 @@ impl VoxelMap for SmoothVoxelMap {
         let noise_chunks =
             generate_noise_chunks(pool, Self::world_chunks_extent(), CHUNK_SHAPE, freq, seed);
 
-        let builder = ChunkMapBuilder3x1::new(CHUNK_SHAPE, Sd16::ONE);
+        let builder = ChunkMapBuilder3x1::new(CHUNK_SHAPE, AMBIENT_VALUE);
         let mut chunks = builder.build_with_hash_map_storage();
 
         for (chunk_min, noise) in noise_chunks.into_iter() {
@@ -74,7 +76,7 @@ impl VoxelMap for SmoothVoxelMap {
 
         MeshBuffers {
             mesh_buffer: Default::default(),
-            neighborhood_buffer: Array3x1::fill(extent, Sd16::ONE),
+            neighborhood_buffer: Array3x1::fill(extent, AMBIENT_VALUE),
         }
     }
 
@@ -117,11 +119,11 @@ impl VoxelMap for SmoothVoxelMap {
     }
 }
 
-fn smooth_voxels_from_noise(noise: &Array3x1<f32>, scale: f32) -> Array3x1<Sd16> {
-    let mut voxels = Array3x1::fill(*noise.extent(), Sd16::ONE);
+fn smooth_voxels_from_noise(noise: &Array3x1<f32>, scale: f32) -> Array3x1<f32> {
+    let mut voxels = Array3x1::fill(*noise.extent(), AMBIENT_VALUE);
 
-    // Convert the f32 noise into Sd16s.
-    let sdf_voxel_noise = TransformMap::new(noise, |d: f32| Sd16::from(scale * d));
+    // Convert the f32 noise into f32s.
+    let sdf_voxel_noise = TransformMap::new(noise, |d: f32| scale * d);
     copy_extent(noise.extent(), &sdf_voxel_noise, &mut voxels);
 
     voxels
@@ -129,5 +131,5 @@ fn smooth_voxels_from_noise(noise: &Array3x1<f32>, scale: f32) -> Array3x1<Sd16>
 
 pub struct MeshBuffers {
     mesh_buffer: SurfaceNetsBuffer,
-    neighborhood_buffer: Array3x1<Sd16>,
+    neighborhood_buffer: Array3x1<f32>,
 }

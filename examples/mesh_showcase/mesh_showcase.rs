@@ -44,6 +44,11 @@ fn setup(
 
     commands.spawn_bundle(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.100, 150.0, 100.0)),
+        light: Light {
+            intensity: 50000.0,
+            range: 1000.0,
+            ..Default::default()
+        },
         ..Default::default()
     });
 
@@ -53,7 +58,7 @@ fn setup(
 
     commands.insert_resource(CameraRotationState::new(camera_entity));
     commands.insert_resource(MeshMaterial(
-        materials.add(Color::rgba(0.0, 0.0, 0.0, 1.0).into()),
+        materials.add(Color::rgba(1.0, 0.0, 0.0, 1.0).into()),
     ));
     commands.insert_resource(MeshGeneratorState::new());
 }

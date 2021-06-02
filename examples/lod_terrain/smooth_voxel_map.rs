@@ -36,11 +36,14 @@ impl VoxelMap for SmoothVoxelMap {
         let builder = ChunkMapBuilder3x1::new(CHUNK_SHAPE, AMBIENT_VALUE);
         let mut chunks = builder.build_with_hash_map_storage();
 
-        for (chunk_min, noise) in noise_chunks.into_iter() {
-            chunks.write_chunk(
-                ChunkKey::new(0, chunk_min),
-                smooth_voxels_from_noise(&noise, scale),
-            );
+        for (chunk_min, mut noise) in noise_chunks.into_iter() {
+            // Rescale the noise.
+            let array = noise.array_mut();
+            let extent = *array.extent();
+            array.for_each_mut(&extent, |_: (), x| {
+                *x *= scale;
+            });
+            chunks.write_chunk(ChunkKey::new(0, chunk_min), noise);
         }
 
         let index = OctreeChunkIndex::index_chunk_map(SUPERCHUNK_SHAPE, &chunks);
@@ -117,16 +120,6 @@ impl VoxelMap for SmoothVoxelMap {
             Some(mesh_buffer.mesh.clone())
         }
     }
-}
-
-fn smooth_voxels_from_noise(noise: &Array3x1<f32>, scale: f32) -> Array3x1<f32> {
-    let mut voxels = Array3x1::fill(*noise.extent(), AMBIENT_VALUE);
-
-    // Convert the f32 noise into f32s.
-    let sdf_voxel_noise = TransformMap::new(noise, |d: f32| scale * d);
-    copy_extent(noise.extent(), &sdf_voxel_noise, &mut voxels);
-
-    voxels
 }
 
 pub struct MeshBuffers {

@@ -130,7 +130,7 @@ impl IsEmpty for CubeVoxel {
     }
 }
 
-const NUM_SHAPES: i32 = 5;
+const NUM_SHAPES: i32 = 6;
 
 fn choose_shape(index: i32) -> Shape {
     match index {

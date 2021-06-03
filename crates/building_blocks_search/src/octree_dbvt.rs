@@ -14,7 +14,7 @@ use ncollide3d::{
     partitioning::{self as nc_part, DBVTLeaf, DBVTLeafId, BVH, DBVT},
 };
 
-/// An ncollide `DBVT` containing `OctreeSet`s. This turns the bounded `Octree` into an unbounded acceleration structure. You
+/// An ncollide `DBVT` containing `OctreeSet`s. This turns the bounded `OctreeSet` into an unbounded acceleration structure. You
 /// may use whatever key type `K` to uniquely identify the octrees.
 pub struct OctreeDbvt<K> {
     dbvt: DBVT<f32, OctreeSet, AABB<f32>>,

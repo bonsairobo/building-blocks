@@ -58,6 +58,11 @@ where
             .and_then(|leaf_id| self.dbvt.get(*leaf_id).map(|leaf| &leaf.data))
     }
 
+    /// Returns `true` iff there is an `OctreeSet` for `key`.
+    pub fn contains_key(&self, key: &K) -> bool {
+        self.leaf_ids.contains_key(key)
+    }
+
     /// Visit every bounding volume (AABB) in the DBVT. This is a heterogeneous tree, meaning that not all nodes have the same
     /// representation. Upper nodes simply store a bounding volume (AABB), while octree nodes will provide both a bounding
     /// volume and an `Octant`, which is completely full for leaf nodes.

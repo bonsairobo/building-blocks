@@ -230,8 +230,7 @@ fn generate_surface_nets_meshes<T: 'static + Clone + Send + Sync + SignedDistanc
                 let padded_chunk_extent = padded_surface_nets_chunk_extent(
                     &map.indexer.extent_for_chunk_with_min(chunk_key.minimum),
                 );
-                let mut padded_chunk =
-                    Array3x1::fill(padded_chunk_extent, map.builder().ambient_value());
+                let mut padded_chunk = Array3x1::fill(padded_chunk_extent, map.ambient_value());
                 copy_extent(&padded_chunk_extent, &map.lod_view(0), &mut padded_chunk);
 
                 let mut surface_nets_buffer = SurfaceNetsBuffer::default();

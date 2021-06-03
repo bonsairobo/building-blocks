@@ -53,7 +53,7 @@ where
     {
         assert!(dst_lod > src_chunk_key.lod);
 
-        let chunk_shape = self.builder().chunk_shape();
+        let chunk_shape = self.chunk_shape();
         let lod_delta = dst_lod - src_chunk_key.lod;
         let dst =
             DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_key.minimum, lod_delta);
@@ -66,7 +66,7 @@ where
     pub fn downsample_ambient_chunk(&mut self, src_chunk_key: ChunkKey<N>, dst_lod: u8) {
         assert!(dst_lod > src_chunk_key.lod);
 
-        let chunk_shape = self.builder().chunk_shape();
+        let chunk_shape = self.chunk_shape();
         let ambient_value = self.ambient_value.clone();
         let lod_delta = dst_lod - src_chunk_key.lod;
         let dst =
@@ -102,7 +102,7 @@ where
     ) where
         Samp: ChunkDownsampler<[i32; 3], T, Bldr::Chunk, Bldr::Chunk>,
     {
-        let chunk_shape = self.builder().chunk_shape();
+        let chunk_shape = self.chunk_shape();
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
 
         let chunk_space_extent =
@@ -147,7 +147,7 @@ where
         Samp: ChunkDownsampler<[i32; 3], T, Bldr::Chunk, Bldr::Chunk>
             + ChunkDownsampler<[i32; 3], T, Lod0ChBorrow, Bldr::Chunk>,
     {
-        let chunk_shape = self.builder().chunk_shape();
+        let chunk_shape = self.chunk_shape();
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
 
         let chunk_space_extent =

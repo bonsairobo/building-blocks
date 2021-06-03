@@ -276,6 +276,21 @@ impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store> {
 
 impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
+    Bldr: ChunkMapBuilder<N, T>,
+{
+    #[inline]
+    pub fn chunk_shape(&self) -> PointN<N> {
+        self.builder().chunk_shape()
+    }
+
+    #[inline]
+    pub fn ambient_value(&self) -> T {
+        self.builder().ambient_value()
+    }
+}
+
+impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store>
+where
     PointN<N>: IntegerPoint<N>,
     Bldr: ChunkMapBuilder<N, T>,
     Store: ChunkReadStorage<N, Bldr::Chunk>,

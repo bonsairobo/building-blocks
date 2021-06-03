@@ -204,9 +204,9 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
 }
 
 fn generate_chunk_meshes_from_sdf_noise(pool: &TaskPool) -> Vec<Option<PosNormMesh>> {
-    let chunks_extent = Extent3i::from_min_and_lub(PointN::fill(-1), PointN::fill(2));
-    let freq = 0.1;
-    let seed = 666;
+    let chunks_extent = Extent3i::from_min_and_shape(PointN::fill(-1), PointN::fill(2));
+    let freq = 0.15;
+    let seed = 313;
     let noise_chunks = generate_noise_chunks(pool, chunks_extent, PointN::fill(16), freq, seed);
 
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an

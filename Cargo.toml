@@ -83,7 +83,7 @@ required-features = ["dot_vox", "lz4", "snappy"]
 [[example]]
 name = "mesh_showcase"
 path = "examples/mesh_showcase/mesh_showcase.rs"
-required-features = ["mesh", "sdfu"]
+required-features = ["mesh", "sdfu", "utilities/simdnoise"]
 
 [[example]]
 name = "sdf_mesh"

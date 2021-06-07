@@ -257,7 +257,7 @@ impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store> {
 
     /// Get an immutable view of a single level of detail `lod` in order to use the access traits.
     #[inline]
-    pub fn lod_view<'a>(&'a self, lod: u8) -> ChunkMapLodView<&'a Self> {
+    pub fn lod_view(&self, lod: u8) -> ChunkMapLodView<&'_ Self> {
         ChunkMapLodView {
             delegate: self,
             lod,
@@ -266,7 +266,7 @@ impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store> {
 
     /// Get a mutable view of a single level of detail `lod` in order to use the access traits.
     #[inline]
-    pub fn lod_view_mut<'a>(&'a mut self, lod: u8) -> ChunkMapLodView<&'a mut Self> {
+    pub fn lod_view_mut(&mut self, lod: u8) -> ChunkMapLodView<&'_ mut Self> {
         ChunkMapLodView {
             delegate: self,
             lod,
@@ -433,7 +433,7 @@ where
             builder,
             ..
         } = self;
-        let chunk_min = key.minimum.clone();
+        let chunk_min = key.minimum;
 
         storage.get_mut_or_insert_with(key, || {
             builder.new_ambient(indexer.extent_for_chunk_with_min(chunk_min))

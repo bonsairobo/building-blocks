@@ -48,7 +48,7 @@ where
 }
 
 #[inline]
-pub(crate) fn for_each_stride_parallel_global_unchecked2(
+pub(crate) fn for_each_stride_lockstep_global_unchecked2(
     iter_extent: &Extent2i,
     array1_extent: &Extent2i,
     array2_extent: &Extent2i,
@@ -58,23 +58,10 @@ pub(crate) fn for_each_stride_parallel_global_unchecked2(
     let min1 = iter_extent.minimum - array1_extent.minimum;
     let min2 = iter_extent.minimum - array2_extent.minimum;
 
-    let mut s1 = Array2ForEachState::new(array1_extent.shape, Local(min1));
-    let mut s2 = Array2ForEachState::new(array2_extent.shape, Local(min2));
+    let s1 = Array2ForEachState::new(array1_extent.shape, Local(min1));
+    let s2 = Array2ForEachState::new(array2_extent.shape, Local(min2));
 
-    s1.start_y();
-    s2.start_y();
-    for _y in 0..iter_extent.shape.y() {
-        s1.start_x();
-        s2.start_x();
-        for _x in 0..iter_extent.shape.x() {
-            f(s1.stride(), s2.stride());
-
-            s1.incr_x();
-            s2.incr_x();
-        }
-        s1.incr_y();
-        s2.incr_y();
-    }
+    for_each2((s1, s2), iter_extent, |_p, (s1, s2)| f(s1, s2));
 }
 
 pub(crate) struct Array2ForEachState {
@@ -107,21 +94,73 @@ impl Array2ForEachState {
 impl StrideIter2 for Array2ForEachState {
     type Stride = Stride;
 
-    fn stride(&self) -> Stride {
+    #[inline]
+    fn stride(&self) -> Self::Stride {
         Stride(self.x_i)
     }
 
+    #[inline]
     fn start_y(&mut self) {
         self.y_i = self.y_start;
     }
+    #[inline]
     fn start_x(&mut self) {
         self.x_i = self.y_i + self.x_start;
     }
 
+    #[inline]
     fn incr_x(&mut self) {
         self.x_i += self.x_stride;
     }
+    #[inline]
     fn incr_y(&mut self) {
         self.y_i += self.y_stride;
     }
 }
+
+macro_rules! impl_stride_iter2_for_tuple {
+    ( $( $var:ident : $t:ident ),+ ) => {
+        impl<$($t),+> StrideIter2 for ($($t,)+)
+        where
+            $($t: StrideIter2),+
+        {
+            type Stride = ($($t::Stride,)+);
+
+            #[inline]
+            fn stride(&self) -> Self::Stride {
+                let ($($var,)+) = self;
+
+                ($($var.stride(),)+)
+            }
+
+            #[inline]
+            fn start_y(&mut self) {
+                let ($($var,)+) = self;
+                $( $var.start_y(); )+
+            }
+            #[inline]
+            fn start_x(&mut self) {
+                let ($($var,)+) = self;
+                $( $var.start_x(); )+
+            }
+
+            #[inline]
+            fn incr_x(&mut self) {
+                let ($($var,)+) = self;
+                $( $var.incr_x(); )+
+            }
+            #[inline]
+            fn incr_y(&mut self) {
+                let ($($var,)+) = self;
+                $( $var.incr_y(); )+
+            }
+        }
+    };
+}
+
+impl_stride_iter2_for_tuple! { a: A }
+impl_stride_iter2_for_tuple! { a: A, b: B }
+impl_stride_iter2_for_tuple! { a: A, b: B, c: C }
+impl_stride_iter2_for_tuple! { a: A, b: B, c: C, d: D }
+impl_stride_iter2_for_tuple! { a: A, b: B, c: C, d: D, e: E }
+impl_stride_iter2_for_tuple! { a: A, b: B, c: C, d: D, e: E, f: F }

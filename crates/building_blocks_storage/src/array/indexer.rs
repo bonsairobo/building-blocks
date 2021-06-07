@@ -1,5 +1,5 @@
 use crate::{
-    for_each_stride_parallel_global_unchecked2, for_each_stride_parallel_global_unchecked3,
+    for_each_stride_lockstep_global_unchecked2, for_each_stride_lockstep_global_unchecked3,
     Array2ForEach, Array3ForEach, ArrayForEach, Local, Local2i, Local3i, Stride,
 };
 
@@ -78,7 +78,7 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
         array2_extent: &Extent2i,
         f: impl FnMut(Stride, Stride),
     ) {
-        for_each_stride_parallel_global_unchecked2(iter_extent, array1_extent, array2_extent, f)
+        for_each_stride_lockstep_global_unchecked2(iter_extent, array1_extent, array2_extent, f)
     }
 }
 
@@ -103,6 +103,6 @@ impl ArrayIndexer<[i32; 3]> for [i32; 3] {
         array2_extent: &Extent3i,
         f: impl FnMut(Stride, Stride),
     ) {
-        for_each_stride_parallel_global_unchecked3(iter_extent, array1_extent, array2_extent, f);
+        for_each_stride_lockstep_global_unchecked3(iter_extent, array1_extent, array2_extent, f);
     }
 }

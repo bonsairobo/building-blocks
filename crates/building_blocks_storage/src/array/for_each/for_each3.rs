@@ -54,7 +54,7 @@ where
 }
 
 #[inline]
-pub(crate) fn for_each_stride_parallel_global_unchecked3(
+pub(crate) fn for_each_stride_lockstep_global_unchecked3(
     iter_extent: &Extent3i,
     array1_extent: &Extent3i,
     array2_extent: &Extent3i,
@@ -64,29 +64,10 @@ pub(crate) fn for_each_stride_parallel_global_unchecked3(
     let min1 = iter_extent.minimum - array1_extent.minimum;
     let min2 = iter_extent.minimum - array2_extent.minimum;
 
-    let mut s1 = Array3ForEachState::new(array1_extent.shape, Local(min1));
-    let mut s2 = Array3ForEachState::new(array2_extent.shape, Local(min2));
+    let s1 = Array3ForEachState::new(array1_extent.shape, Local(min1));
+    let s2 = Array3ForEachState::new(array2_extent.shape, Local(min2));
 
-    s1.start_z();
-    s2.start_z();
-    for _z in 0..iter_extent.shape.z() {
-        s1.start_y();
-        s2.start_y();
-        for _y in 0..iter_extent.shape.y() {
-            s1.start_x();
-            s2.start_x();
-            for _x in 0..iter_extent.shape.x() {
-                f(s1.stride(), s2.stride());
-
-                s1.incr_x();
-                s2.incr_x();
-            }
-            s1.incr_y();
-            s2.incr_y();
-        }
-        s1.incr_z();
-        s2.incr_z();
-    }
+    for_each3((s1, s2), iter_extent, |_p, (s1, s2)| f(s1, s2))
 }
 
 pub(crate) struct Array3ForEachState {
@@ -127,27 +108,91 @@ impl Array3ForEachState {
 impl StrideIter3 for Array3ForEachState {
     type Stride = Stride;
 
-    fn stride(&self) -> Stride {
+    #[inline]
+    fn stride(&self) -> Self::Stride {
         Stride(self.x_i)
     }
 
+    #[inline]
     fn start_z(&mut self) {
         self.z_i = self.z_start;
     }
+    #[inline]
     fn start_y(&mut self) {
         self.y_i = self.z_i + self.y_start;
     }
+    #[inline]
     fn start_x(&mut self) {
         self.x_i = self.y_i + self.x_start;
     }
 
+    #[inline]
     fn incr_x(&mut self) {
         self.x_i += self.x_stride;
     }
+    #[inline]
     fn incr_y(&mut self) {
         self.y_i += self.y_stride;
     }
+    #[inline]
     fn incr_z(&mut self) {
         self.z_i += self.z_stride;
     }
 }
+
+macro_rules! impl_stride_iter3_for_tuple {
+    ( $( $var:ident : $t:ident ),+ ) => {
+        impl<$($t),+> StrideIter3 for ($($t,)+)
+        where
+            $($t: StrideIter3),+
+        {
+            type Stride = ($($t::Stride,)+);
+
+            #[inline]
+            fn stride(&self) -> Self::Stride {
+                let ($($var,)+) = self;
+
+                ($($var.stride(),)+)
+            }
+
+            #[inline]
+            fn start_z(&mut self) {
+                let ($($var,)+) = self;
+                $( $var.start_z(); )+
+            }
+            #[inline]
+            fn start_y(&mut self) {
+                let ($($var,)+) = self;
+                $( $var.start_y(); )+
+            }
+            #[inline]
+            fn start_x(&mut self) {
+                let ($($var,)+) = self;
+                $( $var.start_x(); )+
+            }
+
+            #[inline]
+            fn incr_x(&mut self) {
+                let ($($var,)+) = self;
+                $( $var.incr_x(); )+
+            }
+            #[inline]
+            fn incr_y(&mut self) {
+                let ($($var,)+) = self;
+                $( $var.incr_y(); )+
+            }
+            #[inline]
+            fn incr_z(&mut self) {
+                let ($($var,)+) = self;
+                $( $var.incr_z(); )+
+            }
+        }
+    };
+}
+
+impl_stride_iter3_for_tuple! { a: A }
+impl_stride_iter3_for_tuple! { a: A, b: B }
+impl_stride_iter3_for_tuple! { a: A, b: B, c: C }
+impl_stride_iter3_for_tuple! { a: A, b: B, c: C, d: D }
+impl_stride_iter3_for_tuple! { a: A, b: B, c: C, d: D, e: E }
+impl_stride_iter3_for_tuple! { a: A, b: B, c: C, d: D, e: E, f: F }

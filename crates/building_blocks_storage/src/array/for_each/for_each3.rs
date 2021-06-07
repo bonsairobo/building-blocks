@@ -1,4 +1,4 @@
-use crate::{Array3ForEach, Local, Local3i, Stride};
+use crate::{Local, Local3i, Stride};
 
 use building_blocks_core::prelude::*;
 
@@ -14,22 +14,6 @@ pub trait StrideIter3 {
     fn incr_x(&mut self);
     fn incr_y(&mut self);
     fn incr_z(&mut self);
-}
-
-impl Array3ForEach {
-    #[inline]
-    pub fn for_each_point_and_stride_unchecked(self, f: impl FnMut(Point3i, Stride)) {
-        let Array3ForEach {
-            iter_extent,
-            array_shape,
-            index_min,
-        } = self;
-        for_each3(
-            Array3ForEachState::new(array_shape, index_min),
-            &iter_extent,
-            f,
-        );
-    }
 }
 
 #[inline]

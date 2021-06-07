@@ -1,4 +1,4 @@
-use crate::{Array2ForEach, Local, Local2i, Stride};
+use crate::{Local, Local2i, Stride};
 
 use building_blocks_core::prelude::*;
 
@@ -12,22 +12,6 @@ pub trait StrideIter2 {
 
     fn incr_x(&mut self);
     fn incr_y(&mut self);
-}
-
-impl Array2ForEach {
-    #[inline]
-    pub fn for_each_point_and_stride_unchecked(self, f: impl FnMut(Point2i, Stride)) {
-        let Array2ForEach {
-            iter_extent,
-            array_shape,
-            index_min,
-        } = self;
-        for_each2(
-            Array2ForEachState::new(array_shape, index_min),
-            &iter_extent,
-            f,
-        );
-    }
 }
 
 #[inline]

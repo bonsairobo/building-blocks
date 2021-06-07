@@ -6,6 +6,9 @@ mod for_each3;
 pub(crate) use for_each2::for_each_stride_lockstep_global_unchecked2;
 pub(crate) use for_each3::for_each_stride_lockstep_global_unchecked3;
 
+use for_each2::{for_each2, Array2ForEachState};
+use for_each3::{for_each3, Array3ForEachState};
+
 use crate::{ArrayIndexer, Local, Stride};
 
 use building_blocks_core::prelude::*;
@@ -79,5 +82,37 @@ where
 {
     pub fn for_each_point_and_stride(self, f: impl FnMut(PointN<N>, Stride)) {
         N::for_each_point_and_stride_unchecked(self, f)
+    }
+}
+
+impl Array2ForEach {
+    #[inline]
+    pub fn for_each_point_and_stride_unchecked(self, f: impl FnMut(Point2i, Stride)) {
+        let Array2ForEach {
+            iter_extent,
+            array_shape,
+            index_min,
+        } = self;
+        for_each2(
+            Array2ForEachState::new(array_shape, index_min),
+            &iter_extent,
+            f,
+        );
+    }
+}
+
+impl Array3ForEach {
+    #[inline]
+    pub fn for_each_point_and_stride_unchecked(self, f: impl FnMut(Point3i, Stride)) {
+        let Array3ForEach {
+            iter_extent,
+            array_shape,
+            index_min,
+        } = self;
+        for_each3(
+            Array3ForEachState::new(array_shape, index_min),
+            &iter_extent,
+            f,
+        );
     }
 }

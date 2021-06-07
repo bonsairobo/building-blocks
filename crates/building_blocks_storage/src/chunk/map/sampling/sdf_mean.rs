@@ -10,7 +10,7 @@ impl<N, Src, Dst, T> ChunkDownsampler<N, T, Src, Dst> for SdfMeanDownsampler
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
-    T: 'static + Clone + From<f32>,
+    T: From<f32>,
     f32: From<T>,
     Src: Get<Local<N>, Item = T> + IndexedArray<N>,
     Dst: for<'r> GetMut<'r, Local<N>, Item = &'r mut T> + IndexedArray<N>,

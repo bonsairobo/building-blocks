@@ -9,7 +9,6 @@ impl<N, Src, Dst, T> ChunkDownsampler<N, T, Src, Dst> for PointDownsampler
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
-    T: 'static + Copy,
     Src: Get<Local<N>, Item = T> + IndexedArray<N>,
     Dst: for<'r> GetMut<'r, Local<N>, Item = &'r mut T>,
 {

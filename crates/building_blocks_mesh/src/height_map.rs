@@ -112,7 +112,7 @@ pub fn triangulate_height_map<A, H>(
     let quads_extent = interior_extent.add_to_shape(PointN([-1; 2]));
 
     let visitor = ArrayForEach::new_global(height_map.extent(), quads_extent);
-    visitor.for_each_point_and_stride(|_p, bl_stride| {
+    visitor.for_each(|_p, bl_stride| {
         let br_stride = bl_stride + x_stride;
         let tl_stride = bl_stride + y_stride;
         let tr_stride = bl_stride + x_stride + y_stride;

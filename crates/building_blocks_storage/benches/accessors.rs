@@ -3,8 +3,8 @@ use building_blocks_storage::{prelude::*, ChunkMap3x1, SmallKeyHashMap};
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
-fn array_for_each_stride(c: &mut Criterion) {
-    let mut group = c.benchmark_group("array_for_each_stride");
+fn array_for_each(c: &mut Criterion) {
+    let mut group = c.benchmark_group("array_for_each");
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
@@ -199,7 +199,7 @@ fn chunk_hash_map_copy(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    array_for_each_stride,
+    array_for_each,
     array_for_each_point,
     array_for_each_point_and_stride,
     array_point_indexing,

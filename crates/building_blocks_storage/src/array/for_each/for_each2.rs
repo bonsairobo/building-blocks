@@ -1,11 +1,31 @@
-use crate::{Local, Local2i, Stride};
-
 use building_blocks_core::prelude::*;
 
-pub trait StrideIter2 {
-    type Stride;
+/// Steps a generic 2D iterator `iter` through some "extent," for some interpretation of an extent determined by the iterator.
+///
+/// The visitor `f` will see every point in `extent`, as well as whatever coordinates `iter` would like to associated with
+/// that point.
+#[inline]
+pub fn for_each2<I>(mut iter: I, extent: &Extent2i, mut f: impl FnMut(Point2i, I::Coords))
+where
+    I: Iter2,
+{
+    let min = extent.minimum;
+    let lub = extent.least_upper_bound();
+    iter.start_y();
+    for y in min.y()..lub.y() {
+        iter.start_x();
+        for x in min.x()..lub.x() {
+            f(PointN([x, y]), iter.coords());
+            iter.incr_x();
+        }
+        iter.incr_y();
+    }
+}
 
-    fn stride(&self) -> Self::Stride;
+pub trait Iter2 {
+    type Coords;
+
+    fn coords(&self) -> Self::Coords;
 
     fn start_y(&mut self);
     fn start_x(&mut self);
@@ -14,119 +34,19 @@ pub trait StrideIter2 {
     fn incr_y(&mut self);
 }
 
-#[inline]
-pub fn for_each2<S>(mut s: S, iter_extent: &Extent2i, mut f: impl FnMut(Point2i, S::Stride))
-where
-    S: StrideIter2,
-{
-    let iter_lub = iter_extent.least_upper_bound();
-    s.start_y();
-    for y in iter_extent.minimum.y()..iter_lub.y() {
-        s.start_x();
-        for x in iter_extent.minimum.x()..iter_lub.x() {
-            f(PointN([x, y]), s.stride());
-            s.incr_x();
-        }
-        s.incr_y();
-    }
-}
-
-#[inline]
-pub(crate) fn for_each_stride_lockstep_global_unchecked2(
-    iter_extent: &Extent2i,
-    array1_extent: &Extent2i,
-    array2_extent: &Extent2i,
-    f: impl FnMut(Point2i, (Stride, Stride)),
-) {
-    // Translate to local coordinates.
-    let min1 = iter_extent.minimum - array1_extent.minimum;
-    let min2 = iter_extent.minimum - array2_extent.minimum;
-
-    let s1 = Array2ForEachState::new(array1_extent.shape, Local(min1));
-    let s2 = Array2ForEachState::new(array2_extent.shape, Local(min2));
-
-    for_each2((s1, s2), iter_extent, f);
-}
-
-pub(crate) struct Array2ForEachState {
-    x_stride: usize,
-    y_stride: usize,
-    x_start: usize,
-    y_start: usize,
-    x_i: usize,
-    y_i: usize,
-}
-
-impl Array2ForEachState {
-    pub fn new_with_step(array_shape: Point2i, index_min: Local2i, step: Point2i) -> Self {
-        assert!(array_shape >= Point2i::ZERO);
-        assert!(index_min.0 >= Point2i::ZERO);
-        assert!(step >= Point2i::ZERO);
-
-        let mut x_stride = 1usize;
-        let mut y_stride = array_shape.x() as usize;
-
-        let x_start = x_stride * index_min.0.x() as usize;
-        let y_start = y_stride * index_min.0.y() as usize;
-
-        x_stride *= step.x() as usize;
-        y_stride *= step.y() as usize;
-
-        Self {
-            x_stride,
-            y_stride,
-            x_start,
-            y_start,
-            x_i: 0,
-            y_i: 0,
-        }
-    }
-
-    pub fn new(array_shape: Point2i, index_min: Local2i) -> Self {
-        Self::new_with_step(array_shape, index_min, Point2i::ONES)
-    }
-}
-
-impl StrideIter2 for Array2ForEachState {
-    type Stride = Stride;
-
-    #[inline]
-    fn stride(&self) -> Self::Stride {
-        Stride(self.x_i)
-    }
-
-    #[inline]
-    fn start_y(&mut self) {
-        self.y_i = self.y_start;
-    }
-    #[inline]
-    fn start_x(&mut self) {
-        self.x_i = self.y_i + self.x_start;
-    }
-
-    #[inline]
-    fn incr_x(&mut self) {
-        self.x_i += self.x_stride;
-    }
-    #[inline]
-    fn incr_y(&mut self) {
-        self.y_i += self.y_stride;
-    }
-}
-
-macro_rules! impl_stride_iter2_for_tuple {
+macro_rules! impl_iter2_for_tuple {
     ( $( $var:ident : $t:ident ),+ ) => {
-        impl<$($t),+> StrideIter2 for ($($t,)+)
+        impl<$($t),+> Iter2 for ($($t,)+)
         where
-            $($t: StrideIter2),+
+            $($t: Iter2),+
         {
-            type Stride = ($($t::Stride,)+);
+            type Coords = ($($t::Coords,)+);
 
             #[inline]
-            fn stride(&self) -> Self::Stride {
+            fn coords(&self) -> Self::Coords {
                 let ($($var,)+) = self;
 
-                ($($var.stride(),)+)
+                ($($var.coords(),)+)
             }
 
             #[inline]
@@ -154,9 +74,9 @@ macro_rules! impl_stride_iter2_for_tuple {
     };
 }
 
-impl_stride_iter2_for_tuple! { a: A }
-impl_stride_iter2_for_tuple! { a: A, b: B }
-impl_stride_iter2_for_tuple! { a: A, b: B, c: C }
-impl_stride_iter2_for_tuple! { a: A, b: B, c: C, d: D }
-impl_stride_iter2_for_tuple! { a: A, b: B, c: C, d: D, e: E }
-impl_stride_iter2_for_tuple! { a: A, b: B, c: C, d: D, e: E, f: F }
+impl_iter2_for_tuple! { a: A }
+impl_iter2_for_tuple! { a: A, b: B }
+impl_iter2_for_tuple! { a: A, b: B, c: C }
+impl_iter2_for_tuple! { a: A, b: B, c: C, d: D }
+impl_iter2_for_tuple! { a: A, b: B, c: C, d: D, e: E }
+impl_iter2_for_tuple! { a: A, b: B, c: C, d: D, e: E, f: F }

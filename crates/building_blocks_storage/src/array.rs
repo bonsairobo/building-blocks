@@ -571,8 +571,7 @@ macro_rules! impl_array_for_each {
             #[inline]
             fn for_each(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, Self::Item)) {
                 let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
-                visitor
-                    .for_each_point_and_stride(|$p, $stride| f($forward_coords, self.get($stride)));
+                visitor.for_each(|$p, $stride| f($forward_coords, self.get($stride)));
             }
         }
 
@@ -592,7 +591,7 @@ macro_rules! impl_array_for_each {
                 mut f: impl FnMut($coords, Self::Item),
             ) {
                 let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
-                visitor.for_each_point_and_stride(|$p, $stride| {
+                visitor.for_each(|$p, $stride| {
                     f($forward_coords, self.get_mut_ptr($stride));
                 });
             }
@@ -728,8 +727,8 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, Ptr>(
 {
     let dst_extent = *dst.extent();
     // It shoudn't matter which type we use for the indexer.
-    Dst::Indexer::for_each_stride_lockstep_global_unchecked(
-        &extent,
+    Dst::Indexer::for_each_lockstep_unchecked(
+        extent,
         &dst_extent,
         src.extent(),
         |_p, (s_dst, s_src)| {

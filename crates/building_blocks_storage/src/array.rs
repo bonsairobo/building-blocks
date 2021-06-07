@@ -114,7 +114,8 @@
 //! #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 //! struct VoxelId(u8);
 //!
-//! // This means 3D with 2 channels. Although we pass in a tuple, the two data types are internally stored in separate arrays.
+//! // This means 3D with 2 channels. Although we pass in a tuple, the two data
+//! // types are internally stored in separate arrays.
 //! let mut array = Array3x2::fill(extent, (VoxelId(0), 1.0));
 //!
 //! // This array supports all of the usual access traits and maps the channels
@@ -125,7 +126,7 @@
 //! assert_eq!(array.get_mut(p), (&mut VoxelId(0), &mut 1.0));
 //!
 //! // Here we choose to access just one channel, and there is no performance penalty.
-//! array.for_each_mut(&extent, |p: Point3i, (_id, dist)| {
+//! array.borrow_channels_mut(|(_id, dist)| dist).for_each_mut(&extent, |p: Point3i, dist| {
 //!     let r = p.dot(p);
 //!     *dist = (r as f32).sqrt();
 //! });
@@ -133,8 +134,8 @@
 //! // And if we want to copy just one of those channels into another map, we can
 //! // create a new array that borrows just one of the channels.
 //! let mut dst = Array3x1::fill(extent, 0.0);
-//! let src_select = array.borrow_channels(|(_id, dist)| dist);
-//! copy_extent(&extent, &src_select, &mut dst);
+//! let src = array.borrow_channels(|(_id, dist)| dist);
+//! copy_extent(&extent, &src, &mut dst);
 //! ```
 
 mod coords;

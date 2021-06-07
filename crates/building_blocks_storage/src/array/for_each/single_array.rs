@@ -1,16 +1,12 @@
-use crate::{ArrayIndexer, ForEachSpan, Local, Stride};
+use crate::{ArrayIndexer, ArrayIterSpan, Local, Stride};
 
 use building_blocks_core::prelude::*;
 
 /// All information required to do strided iteration over an extent of a single array.
 #[derive(Clone)]
 pub struct ArrayForEach<N> {
-    /// Extent of the iteration coordinates.
     pub(crate) iter_extent: ExtentN<N>,
-    /// Shape of the array being indexed.
-    pub(crate) array_shape: PointN<N>,
-    /// The starting point and step size in each dimension.
-    pub(crate) span: ForEachSpan<N>,
+    pub(crate) span: ArrayIterSpan<N>,
 }
 
 /// A 2D `ArrayForEach`.
@@ -30,8 +26,8 @@ where
     ) -> Self {
         Self {
             iter_extent,
-            array_shape,
-            span: ForEachSpan {
+            span: ArrayIterSpan {
+                array_shape,
                 origin,
                 step: PointN::ONES,
             },
@@ -39,7 +35,7 @@ where
     }
 
     #[inline]
-    pub fn new_local(array_shape: PointN<N>, iter_extent: &ExtentN<N>) -> Self {
+    pub fn new_local(array_shape: PointN<N>, iter_extent: ExtentN<N>) -> Self {
         // Make sure we don't index out of array bounds.
         let iter_extent =
             iter_extent.intersection(&ExtentN::from_min_and_shape(PointN::ZERO, array_shape));
@@ -48,14 +44,14 @@ where
     }
 
     #[inline]
-    pub fn new_global_unchecked(array_extent: &ExtentN<N>, iter_extent: ExtentN<N>) -> Self {
+    pub fn new_global_unchecked(array_extent: ExtentN<N>, iter_extent: ExtentN<N>) -> Self {
         // Translate to local coordinates.
         let origin = Local(iter_extent.minimum - array_extent.minimum);
 
         Self {
             iter_extent,
-            array_shape: array_extent.shape,
-            span: ForEachSpan {
+            span: ArrayIterSpan {
+                array_shape: array_extent.shape,
                 origin,
                 step: PointN::ONES,
             },
@@ -63,9 +59,9 @@ where
     }
 
     #[inline]
-    pub fn new_global(array_extent: &ExtentN<N>, iter_extent: ExtentN<N>) -> Self {
+    pub fn new_global(array_extent: ExtentN<N>, iter_extent: ExtentN<N>) -> Self {
         // Make sure we don't index out of array bounds.
-        let iter_extent = iter_extent.intersection(array_extent);
+        let iter_extent = iter_extent.intersection(&array_extent);
 
         Self::new_global(array_extent, iter_extent)
     }

@@ -92,7 +92,7 @@ fn estimate_surface<A, T>(
     // Avoid accessing out of bounds with a 2x2x2 kernel.
     let iter_extent = extent.add_to_shape(Point3i::fill(-1));
 
-    let visitor = ArrayForEach::new_global(sdf.extent(), iter_extent);
+    let visitor = ArrayForEach::new_global(*sdf.extent(), iter_extent);
     visitor.for_each(|p, p_stride| {
         // Get the corners of the cube with minimal corner p.
         let mut corner_strides = [Stride(0); 8];

@@ -1,6 +1,7 @@
 use crate::{
     for_each2, for_each3, Array2ForEach, Array2StrideIter, Array3ForEach, Array3StrideIter,
-    ArrayForEach, Local, Local2i, Local3i, Stride,
+    ArrayForEach, ArrayIterSpan, Local, Local2i, Local3i, LockStepArrayForEach,
+    LockStepArrayForEach2, LockStepArrayForEach3, Stride,
 };
 
 use building_blocks_core::prelude::*;
@@ -11,9 +12,7 @@ pub trait ArrayIndexer<N> {
     fn for_each(for_each: ArrayForEach<N>, f: impl FnMut(PointN<N>, Stride));
 
     fn for_each_lockstep_unchecked(
-        iter_extent: &ExtentN<N>,
-        array1_extent: &ExtentN<N>,
-        array2_extent: &ExtentN<N>,
+        for_each: LockStepArrayForEach<N>,
         f: impl FnMut(PointN<N>, (Stride, Stride)),
     );
 
@@ -38,11 +37,15 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
     fn for_each(for_each: Array2ForEach, f: impl FnMut(Point2i, Stride)) {
         let Array2ForEach {
             iter_extent,
-            array_shape,
-            span,
+            span:
+                ArrayIterSpan {
+                    array_shape,
+                    origin,
+                    step,
+                },
         } = for_each;
         for_each2(
-            Array2StrideIter::new_with_step(array_shape, span.origin, span.step),
+            Array2StrideIter::new_with_step(array_shape, origin, step),
             &iter_extent,
             f,
         );
@@ -50,19 +53,18 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
 
     #[inline]
     fn for_each_lockstep_unchecked(
-        iter_extent: &Extent2i,
-        array1_extent: &Extent2i,
-        array2_extent: &Extent2i,
+        for_each: LockStepArrayForEach2,
         f: impl FnMut(Point2i, (Stride, Stride)),
     ) {
-        // Translate to local coordinates.
-        let min1 = iter_extent.minimum - array1_extent.minimum;
-        let min2 = iter_extent.minimum - array2_extent.minimum;
+        let LockStepArrayForEach2 {
+            iter_extent,
+            span1,
+            span2,
+        } = for_each;
+        let s1 = Array2StrideIter::new(span1.array_shape, span1.origin);
+        let s2 = Array2StrideIter::new(span2.array_shape, span2.origin);
 
-        let s1 = Array2StrideIter::new(array1_extent.shape, Local(min1));
-        let s2 = Array2StrideIter::new(array2_extent.shape, Local(min2));
-
-        for_each2((s1, s2), iter_extent, f);
+        for_each2((s1, s2), &iter_extent, f);
     }
 }
 
@@ -76,11 +78,15 @@ impl ArrayIndexer<[i32; 3]> for [i32; 3] {
     fn for_each(for_each: Array3ForEach, f: impl FnMut(Point3i, Stride)) {
         let Array3ForEach {
             iter_extent,
-            array_shape,
-            span,
+            span:
+                ArrayIterSpan {
+                    array_shape,
+                    origin,
+                    step,
+                },
         } = for_each;
         for_each3(
-            Array3StrideIter::new_with_step(array_shape, span.origin, span.step),
+            Array3StrideIter::new_with_step(array_shape, origin, step),
             &iter_extent,
             f,
         );
@@ -88,19 +94,18 @@ impl ArrayIndexer<[i32; 3]> for [i32; 3] {
 
     #[inline]
     fn for_each_lockstep_unchecked(
-        iter_extent: &Extent3i,
-        array1_extent: &Extent3i,
-        array2_extent: &Extent3i,
+        for_each: LockStepArrayForEach3,
         f: impl FnMut(Point3i, (Stride, Stride)),
     ) {
-        // Translate to local coordinates.
-        let min1 = iter_extent.minimum - array1_extent.minimum;
-        let min2 = iter_extent.minimum - array2_extent.minimum;
+        let LockStepArrayForEach3 {
+            iter_extent,
+            span1,
+            span2,
+        } = for_each;
+        let s1 = Array3StrideIter::new(span1.array_shape, span1.origin);
+        let s2 = Array3StrideIter::new(span2.array_shape, span2.origin);
 
-        let s1 = Array3StrideIter::new(array1_extent.shape, Local(min1));
-        let s2 = Array3StrideIter::new(array2_extent.shape, Local(min2));
-
-        for_each3((s1, s2), iter_extent, f)
+        for_each3((s1, s2), &iter_extent, f)
     }
 }
 

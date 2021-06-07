@@ -570,7 +570,7 @@ macro_rules! impl_array_for_each {
 
             #[inline]
             fn for_each(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, Self::Item)) {
-                let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
+                let visitor = ArrayForEach::new_global(*self.extent(), *iter_extent);
                 visitor.for_each(|$p, $stride| f($forward_coords, self.get($stride)));
             }
         }
@@ -590,7 +590,7 @@ macro_rules! impl_array_for_each {
                 iter_extent: &ExtentN<N>,
                 mut f: impl FnMut($coords, Self::Item),
             ) {
-                let visitor = ArrayForEach::new_global(self.extent(), *iter_extent);
+                let visitor = ArrayForEach::new_global(*self.extent(), *iter_extent);
                 visitor.for_each(|$p, $stride| {
                     f($forward_coords, self.get_mut_ptr($stride));
                 });
@@ -688,7 +688,7 @@ where
             // Fast path, mostly for copying entire chunks between chunk maps.
             self.channels.copy_slices(src_array.0.channels.slices());
         } else {
-            unchecked_copy_extent_between_arrays(self, src_array.0, &in_bounds_extent);
+            unchecked_copy_extent_between_arrays(self, src_array.0, in_bounds_extent);
         }
     }
 }
@@ -710,7 +710,7 @@ where
         // destination.
         let in_bounds_extent = extent.intersection(self.extent());
 
-        unchecked_copy_extent_between_arrays(self, &src_array.0, &in_bounds_extent);
+        unchecked_copy_extent_between_arrays(self, &src_array.0, in_bounds_extent);
     }
 }
 
@@ -718,27 +718,22 @@ where
 fn unchecked_copy_extent_between_arrays<Dst, Src, N, Ptr>(
     dst: &mut Dst,
     src: &Src,
-    extent: &ExtentN<N>,
+    extent: ExtentN<N>,
 ) where
+    PointN<N>: IntegerPoint<N>,
     Dst: IndexedArray<N> + GetMutPtr<Stride, Item = Ptr>,
     Src: IndexedArray<N> + Get<Stride, Item = Ptr::Data>,
-    ExtentN<N>: Copy,
     Ptr: MultiMutPtr,
 {
-    let dst_extent = *dst.extent();
     // It shoudn't matter which type we use for the indexer.
-    Dst::Indexer::for_each_lockstep_unchecked(
-        extent,
-        &dst_extent,
-        src.extent(),
-        |_p, (s_dst, s_src)| {
-            // The actual copy.
-            // PERF: could be faster with SIMD copy
-            unsafe {
-                dst.get_mut_ptr(s_dst).write(src.get(s_src));
-            }
-        },
-    );
+    let for_each = LockStepArrayForEach::new_global_unchecked(extent, *dst.extent(), *src.extent());
+    Dst::Indexer::for_each_lockstep_unchecked(for_each, |_p, (s_dst, s_src)| {
+        // The actual copy.
+        // PERF: could be faster with SIMD copy
+        unsafe {
+            dst.get_mut_ptr(s_dst).write(src.get(s_src));
+        }
+    });
 }
 
 impl<N, Chan, Ch> WriteExtent<N, ChunkCopySrc<N, Chan::Data, Ch>> for Array<N, Chan>

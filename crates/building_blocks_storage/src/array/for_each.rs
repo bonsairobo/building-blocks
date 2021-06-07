@@ -14,11 +14,11 @@ use building_blocks_core::prelude::*;
 #[derive(Clone)]
 pub struct ArrayForEach<N> {
     /// Extent of the iteration coordinates.
-    pub(crate) iter_extent: ExtentN<N>,
+    iter_extent: ExtentN<N>,
     /// Shape of the array being indexed.
-    pub(crate) array_shape: PointN<N>,
+    array_shape: PointN<N>,
     /// Array-local minimum where we start indexing.
-    pub(crate) index_min: Local<N>,
+    index_min: Local<N>,
 }
 
 /// A 2D `ArrayForEach`.

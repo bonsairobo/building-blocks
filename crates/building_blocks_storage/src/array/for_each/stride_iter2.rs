@@ -36,8 +36,8 @@ impl Array2StrideIter {
         }
     }
 
-    pub fn new(array_shape: Point2i, index_min: Local2i) -> Self {
-        Self::new_with_step(array_shape, index_min, Point2i::ONES)
+    pub fn new(array_shape: Point2i, origin: Local2i) -> Self {
+        Self::new_with_step(array_shape, origin, Point2i::ONES)
     }
 }
 

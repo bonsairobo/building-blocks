@@ -15,18 +15,18 @@ pub(crate) struct Array3StrideIter {
 }
 
 impl Array3StrideIter {
-    pub fn new_with_step(array_shape: Point3i, index_min: Local3i, step: Point3i) -> Self {
+    pub fn new_with_step(array_shape: Point3i, origin: Local3i, step: Point3i) -> Self {
         debug_assert!(array_shape >= Point3i::ZERO);
-        debug_assert!(index_min.0 >= Point3i::ZERO);
+        debug_assert!(origin.0 >= Point3i::ZERO);
         debug_assert!(step >= Point3i::ZERO);
 
         let mut x_stride = 1usize;
         let mut y_stride = array_shape.x() as usize;
         let mut z_stride = (array_shape.y() * array_shape.x()) as usize;
 
-        let x_start = x_stride * index_min.0.x() as usize;
-        let y_start = y_stride * index_min.0.y() as usize;
-        let z_start = z_stride * index_min.0.z() as usize;
+        let x_start = x_stride * origin.0.x() as usize;
+        let y_start = y_stride * origin.0.y() as usize;
+        let z_start = z_stride * origin.0.z() as usize;
 
         x_stride *= step.x() as usize;
         y_stride *= step.y() as usize;
@@ -45,8 +45,8 @@ impl Array3StrideIter {
         }
     }
 
-    pub fn new(array_shape: Point3i, index_min: Local3i) -> Self {
-        Self::new_with_step(array_shape, index_min, Point3i::ONES)
+    pub fn new(array_shape: Point3i, origin: Local3i) -> Self {
+        Self::new_with_step(array_shape, origin, Point3i::ONES)
     }
 }
 

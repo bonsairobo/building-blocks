@@ -43,7 +43,7 @@ pub trait ArrayIndexer<N> {
         iter_extent: &ExtentN<N>,
         array1_extent: &ExtentN<N>,
         array2_extent: &ExtentN<N>,
-        f: impl FnMut(Stride, Stride),
+        f: impl FnMut(PointN<N>, (Stride, Stride)),
     );
 
     #[inline]
@@ -76,14 +76,9 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
         iter_extent: &Extent2i,
         array1_extent: &Extent2i,
         array2_extent: &Extent2i,
-        mut f: impl FnMut(Stride, Stride),
+        f: impl FnMut(Point2i, (Stride, Stride)),
     ) {
-        for_each_stride_lockstep_global_unchecked2(
-            iter_extent,
-            array1_extent,
-            array2_extent,
-            |_p, (s1, s2)| f(s1, s2),
-        )
+        for_each_stride_lockstep_global_unchecked2(iter_extent, array1_extent, array2_extent, f)
     }
 }
 
@@ -106,13 +101,8 @@ impl ArrayIndexer<[i32; 3]> for [i32; 3] {
         iter_extent: &Extent3i,
         array1_extent: &Extent3i,
         array2_extent: &Extent3i,
-        mut f: impl FnMut(Stride, Stride),
+        f: impl FnMut(Point3i, (Stride, Stride)),
     ) {
-        for_each_stride_lockstep_global_unchecked3(
-            iter_extent,
-            array1_extent,
-            array2_extent,
-            |_p, (s1, s2)| f(s1, s2),
-        );
+        for_each_stride_lockstep_global_unchecked3(iter_extent, array1_extent, array2_extent, f);
     }
 }

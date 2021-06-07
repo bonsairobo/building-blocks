@@ -731,7 +731,7 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, Ptr>(
         &extent,
         &dst_extent,
         src.extent(),
-        |s_dst, s_src| {
+        |_p, (s_dst, s_src)| {
             // The actual copy.
             // PERF: could be faster with SIMD copy
             unsafe {

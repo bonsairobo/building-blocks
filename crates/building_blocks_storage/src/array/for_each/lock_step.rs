@@ -21,6 +21,14 @@ impl<N> LockStepArrayForEach<N>
 where
     PointN<N>: IntegerPoint<N>,
 {
+    pub fn new(iter_extent: ExtentN<N>, span1: ArrayIterSpan<N>, span2: ArrayIterSpan<N>) -> Self {
+        Self {
+            iter_extent,
+            span1,
+            span2,
+        }
+    }
+
     pub fn new_global_unchecked(
         iter_extent: ExtentN<N>,
         array1_extent: ExtentN<N>,
@@ -30,18 +38,17 @@ where
         let origin1 = iter_extent.minimum - array1_extent.minimum;
         let origin2 = iter_extent.minimum - array2_extent.minimum;
 
-        LockStepArrayForEach {
-            iter_extent,
-            span1: ArrayIterSpan {
-                array_shape: array1_extent.shape,
-                origin: Local(origin1),
-                step: PointN::ONES,
-            },
-            span2: ArrayIterSpan {
-                array_shape: array2_extent.shape,
-                origin: Local(origin2),
-                step: PointN::ONES,
-            },
-        }
+        let span1 = ArrayIterSpan {
+            array_shape: array1_extent.shape,
+            origin: Local(origin1),
+            step: PointN::ONES,
+        };
+        let span2 = ArrayIterSpan {
+            array_shape: array2_extent.shape,
+            origin: Local(origin2),
+            step: PointN::ONES,
+        };
+
+        Self::new(iter_extent, span1, span2)
     }
 }

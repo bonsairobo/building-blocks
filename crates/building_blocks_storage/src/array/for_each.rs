@@ -21,7 +21,7 @@ use building_blocks_core::PointN;
 
 /// Information that may be specific to a single array during iteration.
 #[derive(Clone)]
-pub(crate) struct ArrayIterSpan<N> {
+pub struct ArrayIterSpan<N> {
     /// Shape of the array being indexed.
     pub array_shape: PointN<N>,
     /// Array-local point where we start iteration.

@@ -23,11 +23,11 @@ use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 fn main() {
     // Choose which kind of voxel map to use.
 
-    // use blocky_voxel_map::BlockyVoxelMap;
-    // run_example::<BlockyVoxelMap>()
+    use blocky_voxel_map::BlockyVoxelMap;
+    run_example::<BlockyVoxelMap>()
 
-    use smooth_voxel_map::SmoothVoxelMap;
-    run_example::<SmoothVoxelMap>()
+    // use smooth_voxel_map::SmoothVoxelMap;
+    // run_example::<SmoothVoxelMap>()
 }
 
 fn run_example<Map: VoxelMap>() {

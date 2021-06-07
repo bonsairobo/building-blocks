@@ -39,7 +39,7 @@ pub trait ArrayIndexer<N> {
         f: impl FnMut(PointN<N>, Stride),
     );
 
-    fn for_each_stride_parallel_global_unchecked(
+    fn for_each_stride_lockstep_global_unchecked(
         iter_extent: &ExtentN<N>,
         array1_extent: &ExtentN<N>,
         array2_extent: &ExtentN<N>,
@@ -72,7 +72,7 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
     }
 
     #[inline]
-    fn for_each_stride_parallel_global_unchecked(
+    fn for_each_stride_lockstep_global_unchecked(
         iter_extent: &Extent2i,
         array1_extent: &Extent2i,
         array2_extent: &Extent2i,
@@ -97,7 +97,7 @@ impl ArrayIndexer<[i32; 3]> for [i32; 3] {
     }
 
     #[inline]
-    fn for_each_stride_parallel_global_unchecked(
+    fn for_each_stride_lockstep_global_unchecked(
         iter_extent: &Extent3i,
         array1_extent: &Extent3i,
         array2_extent: &Extent3i,

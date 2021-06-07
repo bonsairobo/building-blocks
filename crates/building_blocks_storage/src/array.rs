@@ -727,7 +727,7 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, Ptr>(
 {
     let dst_extent = *dst.extent();
     // It shoudn't matter which type we use for the indexer.
-    Dst::Indexer::for_each_stride_parallel_global_unchecked(
+    Dst::Indexer::for_each_stride_lockstep_global_unchecked(
         &extent,
         &dst_extent,
         src.extent(),

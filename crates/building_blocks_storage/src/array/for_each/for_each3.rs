@@ -67,13 +67,22 @@ pub(crate) struct Array3ForEachState {
 }
 
 impl Array3ForEachState {
-    pub(crate) fn new(array_shape: Point3i, index_min: Local3i) -> Self {
-        let x_stride = 1usize;
-        let y_stride = array_shape.x() as usize;
-        let z_stride = (array_shape.y() * array_shape.x()) as usize;
+    pub fn new_with_step(array_shape: Point3i, index_min: Local3i, step: Point3i) -> Self {
+        assert!(array_shape >= Point3i::ZERO);
+        assert!(index_min.0 >= Point3i::ZERO);
+        assert!(step >= Point3i::ZERO);
+
+        let mut x_stride = 1usize;
+        let mut y_stride = array_shape.x() as usize;
+        let mut z_stride = (array_shape.y() * array_shape.x()) as usize;
+
         let x_start = x_stride * index_min.0.x() as usize;
         let y_start = y_stride * index_min.0.y() as usize;
         let z_start = z_stride * index_min.0.z() as usize;
+
+        x_stride *= step.x() as usize;
+        y_stride *= step.y() as usize;
+        z_stride *= step.z() as usize;
 
         Self {
             x_stride,
@@ -86,6 +95,10 @@ impl Array3ForEachState {
             y_i: 0,
             z_i: 0,
         }
+    }
+
+    pub fn new(array_shape: Point3i, index_min: Local3i) -> Self {
+        Self::new_with_step(array_shape, index_min, Point3i::ONES)
     }
 }
 

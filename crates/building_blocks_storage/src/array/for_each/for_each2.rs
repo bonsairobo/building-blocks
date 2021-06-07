@@ -58,11 +58,19 @@ pub(crate) struct Array2ForEachState {
 }
 
 impl Array2ForEachState {
-    pub(crate) fn new(array_shape: Point2i, index_min: Local2i) -> Self {
-        let x_stride = 1usize;
-        let y_stride = array_shape.x() as usize;
+    pub fn new_with_step(array_shape: Point2i, index_min: Local2i, step: Point2i) -> Self {
+        assert!(array_shape >= Point2i::ZERO);
+        assert!(index_min.0 >= Point2i::ZERO);
+        assert!(step >= Point2i::ZERO);
+
+        let mut x_stride = 1usize;
+        let mut y_stride = array_shape.x() as usize;
+
         let x_start = x_stride * index_min.0.x() as usize;
         let y_start = y_stride * index_min.0.y() as usize;
+
+        x_stride *= step.x() as usize;
+        y_stride *= step.y() as usize;
 
         Self {
             x_stride,
@@ -72,6 +80,10 @@ impl Array2ForEachState {
             x_i: 0,
             y_i: 0,
         }
+    }
+
+    pub fn new(array_shape: Point2i, index_min: Local2i) -> Self {
+        Self::new_with_step(array_shape, index_min, Point2i::ONES)
     }
 }
 

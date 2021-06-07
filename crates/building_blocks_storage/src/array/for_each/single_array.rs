@@ -63,7 +63,7 @@ where
         // Make sure we don't index out of array bounds.
         let iter_extent = iter_extent.intersection(&array_extent);
 
-        Self::new_global(array_extent, iter_extent)
+        Self::new_global_unchecked(array_extent, iter_extent)
     }
 }
 

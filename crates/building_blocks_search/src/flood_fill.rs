@@ -193,7 +193,8 @@ mod tests {
 
         let array_edge_length = 32;
 
-        let (mut map, sphere_radius) = sphere_bit_array(array_edge_length, old_color, background_color);
+        let (mut map, sphere_radius) =
+            sphere_bit_array(array_edge_length, old_color, background_color);
 
         // Flood fill the sphere with "new color."
         let extent = *map.extent();

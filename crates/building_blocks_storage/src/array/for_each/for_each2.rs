@@ -52,7 +52,7 @@ pub(crate) fn for_each_stride_lockstep_global_unchecked2(
     iter_extent: &Extent2i,
     array1_extent: &Extent2i,
     array2_extent: &Extent2i,
-    mut f: impl FnMut(Stride, Stride),
+    f: impl FnMut(Point2i, (Stride, Stride)),
 ) {
     // Translate to local coordinates.
     let min1 = iter_extent.minimum - array1_extent.minimum;
@@ -61,7 +61,7 @@ pub(crate) fn for_each_stride_lockstep_global_unchecked2(
     let s1 = Array2ForEachState::new(array1_extent.shape, Local(min1));
     let s2 = Array2ForEachState::new(array2_extent.shape, Local(min2));
 
-    for_each2((s1, s2), iter_extent, |_p, (s1, s2)| f(s1, s2));
+    for_each2((s1, s2), iter_extent, f);
 }
 
 pub(crate) struct Array2ForEachState {

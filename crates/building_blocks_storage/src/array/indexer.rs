@@ -76,9 +76,14 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
         iter_extent: &Extent2i,
         array1_extent: &Extent2i,
         array2_extent: &Extent2i,
-        f: impl FnMut(Stride, Stride),
+        mut f: impl FnMut(Stride, Stride),
     ) {
-        for_each_stride_lockstep_global_unchecked2(iter_extent, array1_extent, array2_extent, f)
+        for_each_stride_lockstep_global_unchecked2(
+            iter_extent,
+            array1_extent,
+            array2_extent,
+            |_p, (s1, s2)| f(s1, s2),
+        )
     }
 }
 
@@ -101,8 +106,13 @@ impl ArrayIndexer<[i32; 3]> for [i32; 3] {
         iter_extent: &Extent3i,
         array1_extent: &Extent3i,
         array2_extent: &Extent3i,
-        f: impl FnMut(Stride, Stride),
+        mut f: impl FnMut(Stride, Stride),
     ) {
-        for_each_stride_lockstep_global_unchecked3(iter_extent, array1_extent, array2_extent, f);
+        for_each_stride_lockstep_global_unchecked3(
+            iter_extent,
+            array1_extent,
+            array2_extent,
+            |_p, (s1, s2)| f(s1, s2),
+        );
     }
 }

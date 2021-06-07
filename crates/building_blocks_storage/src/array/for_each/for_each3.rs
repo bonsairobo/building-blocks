@@ -1,32 +1,56 @@
-use crate::{Local, Local3i, Stride};
+use crate::{Array3ForEach, Local, Local3i, Stride};
 
 use building_blocks_core::prelude::*;
 
-/// Execute a block of code in a strided 3D for loop described by `for_each`.
-macro_rules! for_each3 {
-    ($for_each:ident, $x:ident, $y:ident, $z:ident, $stride:ident, $code:block) => {
-        let $crate::Array3ForEach {
+pub trait StrideIter3 {
+    type Stride;
+
+    fn stride(&self) -> Self::Stride;
+
+    fn start_z(&mut self);
+    fn start_y(&mut self);
+    fn start_x(&mut self);
+
+    fn incr_x(&mut self);
+    fn incr_y(&mut self);
+    fn incr_z(&mut self);
+}
+
+impl Array3ForEach {
+    #[inline]
+    pub fn for_each_point_and_stride_unchecked(self, f: impl FnMut(Point3i, Stride)) {
+        let Array3ForEach {
             iter_extent,
             array_shape,
             index_min,
-        } = $for_each;
-        let iter_lub = iter_extent.least_upper_bound();
-        let mut s = $crate::Array3ForEachState::new(array_shape, index_min);
-        s.start_z();
-        for $z in iter_extent.minimum.z()..iter_lub.z() {
-            s.start_y();
-            for $y in iter_extent.minimum.y()..iter_lub.y() {
-                s.start_x();
-                for $x in iter_extent.minimum.x()..iter_lub.x() {
-                    let $stride = s.stride();
-                    $code;
-                    s.incr_x();
-                }
-                s.incr_y();
+        } = self;
+        for_each3(
+            Array3ForEachState::new(array_shape, index_min),
+            &iter_extent,
+            f,
+        );
+    }
+}
+
+#[inline]
+pub fn for_each3<S>(mut s: S, iter_extent: &Extent3i, mut f: impl FnMut(Point3i, S::Stride))
+where
+    S: StrideIter3,
+{
+    let iter_lub = iter_extent.least_upper_bound();
+    s.start_z();
+    for z in iter_extent.minimum.z()..iter_lub.z() {
+        s.start_y();
+        for y in iter_extent.minimum.y()..iter_lub.y() {
+            s.start_x();
+            for x in iter_extent.minimum.x()..iter_lub.x() {
+                f(PointN([x, y, z]), s.stride());
+                s.incr_x();
             }
-            s.incr_z();
+            s.incr_y();
         }
-    };
+        s.incr_z();
+    }
 }
 
 #[inline]
@@ -98,28 +122,32 @@ impl Array3ForEachState {
             z_i: 0,
         }
     }
+}
 
-    pub(crate) fn stride(&self) -> Stride {
+impl StrideIter3 for Array3ForEachState {
+    type Stride = Stride;
+
+    fn stride(&self) -> Stride {
         Stride(self.x_i)
     }
 
-    pub(crate) fn start_z(&mut self) {
+    fn start_z(&mut self) {
         self.z_i = self.z_start;
     }
-    pub(crate) fn start_y(&mut self) {
+    fn start_y(&mut self) {
         self.y_i = self.z_i + self.y_start;
     }
-    pub(crate) fn start_x(&mut self) {
+    fn start_x(&mut self) {
         self.x_i = self.y_i + self.x_start;
     }
 
-    pub(crate) fn incr_x(&mut self) {
+    fn incr_x(&mut self) {
         self.x_i += self.x_stride;
     }
-    pub(crate) fn incr_y(&mut self) {
+    fn incr_y(&mut self) {
         self.y_i += self.y_stride;
     }
-    pub(crate) fn incr_z(&mut self) {
+    fn incr_z(&mut self) {
         self.z_i += self.z_stride;
     }
 }

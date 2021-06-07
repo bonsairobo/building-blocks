@@ -1,28 +1,50 @@
-use crate::{Local, Local2i, Stride};
+use crate::{Array2ForEach, Local, Local2i, Stride};
 
 use building_blocks_core::prelude::*;
 
-/// Execute a block of code in a strided 2D for loop described by `for_each`.
-macro_rules! for_each2 {
-    ($for_each:ident, $x:ident, $y:ident, $stride:ident, $code:block) => {
-        let $crate::Array2ForEach {
+pub trait StrideIter2 {
+    type Stride;
+
+    fn stride(&self) -> Self::Stride;
+
+    fn start_y(&mut self);
+    fn start_x(&mut self);
+
+    fn incr_x(&mut self);
+    fn incr_y(&mut self);
+}
+
+impl Array2ForEach {
+    #[inline]
+    pub fn for_each_point_and_stride_unchecked(self, f: impl FnMut(Point2i, Stride)) {
+        let Array2ForEach {
             iter_extent,
             array_shape,
             index_min,
-        } = $for_each;
-        let iter_lub = iter_extent.least_upper_bound();
-        let mut s = $crate::Array2ForEachState::new(array_shape, index_min);
-        s.start_y();
-        for $y in iter_extent.minimum.y()..iter_lub.y() {
-            s.start_x();
-            for $x in iter_extent.minimum.x()..iter_lub.x() {
-                let $stride = s.stride();
-                $code;
-                s.incr_x();
-            }
-            s.incr_y();
+        } = self;
+        for_each2(
+            Array2ForEachState::new(array_shape, index_min),
+            &iter_extent,
+            f,
+        );
+    }
+}
+
+#[inline]
+pub fn for_each2<S>(mut s: S, iter_extent: &Extent2i, mut f: impl FnMut(Point2i, S::Stride))
+where
+    S: StrideIter2,
+{
+    let iter_lub = iter_extent.least_upper_bound();
+    s.start_y();
+    for y in iter_extent.minimum.y()..iter_lub.y() {
+        s.start_x();
+        for x in iter_extent.minimum.x()..iter_lub.x() {
+            f(PointN([x, y]), s.stride());
+            s.incr_x();
         }
-    };
+        s.incr_y();
+    }
 }
 
 #[inline]
@@ -80,22 +102,26 @@ impl Array2ForEachState {
             y_i: 0,
         }
     }
+}
 
-    pub(crate) fn stride(&self) -> Stride {
+impl StrideIter2 for Array2ForEachState {
+    type Stride = Stride;
+
+    fn stride(&self) -> Stride {
         Stride(self.x_i)
     }
 
-    pub(crate) fn start_y(&mut self) {
+    fn start_y(&mut self) {
         self.y_i = self.y_start;
     }
-    pub(crate) fn start_x(&mut self) {
+    fn start_x(&mut self) {
         self.x_i = self.y_i + self.x_start;
     }
 
-    pub(crate) fn incr_x(&mut self) {
+    fn incr_x(&mut self) {
         self.x_i += self.x_stride;
     }
-    pub(crate) fn incr_y(&mut self) {
+    fn incr_y(&mut self) {
         self.y_i += self.y_stride;
     }
 }

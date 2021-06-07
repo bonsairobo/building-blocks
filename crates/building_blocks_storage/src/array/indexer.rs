@@ -66,9 +66,9 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
     #[inline]
     fn for_each_point_and_stride_unchecked(
         for_each: Array2ForEach,
-        mut f: impl FnMut(Point2i, Stride),
+        f: impl FnMut(Point2i, Stride),
     ) {
-        for_each2!(for_each, x, y, stride, { f(PointN([x, y]), stride) });
+        for_each.for_each_point_and_stride_unchecked(f);
     }
 
     #[inline]
@@ -91,9 +91,9 @@ impl ArrayIndexer<[i32; 3]> for [i32; 3] {
     #[inline]
     fn for_each_point_and_stride_unchecked(
         for_each: Array3ForEach,
-        mut f: impl FnMut(Point3i, Stride),
+        f: impl FnMut(Point3i, Stride),
     ) {
-        for_each3!(for_each, x, y, z, stride, { f(PointN([x, y, z]), stride) });
+        for_each.for_each_point_and_stride_unchecked(f);
     }
 
     #[inline]

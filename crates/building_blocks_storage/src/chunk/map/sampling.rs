@@ -4,7 +4,7 @@ pub mod sdf_mean;
 pub use point::*;
 pub use sdf_mean::*;
 
-use crate::{prelude::*, ChunkMap, ChunkMap3};
+use crate::{prelude::*, ArrayIterSpan, ChunkMap, ChunkMap3, LockStepArrayForEach};
 
 use building_blocks_core::prelude::*;
 use std::borrow::Borrow;
@@ -216,6 +216,32 @@ where
             dst_offset,
         }
     }
+}
+
+fn chunk_downsample_for_each<N>(
+    chunk_shape: PointN<N>,
+    dst_min: Local<N>,
+    lod_delta: i32,
+) -> LockStepArrayForEach<N>
+where
+    PointN<N>: IntegerPoint<N>,
+{
+    let dst_shape = chunk_shape >> lod_delta;
+    debug_assert!(dst_shape > PointN::ZERO);
+
+    let iter_extent = ExtentN::from_min_and_shape(PointN::ZERO, dst_shape);
+    let span_dst = ArrayIterSpan {
+        array_shape: chunk_shape,
+        origin: dst_min,
+        step: PointN::ONES,
+    };
+    let span_src = ArrayIterSpan {
+        array_shape: chunk_shape,
+        origin: Local(PointN::ZERO),
+        step: PointN::ONES << lod_delta,
+    };
+
+    LockStepArrayForEach::new(iter_extent, span_dst, span_src)
 }
 
 // ████████╗███████╗███████╗████████╗

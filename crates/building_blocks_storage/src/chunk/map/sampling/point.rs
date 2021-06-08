@@ -5,7 +5,7 @@ use crate::{
 
 use building_blocks_core::prelude::*;
 
-/// A `ChunkDownsampler` that just selects a single point from each `2x2x2` region, discarding the rest.
+/// A `ChunkDownsampler` that just selects a single point from each `2x2x2` (assuming `lod_delta=1`) region, ignoring the rest.
 pub struct PointDownsampler;
 
 impl<N, Src, Dst, T> ChunkDownsampler<N, T, Src, Dst> for PointDownsampler
@@ -50,4 +50,43 @@ where
     };
 
     LockStepArrayForEach::new(iter_extent, span_dst, span_src)
+}
+
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::{Array3x1, ForEach};
+
+    #[test]
+    fn point_downsample_only_ones() {
+        let lod_delta = 1;
+        let step = 1 << lod_delta;
+
+        let chunk_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
+
+        // Make an array where only points with components divisible by 2 have value 1. These are exactly the points that will
+        // be sampled.
+        let src_chunk = Array3x1::fill_with(chunk_extent, |p| {
+            if p.x() % step == 0 && p.y() % step == 0 && p.z() % step == 0 {
+                1
+            } else {
+                0
+            }
+        });
+
+        let mut dst_chunk = Array3x1::fill(chunk_extent, 0);
+        let dst_min = Local(Point3i::ZERO);
+        PointDownsampler.downsample(&src_chunk, &mut dst_chunk, dst_min, lod_delta);
+
+        let dst_extent =
+            Extent3i::from_min_and_shape(Point3i::ZERO, chunk_extent.shape >> lod_delta as i32);
+        dst_chunk.for_each(&dst_extent, |p: Point3i, x| assert_eq!(x, 1, "p = {:?}", p));
+    }
 }

@@ -12,10 +12,10 @@ pub(crate) struct Array2StrideIter {
 }
 
 impl Array2StrideIter {
-    pub fn new_with_step(array_shape: Point2i, origin: Local2i, step: Point2i) -> Self {
-        debug_assert!(array_shape >= Point2i::ZERO);
+    pub fn new(array_shape: Point2i, origin: Local2i, step: Point2i) -> Self {
+        debug_assert!(array_shape >= Point2i::ONES);
         debug_assert!(origin.0 >= Point2i::ZERO);
-        debug_assert!(step >= Point2i::ZERO);
+        debug_assert!(step >= Point2i::ONES);
 
         let mut x_stride = 1usize;
         let mut y_stride = array_shape.x() as usize;
@@ -34,10 +34,6 @@ impl Array2StrideIter {
             x_i: 0,
             y_i: 0,
         }
-    }
-
-    pub fn new(array_shape: Point2i, origin: Local2i) -> Self {
-        Self::new_with_step(array_shape, origin, Point2i::ONES)
     }
 }
 

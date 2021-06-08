@@ -45,7 +45,7 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
                 },
         } = for_each;
         for_each2(
-            Array2StrideIter::new_with_step(array_shape, origin, step),
+            Array2StrideIter::new(array_shape, origin, step),
             &iter_extent,
             f,
         );
@@ -61,8 +61,8 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
             span1,
             span2,
         } = for_each;
-        let s1 = Array2StrideIter::new(span1.array_shape, span1.origin);
-        let s2 = Array2StrideIter::new(span2.array_shape, span2.origin);
+        let s1 = Array2StrideIter::new(span1.array_shape, span1.origin, span1.step);
+        let s2 = Array2StrideIter::new(span2.array_shape, span2.origin, span2.step);
 
         for_each2((s1, s2), &iter_extent, f);
     }
@@ -86,7 +86,7 @@ impl ArrayIndexer<[i32; 3]> for [i32; 3] {
                 },
         } = for_each;
         for_each3(
-            Array3StrideIter::new_with_step(array_shape, origin, step),
+            Array3StrideIter::new(array_shape, origin, step),
             &iter_extent,
             f,
         );
@@ -102,8 +102,8 @@ impl ArrayIndexer<[i32; 3]> for [i32; 3] {
             span1,
             span2,
         } = for_each;
-        let s1 = Array3StrideIter::new(span1.array_shape, span1.origin);
-        let s2 = Array3StrideIter::new(span2.array_shape, span2.origin);
+        let s1 = Array3StrideIter::new(span1.array_shape, span1.origin, span1.step);
+        let s2 = Array3StrideIter::new(span2.array_shape, span2.origin, span2.step);
 
         for_each3((s1, s2), &iter_extent, f)
     }

@@ -13,6 +13,7 @@ impl<N, Src, Dst, T> ChunkDownsampler<N, T, Src, Dst> for SdfMeanDownsampler
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
+    ArrayForEach<N>: Clone,
     T: From<f32>,
     f32: From<T>,
     Src: Get<Stride, Item = T> + IndexedArray<N>,
@@ -26,6 +27,13 @@ where
 
         let lod_scale_factor = 1 << lod_delta;
         let src_shape_per_point = PointN::fill(lod_scale_factor);
+
+        let kernel_for_each = ArrayForEach::new_local_unchecked(
+            chunk_shape,
+            Local(PointN::ZERO),
+            ExtentN::from_min_and_shape(PointN::ZERO, src_shape_per_point),
+        );
+
         // Not only do we get the mean signed distance value by dividing by the volume, but we also re-normalize by dividing
         // by the scale factor (the ratio between voxel edge lengths at the different resolutions).
         let rescale = 1.0 / (lod_scale_factor * src_shape_per_point.volume()) as f32;
@@ -33,16 +41,9 @@ where
         let for_each = chunk_downsample_for_each(chunk_shape, dst_min, lod_delta);
         N::for_each_lockstep_unchecked(for_each, |_p, (s_dst, s_src)| {
             let mut sum = 0.0;
-            N::for_each(
-                ArrayForEach::new_local_unchecked(
-                    chunk_shape,
-                    Local(PointN::ZERO),
-                    ExtentN::from_min_and_shape(PointN::ZERO, src_shape_per_point),
-                ),
-                |_p, neighbor_offset| {
-                    sum += f32::from(src_chunk.get(s_src + neighbor_offset));
-                },
-            );
+            N::for_each(kernel_for_each.clone(), |_p, neighbor_offset| {
+                sum += f32::from(src_chunk.get(s_src + neighbor_offset));
+            });
             *dst_chunk.get_mut(s_dst) = T::from(rescale * sum);
         });
     }

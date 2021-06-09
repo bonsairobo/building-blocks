@@ -46,10 +46,10 @@ exclude = ["benches"]
 opt-level = 2
 
 [profile.release]
-lto = true
+lto = "thin"
 
 [profile.bench]
-lto = true
+lto = "thin"
 
 # TODO: use RFC #2906 to deduplicate dependency specs once it is merged
 

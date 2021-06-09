@@ -9,6 +9,9 @@ keywords = ["voxel", "mesh"]
 
 description = "Efficient storage for maps on sparse or dense, 2D and 3D integer lattices."
 
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
 default = ["lz4"]
 

@@ -124,7 +124,7 @@
 //! ## Cargo Features
 //!
 //! Building Blocks is organized into several crates, some of which are hidden behind features, and some have features
-//! themselves, which get re-exported by the top-level crate. By default, most features are enabled. You can avoid taking
+//! themselves, which get re-exported by the top-level crate. Some features are enabled by default. You can avoid taking
 //! unnecessary dependencies by declaring `default-features = false` in your `Cargo.toml`:
 //!
 //! ```toml

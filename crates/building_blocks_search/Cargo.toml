@@ -9,8 +9,11 @@ keywords = ["voxel"]
 
 description = "Search algorithms for voxel data."
 
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
-default = ["ncollide"]
+default = []
 
 ncollide = ["nalgebra", "ncollide3d", "building_blocks_core/nalgebra"]
 

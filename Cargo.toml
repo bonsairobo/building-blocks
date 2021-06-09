@@ -9,13 +9,10 @@ repository = "https://github.com/bonsairobo/building-blocks"
 keywords = ["voxel"]
 
 [package.metadata.docs.rs]
-features = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "search"]
+all-features = true
 
 [features]
-# All features are default because we want them to be easily discoverable on
-# docs.rs. You can define your own list of features by disabling the defaults
-# with "default-features = false".
-default = ["dot_vox", "glam", "image", "lz4", "mesh", "mint", "nalgebra", "ncollide", "sdfu", "search", "snappy"]
+default = ["lz4", "mesh", "sdfu", "search"]
 
 # Optional crates.
 mesh = ["building_blocks_mesh"]

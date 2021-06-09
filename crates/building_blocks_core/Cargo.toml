@@ -9,8 +9,11 @@ keywords = ["voxel"]
 
 description = "The core data types for defining 2D and 3D integer lattices."
 
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
-default = ["glam", "mint", "nalgebra"]
+default = []
 
 [dependencies]
 itertools = "0.9"

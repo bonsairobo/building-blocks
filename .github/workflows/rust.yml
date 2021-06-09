@@ -21,6 +21,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Cancel Workflow Action
+      uses: styfle/cancel-workflow-action@0.6.0
+      with:
+        access_token: ${{ github.token }}
     - uses: actions/checkout@v2
     - name: Get Latest Stable Rust
       uses: actions-rs/toolchain@v1

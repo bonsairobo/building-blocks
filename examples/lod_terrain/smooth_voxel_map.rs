@@ -19,7 +19,7 @@ const WORLD_CHUNKS_EXTENT: Extent3i = Extent3i {
     shape: PointN([200, 1, 200]),
 };
 
-const AMBIENT_VALUE: f32 = 99999999.0;
+const AMBIENT_VALUE: f32 = 1.0;
 
 pub struct SmoothVoxelMap {
     chunks: ChunkHashMap3x1<f32>,

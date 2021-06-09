@@ -8,7 +8,11 @@ use building_blocks_core::prelude::*;
 pub trait ArrayIndexer<N> {
     fn stride_from_local_point(shape: PointN<N>, point: Local<N>) -> Stride;
 
-    fn make_iter(array_shape: PointN<N>, origin: Local<N>, step: PointN<N>) -> ArrayStrideIter;
+    fn make_stride_iter(
+        array_shape: PointN<N>,
+        origin: Local<N>,
+        step: PointN<N>,
+    ) -> ArrayStrideIter;
 
     fn for_each(for_each: ArrayForEach<N>, f: impl FnMut(PointN<N>, Stride));
 
@@ -35,7 +39,7 @@ impl ArrayIndexer<[i32; 2]> for [i32; 2] {
     }
 
     #[inline]
-    fn make_iter(array_shape: Point2i, origin: Local2i, step: Point2i) -> ArrayStrideIter {
+    fn make_stride_iter(array_shape: Point2i, origin: Local2i, step: Point2i) -> ArrayStrideIter {
         ArrayStrideIter::new_2d(array_shape, origin, step)
     }
 
@@ -66,7 +70,7 @@ impl ArrayIndexer<[i32; 3]> for [i32; 3] {
     }
 
     #[inline]
-    fn make_iter(array_shape: Point3i, origin: Local3i, step: Point3i) -> ArrayStrideIter {
+    fn make_stride_iter(array_shape: Point3i, origin: Local3i, step: Point3i) -> ArrayStrideIter {
         ArrayStrideIter::new_3d(array_shape, origin, step)
     }
 

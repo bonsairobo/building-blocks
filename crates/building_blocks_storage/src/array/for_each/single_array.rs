@@ -27,7 +27,7 @@ where
     ) -> Self {
         Self {
             iter_extent,
-            iter: N::make_iter(array_shape, origin, PointN::ONES),
+            iter: N::make_stride_iter(array_shape, origin, PointN::ONES),
         }
     }
 
@@ -47,7 +47,7 @@ where
 
         Self {
             iter_extent,
-            iter: N::make_iter(array_extent.shape, origin, PointN::ONES),
+            iter: N::make_stride_iter(array_extent.shape, origin, PointN::ONES),
         }
     }
 

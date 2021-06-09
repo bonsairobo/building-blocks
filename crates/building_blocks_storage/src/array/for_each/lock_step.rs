@@ -39,8 +39,8 @@ where
         let origin1 = iter_extent.minimum - array1_extent.minimum;
         let origin2 = iter_extent.minimum - array2_extent.minimum;
 
-        let iter1 = N::make_iter(array1_extent.shape, Local(origin1), PointN::ONES);
-        let iter2 = N::make_iter(array2_extent.shape, Local(origin2), PointN::ONES);
+        let iter1 = N::make_stride_iter(array1_extent.shape, Local(origin1), PointN::ONES);
+        let iter2 = N::make_stride_iter(array2_extent.shape, Local(origin2), PointN::ONES);
 
         Self::new(iter_extent, iter1, iter2)
     }

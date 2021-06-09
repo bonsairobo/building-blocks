@@ -231,8 +231,8 @@ where
     debug_assert!(dst_shape > PointN::ZERO);
 
     let iter_extent = ExtentN::from_min_and_shape(PointN::ZERO, dst_shape);
-    let dst_iter = N::make_iter(chunk_shape, dst_min, PointN::ONES);
-    let src_iter = N::make_iter(chunk_shape, Local(PointN::ZERO), PointN::ONES << lod_delta);
+    let dst_iter = N::make_stride_iter(chunk_shape, dst_min, PointN::ONES);
+    let src_iter = N::make_stride_iter(chunk_shape, Local(PointN::ZERO), PointN::ONES << lod_delta);
 
     LockStepArrayForEach::new(iter_extent, dst_iter, src_iter)
 }

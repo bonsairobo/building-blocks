@@ -1,4 +1,4 @@
-use crate::{ArrayIterSpan, Local};
+use crate::{ArrayIndexer, ArrayStrideIter, Local};
 
 use building_blocks_core::prelude::*;
 
@@ -10,8 +10,8 @@ use building_blocks_core::prelude::*;
 #[derive(Clone)]
 pub struct LockStepArrayForEach<N> {
     pub(crate) iter_extent: ExtentN<N>,
-    pub(crate) span1: ArrayIterSpan<N>,
-    pub(crate) span2: ArrayIterSpan<N>,
+    pub(crate) iter1: ArrayStrideIter,
+    pub(crate) iter2: ArrayStrideIter,
 }
 
 pub type LockStepArrayForEach2 = LockStepArrayForEach<[i32; 2]>;
@@ -19,13 +19,14 @@ pub type LockStepArrayForEach3 = LockStepArrayForEach<[i32; 3]>;
 
 impl<N> LockStepArrayForEach<N>
 where
+    N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
 {
-    pub fn new(iter_extent: ExtentN<N>, span1: ArrayIterSpan<N>, span2: ArrayIterSpan<N>) -> Self {
+    pub fn new(iter_extent: ExtentN<N>, iter1: ArrayStrideIter, iter2: ArrayStrideIter) -> Self {
         Self {
             iter_extent,
-            span1,
-            span2,
+            iter1,
+            iter2,
         }
     }
 
@@ -38,17 +39,9 @@ where
         let origin1 = iter_extent.minimum - array1_extent.minimum;
         let origin2 = iter_extent.minimum - array2_extent.minimum;
 
-        let span1 = ArrayIterSpan {
-            array_shape: array1_extent.shape,
-            origin: Local(origin1),
-            step: PointN::ONES,
-        };
-        let span2 = ArrayIterSpan {
-            array_shape: array2_extent.shape,
-            origin: Local(origin2),
-            step: PointN::ONES,
-        };
+        let iter1 = N::make_iter(array1_extent.shape, Local(origin1), PointN::ONES);
+        let iter2 = N::make_iter(array2_extent.shape, Local(origin2), PointN::ONES);
 
-        Self::new(iter_extent, span1, span2)
+        Self::new(iter_extent, iter1, iter2)
     }
 }

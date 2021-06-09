@@ -1,4 +1,4 @@
-use crate::{ArrayIndexer, ArrayIterSpan, Local, Stride};
+use crate::{ArrayIndexer, ArrayStrideIter, Local, Stride};
 
 use building_blocks_core::prelude::*;
 
@@ -6,7 +6,7 @@ use building_blocks_core::prelude::*;
 #[derive(Clone)]
 pub struct ArrayForEach<N> {
     pub(crate) iter_extent: ExtentN<N>,
-    pub(crate) span: ArrayIterSpan<N>,
+    pub(crate) iter: ArrayStrideIter,
 }
 
 /// A 2D `ArrayForEach`.
@@ -16,6 +16,7 @@ pub type Array3ForEach = ArrayForEach<[i32; 3]>;
 
 impl<N> ArrayForEach<N>
 where
+    N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
 {
     #[inline]
@@ -26,11 +27,7 @@ where
     ) -> Self {
         Self {
             iter_extent,
-            span: ArrayIterSpan {
-                array_shape,
-                origin,
-                step: PointN::ONES,
-            },
+            iter: N::make_iter(array_shape, origin, PointN::ONES),
         }
     }
 
@@ -50,11 +47,7 @@ where
 
         Self {
             iter_extent,
-            span: ArrayIterSpan {
-                array_shape: array_extent.shape,
-                origin,
-                step: PointN::ONES,
-            },
+            iter: N::make_iter(array_extent.shape, origin, PointN::ONES),
         }
     }
 

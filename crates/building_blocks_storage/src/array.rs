@@ -698,6 +698,7 @@ impl<'a, N, Chan, Delegate, F> WriteExtent<N, ArrayCopySrc<TransformMap<'a, Dele
 where
     Self: IndexedArray<N> + GetMutPtr<Stride, Item = Chan::Ptr>,
     TransformMap<'a, Delegate, F>: IndexedArray<N> + Get<Stride, Item = Chan::Data>,
+    N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     Chan: Channels,
 {
@@ -720,6 +721,7 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, Ptr>(
     src: &Src,
     extent: ExtentN<N>,
 ) where
+    N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
     Dst: IndexedArray<N> + GetMutPtr<Stride, Item = Ptr>,
     Src: IndexedArray<N> + Get<Stride, Item = Ptr::Data>,

@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy_utilities::bevy::prelude::*;
 
 pub struct CameraRotationState {
     camera: Entity,

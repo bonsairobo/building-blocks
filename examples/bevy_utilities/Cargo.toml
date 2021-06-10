@@ -1,0 +1,23 @@
+[package]
+name = "bevy_utilities"
+version = "0.1.0"
+authors = ["Duncan <bonsairobo@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+bevy_fly_camera = "0.7"
+thread_local = "1.1"
+
+building_blocks_core = { path = "../../crates/building_blocks_core", default-features = false }
+building_blocks_storage = { path = "../../crates/building_blocks_storage", default-features = false }
+building_blocks_mesh = { path = "../../crates/building_blocks_mesh", default-features = false }
+
+utilities = { path = "../../crates/utilities", features = ["simdnoise"] }
+
+[dependencies.bevy]
+version = "0.5"
+# git = "https://github.com/bevyengine/bevy"
+# rev = "94c41840"
+# path = "../../../bevy"
+default-features = false
+features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]

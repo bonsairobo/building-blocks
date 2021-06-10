@@ -12,13 +12,15 @@ use voxel_map::VoxelMap;
 
 use building_blocks::core::prelude::*;
 
-use bevy::{
-    prelude::*,
-    // render::wireframe::{WireframeConfig, WireframePlugin},
-    tasks::ComputeTaskPool,
-    // wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
+use bevy_utilities::{
+    bevy::{
+        prelude::*,
+        // render::wireframe::{WireframeConfig, WireframePlugin},
+        tasks::ComputeTaskPool,
+        // wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
+    },
+    fly_camera::{FlyCamera, FlyCameraPlugin},
 };
-use bevy_fly_camera::{FlyCamera, FlyCameraPlugin};
 
 fn main() {
     // Choose which kind of voxel map to use.
@@ -31,10 +33,12 @@ fn main() {
 }
 
 fn run_example<Map: VoxelMap>() {
-    let mut window_desc = WindowDescriptor::default();
-    window_desc.width = 1600.0;
-    window_desc.height = 900.0;
-    window_desc.title = "Building Blocks: LOD Terrain Example".to_string();
+    let window_desc = WindowDescriptor {
+        width: 1600.0,
+        height: 900.0,
+        title: "Building Blocks: LOD Terrain Example".to_string(),
+        ..Default::default()
+    };
 
     App::build()
         .insert_resource(window_desc)

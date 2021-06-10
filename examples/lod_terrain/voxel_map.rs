@@ -1,4 +1,4 @@
-use bevy::{ecs, tasks::ComputeTaskPool};
+use bevy_utilities::bevy::{ecs, tasks::ComputeTaskPool};
 use building_blocks::{
     mesh::PosNormMesh,
     prelude::*,

@@ -1,12 +1,15 @@
 use crate::voxel_map::VoxelMap;
 
+use bevy_utilities::{
+    bevy::{asset::prelude::*, ecs, prelude::*, tasks::ComputeTaskPool},
+    mesh::create_mesh_bundle,
+    thread_local_resource::ThreadLocalResource,
+};
 use building_blocks::{
     mesh::*,
     storage::{ChunkKey3, LodChunkUpdate3, SmallKeyHashMap},
 };
-use utilities::bevy_util::{mesh::create_mesh_bundle, thread_local_resource::ThreadLocalResource};
 
-use bevy::{asset::prelude::*, ecs, prelude::*, tasks::ComputeTaskPool};
 use std::{cell::RefCell, collections::VecDeque};
 
 fn max_mesh_creations_per_frame(pool: &ComputeTaskPool) -> usize {

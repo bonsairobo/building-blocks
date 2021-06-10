@@ -1,6 +1,7 @@
 mod camera_rotation;
 
-use bevy::{
+use bevy_utilities::bevy::{
+    asset::LoadState,
     prelude::*,
     render::{
         mesh::Indices,
@@ -50,7 +51,7 @@ fn check_loaded(
     handle: Res<Loading>,
     asset_server: Res<AssetServer>,
 ) {
-    if let bevy::asset::LoadState::Loaded = asset_server.get_load_state(&handle.0) {
+    if let LoadState::Loaded = asset_server.get_load_state(&handle.0) {
         state.set(AppState::Run).unwrap();
     }
 }

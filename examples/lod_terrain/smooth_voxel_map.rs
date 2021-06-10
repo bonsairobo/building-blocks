@@ -1,12 +1,11 @@
 use crate::voxel_map::VoxelMap;
 
-use bevy::tasks::ComputeTaskPool;
+use bevy_utilities::{bevy::tasks::ComputeTaskPool, noise::generate_noise_chunks};
 use building_blocks::{
     mesh::{padded_surface_nets_chunk_extent, surface_nets, PosNormMesh, SurfaceNetsBuffer},
     prelude::*,
     storage::{ChunkHashMap3x1, ChunkKey3, OctreeChunkIndex},
 };
-use utilities::noise::generate_noise_chunks;
 
 const CHUNK_LOG2: i32 = 4;
 const CHUNK_SHAPE: Point3i = PointN([1 << CHUNK_LOG2; 3]);

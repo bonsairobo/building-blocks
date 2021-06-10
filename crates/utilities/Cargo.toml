@@ -7,17 +7,6 @@ edition = "2018"
 [dependencies]
 building_blocks_core = { path = "../../crates/building_blocks_core", default-features = false }
 building_blocks_storage = { path = "../../crates/building_blocks_storage", default-features = false }
-building_blocks_mesh = { path = "../../crates/building_blocks_mesh", default-features = false }
-
-thread_local = "1.1"
 
 # Only needed for examples.
 simdnoise = { version = "3.1", optional = true }
-
-[dependencies.bevy]
-version = "0.5"
-# git = "https://github.com/bevyengine/bevy"
-# rev = "94c41840"
-# path = "../../../bevy"
-default-features = false
-features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]

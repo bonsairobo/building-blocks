@@ -5,11 +5,13 @@ use building_blocks::core::{
 use building_blocks::mesh::*;
 use building_blocks::storage::{prelude::*, IsEmpty, Sd16};
 
-use utilities::{bevy_util::mesh::create_mesh_bundle, noise::generate_noise_chunks};
-
-use bevy::{
-    prelude::*,
-    tasks::{ComputeTaskPool, TaskPool},
+use bevy_utilities::{
+    bevy::{
+        prelude::*,
+        tasks::{ComputeTaskPool, TaskPool},
+    },
+    mesh::create_mesh_bundle,
+    noise::generate_noise_chunks
 };
 
 pub struct MeshGeneratorState {

@@ -4,17 +4,19 @@ mod mesh_generator;
 use camera_rotation::{camera_rotation_system, CameraRotationState};
 use mesh_generator::{mesh_generator_system, MeshGeneratorState, MeshMaterial};
 
-use bevy::prelude::*;
-use bevy::{
+use bevy_utilities::bevy::{
+    prelude::*,
     render::wireframe::{WireframeConfig, WireframePlugin},
     wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
 };
 
 fn main() {
-    let mut window_desc = WindowDescriptor::default();
-    window_desc.width = 1600.0;
-    window_desc.height = 900.0;
-    window_desc.title = "Building Blocks: Bevy Meshing Example".to_string();
+    let window_desc = WindowDescriptor {
+        width: 1600.0,
+        height: 900.0,
+        title: "Building Blocks: Mesh Showcase".to_string(),
+        ..Default::default()
+    };
 
     App::build()
         .insert_resource(window_desc)

@@ -5,7 +5,7 @@ use crate::{
 
 use building_blocks::core::prelude::*;
 
-use bevy::{prelude::*, render::camera::Camera};
+use bevy_utilities::bevy::{prelude::*, render::camera::Camera};
 
 #[derive(Default)]
 pub struct LodState {

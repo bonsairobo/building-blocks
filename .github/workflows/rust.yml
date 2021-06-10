@@ -32,8 +32,6 @@ jobs:
         toolchain: stable
         default: true
         components: clippy
-    - name: Get SDL2
-      run: sudo apt-get update && sudo apt-get install libsdl2-dev
     - name: Lint
       run: cargo clippy --all --all-features
     - name: Build

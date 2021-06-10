@@ -1,0 +1,37 @@
+[package]
+name = "building-blocks-examples"
+version = "0.6.0"
+edition = "2018"
+authors = ["Duncan <bonsairobo@gmail.com>"]
+description = "Examples for the building-blocks crate."
+license = "MIT"
+
+[profile]
+dev = { opt-level = 2 }
+release = { lto = "thin" }
+bench = { lto = "thin" }
+
+[dev-dependencies]
+bevy_utilities = { path = "bevy_utilities" }
+building-blocks = { path = "..", features = ["glam", "mesh", "sdfu"] }
+utilities = { path = "../crates/utilities", features = ["simdnoise"]}
+
+[[example]]
+name = "mesh_showcase"
+path = "mesh_showcase/mesh_showcase.rs"
+
+[[example]]
+name = "sdf_mesh"
+path = "sdf_mesh/sdf_mesh.rs"
+
+[[example]]
+name = "quad_mesh_uvs"
+path = "quad_mesh_uvs/quad_mesh_uvs.rs"
+
+[[example]]
+name = "array_texture_materials"
+path = "array_texture_materials/array_texture_materials.rs"
+
+[[example]]
+name = "lod_terrain"
+path = "lod_terrain/lod_terrain.rs"

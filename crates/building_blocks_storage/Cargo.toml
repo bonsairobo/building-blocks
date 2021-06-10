@@ -12,9 +12,6 @@ description = "Efficient storage for maps on sparse or dense, 2D and 3D integer 
 [package.metadata.docs.rs]
 all-features = true
 
-[features]
-default = ["lz4"]
-
 [dependencies]
 ahash = { version = "0.7", features = ["serde"] }
 auto_impl = "0.4"

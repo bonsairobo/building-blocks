@@ -1,11 +1,12 @@
 mod camera_rotation;
 
-use bevy::{
+use bevy_utilities::bevy::{
+    asset::LoadState,
     prelude::*,
     render::{
         mesh::Indices,
         pipeline::{PipelineDescriptor, PrimitiveTopology, RenderPipeline},
-        shader::ShaderStages,
+        shader::{ShaderStage, ShaderStages},
         texture::{AddressMode, SamplerDescriptor},
     },
 };
@@ -53,7 +54,7 @@ fn check_loaded(
     handle: Res<Loading>,
     asset_server: Res<AssetServer>,
 ) {
-    if let bevy::asset::LoadState::Loaded = asset_server.get_load_state(&handle.0) {
+    if let LoadState::Loaded = asset_server.get_load_state(&handle.0) {
         state.set(AppState::Run).unwrap();
     }
 }
@@ -182,14 +183,8 @@ fn setup(
     render_mesh.set_indices(Some(Indices::U32(indices)));
 
     let pipeline = pipelines.add(PipelineDescriptor::default_config(ShaderStages {
-        vertex: shaders.add(Shader::from_glsl(
-            bevy::render::shader::ShaderStage::Vertex,
-            VERTEX_SHADER,
-        )),
-        fragment: Some(shaders.add(Shader::from_glsl(
-            bevy::render::shader::ShaderStage::Fragment,
-            FRAGMENT_SHADER,
-        ))),
+        vertex: shaders.add(Shader::from_glsl(ShaderStage::Vertex, VERTEX_SHADER)),
+        fragment: Some(shaders.add(Shader::from_glsl(ShaderStage::Fragment, FRAGMENT_SHADER))),
     }));
 
     commands.spawn_bundle(PbrBundle {

@@ -1,4 +1,4 @@
-use bevy::{
+use bevy_utilities::bevy::{
     prelude::*,
     render::{
         mesh::{Indices, VertexAttributeValues},

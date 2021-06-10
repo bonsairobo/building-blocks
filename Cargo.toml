@@ -11,6 +11,11 @@ keywords = ["voxel"]
 [package.metadata.docs.rs]
 all-features = true
 
+[profile]
+dev = { opt-level = 2 }
+release = { lto = "thin" }
+bench = { lto = "thin" }
+
 [features]
 default = ["lz4", "mesh", "sdfu", "search"]
 
@@ -37,16 +42,7 @@ ncollide = ["building_blocks_search/ncollide"]
 
 [workspace]
 members = ["crates/*"]
-exclude = ["benches"]
-
-[profile.dev]
-opt-level = 2
-
-[profile.release]
-lto = "thin"
-
-[profile.bench]
-lto = "thin"
+exclude = ["benches", "examples"]
 
 # TODO: use RFC #2906 to deduplicate dependency specs once it is merged
 
@@ -59,45 +55,9 @@ building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.6.0"
 building_blocks_search = { path = "crates/building_blocks_search", version = "0.6.0", default-features = false, optional = true }
 
 [dev-dependencies]
-bevy_fly_camera = "0.7"
-
-# Common code for tests and examples.
 utilities = { path = "crates/utilities" }
-
-[dev-dependencies.bevy]
-version = "0.5"
-# git = "https://github.com/bevyengine/bevy"
-# rev = "94c41840"
-# path = "../bevy"
-default-features = false
-features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]
 
 [[bin]]
 name = "measure_compression_rate"
 path = "src/bin/measure_compression_rate.rs"
 required-features = ["dot_vox", "lz4", "snappy"]
-
-[[example]]
-name = "mesh_showcase"
-path = "examples/mesh_showcase/mesh_showcase.rs"
-required-features = ["mesh", "sdfu", "utilities/simdnoise"]
-
-[[example]]
-name = "sdf_mesh"
-path = "examples/sdf_mesh/sdf_mesh.rs"
-required-features = ["mesh", "sdfu"]
-
-[[example]]
-name = "quad_mesh_uvs"
-path = "examples/quad_mesh_uvs/quad_mesh_uvs.rs"
-required-features = ["mesh"]
-
-[[example]]
-name = "array_texture_materials"
-path = "examples/array_texture_materials/array_texture_materials.rs"
-required-features = ["mesh"]
-
-[[example]]
-name = "lod_terrain"
-path = "examples/lod_terrain/lod_terrain.rs"
-required-features = ["glam", "mesh", "utilities/simdnoise"]

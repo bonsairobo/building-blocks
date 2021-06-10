@@ -51,8 +51,9 @@
 //! ```
 
 use crate::{
-    active_clipmap_lod_chunks, Array3x1, ChunkKey3, ChunkMap3, ChunkedOctreeSet, ClipMapConfig3,
-    ClipMapUpdate3, GetMut, IterChunkKeys, LodChunkUpdate3, OctreeSet, SmallKeyHashMap,
+    active_clipmap_lod_chunks, Array3x1, ChunkKey3, ChunkMap3, ChunkUnits3, ChunkedOctreeSet,
+    ClipMapConfig3, ClipMapUpdate3, GetMut, IterChunkKeys, LodChunkUpdate3, OctreeSet,
+    SmallKeyHashMap,
 };
 
 use building_blocks_core::prelude::*;
@@ -182,7 +183,7 @@ impl OctreeChunkIndex {
         &self,
         extent: &Extent3i,
         clip_box_radius: u16,
-        lod0_center: Point3i,
+        lod0_center: ChunkUnits3,
         mut init_rx: impl FnMut(ChunkKey3),
     ) {
         let config = self.clipmap_config(clip_box_radius);
@@ -196,8 +197,8 @@ impl OctreeChunkIndex {
         &self,
         extent: &Extent3i,
         clip_box_radius: u16,
-        old_lod0_center: Point3i,
-        new_lod0_center: Point3i,
+        old_lod0_center: ChunkUnits3,
+        new_lod0_center: ChunkUnits3,
         mut update_rx: impl FnMut(LodChunkUpdate3),
     ) {
         let update = ClipMapUpdate3::new(

@@ -3,17 +3,19 @@ use crate::{
     voxel_map::VoxelMap,
 };
 
-use building_blocks::core::prelude::*;
+use building_blocks::{
+    core::prelude::*,
+    storage::{ChunkUnits, ChunkUnits3},
+};
 
 use bevy_utilities::bevy::{prelude::*, render::camera::Camera};
 
-#[derive(Default)]
 pub struct LodState {
-    old_lod0_center: Point3i,
+    old_lod0_center: ChunkUnits3,
 }
 
 impl LodState {
-    pub fn new(lod0_center: Point3i) -> Self {
+    pub fn new(lod0_center: ChunkUnits3) -> Self {
         Self {
             old_lod0_center: lod0_center,
         }
@@ -33,7 +35,7 @@ pub fn level_of_detail_system<Map: VoxelMap>(
         return;
     };
 
-    let lod0_center = Point3f::from(camera_position).in_voxel() >> Map::chunk_log2();
+    let lod0_center = ChunkUnits(Point3f::from(camera_position).in_voxel() >> Map::chunk_log2());
 
     if lod0_center == lod_state.old_lod0_center {
         return;

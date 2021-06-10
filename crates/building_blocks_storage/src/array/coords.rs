@@ -1,4 +1,4 @@
-use building_blocks_core::{ConstZero, PointN};
+use building_blocks_core::{ConstZero, IntegerPoint, PointN};
 
 use core::ops::{Add, AddAssign, Deref, Mul, Sub, SubAssign};
 use num::Zero;
@@ -116,5 +116,21 @@ impl SubAssign for Stride {
     #[inline]
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
+    }
+}
+
+/// A newtype wrapper for `PointN` where each point represents exactly one chunk.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ChunkUnits<N>(pub PointN<N>);
+
+pub type ChunkUnits2 = ChunkUnits<[i32; 2]>;
+pub type ChunkUnits3 = ChunkUnits<[i32; 3]>;
+
+impl<N> ChunkUnits<N>
+where
+    PointN<N>: IntegerPoint<N>,
+{
+    pub fn chunk_min(&self, chunk_shape: PointN<N>) -> PointN<N> {
+        chunk_shape * self.0
     }
 }

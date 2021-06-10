@@ -1,4 +1,4 @@
-use crate::{ChunkKey, ChunkKey3, Octant, OctreeNode, OctreeSet, VisitStatus};
+use crate::{ChunkKey, ChunkKey3, ChunkUnits3, Octant, OctreeNode, OctreeSet, VisitStatus};
 
 use building_blocks_core::prelude::*;
 
@@ -39,11 +39,11 @@ impl ClipMapConfig3 {
 pub fn active_clipmap_lod_chunks(
     config: &ClipMapConfig3,
     octree: &OctreeSet,
-    lod0_center: Point3i,
+    lod0_center: ChunkUnits3,
     mut active_rx: impl FnMut(ChunkKey3),
 ) {
     let chunk_log2 = config.chunk_edge_length_log2();
-    let centers = all_lod_centers(lod0_center, config.num_lods);
+    let centers = all_lod_centers(lod0_center.0, config.num_lods);
 
     let high_lod_boundary = config.clip_box_radius >> 1;
 
@@ -114,16 +114,16 @@ impl ClipMapUpdate3 {
     /// `new_lod0_center`.
     pub fn new(
         config: &ClipMapConfig3,
-        old_lod0_center: Point3i,
-        new_lod0_center: Point3i,
+        old_lod0_center: ChunkUnits3,
+        new_lod0_center: ChunkUnits3,
     ) -> Self {
         Self {
             chunk_log2: config.chunk_shape.x().trailing_zeros() as i32,
             num_lods: config.num_lods,
             low_lod_boundary: config.clip_box_radius,
             high_lod_boundary: config.clip_box_radius >> 1,
-            old_centers: all_lod_centers(old_lod0_center, config.num_lods),
-            new_centers: all_lod_centers(new_lod0_center, config.num_lods),
+            old_centers: all_lod_centers(old_lod0_center.0, config.num_lods),
+            new_centers: all_lod_centers(new_lod0_center.0, config.num_lods),
         }
     }
 
@@ -236,19 +236,19 @@ fn get_offset_from_lod_center(octant: &Octant, centers: &[Point3i]) -> i32 {
         .max_component()
 }
 
-/// For calculating offsets from the clipmap center, we need to bias any positive components to make voxel coordinates symmetric
-/// about the center.
+/// For calculating offsets from the clipmap center, we need to bias any nonnegative components to make voxel coordinates
+/// symmetric about the center.
 ///
 /// ```text
 /// Voxel Coordinates
 ///
 ///   -3  -2  -1   0   1   2   3
-/// <--------------|-------------->
+/// <--|---|---|---|---|---|---|-->
 ///
 /// Clipmap Coordinates
 ///
 ///     -3  -2  -1   1   2   3
-/// <--------------|-------------->
+/// <--|---|---|---|---|---|---|-->
 /// ```
 fn clipmap_coordinates(p: Point3i) -> Point3i {
     p.map_components_unary(|c| if c >= 0 { c + 1 } else { c })
@@ -272,7 +272,7 @@ fn octant_chunk_key(chunk_log2: i32, octant: &Octant) -> ChunkKey3 {
 
 #[cfg(test)]
 mod test {
-    use crate::SmallKeyHashSet;
+    use crate::{ChunkUnits, SmallKeyHashSet};
 
     use super::*;
 
@@ -282,7 +282,7 @@ mod test {
     #[test]
     fn active_chunks_in_lod0_and_lod1() {
         let config = ClipMapConfig3::new(NUM_LODS, CLIP_BOX_RADIUS, CHUNK_SHAPE);
-        let lod0_center = Point3i::ZERO;
+        let lod0_center = ChunkUnits(Point3i::ZERO);
 
         let domain = Extent3i::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
         let mut octree = OctreeSet::new_empty(domain);

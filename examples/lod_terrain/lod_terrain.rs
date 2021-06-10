@@ -10,7 +10,7 @@ use mesh_generator::{
 };
 use voxel_map::VoxelMap;
 
-use building_blocks::core::prelude::*;
+use building_blocks::{core::prelude::*, storage::ChunkUnits};
 
 use bevy_utilities::{
     bevy::{
@@ -74,7 +74,7 @@ fn setup<Map: VoxelMap>(
     let map = Map::generate(&*pool, freq, scale, seed);
 
     // Queue up commands to initialize the chunk meshes to their appropriate LODs given the starting camera position.
-    let init_lod0_center = Point3i::ZERO;
+    let init_lod0_center = ChunkUnits(Point3i::ZERO);
     let mut mesh_commands = MeshCommandQueue::default();
     map.chunk_index().active_clipmap_lod_chunks(
         &Map::world_extent(),

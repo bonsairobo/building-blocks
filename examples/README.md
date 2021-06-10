@@ -1,5 +1,8 @@
 # Examples
 
+The `examples/` directory is not in the `building-blocks` cargo workspace, so to run an example, you need to `cd examples`
+before running `cargo run --example foo`.
+
 All examples use the Bevy engine. This list is roughly ordered by complexity.
 
 ## SDF Mesh

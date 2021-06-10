@@ -5,17 +5,28 @@ use building_blocks_core::prelude::*;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ClipMapConfig3 {
     /// The number of levels of detail.
-    pub num_lods: u8,
+    num_lods: u8,
     /// The radius (in chunks) of a clipbox at any level of detail.
-    pub clip_box_radius: i32,
+    clip_box_radius: i32,
     /// The shape of every chunk, regardless of LOD. Note that while a chunk at a higher LOD takes up more world space, it has
     /// the same shape as chunks at lower levels, because the voxel size also changes.
     ///
     /// **WARNING**: As of now, chunks must be cubes.
-    pub chunk_shape: Point3i,
+    chunk_shape: Point3i,
 }
 
 impl ClipMapConfig3 {
+    pub fn new(num_lods: u8, clip_box_radius: u16, chunk_shape: Point3i) -> Self {
+        assert!(clip_box_radius >= 2); // Radius 1 doesn't work for any more than a single LOD, so why are you using a clipmap?
+        assert!(chunk_shape.dimensions_are_powers_of_2());
+
+        Self {
+            num_lods,
+            clip_box_radius: clip_box_radius as i32,
+            chunk_shape,
+        }
+    }
+
     pub fn chunk_edge_length_log2(&self) -> i32 {
         assert!(self.chunk_shape.is_cube());
 
@@ -45,7 +56,11 @@ pub fn active_clipmap_lod_chunks(
 
         let offset_from_center = get_offset_from_lod_center(&octant, &centers);
 
-        if lod == 0 || offset_from_center >= high_lod_boundary {
+        if lod == 0 || offset_from_center > high_lod_boundary {
+            // println!(
+            //     "lod = {:?} offset = {:?} octant = {:?}",
+            //     lod, offset_from_center, octant
+            // );
             // This octant can be rendered at this level of detail.
             active_rx(octant_chunk_key(chunk_log2, &octant));
 
@@ -130,8 +145,8 @@ impl ClipMapUpdate3 {
             let old_offset_from_center = get_offset_from_lod_center(&octant, &self.old_centers);
             let offset_from_center = get_offset_from_lod_center(&octant, &self.new_centers);
 
-            if old_offset_from_center >= self.high_lod_boundary
-                && offset_from_center < self.high_lod_boundary
+            if old_offset_from_center > self.high_lod_boundary
+                && offset_from_center <= self.high_lod_boundary
             {
                 // Increase the detail for this octant.
                 // Create the higher detail in descendant octants.
@@ -149,8 +164,8 @@ impl ClipMapUpdate3 {
                 }));
 
                 VisitStatus::Stop
-            } else if offset_from_center >= self.high_lod_boundary
-                && old_offset_from_center < self.high_lod_boundary
+            } else if offset_from_center > self.high_lod_boundary
+                && old_offset_from_center <= self.high_lod_boundary
             {
                 // Decrease the detail for this octant.
                 // Delete the higher detail in descendant octants.
@@ -168,8 +183,8 @@ impl ClipMapUpdate3 {
                 }));
 
                 VisitStatus::Stop
-            } else if offset_from_center >= self.low_lod_boundary
-                && old_offset_from_center >= self.low_lod_boundary
+            } else if offset_from_center > self.low_lod_boundary
+                && old_offset_from_center > self.low_lod_boundary
             {
                 VisitStatus::Stop
             } else {
@@ -199,7 +214,7 @@ fn find_merge_or_split_descendants(
     node.visit_all_octants_in_preorder(octree, &mut |node: &OctreeNode| {
         let lod = node.octant().power();
         let old_offset_from_center = get_offset_from_lod_center(node.octant(), centers);
-        if lod == 0 || old_offset_from_center >= high_lod_boundary {
+        if lod == 0 || old_offset_from_center > high_lod_boundary {
             matching_chunks.push(octant_chunk_key(chunk_log2, node.octant()));
 
             VisitStatus::Stop
@@ -216,7 +231,27 @@ fn get_offset_from_lod_center(octant: &Octant, centers: &[Point3i]) -> i32 {
     let lod_p = octant.minimum() >> lod as i32;
     let lod_center = centers[lod as usize];
 
-    (lod_p - lod_center).abs().max_component()
+    clipmap_coordinates(lod_p - lod_center)
+        .abs()
+        .max_component()
+}
+
+/// For calculating offsets from the clipmap center, we need to bias any positive components to make voxel coordinates symmetric
+/// about the center.
+///
+/// ```text
+/// Voxel Coordinates
+///
+///   -3  -2  -1   0   1   2   3
+/// <--------------|-------------->
+///
+/// Clipmap Coordinates
+///
+///     -3  -2  -1   1   2   3
+/// <--------------|-------------->
+/// ```
+fn clipmap_coordinates(p: Point3i) -> Point3i {
+    p.map_components_unary(|c| if c >= 0 { c + 1 } else { c })
 }
 
 fn octant_chunk_key(chunk_log2: i32, octant: &Octant) -> ChunkKey3 {
@@ -226,4 +261,66 @@ fn octant_chunk_key(chunk_log2: i32, octant: &Octant) -> ChunkKey3 {
         lod,
         minimum: (octant.minimum() << chunk_log2) >> lod as i32,
     }
+}
+
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
+
+#[cfg(test)]
+mod test {
+    use crate::SmallKeyHashSet;
+
+    use super::*;
+
+    use pretty_assertions::assert_eq;
+    use std::iter::FromIterator;
+
+    #[test]
+    fn active_chunks_in_lod0_and_lod1() {
+        let config = ClipMapConfig3::new(NUM_LODS, CLIP_BOX_RADIUS, CHUNK_SHAPE);
+        let lod0_center = Point3i::ZERO;
+
+        let domain = Extent3i::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
+        let mut octree = OctreeSet::new_empty(domain);
+        let filled_extent = Extent3i::from_min_and_shape(Point3i::fill(-4), Point3i::fill(8));
+        octree.add_extent(&filled_extent);
+
+        let mut active_keys = SmallKeyHashSet::new();
+        active_clipmap_lod_chunks(&config, &octree, lod0_center, |key| {
+            active_keys.insert(key);
+        });
+
+        let mut lod1_set = OctreeSet::new_empty(domain);
+        lod1_set.add_extent(&Extent3i::from_min_and_shape(
+            Point3i::fill(-2),
+            Point3i::fill(4),
+        ));
+        lod1_set.subtract_extent(&Extent3i::from_min_and_shape(
+            Point3i::fill(-1),
+            Point3i::fill(2),
+        ));
+
+        let expected_keys = SmallKeyHashSet::from_iter(
+            Extent3i::from_min_and_shape(Point3i::fill(-2), Point3i::fill(4))
+                .iter_points()
+                .map(|p| ChunkKey {
+                    minimum: p * CHUNK_SHAPE,
+                    lod: 0,
+                })
+                .chain(lod1_set.collect_points().into_iter().map(|p| ChunkKey {
+                    minimum: p * CHUNK_SHAPE,
+                    lod: 1,
+                })),
+        );
+
+        assert_eq!(active_keys, expected_keys);
+    }
+
+    const CHUNK_SHAPE: Point3i = PointN([16; 3]);
+    const NUM_LODS: u8 = 2;
+    const CLIP_BOX_RADIUS: u16 = 2;
 }

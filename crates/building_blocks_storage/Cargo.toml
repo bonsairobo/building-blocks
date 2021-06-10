@@ -33,7 +33,9 @@ snap = { version = "1.0", optional = true }
 
 [dev-dependencies]
 criterion = "0.3"
+pretty_assertions = "0.7"
 rand = "0.8"
+
 # Common code for tests and examples.
 utilities = { path = "../utilities" }
 

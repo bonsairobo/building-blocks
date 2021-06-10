@@ -12,7 +12,7 @@ pub trait VoxelMap: ecs::component::Component {
 
     fn world_chunks_extent() -> Extent3i;
     fn chunk_log2() -> i32;
-    fn clip_box_radius() -> i32;
+    fn clip_box_radius() -> u16;
     fn world_extent() -> Extent3i;
 
     fn chunk_index(&self) -> &OctreeChunkIndex;

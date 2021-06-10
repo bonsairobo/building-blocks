@@ -712,6 +712,22 @@ impl OctreeSet {
             }
         }
     }
+
+    /// Get all of the points in this set collected into a `Vec`.
+    pub fn collect_points(&self) -> Vec<Point3i> {
+        let mut leaves = Vec::new();
+        self.visit_all_octants_in_preorder(&mut |node: &OctreeNode| {
+            if node.is_full() {
+                for p in Extent3i::from(*node.octant()).iter_points() {
+                    leaves.push(p);
+                }
+            }
+
+            VisitStatus::Continue
+        });
+
+        leaves
+    }
 }
 
 /// Represents a single non-empty octant in the octree. Can be used for manual traversal by calling `OctreeSet::get_child`.

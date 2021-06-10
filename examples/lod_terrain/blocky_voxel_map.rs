@@ -14,7 +14,7 @@ const CHUNK_LOG2: i32 = 4;
 const CHUNK_SHAPE: Point3i = PointN([1 << CHUNK_LOG2; 3]);
 const NUM_LODS: u8 = 6;
 const SUPERCHUNK_SHAPE: Point3i = PointN([1 << (CHUNK_LOG2 + NUM_LODS as i32 - 1); 3]);
-const CLIP_BOX_RADIUS: i32 = 8;
+const CLIP_BOX_RADIUS: u16 = 8;
 
 const WORLD_CHUNKS_EXTENT: Extent3i = Extent3i {
     minimum: PointN([-100, 0, -100]),
@@ -82,7 +82,7 @@ impl VoxelMap for BlockyVoxelMap {
     fn chunk_log2() -> i32 {
         CHUNK_LOG2
     }
-    fn clip_box_radius() -> i32 {
+    fn clip_box_radius() -> u16 {
         CLIP_BOX_RADIUS
     }
     fn world_chunks_extent() -> Extent3i {

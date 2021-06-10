@@ -159,7 +159,7 @@ impl OctreeChunkIndex {
         }
     }
 
-    pub fn clipmap_config(&self, clip_box_radius: i32) -> ClipMapConfig3 {
+    pub fn clipmap_config(&self, clip_box_radius: u16) -> ClipMapConfig3 {
         assert!(self.superchunk_octrees.indexer.chunk_shape().is_cube());
         assert!(self.chunk_shape().is_cube());
 
@@ -173,11 +173,7 @@ impl OctreeChunkIndex {
         let chunk_log2 = self.chunk_shape().x().trailing_zeros() as u8;
         let num_lods = superchunk_log2 - chunk_log2 + 1;
 
-        ClipMapConfig3 {
-            num_lods,
-            chunk_shape: self.chunk_shape(),
-            clip_box_radius,
-        }
+        ClipMapConfig3::new(num_lods, clip_box_radius, self.chunk_shape())
     }
 
     /// Traverses all octree nodes overlapping `extent` to find the `ChunkKey3`s that are "active" when the clipmap is
@@ -185,7 +181,7 @@ impl OctreeChunkIndex {
     pub fn active_clipmap_lod_chunks(
         &self,
         extent: &Extent3i,
-        clip_box_radius: i32,
+        clip_box_radius: u16,
         lod0_center: Point3i,
         mut init_rx: impl FnMut(ChunkKey3),
     ) {
@@ -199,7 +195,7 @@ impl OctreeChunkIndex {
     pub fn find_clipmap_chunk_updates(
         &self,
         extent: &Extent3i,
-        clip_box_radius: i32,
+        clip_box_radius: u16,
         old_lod0_center: Point3i,
         new_lod0_center: Point3i,
         mut update_rx: impl FnMut(LodChunkUpdate3),

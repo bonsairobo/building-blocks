@@ -135,6 +135,7 @@ impl OctreeChunkIndex {
 
         let mut superchunk_bitsets = SmallKeyHashMap::default();
         for chunk_key in chunk_keys {
+            assert_eq!(chunk_key.lod, 0);
             let superchunk_key = chunk_key.minimum & superchunk_mask;
             let bitset = superchunk_bitsets.entry(superchunk_key).or_insert_with(|| {
                 Array3x1::fill(

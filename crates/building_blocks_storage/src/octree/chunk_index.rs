@@ -112,6 +112,7 @@ impl OctreeChunkIndex {
     ) -> Self {
         assert!(superchunk_shape.dimensions_are_powers_of_2());
         assert!(chunk_shape.dimensions_are_powers_of_2());
+        assert!(chunk_shape.is_cube());
 
         let superchunk_log2 = superchunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);

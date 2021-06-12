@@ -19,7 +19,7 @@ use bevy_utilities::{
         tasks::ComputeTaskPool,
         // wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
     },
-    fly_camera::{FlyCamera, FlyCameraPlugin},
+    smooth_cameras::{controllers::fps::*, LookTransformPlugin},
 };
 
 fn main() {
@@ -51,7 +51,8 @@ fn run_example<Map: VoxelMap>() {
         //     ..Default::default()
         // })
         .add_plugins(DefaultPlugins)
-        .add_plugin(FlyCameraPlugin)
+        .add_plugin(LookTransformPlugin)
+        .add_plugin(FpsCameraPlugin)
         // .add_plugin(WireframePlugin)
         .add_startup_system(setup::<Map>.system())
         .add_system(level_of_detail_system::<Map>.system())
@@ -91,10 +92,12 @@ fn setup<Map: VoxelMap>(
     commands.insert_resource(load_mesh_materials(&mut *materials));
 
     // Lights, camera, action!
-    commands
-        .spawn()
-        .insert_bundle(PerspectiveCameraBundle::new_3d())
-        .insert(FlyCamera::default());
+    commands.spawn_bundle(FpsCameraBundle::new(
+        FpsCameraController::default(),
+        PerspectiveCameraBundle::new_3d(),
+        Vec3::splat(100.0),
+        Vec3::splat(0.0),
+    ));
     commands.spawn_bundle(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 500.0, 0.0)),
         light: Light {

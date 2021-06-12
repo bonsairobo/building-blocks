@@ -21,3 +21,7 @@ version = "0.5"
 # path = "../../../bevy"
 default-features = false
 features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]
+
+[dependencies.smooth-bevy-cameras]
+git = "https://github.com/bonsairobo/smooth-bevy-cameras"
+rev = "3c6f3bd"

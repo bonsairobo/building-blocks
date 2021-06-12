@@ -4,4 +4,4 @@ pub mod noise;
 pub mod thread_local_resource;
 
 pub use bevy;
-pub use bevy_fly_camera as fly_camera;
+pub use smooth_bevy_cameras as smooth_cameras;

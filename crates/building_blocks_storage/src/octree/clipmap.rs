@@ -227,27 +227,22 @@ fn get_offset_from_lod_center(octant: &Octant, centers: &[Point3i]) -> i32 {
     let lod_p = octant.minimum() >> lod as i32;
     let lod_center = centers[lod as usize];
 
-    clipmap_coordinates(lod_p - lod_center)
+    (lod_p - lod_center)
+        // For calculating offsets from the clipmap center, we need to bias any nonnegative components to make voxel coordinates
+        // symmetric about the center.
+        //
+        // Voxel Coordinates
+        //
+        //   -3  -2  -1   0   1   2   3
+        // <--|---|---|---|---|---|---|-->
+        //
+        // Clipmap Coordinates
+        //
+        //     -3  -2  -1   1   2   3
+        // <--|---|---|---|---|---|---|-->
+        .map_components_unary(|c| if c >= 0 { c + 1 } else { c })
         .abs()
         .max_component()
-}
-
-/// For calculating offsets from the clipmap center, we need to bias any nonnegative components to make voxel coordinates
-/// symmetric about the center.
-///
-/// ```text
-/// Voxel Coordinates
-///
-///   -3  -2  -1   0   1   2   3
-/// <--|---|---|---|---|---|---|-->
-///
-/// Clipmap Coordinates
-///
-///     -3  -2  -1   1   2   3
-/// <--|---|---|---|---|---|---|-->
-/// ```
-fn clipmap_coordinates(p: Point3i) -> Point3i {
-    p.map_components_unary(|c| if c >= 0 { c + 1 } else { c })
 }
 
 fn octant_chunk_key(chunk_log2: i32, octant: &Octant) -> ChunkKey3 {

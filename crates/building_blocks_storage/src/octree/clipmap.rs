@@ -57,10 +57,6 @@ pub fn active_clipmap_lod_chunks(
         let offset_from_center = get_offset_from_lod_center(&octant, &centers);
 
         if lod == 0 || offset_from_center > high_lod_boundary {
-            // println!(
-            //     "lod = {:?} offset = {:?} octant = {:?}",
-            //     lod, offset_from_center, octant
-            // );
             // This octant can be rendered at this level of detail.
             active_rx(octant_chunk_key(chunk_log2, &octant));
 
@@ -276,7 +272,7 @@ mod test {
 
     use super::*;
 
-    use pretty_assertions::assert_eq;
+    use itertools::Itertools;
     use std::iter::FromIterator;
 
     #[test]
@@ -289,10 +285,14 @@ mod test {
         let filled_extent = Extent3i::from_min_and_shape(Point3i::fill(-4), Point3i::fill(8));
         octree.add_extent(&filled_extent);
 
-        let mut active_keys = SmallKeyHashSet::new();
-        active_clipmap_lod_chunks(&config, &octree, lod0_center, |key| {
-            active_keys.insert(key);
-        });
+        let active_chunks = ActiveChunks::new(&config, &octree, lod0_center);
+
+        let lod0_set = Extent3i::from_min_and_shape(Point3i::fill(-2), Point3i::fill(4))
+            .iter_points()
+            .map(|p| ChunkKey {
+                minimum: p * CHUNK_SHAPE,
+                lod: 0,
+            });
 
         let mut lod1_set = OctreeSet::new_empty(domain);
         lod1_set.add_extent(&Extent3i::from_min_and_shape(
@@ -303,21 +303,131 @@ mod test {
             Point3i::fill(-1),
             Point3i::fill(2),
         ));
+        let lod1_set = lod1_set.collect_points().into_iter().map(|p| ChunkKey {
+            minimum: p * CHUNK_SHAPE,
+            lod: 1,
+        });
 
-        let expected_keys = SmallKeyHashSet::from_iter(
-            Extent3i::from_min_and_shape(Point3i::fill(-2), Point3i::fill(4))
-                .iter_points()
-                .map(|p| ChunkKey {
-                    minimum: p * CHUNK_SHAPE,
-                    lod: 0,
-                })
-                .chain(lod1_set.collect_points().into_iter().map(|p| ChunkKey {
-                    minimum: p * CHUNK_SHAPE,
-                    lod: 1,
-                })),
+        let expected_keys = SmallKeyHashSet::from_iter(lod0_set.chain(lod1_set));
+
+        assert_eq!(active_chunks.keys, expected_keys);
+    }
+
+    #[test]
+    fn no_updates_when_center_does_not_move() {
+        let config = ClipMapConfig3::new(NUM_LODS, CLIP_BOX_RADIUS, CHUNK_SHAPE);
+
+        let domain = Extent3i::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
+        let octree = OctreeSet::new_full(domain);
+
+        let centers = [
+            [0, 0, 0],
+            [2, 0, 0],
+            [-2, 0, 0],
+            [0, 2, 0],
+            [0, -2, 0],
+            [0, 0, 2],
+            [0, 0, -2],
+        ];
+
+        for p in centers.iter().cloned() {
+            let center = ChunkUnits(PointN(p));
+            ClipMapUpdate3::new(&config, center, center)
+                .find_chunk_updates(&octree, |_update| panic!("Fail"));
+        }
+    }
+
+    #[test]
+    fn updates_are_consistent_with_active_chunks() {
+        let config = ClipMapConfig3::new(NUM_LODS, CLIP_BOX_RADIUS, CHUNK_SHAPE);
+
+        let domain = Extent3i::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
+        let octree = OctreeSet::new_full(domain);
+
+        validate_update_path(
+            &config,
+            &octree,
+            &[
+                [0, 0, 0],
+                [0, 0, 0],
+                [1, 0, 0],
+                [0, 0, 0],
+                [-1, 0, 0],
+                [0, 0, 0],
+                [0, 1, 0],
+                [0, 0, 0],
+                [0, -1, 0],
+                [0, 0, 0],
+                [0, 0, 1],
+                [0, 0, 0],
+                [0, 0, -1],
+            ],
         );
+    }
 
-        assert_eq!(active_keys, expected_keys);
+    fn validate_update_path(config: &ClipMapConfig3, octree: &OctreeSet, path: &[[i32; 3]]) {
+        let mut active_chunks = ActiveChunks::new(&config, &octree, ChunkUnits(PointN(path[0])));
+
+        for (p1, p2) in path.iter().cloned().tuple_windows() {
+            let old_lod0_center = ChunkUnits(PointN(p1));
+            let new_lod0_center = ChunkUnits(PointN(p2));
+
+            ClipMapUpdate3::new(config, old_lod0_center, new_lod0_center)
+                .find_chunk_updates(octree, |update| active_chunks.apply_update(update));
+
+            // We should end up with the same result from moving the clipmap as we do just constructing it from scratch at the
+            // new location.
+            assert_eq!(
+                active_chunks,
+                ActiveChunks::new(config, octree, new_lod0_center),
+                "Failed on edge: {:?} --> {:?}",
+                p1,
+                p2
+            );
+        }
+    }
+
+    /// This just stores the state of active chunks so that we can compare a known correct "active set" with one that has been
+    /// modified via any number of calls to `apply_update`.
+    #[derive(Debug, Eq, PartialEq)]
+    struct ActiveChunks {
+        keys: SmallKeyHashSet<ChunkKey3>,
+    }
+
+    impl ActiveChunks {
+        fn new(config: &ClipMapConfig3, octree: &OctreeSet, lod0_center: ChunkUnits3) -> Self {
+            let mut keys = SmallKeyHashSet::new();
+            active_clipmap_lod_chunks(&config, &octree, lod0_center, |key| {
+                keys.insert(key);
+            });
+
+            Self { keys }
+        }
+
+        fn apply_update(&mut self, update: LodChunkUpdate3) {
+            match update {
+                LodChunkUpdate::Merge(MergeChunks {
+                    old_chunks,
+                    new_chunk,
+                }) => {
+                    for chunk in old_chunks.into_iter() {
+                        self.keys.remove(&chunk);
+                    }
+                    assert!(!self.keys.contains(&new_chunk));
+                    self.keys.insert(new_chunk);
+                }
+                LodChunkUpdate::Split(SplitChunk {
+                    old_chunk,
+                    new_chunks,
+                }) => {
+                    self.keys.remove(&old_chunk);
+                    for chunk in new_chunks.into_iter() {
+                        assert!(!self.keys.contains(&chunk));
+                        self.keys.insert(chunk);
+                    }
+                }
+            }
+        }
     }
 
     const CHUNK_SHAPE: Point3i = PointN([16; 3]);

@@ -310,7 +310,7 @@ impl<N, Chan> FillExtent<N> for Array<N, Chan>
 where
     Self: ForEachMutPtr<N, (), Item = Chan::Ptr>,
     PointN<N>: IntegerPoint<N>,
-    Chan: FillChannels,
+    Chan: ResetChannels,
     Chan::Data: Clone,
 {
     type Item = Chan::Data;
@@ -329,7 +329,7 @@ where
 
 impl<N, Chan> Array<N, Chan>
 where
-    Chan: FillChannels,
+    Chan: ResetChannels,
 {
     /// Set all points to the same value.
     #[inline]
@@ -742,7 +742,7 @@ impl<N, Chan, Ch> WriteExtent<N, ChunkCopySrc<N, Chan::Data, Ch>> for Array<N, C
 where
     Self: ForEachMutPtr<N, (), Item = Chan::Ptr> + WriteExtent<N, ArrayCopySrc<Ch>>,
     PointN<N>: IntegerPoint<N>,
-    Chan: FillChannels,
+    Chan: ResetChannels,
     Chan::Data: Clone,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: ChunkCopySrc<N, Chan::Data, Ch>) {

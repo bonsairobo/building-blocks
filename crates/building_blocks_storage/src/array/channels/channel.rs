@@ -1,6 +1,6 @@
 use crate::{
     AsRawBytes, BorrowChannels, BorrowChannelsMut, Channels, CopySlices, FillChannels, GetMut,
-    GetMutPtr, GetRef, Slices, SlicesMut, UninitChannels,
+    GetMutPtr, GetRef, ResetChannels, Slices, SlicesMut, UninitChannels,
 };
 
 use core::mem::MaybeUninit;
@@ -141,7 +141,13 @@ where
     fn fill(value: Self::Data, length: usize) -> Self {
         Self::fill(value, length)
     }
+}
 
+impl<T, Store> ResetChannels for Channel<T, Store>
+where
+    T: Clone,
+    Store: DerefMut<Target = [T]>,
+{
     fn reset_values(&mut self, value: Self::Data) {
         self.reset_values(value)
     }

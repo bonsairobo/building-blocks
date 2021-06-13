@@ -49,9 +49,12 @@ pub trait BorrowChannelsMut<'a> {
     fn borrow_mut(&'a mut self) -> Self::Borrowed;
 }
 
+pub trait ResetChannels: Channels {
+    fn reset_values(&mut self, value: Self::Data);
+}
+
 pub trait FillChannels: Channels {
     fn fill(value: Self::Data, length: usize) -> Self;
-    fn reset_values(&mut self, value: Self::Data);
 }
 
 pub trait UninitChannels: Channels {

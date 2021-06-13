@@ -1,6 +1,6 @@
 use crate::{
     BorrowChannels, BorrowChannelsMut, Channel, Channels, Compressed, Compression, CopySlices,
-    FastChannelsCompression, FillChannels, Slices, SlicesMut, UninitChannels,
+    FastChannelsCompression, FillChannels, ResetChannels, Slices, SlicesMut, UninitChannels,
 };
 
 macro_rules! impl_channels_for_tuple {
@@ -90,7 +90,12 @@ macro_rules! impl_channels_for_tuple {
 
                 ($($t::fill($var1, length),)+)
             }
+        }
 
+        impl<$($t),+> ResetChannels for ($($t,)+)
+        where
+            $($t: ResetChannels),+
+        {
             fn reset_values(&mut self, value: Self::Data) {
                 let ($($var1,)+) = self;
                 let ($($var2,)+) = value;

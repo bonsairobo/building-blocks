@@ -51,6 +51,8 @@
 //! });
 //! ```
 //!
+//! ## Manual Node Traversal
+//!
 //! The other form of traversal is "node-based," which is slightly less efficient and more manual but also more flexible. See
 //! the `OctreeSet::root_node`, `OctreeSet::child_node`, and `OctreeNode` documentation for details.
 

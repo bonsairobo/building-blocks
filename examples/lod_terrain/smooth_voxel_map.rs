@@ -45,10 +45,10 @@ impl VoxelMap for SmoothVoxelMap {
             chunks.write_chunk(ChunkKey::new(0, chunk_min), noise);
         }
 
-        let index = OctreeChunkIndex::index_chunk_map(SUPERCHUNK_SHAPE, &chunks);
+        let index = OctreeChunkIndex::index_chunk_map(SUPERCHUNK_SHAPE, NUM_LODS, &chunks);
 
         let world_extent = Self::world_chunks_extent() * CHUNK_SHAPE;
-        chunks.downsample_chunks_with_index(NUM_LODS, &index, &PointDownsampler, &world_extent);
+        chunks.downsample_chunks_with_index(&index, &PointDownsampler, &world_extent);
 
         Self { chunks, index }
     }

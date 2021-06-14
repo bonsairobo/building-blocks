@@ -95,7 +95,6 @@ where
     /// Destination chunks up to `num_lods` will be considered.
     pub fn downsample_chunks_with_index<Samp>(
         &mut self,
-        num_lods: u8,
         index: &OctreeChunkIndex,
         sampler: &Samp,
         extent: &Extent3i,
@@ -108,36 +107,33 @@ where
         let chunk_space_extent =
             Extent3i::from_min_and_shape(extent.minimum >> chunk_log2, extent.shape >> chunk_log2);
 
-        index
-            .superchunk_octrees
-            .visit_octrees(extent, &mut |octree| {
-                // Post-order is important to make sure we start downsampling at LOD 0.
-                octree.visit_all_octants_for_extent_in_postorder(
-                    &chunk_space_extent,
-                    &mut |node: &OctreeNode| {
-                        let src_lod = node.octant().power();
-                        let dst_lod = src_lod + 1;
-                        if dst_lod < num_lods {
-                            let src_chunk_min =
-                                (node.octant().minimum() << chunk_log2) >> src_lod as i32;
-                            self.downsample_chunk(
-                                sampler,
-                                ChunkKey::new(src_lod, src_chunk_min),
-                                dst_lod,
-                            );
-                        }
+        index.visit_octrees(extent, &mut |octree| {
+            // Post-order is important to make sure we start downsampling at LOD 0.
+            octree.visit_all_octants_for_extent_in_postorder(
+                &chunk_space_extent,
+                &mut |node: &OctreeNode| {
+                    let src_lod = node.octant().power();
+                    let dst_lod = src_lod + 1;
+                    if dst_lod < index.num_lods() {
+                        let src_chunk_min =
+                            (node.octant().minimum() << chunk_log2) >> src_lod as i32;
+                        self.downsample_chunk(
+                            sampler,
+                            ChunkKey::new(src_lod, src_chunk_min),
+                            dst_lod,
+                        );
+                    }
 
-                        VisitStatus::Continue
-                    },
-                );
-            });
+                    VisitStatus::Continue
+                },
+            );
+        });
     }
 
     /// Same as `downsample_chunks_with_index`, but allows passing in a closure that fetches LOD0 chunks. This is mostly a
     /// workaround so we can downsample multichannel chunks from LOD0.
     pub fn downsample_chunks_with_lod0_and_index<Samp, Lod0Ch, Lod0ChBorrow>(
         &mut self,
-        num_lods: u8,
         get_lod0_chunk: impl Fn(Point3i) -> Option<Lod0Ch>,
         index: &OctreeChunkIndex,
         sampler: &Samp,
@@ -153,40 +149,38 @@ where
         let chunk_space_extent =
             Extent3i::from_min_and_shape(extent.minimum >> chunk_log2, extent.shape >> chunk_log2);
 
-        index
-            .superchunk_octrees
-            .visit_octrees(extent, &mut |octree| {
-                // Post-order is important to make sure we start downsampling at LOD 0.
-                octree.visit_all_octants_for_extent_in_postorder(
-                    &chunk_space_extent,
-                    &mut |node: &OctreeNode| {
-                        let src_lod = node.octant().power();
-                        let dst_lod = src_lod + 1;
-                        if dst_lod < num_lods {
-                            let src_chunk_min =
-                                (node.octant().minimum() << chunk_log2) >> src_lod as i32;
-                            let src_chunk_key = ChunkKey::new(src_lod, src_chunk_min);
+        index.visit_octrees(extent, &mut |octree| {
+            // Post-order is important to make sure we start downsampling at LOD 0.
+            octree.visit_all_octants_for_extent_in_postorder(
+                &chunk_space_extent,
+                &mut |node: &OctreeNode| {
+                    let src_lod = node.octant().power();
+                    let dst_lod = src_lod + 1;
+                    if dst_lod < index.num_lods() {
+                        let src_chunk_min =
+                            (node.octant().minimum() << chunk_log2) >> src_lod as i32;
+                        let src_chunk_key = ChunkKey::new(src_lod, src_chunk_min);
 
-                            if src_lod == 0 {
-                                if let Some(src_chunk) = get_lod0_chunk(src_chunk_min) {
-                                    self.downsample_external_chunk(
-                                        sampler,
-                                        src_chunk_key,
-                                        src_chunk.borrow(),
-                                        dst_lod,
-                                    );
-                                } else {
-                                    self.downsample_ambient_chunk(src_chunk_key, dst_lod);
-                                }
+                        if src_lod == 0 {
+                            if let Some(src_chunk) = get_lod0_chunk(src_chunk_min) {
+                                self.downsample_external_chunk(
+                                    sampler,
+                                    src_chunk_key,
+                                    src_chunk.borrow(),
+                                    dst_lod,
+                                );
                             } else {
-                                self.downsample_chunk(sampler, src_chunk_key, dst_lod);
+                                self.downsample_ambient_chunk(src_chunk_key, dst_lod);
                             }
+                        } else {
+                            self.downsample_chunk(sampler, src_chunk_key, dst_lod);
                         }
+                    }
 
-                        VisitStatus::Continue
-                    },
-                );
-            });
+                    VisitStatus::Continue
+                },
+            );
+        });
     }
 }
 
@@ -319,7 +313,7 @@ mod tests {
         let lodn_builder = ChunkMapBuilder3x1::new(chunk_shape, Sd8::ONE);
         let mut lodn = lodn_builder.build_with_hash_map_storage();
 
-        let index = OctreeChunkIndex::index_chunk_map(superchunk_shape, &lod0);
+        let index = OctreeChunkIndex::index_chunk_map(superchunk_shape, num_lods, &lod0);
 
         // Since we're downsampling multichannel chunks, we need to project them onto the one channel that we're downsampling.
         let get_lod0_chunk = |p| {
@@ -328,7 +322,6 @@ mod tests {
         };
 
         lodn.downsample_chunks_with_lod0_and_index(
-            num_lods,
             get_lod0_chunk,
             &index,
             &SdfMeanDownsampler,

@@ -1,4 +1,4 @@
-use crate::{ChunkKey, ChunkKey3, ChunkUnits3, Octant, OctreeNode, OctreeSet, VisitStatus};
+use crate::{ChunkKey, ChunkKey3, ChunkUnits, Octant, OctreeNode, OctreeSet, VisitStatus};
 
 use building_blocks_core::prelude::*;
 
@@ -39,7 +39,7 @@ impl ClipMapConfig3 {
 pub fn active_clipmap_lod_chunks(
     config: &ClipMapConfig3,
     octree: &OctreeSet,
-    lod0_center: ChunkUnits3,
+    lod0_center: ChunkUnits<Point3i>,
     mut active_rx: impl FnMut(ChunkKey3),
 ) {
     let chunk_log2 = config.chunk_edge_length_log2();
@@ -110,8 +110,8 @@ impl ClipMapUpdate3 {
     /// `new_lod0_center`.
     pub fn new(
         config: &ClipMapConfig3,
-        old_lod0_center: ChunkUnits3,
-        new_lod0_center: ChunkUnits3,
+        old_lod0_center: ChunkUnits<Point3i>,
+        new_lod0_center: ChunkUnits<Point3i>,
     ) -> Self {
         Self {
             chunk_log2: config.chunk_shape.x().trailing_zeros() as i32,
@@ -390,7 +390,11 @@ mod test {
     }
 
     impl ActiveChunks {
-        fn new(config: &ClipMapConfig3, octree: &OctreeSet, lod0_center: ChunkUnits3) -> Self {
+        fn new(
+            config: &ClipMapConfig3,
+            octree: &OctreeSet,
+            lod0_center: ChunkUnits<Point3i>,
+        ) -> Self {
             let mut keys = SmallKeyHashSet::new();
             active_clipmap_lod_chunks(&config, &octree, lod0_center, |key| {
                 keys.insert(key);

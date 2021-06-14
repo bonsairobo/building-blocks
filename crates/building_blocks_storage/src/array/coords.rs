@@ -119,14 +119,11 @@ impl SubAssign for Stride {
     }
 }
 
-/// A newtype wrapper for `PointN` where each point represents exactly one chunk.
+/// A newtype wrapper for `PointN` or `ExtentN` where each point represents exactly one chunk.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ChunkUnits<N>(pub PointN<N>);
+pub struct ChunkUnits<T>(pub T);
 
-pub type ChunkUnits2 = ChunkUnits<[i32; 2]>;
-pub type ChunkUnits3 = ChunkUnits<[i32; 3]>;
-
-impl<N> ChunkUnits<N>
+impl<N> ChunkUnits<PointN<N>>
 where
     PointN<N>: IntegerPoint<N>,
 {

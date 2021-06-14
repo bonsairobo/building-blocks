@@ -3,19 +3,16 @@ use crate::{
     voxel_map::VoxelMap,
 };
 
-use building_blocks::{
-    core::prelude::*,
-    storage::{ChunkUnits, ChunkUnits3},
-};
+use building_blocks::{core::prelude::*, storage::ChunkUnits};
 
 use bevy_utilities::bevy::{prelude::*, render::camera::Camera};
 
 pub struct LodState {
-    old_lod0_center: ChunkUnits3,
+    old_lod0_center: ChunkUnits<Point3i>,
 }
 
 impl LodState {
-    pub fn new(lod0_center: ChunkUnits3) -> Self {
+    pub fn new(lod0_center: ChunkUnits<Point3i>) -> Self {
         Self {
             old_lod0_center: lod0_center,
         }

@@ -24,11 +24,12 @@
 //!
 //! // Now we index the currently populated set of chunks.
 //! let superchunk_shape = Point3i::fill(512);
-//! let mut index = OctreeChunkIndex::index_chunk_map(superchunk_shape, &map);
+//! let num_lods = 5; // Up to 6 supported for now.
+//! let mut index = OctreeChunkIndex::index_chunk_map(superchunk_shape, num_lods, &map);
 //!
 //! // Just make sure everything's here. A unit test to help you understand this structure.
 //! let mut chunk_keys = HashSet::new();
-//! index.superchunk_octrees.visit_octrees(
+//! index.visit_octrees(
 //!     &extent,
 //!     &mut |octree: &OctreeSet| {
 //!         octree.visit_all_octants_in_preorder(&mut |node: &OctreeNode| {
@@ -46,12 +47,11 @@
 //! // Now let's downsample those chunks into every LOD of the map. This goes bottom-up in post-order. The
 //! // `PointDownsampler` simply takes one point for each 2x2x2 region being sampled. There is also an `SdfMeanDownsampler` that
 //! // works on any voxels types that implement `SignedDistance`. Or you can define your own downsampler!
-//! let num_lods = 5; // Up to 6 supported for now.
-//! map.downsample_chunks_with_index(num_lods, &index, &PointDownsampler, &extent);
+//! map.downsample_chunks_with_index(&index, &PointDownsampler, &extent);
 //! ```
 
 use crate::{
-    active_clipmap_lod_chunks, Array3x1, ChunkKey3, ChunkMap3, ChunkUnits3, ChunkedOctreeSet,
+    active_clipmap_lod_chunks, Array3x1, ChunkKey3, ChunkMap3, ChunkUnits, ChunkedOctreeSet,
     ClipMapConfig3, ClipMapUpdate3, GetMut, IterChunkKeys, LodChunkUpdate3, OctreeSet,
     SmallKeyHashMap,
 };
@@ -63,10 +63,11 @@ use serde::{Deserialize, Serialize};
 /// A `ChunkedOctreeSet` that indexes the chunks of a `ChunkMap`. Useful for representing a clipmap.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct OctreeChunkIndex {
-    /// An unbounded set of chunk keys, but scaled down to be contiguous. For example, if the chunk shape is `16^3`, then the
-    /// chunk key `[16, 32, -64]` is represented as point `[1, 2, -4]` in this set.
-    pub superchunk_octrees: ChunkedOctreeSet,
+    /// An unbounded set of chunk keys, but scaled down to be contiguous, i.e. it operates in `ChunkUnits`.
+    superchunk_octrees: ChunkedOctreeSet,
     chunk_shape: Point3i,
+    /// Independent from the superchunk_shape, although it may not be larger than self.max_lods().
+    num_lods: u8,
 }
 
 impl OctreeChunkIndex {
@@ -82,9 +83,29 @@ impl OctreeChunkIndex {
         self.superchunk_octrees.indexer.chunk_shape()
     }
 
+    #[inline]
+    pub fn num_lods(&self) -> u8 {
+        self.num_lods
+    }
+
+    #[inline]
+    pub fn max_lods(&self) -> u8 {
+        // Calculations assume the chunk shape is a cube.
+        let superchunk_log2 = self
+            .superchunk_octrees
+            .indexer
+            .chunk_shape()
+            .x()
+            .trailing_zeros() as u8;
+        let chunk_log2 = self.chunk_shape().x().trailing_zeros() as u8;
+
+        superchunk_log2 - chunk_log2 + 1
+    }
+
     /// Same as `index_lod0_chunks`, but using the chunk keys and chunk shape from `chunk_map`.
     pub fn index_chunk_map<T, Ch, Store>(
         superchunk_shape: Point3i,
+        num_lods: u8,
         chunk_map: &ChunkMap3<T, Ch, Store>,
     ) -> Self
     where
@@ -95,6 +116,7 @@ impl OctreeChunkIndex {
         Self::index_lod0_chunks(
             superchunk_shape,
             chunk_shape,
+            num_lods,
             chunk_map.storage().chunk_keys().filter(|k| k.lod == 0),
         )
     }
@@ -108,6 +130,7 @@ impl OctreeChunkIndex {
     pub fn index_lod0_chunks<'a>(
         superchunk_shape: Point3i,
         chunk_shape: Point3i,
+        num_lods: u8,
         chunk_keys: impl Iterator<Item = &'a ChunkKey3>,
     ) -> Self {
         assert!(superchunk_shape.dimensions_are_powers_of_2());
@@ -156,27 +179,21 @@ impl OctreeChunkIndex {
             superchunk_octrees.insert(lod_chunk_key, octree);
         }
 
-        Self {
+        let index = Self {
             superchunk_octrees: ChunkedOctreeSet::new(superchunk_shape, superchunk_octrees),
             chunk_shape,
-        }
+            num_lods,
+        };
+        assert!(index.num_lods <= index.max_lods());
+
+        index
     }
 
     pub fn clipmap_config(&self, clip_box_radius: u16) -> ClipMapConfig3 {
         assert!(self.superchunk_octrees.indexer.chunk_shape().is_cube());
         assert!(self.chunk_shape().is_cube());
 
-        // Calculations assume the chunk shape is a cube.
-        let superchunk_log2 = self
-            .superchunk_octrees
-            .indexer
-            .chunk_shape()
-            .x()
-            .trailing_zeros() as u8;
-        let chunk_log2 = self.chunk_shape().x().trailing_zeros() as u8;
-        let num_lods = superchunk_log2 - chunk_log2 + 1;
-
-        ClipMapConfig3::new(num_lods, clip_box_radius, self.chunk_shape())
+        ClipMapConfig3::new(self.num_lods, clip_box_radius, self.chunk_shape())
     }
 
     /// Traverses all octree nodes overlapping `extent` to find the `ChunkKey3`s that are "active" when the clipmap is
@@ -185,7 +202,7 @@ impl OctreeChunkIndex {
         &self,
         extent: &Extent3i,
         clip_box_radius: u16,
-        lod0_center: ChunkUnits3,
+        lod0_center: ChunkUnits<Point3i>,
         mut init_rx: impl FnMut(ChunkKey3),
     ) {
         let config = self.clipmap_config(clip_box_radius);
@@ -199,8 +216,8 @@ impl OctreeChunkIndex {
         &self,
         extent: &Extent3i,
         clip_box_radius: u16,
-        old_lod0_center: ChunkUnits3,
-        new_lod0_center: ChunkUnits3,
+        old_lod0_center: ChunkUnits<Point3i>,
+        new_lod0_center: ChunkUnits<Point3i>,
         mut update_rx: impl FnMut(LodChunkUpdate3),
     ) {
         let update = ClipMapUpdate3::new(
@@ -212,5 +229,18 @@ impl OctreeChunkIndex {
             .visit_octrees(extent, &mut |octree| {
                 update.find_chunk_updates(octree, &mut update_rx)
             });
+    }
+
+    pub fn add_extent(&mut self, extent: ChunkUnits<Extent3i>) {
+        self.superchunk_octrees.add_extent(&extent.0)
+    }
+
+    pub fn subtract_extent(&mut self, extent: ChunkUnits<Extent3i>) {
+        self.superchunk_octrees.subtract_extent(&extent.0)
+    }
+
+    /// Visit all superchunk octrees that overlap `extent`.
+    pub fn visit_octrees(&self, extent: &Extent3i, visitor: &mut impl FnMut(&OctreeSet)) {
+        self.superchunk_octrees.visit_octrees(extent, visitor)
     }
 }

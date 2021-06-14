@@ -74,17 +74,13 @@ fn sdf_mean_downsample_chunk_map(c: &mut Criterion) {
                                 * chunk_shape;
                         map.fill_extent(0, &map_extent, Sd8::NEG_ONE);
 
-                        let index = OctreeChunkIndex::index_chunk_map(superchunk_shape, &map);
+                        let index =
+                            OctreeChunkIndex::index_chunk_map(superchunk_shape, num_lods, &map);
 
                         (map, index, map_extent)
                     },
                     |(mut map, index, map_extent)| {
-                        map.downsample_chunks_with_index(
-                            num_lods,
-                            &index,
-                            &SdfMeanDownsampler,
-                            &map_extent,
-                        )
+                        map.downsample_chunks_with_index(&index, &SdfMeanDownsampler, &map_extent)
                     },
                 );
             },

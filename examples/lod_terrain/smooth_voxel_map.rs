@@ -9,7 +9,7 @@ use building_blocks::{
 
 const CHUNK_LOG2: i32 = 4;
 const CHUNK_SHAPE: Point3i = PointN([1 << CHUNK_LOG2; 3]);
-const NUM_LODS: u8 = 6;
+const NUM_LODS: u8 = 4;
 const SUPERCHUNK_SHAPE: Point3i = PointN([1 << (CHUNK_LOG2 + NUM_LODS as i32 - 1); 3]);
 const CLIP_BOX_RADIUS: u16 = 12;
 

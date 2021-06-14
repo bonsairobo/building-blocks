@@ -1,6 +1,6 @@
 [package]
 name = "building-blocks-examples"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2018"
 authors = ["Duncan <bonsairobo@gmail.com>"]
 description = "Examples for the building-blocks crate."

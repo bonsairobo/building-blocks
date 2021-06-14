@@ -15,21 +15,32 @@ use building_blocks::{core::prelude::*, storage::ChunkUnits};
 use bevy_utilities::{
     bevy::{
         prelude::*,
+        render::camera::PerspectiveProjection,
         // render::wireframe::{WireframeConfig, WireframePlugin},
         tasks::ComputeTaskPool,
         // wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
     },
     smooth_cameras::{controllers::fps::*, LookTransformPlugin},
 };
+use structopt::StructOpt;
+
+#[derive(Debug, StructOpt)]
+enum Options {
+    Blocky,
+    Smooth,
+}
 
 fn main() {
-    // Choose which kind of voxel map to use.
-
-    // use blocky_voxel_map::BlockyVoxelMap;
-    // run_example::<BlockyVoxelMap>()
-
-    use smooth_voxel_map::SmoothVoxelMap;
-    run_example::<SmoothVoxelMap>()
+    match Options::from_args() {
+        Options::Blocky => {
+            use blocky_voxel_map::BlockyVoxelMap;
+            run_example::<BlockyVoxelMap>()
+        }
+        Options::Smooth => {
+            use smooth_voxel_map::SmoothVoxelMap;
+            run_example::<SmoothVoxelMap>()
+        }
+    }
 }
 
 fn run_example<Map: VoxelMap>() {
@@ -94,7 +105,13 @@ fn setup<Map: VoxelMap>(
     // Lights, camera, action!
     commands.spawn_bundle(FpsCameraBundle::new(
         FpsCameraController::default(),
-        PerspectiveCameraBundle::new_3d(),
+        PerspectiveCameraBundle {
+            perspective_projection: PerspectiveProjection {
+                far: 10000.0,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
         Vec3::splat(100.0),
         Vec3::splat(0.0),
     ));

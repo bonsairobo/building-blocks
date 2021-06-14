@@ -54,8 +54,10 @@ A larger scale example of terrain generated with 3D fractional brownian motion
 ([SIMDnoise](https://docs.rs/simdnoise/3.1.6/simdnoise/) crate). The further chunks are from the camera, the more they get
 downsampled. Chunk meshes are dynamically generated as the camera moves.
 
+You can run with either a blocky map or a smooth map.
 ```sh
-cargo run --example lod_terrain
+cargo run --example lod_terrain blocky
+cargo run --example lod_terrain smooth
 ```
 
 ![LOD Terrain](/examples/screenshots/lod_terrain.png)

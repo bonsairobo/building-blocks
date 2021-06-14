@@ -12,6 +12,8 @@ release = { lto = "thin" }
 bench = { lto = "thin" }
 
 [dev-dependencies]
+structopt = "0.3"
+
 bevy_utilities = { path = "bevy_utilities" }
 building-blocks = { path = "..", features = ["glam", "mesh", "sdfu"] }
 utilities = { path = "../crates/utilities", features = ["simdnoise"]}

@@ -104,8 +104,7 @@ where
         let chunk_shape = self.chunk_shape();
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
 
-        let chunk_space_extent =
-            Extent3i::from_min_and_shape(extent.minimum >> chunk_log2, extent.shape >> chunk_log2);
+        let chunk_space_extent = *extent >> chunk_log2;
 
         index.visit_octrees(extent, &mut |octree| {
             // Post-order is important to make sure we start downsampling at LOD 0.
@@ -146,8 +145,7 @@ where
         let chunk_shape = self.chunk_shape();
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
 
-        let chunk_space_extent =
-            Extent3i::from_min_and_shape(extent.minimum >> chunk_log2, extent.shape >> chunk_log2);
+        let chunk_space_extent = *extent >> chunk_log2;
 
         index.visit_octrees(extent, &mut |octree| {
             // Post-order is important to make sure we start downsampling at LOD 0.

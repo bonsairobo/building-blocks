@@ -1,6 +1,6 @@
 use crate::{point::point_traits::*, PointN};
 
-use core::ops::{Add, AddAssign, Mul, Sub, SubAssign};
+use core::ops::{Add, AddAssign, Mul, Shl, Shr, Sub, SubAssign};
 use num::Zero;
 use serde::{Deserialize, Serialize};
 
@@ -192,14 +192,14 @@ where
     }
 }
 
-impl<T> Add<PointN<T>> for ExtentN<T>
+impl<N> Add<PointN<N>> for ExtentN<N>
 where
-    PointN<T>: Add<Output = PointN<T>>,
+    PointN<N>: Add<Output = PointN<N>>,
 {
     type Output = Self;
 
     #[inline]
-    fn add(self, rhs: PointN<T>) -> Self::Output {
+    fn add(self, rhs: PointN<N>) -> Self::Output {
         ExtentN {
             minimum: self.minimum + rhs,
             shape: self.shape,
@@ -207,14 +207,14 @@ where
     }
 }
 
-impl<T> Sub<PointN<T>> for ExtentN<T>
+impl<N> Sub<PointN<N>> for ExtentN<N>
 where
-    PointN<T>: Sub<Output = PointN<T>>,
+    PointN<N>: Sub<Output = PointN<N>>,
 {
     type Output = Self;
 
     #[inline]
-    fn sub(self, rhs: PointN<T>) -> Self::Output {
+    fn sub(self, rhs: PointN<N>) -> Self::Output {
         ExtentN {
             minimum: self.minimum - rhs,
             shape: self.shape,
@@ -222,14 +222,14 @@ where
     }
 }
 
-impl<T> Mul<PointN<T>> for ExtentN<T>
+impl<N> Mul<PointN<N>> for ExtentN<N>
 where
-    PointN<T>: Copy + Mul<Output = PointN<T>>,
+    PointN<N>: Copy + Mul<Output = PointN<N>>,
 {
     type Output = Self;
 
     #[inline]
-    fn mul(self, rhs: PointN<T>) -> Self::Output {
+    fn mul(self, rhs: PointN<N>) -> Self::Output {
         ExtentN {
             minimum: self.minimum * rhs,
             shape: self.shape * rhs,
@@ -237,22 +237,78 @@ where
     }
 }
 
-impl<T> AddAssign<PointN<T>> for ExtentN<T>
+impl<N> Shl<PointN<N>> for ExtentN<N>
 where
-    Self: Copy + Add<PointN<T>, Output = ExtentN<T>>,
+    PointN<N>: Copy + Shl<Output = PointN<N>>,
+{
+    type Output = Self;
+
+    #[inline]
+    fn shl(self, rhs: PointN<N>) -> Self::Output {
+        ExtentN {
+            minimum: self.minimum << rhs,
+            shape: self.shape << rhs,
+        }
+    }
+}
+
+impl<N> Shr<PointN<N>> for ExtentN<N>
+where
+    PointN<N>: Copy + Shr<Output = PointN<N>>,
+{
+    type Output = Self;
+
+    #[inline]
+    fn shr(self, rhs: PointN<N>) -> Self::Output {
+        ExtentN {
+            minimum: self.minimum >> rhs,
+            shape: self.shape >> rhs,
+        }
+    }
+}
+
+impl<N> Shl<i32> for ExtentN<N>
+where
+    Self: Shl<PointN<N>, Output = Self>,
+    PointN<N>: Point<Scalar = i32>,
+{
+    type Output = Self;
+
+    #[inline]
+    fn shl(self, rhs: i32) -> Self::Output {
+        self << PointN::fill(rhs)
+    }
+}
+
+impl<N> Shr<i32> for ExtentN<N>
+where
+    Self: Shr<PointN<N>, Output = Self>,
+    PointN<N>: Point<Scalar = i32>,
+{
+    type Output = Self;
+
+    #[inline]
+    fn shr(self, rhs: i32) -> Self::Output {
+        self >> PointN::fill(rhs)
+    }
+}
+
+impl<N> AddAssign<PointN<N>> for ExtentN<N>
+where
+    Self: Copy + Add<PointN<N>, Output = ExtentN<N>>,
 {
     #[inline]
-    fn add_assign(&mut self, rhs: PointN<T>) {
+    fn add_assign(&mut self, rhs: PointN<N>) {
         *self = *self + rhs;
     }
 }
 
-impl<T> SubAssign<PointN<T>> for ExtentN<T>
+impl<N> SubAssign<PointN<N>> for ExtentN<N>
 where
-    Self: Copy + Sub<PointN<T>, Output = ExtentN<T>>,
+    Self: Copy + Sub<PointN<N>, Output = ExtentN<N>>,
 {
     #[inline]
-    fn sub_assign(&mut self, rhs: PointN<T>) {
+    fn sub_assign(&mut self, rhs: PointN<N>) {
         *self = *self - rhs;
     }
 }

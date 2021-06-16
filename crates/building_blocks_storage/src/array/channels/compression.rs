@@ -1,6 +1,6 @@
 use crate::{BytesCompression, Channel, Compressed, Compression, FromBytesCompression};
 
-use zerocopy::AsBytes;
+use bytemuck::{cast_slice, Pod};
 
 /// Compresses a tuple of `Channel`s into a tuple of `FastCompressedChannel`s.
 pub struct FastChannelsCompression<By, Chan> {
@@ -58,7 +58,7 @@ impl<T> FastCompressedChannel<T> {
 impl<By, T> Compression for FastChannelsCompression<By, Channel<T>>
 where
     By: BytesCompression,
-    [T]: AsBytes,
+    T: Pod,
 {
     type Data = Channel<T>;
     type CompressedData = FastCompressedChannel<T>;
@@ -70,7 +70,7 @@ where
     fn compress(&self, data: &Self::Data) -> Compressed<Self> {
         let mut compressed_bytes = Vec::new();
         self.bytes_compression
-            .compress_bytes(data.store().as_bytes(), &mut compressed_bytes);
+            .compress_bytes(cast_slice(data.store().as_slice()), &mut compressed_bytes);
 
         Compressed::new(FastCompressedChannel {
             compressed_bytes,

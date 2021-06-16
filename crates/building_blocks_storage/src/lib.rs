@@ -32,7 +32,6 @@ pub mod compression;
 pub mod func;
 pub mod multi_ptr;
 pub mod octree;
-pub mod raw_bytes;
 pub mod signed_distance;
 pub mod transform_map;
 
@@ -44,7 +43,6 @@ pub use compression::*;
 pub use func::*;
 pub use multi_ptr::*;
 pub use octree::*;
-pub use raw_bytes::*;
 pub use signed_distance::*;
 pub use transform_map::*;
 

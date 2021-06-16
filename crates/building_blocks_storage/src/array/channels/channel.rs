@@ -1,6 +1,6 @@
 use crate::{
-    AsRawBytes, BorrowChannels, BorrowChannelsMut, Channels, CopySlices, FillChannels, GetMut,
-    GetMutPtr, GetRef, ResetChannels, Slices, SlicesMut, UninitChannels,
+    BorrowChannels, BorrowChannelsMut, Channels, CopySlices, FillChannels, GetMut, GetMutPtr,
+    GetRef, ResetChannels, Slices, SlicesMut, UninitChannels,
 };
 
 use core::mem::MaybeUninit;
@@ -57,18 +57,6 @@ where
         T: Clone,
     {
         self.store.fill(value);
-    }
-}
-
-impl<'a, T, Store> AsRawBytes<'a> for Channel<T, Store>
-where
-    T: 'static + Copy,
-    Store: Deref<Target = [T]>,
-{
-    type Output = &'a [u8];
-
-    fn as_raw_bytes(&'a self) -> Self::Output {
-        self.store().as_raw_bytes()
     }
 }
 

@@ -56,8 +56,3 @@ building_blocks_search = { path = "crates/building_blocks_search", version = "0.
 
 [dev-dependencies]
 utilities = { path = "crates/utilities" }
-
-[[bin]]
-name = "measure_compression_rate"
-path = "src/bin/measure_compression_rate.rs"
-required-features = ["dot_vox", "lz4", "snappy"]

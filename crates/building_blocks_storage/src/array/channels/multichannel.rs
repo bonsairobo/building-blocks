@@ -207,7 +207,7 @@ mod test {
     fn multichannel_compression() {
         use crate::Lz4;
 
-        let channels = (Channel::fill(0, 10), Channel::fill('a', 10));
+        let channels = (Channel::fill(0, 10), Channel::fill(b'a', 10));
 
         let compression = FastChannelsCompression2::from_bytes_compression(Lz4 { level: 10 });
 

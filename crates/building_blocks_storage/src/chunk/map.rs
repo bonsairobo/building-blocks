@@ -674,31 +674,31 @@ mod tests {
     fn multichannel_compressed_accessors() {
         use crate::{FastCompressibleChunkStorageNx2, LocalChunkCache, Lz4};
 
-        let builder = ChunkMapBuilder3x2::new(CHUNK_SHAPE, (0, 'a'));
+        let builder = ChunkMapBuilder3x2::new(CHUNK_SHAPE, (0, b'a'));
         let mut map = builder.build_with_write_storage(
             FastCompressibleChunkStorageNx2::with_bytes_compression(Lz4 { level: 10 }),
         );
 
         let mut lod0 = map.lod_view_mut(0);
 
-        assert_eq!(lod0.get_mut(Point3i::fill(1)), (&mut 0, &mut 'a'));
+        assert_eq!(lod0.get_mut(Point3i::fill(1)), (&mut 0, &mut b'a'));
 
         let extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(80));
 
         lod0.for_each_mut(&extent, |_p, (num, letter)| {
             *num = 1;
-            *letter = 'b';
+            *letter = b'b';
         });
 
         let local_cache = LocalChunkCache::new();
         let reader = map.reader(&local_cache);
         let lod0 = reader.lod_view(0);
-        assert_eq!(lod0.get(Point3i::fill(1)), (0, 'a'));
-        assert_eq!(lod0.get_ref(Point3i::fill(1)), (&0, &'a'));
+        assert_eq!(lod0.get(Point3i::fill(1)), (0, b'a'));
+        assert_eq!(lod0.get_ref(Point3i::fill(1)), (&0, &b'a'));
 
         lod0.for_each(&extent, |_p, (num, letter)| {
             assert_eq!(num, 1);
-            assert_eq!(letter, 'b');
+            assert_eq!(letter, b'b');
         });
     }
 }

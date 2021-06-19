@@ -18,11 +18,14 @@ pub struct Morton2(pub u64);
 
 impl Morton2 {
     // Only 32 bits can be set in each mask.
-    const X_MASK: u64 = 0b01010101_01010101_01010101_01010101_01010101_01010101_01010101_01010101;
-    const Y_MASK: u64 = 0b10101010_10101010_10101010_10101010_10101010_10101010_10101010_10101010;
+    const X_MASK: u64 =
+        0b0101_0101_0101_0101_0101_0101_0101_0101_0101_0101_0101_0101_0101_0101_0101_0101;
+    const Y_MASK: u64 =
+        0b1010_1010_1010_1010_1010_1010_1010_1010_1010_1010_1010_1010_1010_1010_1010_1010;
 }
 
 impl fmt::Debug for Morton2 {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "{} = {:b}", self.0, self.0)
     }
@@ -59,6 +62,7 @@ impl From<Morton2> for Point2i {
 pub struct Morton3(pub u128);
 
 impl fmt::Debug for Morton3 {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "{} = {:b}", self.0, self.0)
     }
@@ -67,9 +71,12 @@ impl fmt::Debug for Morton3 {
 // bitintr does not support u128, so we need to use two separate u64s and concatenate them.
 impl Morton3 {
     // Only 21 bits can be set in each mask.
-    const X_MASK: u64 = 0b00010010_01001001_00100100_10010010_01001001_00100100_10010010_01001001;
-    const Y_MASK: u64 = 0b00100100_10010010_01001001_00100100_10010010_01001001_00100100_10010010;
-    const Z_MASK: u64 = 0b01001001_00100100_10010010_01001001_00100100_10010010_01001001_00100100;
+    const X_MASK: u64 =
+        0b0001_0010_0100_1001_0010_0100_1001_0010_0100_1001_0010_0100_1001_0010_0100_1001;
+    const Y_MASK: u64 =
+        0b0010_0100_1001_0010_0100_1001_0010_0100_1001_0010_0100_1001_0010_0100_1001_0010;
+    const Z_MASK: u64 =
+        0b0100_1001_0010_0100_1001_0010_0100_1001_0010_0100_1001_0010_0100_1001_0010_0100;
 }
 
 impl From<Point3i> for Morton3 {

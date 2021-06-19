@@ -16,6 +16,7 @@ all-features = true
 default = []
 
 [dependencies]
+bitintr = "0.3"
 itertools = "0.9"
 num = "0.3"
 serde = { version = "1.0", features = ["derive"] }

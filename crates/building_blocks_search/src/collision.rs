@@ -5,7 +5,6 @@ pub use ball::*;
 pub use ray::*;
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::Octant;
 
 use nalgebra as na;
 

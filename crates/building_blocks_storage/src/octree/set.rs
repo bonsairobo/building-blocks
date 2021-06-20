@@ -60,6 +60,7 @@ use crate::{prelude::*, IsEmpty, SmallKeyHashMap};
 
 use building_blocks_core::prelude::*;
 
+use core::ops::Deref;
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 
@@ -219,11 +220,11 @@ impl OctreeSet {
     }
 
     /// The entire octant spanned by the octree.
-    pub fn octant(&self) -> Octant {
-        Octant {
-            minimum: self.extent.minimum,
-            edge_length: self.edge_length(),
-        }
+    pub fn octant(&self) -> OctreeOctant {
+        OctreeOctant(Octant::new_unchecked(
+            self.extent.minimum,
+            self.edge_length(),
+        ))
     }
 
     /// The extent spanned by the octree.
@@ -306,13 +307,15 @@ impl OctreeSet {
     }
 
     fn extent_predicate(extent: &Extent3i, node: &OctreeNode) -> bool {
-        !Extent3i::from(node.octant).intersection(extent).is_empty()
+        !Extent3i::from(node.octant.0)
+            .intersection(extent)
+            .is_empty()
     }
 
     fn _visit_all_octants_in_preorder(
         &self,
         code: LocationCode,
-        octant: Octant,
+        octant: OctreeOctant,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
         self._visit_branches_and_fat_leaves_in_preorder(code, octant, &mut |node: &OctreeNode| {
@@ -327,7 +330,7 @@ impl OctreeSet {
     fn _visit_all_octants_in_postorder(
         &self,
         code: LocationCode,
-        octant: Octant,
+        octant: OctreeOctant,
         predicate: &impl Fn(&OctreeNode) -> bool,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
@@ -380,7 +383,7 @@ impl OctreeSet {
     fn _visit_branches_and_fat_leaves_in_preorder(
         &self,
         code: LocationCode,
-        octant: Octant,
+        octant: OctreeOctant,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
         // Precondition: OctreeNode exists.
@@ -429,13 +432,13 @@ impl OctreeSet {
     fn _visit_branches_and_fat_leaves_in_postorder(
         &self,
         code: LocationCode,
-        octant: Octant,
+        octant: OctreeOctant,
         predicate: &impl Fn(&OctreeNode) -> bool,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
         // Precondition: OctreeNode exists.
 
-        let mut handle_leaf = |octant: Octant| {
+        let mut handle_leaf = |octant: OctreeOctant| {
             let node = OctreeNode::leaf(octant);
 
             if predicate(&node) {
@@ -528,7 +531,7 @@ impl OctreeSet {
 
         let child_octant = parent.octant.child(child_index);
 
-        if child_octant.power() == 0 {
+        if child_octant.is_single_voxel() {
             // The child is a leaf, so we don't need to extend the OctreeNode or look for a child bitmask.
             return Some(OctreeNode {
                 code: LocationCode::LEAF,
@@ -567,22 +570,22 @@ impl OctreeSet {
     fn _add_extent(
         &mut self,
         code: LocationCode,
-        octant: Octant,
+        octant: OctreeOctant,
         already_exists: bool,
         add_extent: &Extent3i,
     ) -> (bool, bool) {
         if octant.is_single_voxel() {
-            let intersects = add_extent.contains(octant.minimum);
+            let intersects = add_extent.contains(octant.minimum());
             return (intersects, intersects || already_exists);
         }
 
-        let octant_extent = Extent3i::from(octant);
+        let octant_extent = Extent3i::from(octant.0);
         let octant_intersection = add_extent.intersection(&octant_extent);
 
         if octant_extent == octant_intersection {
             // The octant is a subset of the extent being added, so we can make it an implicit leaf.
             if already_exists {
-                self.remove_subtree(&code, octant.power());
+                self.remove_subtree(&code, octant.exponent());
             }
             return (true, true);
         }
@@ -619,7 +622,7 @@ impl OctreeSet {
         if child_bitmask != 0 && !all_children_full {
             self.nodes.insert(code, child_bitmask);
         } else if already_had_bitmask && all_children_full {
-            self.remove_subtree(&code, octant.power());
+            self.remove_subtree(&code, octant.exponent());
         }
 
         (true, all_children_full)
@@ -636,21 +639,21 @@ impl OctreeSet {
     fn _subtract_extent(
         &mut self,
         code: LocationCode,
-        octant: Octant,
+        octant: OctreeOctant,
         sub_extent: &Extent3i,
     ) -> bool {
         // Precondition: octant is not already empty.
 
         if octant.is_single_voxel() {
-            return !sub_extent.contains(octant.minimum);
+            return !sub_extent.contains(octant.minimum());
         }
 
-        let octant_extent = Extent3i::from(octant);
+        let octant_extent = Extent3i::from(octant.0);
         let octant_intersection = sub_extent.intersection(&octant_extent);
 
         if octant_extent == octant_intersection {
             // The octant is a subset of the extent being subtracted, so we can remove the entire subtree.
-            self.remove_subtree(&code, octant.power());
+            self.remove_subtree(&code, octant.exponent());
             return false;
         }
 
@@ -735,7 +738,7 @@ impl OctreeSet {
 /// Represents a single non-empty octant in the octree. Can be used for manual traversal by calling `OctreeSet::get_child`.
 #[derive(Clone, Copy, Debug)]
 pub struct OctreeNode {
-    octant: Octant,
+    octant: OctreeOctant,
     code: LocationCode,
     child_bitmask: ChildBitMask,
 }
@@ -819,7 +822,7 @@ impl OctreeNode {
         }
     }
 
-    fn leaf(octant: Octant) -> Self {
+    fn leaf(octant: OctreeOctant) -> Self {
         Self {
             octant,
             code: LocationCode::LEAF,
@@ -827,7 +830,7 @@ impl OctreeNode {
         }
     }
 
-    fn branch(octant: Octant, code: LocationCode, child_bitmask: ChildBitMask) -> Self {
+    fn branch(octant: OctreeOctant, code: LocationCode, child_bitmask: ChildBitMask) -> Self {
         Self {
             octant,
             code,
@@ -881,42 +884,26 @@ impl LocationCode {
 /// A cube-shaped extent which is an octant at some level of an octree. As a leaf node, it represents a totally full set of
 /// points.
 #[derive(Clone, Copy, Debug)]
-pub struct Octant {
-    minimum: Point3i,
-    edge_length: i32,
+pub struct OctreeOctant(pub Octant);
+
+impl Deref for OctreeOctant {
+    type Target = Octant;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
-impl Octant {
-    #[inline]
-    pub fn minimum(&self) -> Point3i {
-        self.minimum
-    }
-
-    #[inline]
-    pub fn edge_length(&self) -> i32 {
-        self.edge_length
-    }
-
-    #[inline]
-    pub fn is_single_voxel(&self) -> bool {
-        self.edge_length == 1
-    }
-
-    #[inline]
-    pub fn power(&self) -> u8 {
-        self.edge_length.trailing_zeros() as u8
-    }
-
+impl OctreeOctant {
     /// Returns the child octant, where `child_index` specifies the child as a number in `[0..7]` of the binary format `0bZYX`.
     #[inline]
     pub fn child(&self, child_index: u8) -> Self {
-        let half_edge_length = self.edge_length >> 1;
+        let half_edge_length = self.edge_length() >> 1;
 
-        Self {
-            minimum: self.minimum
-                + half_edge_length * Point3i::CUBE_CORNER_OFFSETS[child_index as usize],
-            edge_length: half_edge_length,
-        }
+        Self(Octant::new_unchecked(
+            self.minimum() + half_edge_length * Point3i::CUBE_CORNER_OFFSETS[child_index as usize],
+            half_edge_length,
+        ))
     }
 
     /// Visit `self` and all octants descending from `self` (children and children's children). This is a pre-order traversal.
@@ -965,13 +952,6 @@ impl Octant {
         }
 
         visitor.visit_octant(&OctreeNode::leaf(self))
-    }
-}
-
-impl From<Octant> for Extent3i {
-    #[inline]
-    fn from(octant: Octant) -> Self {
-        Extent3i::from_min_and_shape(octant.minimum, Point3i::fill(octant.edge_length))
     }
 }
 

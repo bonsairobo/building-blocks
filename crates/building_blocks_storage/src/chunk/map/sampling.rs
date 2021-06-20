@@ -111,7 +111,7 @@ where
             octree.visit_all_octants_for_extent_in_postorder(
                 &chunk_space_extent,
                 &mut |node: &OctreeNode| {
-                    let src_lod = node.octant().power();
+                    let src_lod = node.octant().exponent();
                     let dst_lod = src_lod + 1;
                     if dst_lod < index.num_lods() {
                         let src_chunk_min =
@@ -152,7 +152,7 @@ where
             octree.visit_all_octants_for_extent_in_postorder(
                 &chunk_space_extent,
                 &mut |node: &OctreeNode| {
-                    let src_lod = node.octant().power();
+                    let src_lod = node.octant().exponent();
                     let dst_lod = src_lod + 1;
                     if dst_lod < index.num_lods() {
                         let src_chunk_min =

@@ -1,4 +1,4 @@
-use crate::{ChunkKey, ChunkKey3, ChunkUnits, Octant, OctreeNode, OctreeSet, VisitStatus};
+use crate::{ChunkKey, ChunkKey3, ChunkUnits, OctreeNode, OctreeSet, VisitStatus};
 
 use building_blocks_core::prelude::*;
 
@@ -49,7 +49,7 @@ pub fn active_clipmap_lod_chunks(
 
     octree.visit_all_octants_in_preorder(&mut |node: &OctreeNode| {
         let octant = node.octant();
-        let lod = octant.power();
+        let lod = octant.exponent();
         if lod >= config.num_lods {
             return VisitStatus::Continue;
         }
@@ -133,7 +133,7 @@ impl ClipMapUpdate3 {
         octree.visit_all_octants_in_preorder(&mut |node: &OctreeNode| {
             let octant = node.octant();
 
-            let lod = octant.power();
+            let lod = octant.exponent();
             if lod >= self.num_lods || lod == 0 {
                 return VisitStatus::Continue;
             }
@@ -208,7 +208,7 @@ fn find_merge_or_split_descendants(
 ) -> Vec<ChunkKey3> {
     let mut matching_chunks = Vec::with_capacity(8);
     node.visit_all_octants_in_preorder(octree, &mut |node: &OctreeNode| {
-        let lod = node.octant().power();
+        let lod = node.octant().exponent();
         let old_offset_from_center = get_offset_from_lod_center(node.octant(), centers);
         if lod == 0 || old_offset_from_center > high_lod_boundary {
             matching_chunks.push(octant_chunk_key(chunk_log2, node.octant()));
@@ -223,7 +223,7 @@ fn find_merge_or_split_descendants(
 }
 
 fn get_offset_from_lod_center(octant: &Octant, centers: &[Point3i]) -> i32 {
-    let lod = octant.power();
+    let lod = octant.exponent();
     let lod_p = octant.minimum() >> lod as i32;
     let lod_center = centers[lod as usize];
 
@@ -246,7 +246,7 @@ fn get_offset_from_lod_center(octant: &Octant, centers: &[Point3i]) -> i32 {
 }
 
 fn octant_chunk_key(chunk_log2: i32, octant: &Octant) -> ChunkKey3 {
-    let lod = octant.power();
+    let lod = octant.exponent();
 
     ChunkKey {
         lod,

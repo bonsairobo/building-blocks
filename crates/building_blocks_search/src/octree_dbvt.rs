@@ -4,9 +4,7 @@
 //! placed into the `OctreeDbvt`.
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{
-    Octant, OctreeNode, OctreeSet, OctreeVisitor, SmallKeyHashMap, VisitStatus,
-};
+use building_blocks_storage::{OctreeNode, OctreeSet, OctreeVisitor, SmallKeyHashMap, VisitStatus};
 
 use core::hash::Hash;
 use ncollide3d::{

@@ -119,7 +119,7 @@
 //!
 //! ```toml
 //! [profile.release]
-//! lto = true
+//! lto = "thin"
 //! ```
 //!
 //! ## Cargo Features

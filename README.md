@@ -121,7 +121,7 @@ of critical algorithms like meshing by up to 2x. Just add this to your Cargo.tom
 
 ```toml
 [profile.release]
-lto = true
+lto = "thin"
 ```
 
 ### Cargo Features

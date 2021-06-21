@@ -12,7 +12,8 @@ use sled::Tree;
 /// This is essentially a B+ tree of compressed chunks (backed by the `sled` crate). The keys are morton codes for the
 /// corresponding chunks coordinates. This ensures that all of the chunks in an orthant are stored in a contiguous key space.
 ///
-/// The DB values are only portable if the `compression` used respects endianness of the current machine.
+/// The DB values are only portable if the `compression` used respects endianness of the current machine. Use
+/// `BincodeCompression` if you absolutely need portability across machines with different endianness.
 pub struct ChunkDb<N, Compr> {
     tree: Tree,
     compression: Compr,

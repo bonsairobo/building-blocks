@@ -130,7 +130,7 @@
 //!
 //! ```toml
 //! [dependencies.building-blocks]
-//! version = "0.6"
+//! version = "0.7"
 //! default-features = false
 //! features = ["foo", "bar"]
 //! ```

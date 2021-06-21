@@ -7,10 +7,10 @@ use futures::future::join_all;
 use itertools::Itertools;
 use sled::Tree;
 
-/// A persistent, transactional database of chunks.
+/// A persistent, transactional, crash-consistent database of chunks.
 ///
-/// This is essentially a B+ tree of compressed chunks (backed by the `sled` crate). The keys are morton codes for the
-/// corresponding chunks coordinates. This ensures that all of the chunks in an orthant are stored in a contiguous key space.
+/// This is essentially a B+ tree of compressed chunks (backed by the `sled` crate). The keys are Morton codes for the
+/// corresponding chunk coordinates. This ensures that all of the chunks in an orthant are stored in a contiguous key space.
 ///
 /// The DB values are only portable if the `compression` used respects endianness of the current machine. Use
 /// `BincodeCompression` if you absolutely need portability across machines with different endianness.
@@ -63,7 +63,7 @@ where
             for (key, compressed_chunk) in
                 join_all(batch_of_chunks.into_iter().map(|(key, chunk)| async move {
                     (
-                        <ChunkKey<N> as DatabaseKey<N>>::into_ord_key(key),
+                        ChunkKey::<N>::into_ord_key(key),
                         self.compression.compress(&chunk),
                     )
                 }))

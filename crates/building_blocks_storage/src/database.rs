@@ -85,18 +85,17 @@ where
         Ok(())
     }
 
-    /// Scans the given orthant for chunks, decompresses them, then returns them. Because chunk keys are stored in Morton order,
-    /// the chunks in any orthant are guaranteed to be contiguous.
+    /// Scans the given orthant for chunks, decompresses them, then passes them to `chunk_rx`. Because chunk keys are stored in
+    /// Morton order, the chunks in any orthant are guaranteed to be contiguous.
     ///
     /// The `orthant` is expected in voxel units, not chunk units.
     pub async fn read_chunks_in_orthant(
         &self,
         lod: u8,
         orthant: Orthant<N>,
-    ) -> sled::Result<Vec<(ChunkKey<N>, Compr::Data)>> {
+        mut chunk_rx: impl FnMut(ChunkKey<N>, Compr::Data),
+    ) -> sled::Result<()> {
         let range = ChunkKey::<N>::orthant_range(lod, orthant);
-
-        let mut chunks = Vec::new();
 
         for batch in &self.tree.range(range).chunks(16) {
             for batch_result in join_all(batch.into_iter().map(|kv_result| async move {
@@ -112,11 +111,11 @@ where
             .await
             {
                 let (chunk_key, chunk) = batch_result?;
-                chunks.push((chunk_key, chunk));
+                chunk_rx(chunk_key, chunk);
             }
         }
 
-        Ok(chunks)
+        Ok(())
     }
 }
 
@@ -266,7 +265,10 @@ mod test {
         // This octant should contain the chunks in the positive octant, but not the other chunk.
         let octant = Octant::new_unchecked(Point3i::ZERO, 32);
 
-        let read_chunks = futures::executor::block_on(chunk_db.read_chunks_in_orthant(0, octant))?;
+        let mut read_chunks = Vec::new();
+        futures::executor::block_on(
+            chunk_db.read_chunks_in_orthant(0, octant, |k, v| read_chunks.push((k, v))),
+        )?;
 
         let read_keys: Vec<_> = read_chunks.iter().map(|(k, _)| k.clone()).collect();
         let expected_read_keys: Vec<_> =

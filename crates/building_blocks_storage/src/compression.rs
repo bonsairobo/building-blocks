@@ -13,56 +13,72 @@ pub use lz4_compression::Lz4;
 pub use snappy_compression::Snappy;
 
 use serde::{Deserialize, Serialize};
+use std::io;
 
 /// An algorithm for:
-///     1. compressing a specific type `Data` into type `Compressed`
-///     2. decompressing `Compressed` back into `Data`
+///     1. compressing a specific type `Data` into raw bytes
+///     2. decompressing raw bytes back into `Data`
 pub trait Compression: Sized {
     type Data;
-    type CompressedData;
 
-    fn compress(&self, data: &Self::Data) -> Compressed<Self>;
-    fn decompress(compressed: &Self::CompressedData) -> Self::Data;
+    fn compress_to_writer(
+        &self,
+        data: &Self::Data,
+        compressed_bytes: impl io::Write,
+    ) -> io::Result<()>;
+
+    fn decompress_from_reader(compressed_bytes: impl io::Read) -> io::Result<Self::Data>;
+
+    /// To preserve type information. prefer this method over `compress_to_writer`.
+    fn compress(&self, data: &Self::Data) -> Compressed<Self> {
+        Compressed::new(self, data)
+    }
 }
 
 pub trait FromBytesCompression<B> {
     fn from_bytes_compression(bytes_compression: B) -> Self;
 }
 
-/// A value compressed with compression algorithm `A`.
+/// A wrapper for bytes from compression algorithm `A`. This is slightly safer than manually calling `decompress` on any byte
+/// slice, since it remembers the original data type.
 #[derive(Clone, Deserialize, Serialize)]
-pub struct Compressed<A>
-where
-    A: Compression,
-{
-    pub compressed_data: A::CompressedData,
+pub struct Compressed<A> {
+    pub compressed_bytes: Vec<u8>,
     marker: std::marker::PhantomData<A>,
 }
 
-impl<T, A> Compressed<A>
+impl<A> Compressed<A>
 where
-    A: Compression<CompressedData = T>,
+    A: Compression,
 {
-    pub fn new(compressed_data: A::CompressedData) -> Self {
+    pub fn new(compression: &A, data: &A::Data) -> Self {
+        let mut compressed_bytes = Vec::new();
+        A::compress_to_writer(compression, data, &mut compressed_bytes).unwrap();
+
         Self {
-            compressed_data,
+            compressed_bytes,
             marker: Default::default(),
         }
     }
 
     pub fn decompress(&self) -> A::Data {
-        A::decompress(&self.compressed_data)
+        A::decompress_from_reader(self.compressed_bytes.as_slice()).unwrap()
     }
 
-    pub fn take(self) -> A::CompressedData {
-        self.compressed_data
+    pub fn take_bytes(self) -> Vec<u8> {
+        self.compressed_bytes
     }
 }
 
-/// A compression algorithm that acts directly on a slice of bytes.
+/// A compression algorithm that reads a stream of bytes.
 pub trait BytesCompression {
-    fn compress_bytes(&self, bytes: &[u8], compressed_bytes: impl std::io::Write);
-    fn decompress_bytes(compressed_bytes: &[u8], bytes: &mut impl std::io::Write);
+    fn compress_bytes(
+        &self,
+        bytes: impl io::Read,
+        compressed_bytes: impl io::Write,
+    ) -> io::Result<()>;
+
+    fn decompress_bytes(compressed_bytes: impl io::Read, bytes: impl io::Write) -> io::Result<()>;
 }
 
 /// A value that is either compressed or decompressed.

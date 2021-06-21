@@ -1,7 +1,9 @@
 use crate::{
-    BorrowChannels, BorrowChannelsMut, Channel, Channels, Compressed, Compression, CopySlices,
+    BorrowChannels, BorrowChannelsMut, Channel, Channels, Compression, CopySlices,
     FastChannelsCompression, FillChannels, ResetChannels, Slices, SlicesMut, UninitChannels,
 };
+
+use std::io;
 
 macro_rules! impl_channels_for_tuple {
     ( $( $var1:ident, $var2:ident : $t:ident ),+ ) => {
@@ -127,21 +129,24 @@ macro_rules! impl_channels_for_tuple {
             By: Clone,
         {
             type Data = ($(Channel<$t>,)+);
-            type CompressedData = ($(Compressed<FastChannelsCompression<By, Channel<$t>>>,)+);
 
-            fn compress(&self, data: &Self::Data) -> Compressed<Self> {
+            fn compress_to_writer(&self, data: &Self::Data, mut compressed_bytes: impl std::io::Write) -> io::Result<()> {
                 let ($($var1,)+) = data;
 
                 // Have to make compression objects for each channel.
                 let ($($var2,)+) = ($(FastChannelsCompression::<By, Channel<$t>>::new(self.bytes_compression().clone()),)+);
 
-                Compressed::new(($($var2.compress($var1),)+))
+                // Compress each channel in tuple order.
+                $( $var2.compress_to_writer($var1, &mut compressed_bytes)?; )+
+
+                Ok(())
             }
 
-            fn decompress(compressed: &Self::CompressedData) -> Self::Data {
-                let ($($var1,)+) = compressed;
+            fn decompress_from_reader(mut compressed_bytes: impl io::Read) -> io::Result<Self::Data> {
+                // Decompress each channel in tuple order.
+                $( let $var1 = FastChannelsCompression::<By, Channel<$t>>::decompress_from_reader(&mut compressed_bytes)?; )+
 
-                ( $($var1.decompress(),)+ )
+                Ok(($($var1,)+))
             }
         }
     }

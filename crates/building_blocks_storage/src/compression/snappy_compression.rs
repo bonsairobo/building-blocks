@@ -1,6 +1,7 @@
 use super::BytesCompression;
 
 use serde::{Deserialize, Serialize};
+use std::io;
 
 /// The [Snappy compression algorithm](https://en.wikipedia.org/wiki/Snappy_(compression)).
 /// Uses a pure Rust implementation, making it suitable for use with the WASM target.
@@ -8,24 +9,33 @@ use serde::{Deserialize, Serialize};
 pub struct Snappy;
 
 impl BytesCompression for Snappy {
-    fn compress_bytes(&self, bytes: &[u8], compressed_bytes: impl std::io::Write) {
+    fn compress_bytes(
+        &self,
+        mut bytes: impl io::Read,
+        compressed_bytes: impl io::Write,
+    ) -> io::Result<()> {
         let mut encoder = snap::write::FrameEncoder::new(compressed_bytes);
-        std::io::copy(&mut std::io::Cursor::new(bytes), &mut encoder).unwrap();
+        io::copy(&mut bytes, &mut encoder)?;
         encoder.into_inner().expect("failed to flush the writer");
+        Ok(())
     }
 
-    fn decompress_bytes(compressed_bytes: &[u8], bytes: &mut impl std::io::Write) {
+    fn decompress_bytes(
+        compressed_bytes: impl io::Read,
+        mut bytes: impl io::Write,
+    ) -> io::Result<()> {
         let mut decoder = snap::read::FrameDecoder::new(compressed_bytes);
-        std::io::copy(&mut decoder, bytes).unwrap();
+        io::copy(&mut decoder, &mut bytes)?;
+        Ok(())
     }
 }
 
-// ████████╗███████╗███████╗████████╗███████╗
-// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝██╔════╝
-//    ██║   █████╗  ███████╗   ██║   ███████╗
-//    ██║   ██╔══╝  ╚════██║   ██║   ╚════██║
-//    ██║   ███████╗███████║   ██║   ███████║
-//    ╚═╝   ╚══════╝╚══════╝   ╚═╝   ╚══════╝
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
 
 #[cfg(test)]
 mod tests {
@@ -36,9 +46,11 @@ mod tests {
         let bytes: Vec<u8> = (0u8..100).collect();
 
         let mut compressed_bytes = Vec::new();
-        Snappy.compress_bytes(&bytes, &mut compressed_bytes);
+        Snappy
+            .compress_bytes(bytes.as_slice(), &mut compressed_bytes)
+            .unwrap();
         let mut decompressed_bytes = Vec::new();
-        Snappy::decompress_bytes(&compressed_bytes, &mut decompressed_bytes);
+        Snappy::decompress_bytes(compressed_bytes.as_slice(), &mut decompressed_bytes).unwrap();
 
         assert_eq!(bytes, decompressed_bytes);
     }

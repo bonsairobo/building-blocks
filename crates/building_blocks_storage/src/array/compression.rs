@@ -1,6 +1,9 @@
-use crate::{Array, Compressed, Compression, FromBytesCompression};
+use crate::{Array, Compression, FromBytesCompression};
 
 use building_blocks_core::prelude::*;
+
+use bytemuck::{bytes_of, bytes_of_mut};
+use std::io;
 
 /// A compression algorithm for arrays that avoid the overhead of serialization but ignores endianness and therefore isn't
 /// portable.
@@ -32,55 +35,35 @@ where
     }
 }
 
-/// A compressed `Array` that decompresses quickly but only on the same platform where it was compressed.
-#[derive(Clone)]
-pub struct FastCompressedArray<N, C>
-where
-    C: Compression,
-{
-    compressed_channels: C::CompressedData,
-    extent: ExtentN<N>,
-}
-
-impl<N, C> FastCompressedArray<N, C>
-where
-    C: Compression,
-{
-    pub fn compressed_channels(&self) -> &C::CompressedData {
-        &self.compressed_channels
-    }
-
-    pub fn extent(&self) -> &ExtentN<N> {
-        &self.extent
-    }
-
-    pub fn into_parts(self) -> (C::CompressedData, ExtentN<N>) {
-        (self.compressed_channels, self.extent)
-    }
-}
-
 impl<N, C> Compression for FastArrayCompression<N, C>
 where
-    PointN<N>: Copy,
+    PointN<N>: IntegerPoint<N>,
     C: Compression,
 {
     type Data = Array<N, C::Data>;
-    type CompressedData = FastCompressedArray<N, C>;
 
-    fn compress(&self, data: &Self::Data) -> Compressed<Self> {
-        let compressed_channels = self.channels_compression.compress(data.channels()).take();
+    fn compress_to_writer(
+        &self,
+        data: &Self::Data,
+        mut compressed_bytes: impl io::Write,
+    ) -> io::Result<()> {
+        // First write the extent.
+        compressed_bytes.write_all(bytes_of(data.extent()))?;
 
-        Compressed::new(FastCompressedArray {
-            compressed_channels,
-            extent: data.extent,
-        })
+        // Compress the channels.
+        self.channels_compression
+            .compress_to_writer(data.channels(), compressed_bytes)
     }
 
-    fn decompress(compressed: &Self::CompressedData) -> Self::Data {
-        Array::new(
-            compressed.extent,
-            C::decompress(&compressed.compressed_channels),
-        )
+    fn decompress_from_reader(mut compressed_bytes: impl io::Read) -> io::Result<Self::Data> {
+        // First read the extent.
+        let mut extent = ExtentN::from_min_and_shape(PointN::ZERO, PointN::ZERO);
+        compressed_bytes.read_exact(bytes_of_mut(&mut extent))?;
+
+        // Decompress the channels.
+        let channels = C::decompress_from_reader(compressed_bytes)?;
+
+        Ok(Array::new(extent, channels))
     }
 }
 
@@ -172,12 +155,9 @@ mod test {
 
         let compression = FastArrayCompressionNx1::from_bytes_compression(bytes_compression);
 
-        let compressed_array = compression.compress(array).take();
+        let compressed_bytes = compression.compress(array).take_bytes();
 
-        let compressed_size_bytes = compressed_array
-            .compressed_channels()
-            .compressed_bytes()
-            .len();
+        let compressed_size_bytes = compressed_bytes.len();
 
         test_print(&format!(
             "source = {} bytes, compressed = {} bytes; rate = {:.1}%\n",

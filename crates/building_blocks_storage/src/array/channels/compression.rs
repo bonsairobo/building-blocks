@@ -1,6 +1,7 @@
-use crate::{BytesCompression, Channel, Compressed, Compression, FromBytesCompression};
+use crate::{BytesCompression, Channel, Compression, FromBytesCompression};
 
-use bytemuck::{cast_slice, cast_slice_mut, Pod};
+use bytemuck::{bytes_of, bytes_of_mut, cast_slice, cast_slice_mut, Pod};
+use std::io;
 
 /// Compresses a tuple of `Channel`s into a tuple of `FastCompressedChannel`s.
 pub struct FastChannelsCompression<By, Chan> {
@@ -41,55 +42,45 @@ impl<By, Chan> FromBytesCompression<By> for FastChannelsCompression<By, Chan> {
     }
 }
 
-/// A compressed `Channel` that decompresses quickly but only on the same platform where it was compressed.
-#[derive(Clone)]
-pub struct FastCompressedChannel<T> {
-    compressed_bytes: Vec<u8>,
-    decompressed_length: usize, // TODO: we should be able to remove this with some refactoring of the Compression trait
-    marker: std::marker::PhantomData<T>,
-}
-
-impl<T> FastCompressedChannel<T> {
-    pub fn compressed_bytes(&self) -> &[u8] {
-        &self.compressed_bytes
-    }
-}
-
 impl<By, T> Compression for FastChannelsCompression<By, Channel<T>>
 where
     By: BytesCompression,
     T: Pod,
 {
     type Data = Channel<T>;
-    type CompressedData = FastCompressedChannel<T>;
 
     // Compress the map using some `B: BytesCompression`.
     //
     // WARNING: For performance, this reinterprets the inner vector as a byte slice without accounting for endianness. This is
     // not compatible across platforms.
-    fn compress(&self, data: &Self::Data) -> Compressed<Self> {
-        let mut compressed_bytes = Vec::new();
-        self.bytes_compression
-            .compress_bytes(cast_slice(data.store().as_slice()), &mut compressed_bytes);
+    fn compress_to_writer(
+        &self,
+        data: &Self::Data,
+        mut compressed_bytes: impl io::Write,
+    ) -> io::Result<()> {
+        // Start with the number of values in the channel so we can allocate that up front during decompression.
+        compressed_bytes.write_all(bytes_of(&data.store().len()))?;
 
-        Compressed::new(FastCompressedChannel {
-            compressed_bytes,
-            decompressed_length: data.store().len(),
-            marker: Default::default(),
-        })
+        // Compress the values.
+        self.bytes_compression
+            .compress_bytes(cast_slice(data.store().as_slice()), compressed_bytes)
     }
 
-    fn decompress(compressed: &Self::CompressedData) -> Self::Data {
-        let num_values = compressed.decompressed_length;
+    fn decompress_from_reader(mut compressed_bytes: impl io::Read) -> io::Result<Self::Data> {
+        // Extract the number of values in the original channel.
+        let mut num_values = 0usize;
+        compressed_bytes.read_exact(bytes_of_mut(&mut num_values))?;
 
         // Allocate the vector with element type T so the alignment is correct.
         let mut decompressed_values: Vec<T> = Vec::with_capacity(num_values);
         unsafe { decompressed_values.set_len(num_values) };
-        By::decompress_bytes(
-            &compressed.compressed_bytes,
-            &mut cast_slice_mut(decompressed_values.as_mut_slice()),
-        );
 
-        Channel::new(decompressed_values)
+        // Decompress the values by consuming the rest of the bytes.
+        By::decompress_bytes(
+            compressed_bytes,
+            &mut cast_slice_mut(decompressed_values.as_mut_slice()),
+        )?;
+
+        Ok(Channel::new(decompressed_values))
     }
 }

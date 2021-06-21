@@ -1,5 +1,6 @@
 use crate::{point::point_traits::*, PointN};
 
+use bytemuck::{Pod, Zeroable};
 use core::ops::{Add, AddAssign, Mul, Shl, Shr, Sub, SubAssign};
 use num::Zero;
 use serde::{Deserialize, Serialize};
@@ -27,6 +28,9 @@ pub struct ExtentN<N> {
     /// The length of each dimension.
     pub shape: PointN<N>,
 }
+
+unsafe impl<N> Zeroable for ExtentN<N> where PointN<N>: Zeroable {}
+unsafe impl<N> Pod for ExtentN<N> where PointN<N>: Pod {}
 
 // A few of these traits could be derived. But it seems that derive will not help the compiler infer trait bounds as well.
 

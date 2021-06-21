@@ -1,5 +1,6 @@
 use crate::PointN;
 
+use bytemuck::Pod;
 use core::ops::{
     Add, AddAssign, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub, SubAssign,
 };
@@ -23,6 +24,7 @@ pub trait Point:
     + Ones
     + PartialEq
     + PartialOrd
+    + Pod
     + Sized
     + Sub<Output = Self>
     + SubAssign

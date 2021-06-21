@@ -1,6 +1,7 @@
 use super::BytesCompression;
 
 use serde::{Deserialize, Serialize};
+use std::io;
 
 /// The [LZ4 compression algorithm](https://en.wikipedia.org/wiki/LZ4_(compression_algorithm)).
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -11,27 +12,36 @@ pub struct Lz4 {
 }
 
 impl BytesCompression for Lz4 {
-    fn compress_bytes(&self, bytes: &[u8], compressed_bytes: impl std::io::Write) {
+    fn compress_bytes(
+        &self,
+        mut bytes: impl io::Read,
+        compressed_bytes: impl io::Write,
+    ) -> io::Result<()> {
         let mut encoder = lz4::EncoderBuilder::new()
             .level(self.level)
-            .build(compressed_bytes)
-            .unwrap();
-        std::io::copy(&mut std::io::Cursor::new(bytes), &mut encoder).unwrap();
-        let (_output, _result) = encoder.finish();
+            .build(compressed_bytes)?;
+        io::copy(&mut bytes, &mut encoder)?;
+        let (_output, result) = encoder.finish();
+
+        result
     }
 
-    fn decompress_bytes(compressed_bytes: &[u8], bytes: &mut impl std::io::Write) {
-        let mut decoder = lz4::Decoder::new(compressed_bytes).unwrap();
-        std::io::copy(&mut decoder, bytes).unwrap();
+    fn decompress_bytes(
+        compressed_bytes: impl io::Read,
+        mut bytes: impl io::Write,
+    ) -> io::Result<()> {
+        let mut decoder = lz4::Decoder::new(compressed_bytes)?;
+        io::copy(&mut decoder, &mut bytes)?;
+        Ok(())
     }
 }
 
-// ████████╗███████╗███████╗████████╗███████╗
-// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝██╔════╝
-//    ██║   █████╗  ███████╗   ██║   ███████╗
-//    ██║   ██╔══╝  ╚════██║   ██║   ╚════██║
-//    ██║   ███████╗███████║   ██║   ███████║
-//    ╚═╝   ╚══════╝╚══════╝   ╚═╝   ╚══════╝
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
 
 #[cfg(test)]
 mod tests {
@@ -42,9 +52,11 @@ mod tests {
         let bytes: Vec<u8> = (0u8..100).collect();
 
         let mut compressed_bytes = Vec::new();
-        Lz4 { level: 10 }.compress_bytes(&bytes, &mut compressed_bytes);
+        Lz4 { level: 10 }
+            .compress_bytes(bytes.as_slice(), &mut compressed_bytes)
+            .unwrap();
         let mut decompressed_bytes = Vec::new();
-        Lz4::decompress_bytes(&compressed_bytes, &mut decompressed_bytes);
+        Lz4::decompress_bytes(compressed_bytes.as_slice(), &mut decompressed_bytes).unwrap();
 
         assert_eq!(bytes, decompressed_bytes);
     }

@@ -1,6 +1,7 @@
-use super::{BytesCompression, Compressed, Compression};
+use super::{BytesCompression, Compression};
 
 use serde::{de::DeserializeOwned, Serialize};
+use std::io;
 
 /// Run some compression algorithm `A` after bincode serializing a type `T`. This provides a decent
 /// default compression for any serializable type.
@@ -38,30 +39,32 @@ where
     A: BytesCompression,
 {
     type Data = T;
-    type CompressedData = Vec<u8>;
 
-    fn compress(&self, data: &Self::Data) -> Compressed<Self> {
-        let mut compressed_bytes = Vec::new();
-        self.compression
-            .compress_bytes(&bincode::serialize(data).unwrap(), &mut compressed_bytes);
-
-        Compressed::new(compressed_bytes)
+    fn compress_to_writer(
+        &self,
+        data: &Self::Data,
+        compressed_bytes: impl io::Write,
+    ) -> io::Result<()> {
+        self.compression.compress_bytes(
+            bincode::serialize(data).unwrap().as_slice(),
+            compressed_bytes,
+        )
     }
 
-    fn decompress(compressed: &Self::CompressedData) -> Self::Data {
+    fn decompress_from_reader(compressed_bytes: impl io::Read) -> io::Result<Self::Data> {
         let mut decompressed_bytes = Vec::new();
-        A::decompress_bytes(compressed, &mut decompressed_bytes);
+        A::decompress_bytes(compressed_bytes, &mut decompressed_bytes)?;
 
-        bincode::deserialize(&decompressed_bytes).unwrap()
+        Ok(bincode::deserialize(&decompressed_bytes).unwrap())
     }
 }
 
-// ████████╗███████╗███████╗████████╗███████╗
-// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝██╔════╝
-//    ██║   █████╗  ███████╗   ██║   ███████╗
-//    ██║   ██╔══╝  ╚════██║   ██║   ╚════██║
-//    ██║   ███████╗███████║   ██║   ███████║
-//    ╚═╝   ╚══════╝╚══════╝   ╚═╝   ╚══════╝
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
 
 #[cfg(all(test, feature = "snap"))]
 mod tests {
@@ -77,8 +80,8 @@ mod tests {
         let foo = Foo((0u8..100).collect());
 
         let compression = BincodeCompression::new(Snappy);
-        let compressed_bytes = compression.compress(&foo);
-        let decompressed_foo = compressed_bytes.decompress();
+        let compressed = compression.compress(&foo);
+        let decompressed_foo = compressed.decompress();
 
         assert_eq!(foo, decompressed_foo);
     }

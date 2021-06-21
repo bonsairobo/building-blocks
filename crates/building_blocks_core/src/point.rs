@@ -13,6 +13,7 @@ mod sdfu_integration;
 mod point2;
 mod point3;
 
+use bytemuck::{Pod, Zeroable};
 pub use point2::*;
 pub use point3::*;
 
@@ -68,6 +69,9 @@ use serde::{Deserialize, Serialize};
 /// ```
 #[derive(Copy, Clone, Debug, Deserialize, Default, Eq, Hash, PartialEq, Serialize)]
 pub struct PointN<N>(pub N);
+
+unsafe impl<N> Zeroable for PointN<N> where N: Zeroable {}
+unsafe impl<N> Pod for PointN<N> where N: Pod {}
 
 impl<N> PointN<N>
 where

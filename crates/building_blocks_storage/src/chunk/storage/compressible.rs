@@ -26,7 +26,7 @@ pub type FastCompressibleChunkStorage<N, By, Chan> =
 
 impl<N, By, Chan> FastCompressibleChunkStorage<N, By, Chan>
 where
-    PointN<N>: Copy,
+    PointN<N>: IntegerPoint<N>,
     ChunkKey<N>: Clone + Eq + Hash,
     FastChannelsCompression<By, Chan>: Compression,
 {

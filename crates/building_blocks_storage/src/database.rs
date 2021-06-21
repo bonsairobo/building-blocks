@@ -20,6 +20,11 @@ pub struct ChunkDb<N, Compr> {
     marker: std::marker::PhantomData<N>,
 }
 
+/// A 2D `ChunkDb`.
+pub type ChunkDb2<Compr> = ChunkDb<[i32; 2], Compr>;
+/// A 3D `ChunkDb`.
+pub type ChunkDb3<Compr> = ChunkDb<[i32; 3], Compr>;
+
 pub trait DatabaseKey<N> {
     type Key: Copy + Ord;
     type KeyBytes: AsRef<[u8]>;

@@ -86,12 +86,12 @@ pub mod prelude {
     pub use super::chunk::storage::compressible_reader::multichannel_aliases::*;
     pub use super::chunk::storage::hash_map::multichannel_aliases::*;
 
-    #[cfg(feature = "sled")]
-    pub use super::ChunkDb;
     #[cfg(feature = "lz4")]
     pub use super::Lz4;
     #[cfg(feature = "snap")]
     pub use super::Snappy;
+    #[cfg(feature = "sled")]
+    pub use super::{ChunkDb, ChunkDb2, ChunkDb3};
 }
 
 #[cfg(feature = "dot_vox")]

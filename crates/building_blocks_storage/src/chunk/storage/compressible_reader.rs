@@ -57,7 +57,7 @@ where
     ChunkKey<N>: Clone + Eq + Hash,
     Compr: Compression,
 {
-    type IntoIter = CompressibleChunkStorageReaderIntoIter<'a, N, Compr>;
+    type IntoIter = CompressibleChunkStorageReaderIter<'a, N, Compr>;
     type Item = (&'a ChunkKey<N>, &'a Compr::Data);
 
     fn into_iter(self) -> Self::IntoIter {
@@ -66,7 +66,7 @@ where
             local_cache,
         } = self;
 
-        CompressibleChunkStorageReaderIntoIter {
+        CompressibleChunkStorageReaderIter {
             cache_entries: storage.cache.entries(),
             local_cache,
             compressed: &storage.compressed,
@@ -74,7 +74,7 @@ where
     }
 }
 
-pub struct CompressibleChunkStorageReaderIntoIter<'a, N, Compr>
+pub struct CompressibleChunkStorageReaderIter<'a, N, Compr>
 where
     Compr: Compression,
 {
@@ -83,7 +83,7 @@ where
     compressed: &'a CompressedChunks<Compr>,
 }
 
-impl<'a, N, Compr> Iterator for CompressibleChunkStorageReaderIntoIter<'a, N, Compr>
+impl<'a, N, Compr> Iterator for CompressibleChunkStorageReaderIter<'a, N, Compr>
 where
     ChunkKey<N>: Clone + Eq + Hash,
     Compr: Compression,

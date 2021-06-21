@@ -7,6 +7,8 @@ use futures::future::join_all;
 use itertools::Itertools;
 use sled::Tree;
 
+pub use sled;
+
 /// A persistent, transactional, crash-consistent database of chunks.
 ///
 /// This is essentially a B+ tree of compressed chunks (backed by the `sled` crate). The keys are Morton codes for the

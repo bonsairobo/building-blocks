@@ -46,6 +46,12 @@ pub use octree::*;
 pub use signed_distance::*;
 pub use transform_map::*;
 
+#[cfg(feature = "sled")]
+pub mod database;
+
+#[cfg(feature = "sled")]
+pub use database::*;
+
 /// Used in many generic algorithms to check if a voxel is considered empty.
 pub trait IsEmpty {
     fn is_empty(&self) -> bool;
@@ -80,6 +86,8 @@ pub mod prelude {
     pub use super::chunk::storage::compressible_reader::multichannel_aliases::*;
     pub use super::chunk::storage::hash_map::multichannel_aliases::*;
 
+    #[cfg(feature = "sled")]
+    pub use super::ChunkDb;
     #[cfg(feature = "lz4")]
     pub use super::Lz4;
     #[cfg(feature = "snap")]

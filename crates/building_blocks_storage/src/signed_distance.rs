@@ -1,3 +1,4 @@
+use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 
 pub trait SignedDistance: Into<f32> {
@@ -17,6 +18,12 @@ pub struct Sd8(pub i8);
 /// A signed distance value in the range `[-1.0, 1.0]` with 16 bits of precision.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct Sd16(pub i16);
+
+unsafe impl Zeroable for Sd8 {}
+unsafe impl Pod for Sd8 {}
+
+unsafe impl Zeroable for Sd16 {}
+unsafe impl Pod for Sd16 {}
 
 impl Sd8 {
     pub const RESOLUTION: f32 = std::i8::MAX as f32;

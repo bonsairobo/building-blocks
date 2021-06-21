@@ -17,7 +17,7 @@ release = { lto = "thin" }
 bench = { lto = "thin" }
 
 [features]
-default = ["lz4", "mesh", "sdfu", "search"]
+default = ["lz4", "mesh", "sdfu", "search", "sled"]
 
 # Optional crates.
 mesh = ["building_blocks_mesh"]
@@ -27,6 +27,7 @@ search = ["building_blocks_search"]
 dot_vox = ["building_blocks_storage/dot_vox"]
 image = ["building_blocks_storage/image"]
 sdfu = ["building_blocks_core/sdfu"]
+sled = ["building_blocks_storage/sled"]
 
 # Math type conversions.
 glam = ["building_blocks_core/glam"]

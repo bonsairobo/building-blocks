@@ -1,4 +1,4 @@
-use crate::{Axis2, IterExtent};
+use crate::Axis2;
 
 use super::{point_traits::*, PointN};
 

@@ -6,6 +6,7 @@
 
 pub mod axis;
 pub mod extent;
+pub mod int_math;
 pub mod morton;
 pub mod orthant;
 pub mod point;
@@ -14,6 +15,7 @@ pub use axis::{Axis2, Axis3, Axis3Permutation, SignedAxis2, SignedAxis3};
 pub use extent::{
     bounding_extent, Extent2, Extent2f, Extent2i, Extent3, Extent3f, Extent3i, ExtentN,
 };
+pub use int_math::*;
 pub use morton::*;
 pub use orthant::*;
 pub use point::{point_traits::*, Point2, Point2f, Point2i, Point3, Point3f, Point3i, PointN};

@@ -1,4 +1,7 @@
-use crate::{Extent2i, Extent3i, IntegerPoint, Point, Point2i, Point3i, PointN};
+use crate::{
+    round_down_multiple_of_pow2, Extent2i, Extent3i, ExtentN, IntegerPoint, MapComponents, Point,
+    Point2i, Point3i, PointN,
+};
 
 /// An extent for which, given some fixed power of 2 called P, satisfies:
 /// - each component of the minimum is a multiple of P
@@ -25,8 +28,8 @@ where
     /// - an `exponent` for the power of 2 edge length
     /// - a `min_multiple` to multiply by the `edge_length` to get the minimum
     #[inline]
-    pub fn new(exponent: u8, min_multiple: PointN<N>) -> Self {
-        let edge_length = 1 << exponent as i32;
+    pub fn new(exponent: i32, min_multiple: PointN<N>) -> Self {
+        let edge_length = 1 << exponent;
         let minimum = min_multiple * edge_length;
 
         Self {
@@ -75,5 +78,95 @@ impl From<Octant> for Extent3i {
     #[inline]
     fn from(octant: Octant) -> Self {
         Extent3i::from_min_and_shape(octant.minimum, Point3i::fill(octant.edge_length))
+    }
+}
+
+/// Returns the smallest set of `Orthant`s required to cover `extent`. All `Orthant`s have the same shape, as determined by
+/// `exponent`.
+#[inline]
+pub fn orthants_covering_extent<N>(
+    extent: ExtentN<N>,
+    exponent: i32,
+) -> impl Iterator<Item = Orthant<N>>
+where
+    PointN<N>: std::fmt::Debug + IntegerPoint<N>,
+    ExtentN<N>: std::fmt::Debug,
+{
+    let power = 1 << exponent;
+
+    // Round down the minimum to the nearest multiple of power.
+    let rounded_min = extent
+        .minimum
+        .map_components_unary(|c| round_down_multiple_of_pow2(c, power));
+    // Round up the maximum to the nearest multiple of power.
+    let rounded_max = extent
+        .max()
+        .map_components_unary(|c| round_down_multiple_of_pow2(c, power));
+
+    let scaled_extent = ExtentN::from_min_and_max(rounded_min >> exponent, rounded_max >> exponent);
+
+    scaled_extent
+        .iter_points()
+        .map(move |min_mul| Orthant::new(exponent, min_mul))
+}
+
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn orthants_cover_extent_exact() {
+        let extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([4, 4, 4]));
+
+        let covering_octants: Vec<_> = orthants_covering_extent(extent, 2).collect();
+        assert_eq!(covering_octants, vec![Orthant::new(2, PointN([0, 0, 0]))]);
+
+        let covering_octants: Vec<_> = orthants_covering_extent(extent, 1).collect();
+        assert_eq!(
+            covering_octants,
+            vec![
+                Orthant::new(1, PointN([0, 0, 0])),
+                Orthant::new(1, PointN([1, 0, 0])),
+                Orthant::new(1, PointN([0, 1, 0])),
+                Orthant::new(1, PointN([1, 1, 0])),
+                Orthant::new(1, PointN([0, 0, 1])),
+                Orthant::new(1, PointN([1, 0, 1])),
+                Orthant::new(1, PointN([0, 1, 1])),
+                Orthant::new(1, PointN([1, 1, 1])),
+            ]
+        );
+    }
+
+    #[test]
+    fn orthants_cover_extent_inexact_negative() {
+        let extent = Extent3i::from_min_and_shape(PointN([-3, -3, -3]), PointN([2, 2, 2]));
+
+        let covering_octants: Vec<_> = orthants_covering_extent(extent, 2).collect();
+        assert_eq!(
+            covering_octants,
+            vec![Orthant::new(2, PointN([-1, -1, -1]))]
+        );
+
+        let covering_octants: Vec<_> = orthants_covering_extent(extent, 1).collect();
+        assert_eq!(
+            covering_octants,
+            vec![
+                Orthant::new(1, PointN([-2, -2, -2])),
+                Orthant::new(1, PointN([-1, -2, -2])),
+                Orthant::new(1, PointN([-2, -1, -2])),
+                Orthant::new(1, PointN([-1, -1, -2])),
+                Orthant::new(1, PointN([-2, -2, -1])),
+                Orthant::new(1, PointN([-1, -2, -1])),
+                Orthant::new(1, PointN([-2, -1, -1])),
+                Orthant::new(1, PointN([-1, -1, -1])),
+            ]
+        );
     }
 }

@@ -145,6 +145,10 @@ where
 
         Ok(())
     }
+
+    pub fn tree(&self) -> &Tree {
+        &self.tree
+    }
 }
 
 impl DatabaseKey<[i32; 2]> for ChunkKey2 {

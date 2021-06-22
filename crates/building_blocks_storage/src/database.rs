@@ -88,6 +88,7 @@ where
         for (db_key, chunk) in compressed_chunks.into_iter() {
             let key_bytes = ChunkKey::<N>::ord_key_to_be_bytes(db_key);
             // PERF: use a Batch instead?
+            // PERF: IVec will copy the bytes instead of moving, because it needs to also allocate room for an internal header
             self.tree.insert(key_bytes, chunk.take_bytes())?;
         }
 

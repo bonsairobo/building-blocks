@@ -107,20 +107,20 @@ where
     ) -> sled::Result<()> {
         let range = ChunkKey::<N>::orthant_range(lod, orthant);
 
-        for batch in &self.tree.range(range).chunks(16) {
-            for batch_result in join_all(batch.into_iter().map(|kv_result| async move {
-                let (key, compressed_chunk) = kv_result?;
+        let read_kvs = self.tree.range(range).collect::<Result<Vec<_>, _>>()?;
 
-                let ord_key = ChunkKey::<N>::ord_key_from_be_bytes(key.as_ref());
-                let chunk_key = ChunkKey::<N>::from_ord_key(ord_key);
+        for batch in &read_kvs.into_iter().chunks(16) {
+            for (chunk_key, chunk) in
+                join_all(batch.into_iter().map(|(key, compressed_chunk)| async move {
+                    let ord_key = ChunkKey::<N>::ord_key_from_be_bytes(key.as_ref());
+                    let chunk_key = ChunkKey::<N>::from_ord_key(ord_key);
 
-                let chunk = Compr::decompress_from_reader(compressed_chunk.as_ref()).unwrap();
+                    let chunk = Compr::decompress_from_reader(compressed_chunk.as_ref()).unwrap();
 
-                sled::Result::Ok((chunk_key, chunk))
-            }))
-            .await
+                    (chunk_key, chunk)
+                }))
+                .await
             {
-                let (chunk_key, chunk) = batch_result?;
                 chunk_rx(chunk_key, chunk);
             }
         }

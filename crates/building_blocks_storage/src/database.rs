@@ -1,6 +1,6 @@
 use crate::{ChunkKey, ChunkKey2, ChunkKey3, Compression};
 
-use building_blocks_core::prelude::*;
+use building_blocks_core::{orthants_covering_extent, prelude::*};
 
 use core::ops::RangeInclusive;
 use futures::future::join_all;
@@ -52,6 +52,7 @@ impl<N, Compr> ChunkDb<N, Compr> {
 
 impl<N, Compr> ChunkDb<N, Compr>
 where
+    PointN<N>: IntegerPoint<N>,
     ChunkKey<N>: DatabaseKey<N>,
     Compr: Compression + Copy,
 {
@@ -121,6 +122,27 @@ where
                 let (chunk_key, chunk) = batch_result?;
                 chunk_rx(chunk_key, chunk);
             }
+        }
+
+        Ok(())
+    }
+
+    /// This is like `read_chunks_in_orthant`, but it works for the given `extent`. Since Morton order only guarantees
+    /// contiguity within a single `Orthant`, we should not naively scan from the Morton of `extent.minimum` to `extent.max()`.
+    /// Rather, we scan a set of `Orthant`s that covers `extent`. This covering is *at least* sufficient to cover the extent,
+    /// and it gets more exact as `orthant_exponent` (log2 of the side length) gets smaller. However, for exactness, you must
+    /// necessarily do more scans.
+    pub async fn read_orthants_covering_extent(
+        &self,
+        lod: u8,
+        orthant_exponent: i32,
+        extent: ExtentN<N>,
+        mut chunk_rx: impl FnMut(ChunkKey<N>, Compr::Data),
+    ) -> sled::Result<()> {
+        // PERF: more parallelism?
+        for orthant in orthants_covering_extent(extent, orthant_exponent) {
+            self.read_chunks_in_orthant(lod, orthant, &mut chunk_rx)
+                .await?;
         }
 
         Ok(())

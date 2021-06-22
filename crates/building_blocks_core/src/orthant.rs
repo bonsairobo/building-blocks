@@ -89,8 +89,7 @@ pub fn orthants_covering_extent<N>(
     exponent: i32,
 ) -> impl Iterator<Item = Orthant<N>>
 where
-    PointN<N>: std::fmt::Debug + IntegerPoint<N>,
-    ExtentN<N>: std::fmt::Debug,
+    PointN<N>: IntegerPoint<N>,
 {
     let power = 1 << exponent;
 

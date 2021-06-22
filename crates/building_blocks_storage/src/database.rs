@@ -109,7 +109,7 @@ where
 
         let read_kvs = self.tree.range(range).collect::<Result<Vec<_>, _>>()?;
 
-        for batch in &read_kvs.into_iter().chunks(16) {
+        for batch in read_kvs.chunks(16) {
             for (chunk_key, chunk) in
                 join_all(batch.into_iter().map(|(key, compressed_chunk)| async move {
                     let ord_key = ChunkKey::<N>::ord_key_from_be_bytes(key.as_ref());

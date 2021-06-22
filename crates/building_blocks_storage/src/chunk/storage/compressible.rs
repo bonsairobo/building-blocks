@@ -66,7 +66,15 @@ where
     }
 
     pub fn len_compressed(&self) -> usize {
-        self.cache.len_cached()
+        self.compressed.len()
+    }
+
+    pub fn len_total(&self) -> usize {
+        self.len_cached() + self.len_compressed()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len_total() == 0
     }
 
     /// Returns a reader that implements `ChunkReadStorage`.

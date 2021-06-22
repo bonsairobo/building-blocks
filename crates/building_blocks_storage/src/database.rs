@@ -4,7 +4,6 @@ use building_blocks_core::{orthants_covering_extent, prelude::*};
 
 use core::ops::RangeInclusive;
 use futures::future::join_all;
-use itertools::Itertools;
 use sled::Tree;
 use std::borrow::Borrow;
 
@@ -68,19 +67,16 @@ where
     {
         // First compress all of the chunks in parallel.
         let mut compressed_chunks = Vec::new();
-        for batch_of_chunks in &chunks.into_iter().chunks(16) {
-            for (key, compressed_chunk) in
-                join_all(batch_of_chunks.into_iter().map(|(key, chunk)| async move {
-                    (
-                        ChunkKey::<N>::into_ord_key(key),
-                        self.compression.compress(chunk.borrow()),
-                    )
-                }))
-                .await
-                .into_iter()
-            {
-                compressed_chunks.push((key, compressed_chunk));
-            }
+        for (key, compressed_chunk) in join_all(chunks.map(|(key, chunk)| async move {
+            (
+                ChunkKey::<N>::into_ord_key(key),
+                self.compression.compress(chunk.borrow()),
+            )
+        }))
+        .await
+        .into_iter()
+        {
+            compressed_chunks.push((key, compressed_chunk));
         }
         // Sort them by the Ord key.
         compressed_chunks.sort_by_key(|(k, _)| *k);

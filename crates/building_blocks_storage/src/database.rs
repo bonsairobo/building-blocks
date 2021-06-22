@@ -6,6 +6,7 @@ use core::ops::RangeInclusive;
 use futures::future::join_all;
 use itertools::Itertools;
 use sled::Tree;
+use std::borrow::Borrow;
 
 pub use sled;
 
@@ -58,12 +59,12 @@ where
 {
     /// Insert a set of chunks. This will compress all of the chunks asynchronously then insert them into the database.
     /// Pre-existing chunks will be overwritten.
-    pub async fn write_chunks<'a>(
+    pub async fn write_chunks<'a, Data>(
         &self,
-        chunks: impl Iterator<Item = (ChunkKey<N>, &'a Compr::Data)>,
+        chunks: impl Iterator<Item = (ChunkKey<N>, Data)>,
     ) -> sled::Result<()>
     where
-        Compr::Data: 'a,
+        Data: Borrow<Compr::Data>,
     {
         // First compress all of the chunks in parallel.
         let mut compressed_chunks = Vec::new();
@@ -72,7 +73,7 @@ where
                 join_all(batch_of_chunks.into_iter().map(|(key, chunk)| async move {
                     (
                         ChunkKey::<N>::into_ord_key(key),
-                        self.compression.compress(&chunk),
+                        self.compression.compress(chunk.borrow()),
                     )
                 }))
                 .await

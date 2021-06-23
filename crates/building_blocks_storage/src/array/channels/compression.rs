@@ -78,7 +78,7 @@ where
         // Decompress the values by consuming the rest of the bytes.
         By::decompress_bytes(
             compressed_bytes,
-            &mut cast_slice_mut(decompressed_values.as_mut_slice()),
+            cast_slice_mut(decompressed_values.as_mut_slice()),
         )?;
 
         Ok(Channel::new(decompressed_values))

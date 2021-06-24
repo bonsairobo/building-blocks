@@ -81,11 +81,11 @@ fn setup<Map: VoxelMap>(
 
     // Generate a voxel map from noise.
     let freq = 0.25;
-    let scale = 4.0;
+    let scale = 5.0;
     let seed = 666;
     let octaves = 9;
     let freq_warp = 0.015;
-    let scale_warp = 500.0;
+    let scale_warp = 600.0;
     let map = Map::generate(&*pool, freq, scale, seed, octaves, freq_warp, scale_warp);
 
     // Queue up commands to initialize the chunk meshes to their appropriate LODs given the starting camera position.

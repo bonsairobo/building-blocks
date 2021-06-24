@@ -84,8 +84,8 @@ impl VoxelMap for SmoothVoxelMap {
             // Rescale the noise.
             let array = noise.array_mut();
             let extent = *array.extent();
-            array.for_each_mut(&extent, |p: Point3i, x: &mut f32| {
-                *x = p.y() as f32 + *x * scale;
+            array.for_each_mut(&extent, |_: (), x: &mut f32| {
+                *x *= scale;
             });
 
             noise_chunk_map.write_chunk(ChunkKey::new(0, chunk_min), noise);
@@ -96,7 +96,7 @@ impl VoxelMap for SmoothVoxelMap {
             chunk.for_each_mut(&extent, |p: Point3i, d: &mut f32| {
                 let (warp_x, warp_y, warp_z) = warp.get(p);
                 let sample_p = p + PointN([warp_x as i32, warp_y as i32, warp_z as i32]);
-                *d = p.y() as f32 + noise_chunk_map.get_point(0, sample_p) * scale
+                *d = p.y() as f32 + noise_chunk_map.get_point(0, sample_p)
             });
 
             chunks.write_chunk(warp_key, chunk);

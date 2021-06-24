@@ -71,6 +71,16 @@ pub struct OctreeChunkIndex {
 }
 
 impl OctreeChunkIndex {
+    pub fn new_empty(superchunk_shape: Point3i, chunk_shape: Point3i, num_lods: u8) -> Self {
+        validate_params(superchunk_shape, chunk_shape, num_lods);
+
+        Self {
+            superchunk_octrees: ChunkedOctreeSet::new_empty(superchunk_shape),
+            chunk_shape,
+            num_lods,
+        }
+    }
+
     /// The shape of the world extent convered by a single chunk (a leaf of an octree).
     #[inline]
     pub fn chunk_shape(&self) -> Point3i {
@@ -86,20 +96,6 @@ impl OctreeChunkIndex {
     #[inline]
     pub fn num_lods(&self) -> u8 {
         self.num_lods
-    }
-
-    #[inline]
-    pub fn max_lods(&self) -> u8 {
-        // Calculations assume the chunk shape is a cube.
-        let superchunk_log2 = self
-            .superchunk_octrees
-            .indexer
-            .chunk_shape()
-            .x()
-            .trailing_zeros() as u8;
-        let chunk_log2 = self.chunk_shape().x().trailing_zeros() as u8;
-
-        superchunk_log2 - chunk_log2 + 1
     }
 
     /// Same as `index_lod0_chunks`, but using the chunk keys and chunk shape from `chunk_map`.
@@ -133,24 +129,10 @@ impl OctreeChunkIndex {
         num_lods: u8,
         chunk_keys: impl Iterator<Item = &'a ChunkKey3>,
     ) -> Self {
-        assert!(superchunk_shape.dimensions_are_powers_of_2());
-        assert!(chunk_shape.dimensions_are_powers_of_2());
-        assert!(chunk_shape.is_cube());
+        let (_, chunk_log2) = validate_params(superchunk_shape, chunk_shape, num_lods);
 
-        let superchunk_log2 = superchunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
-        let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
-        assert!(superchunk_log2 > chunk_log2);
-
-        assert!(
-            superchunk_log2 - chunk_log2 < Point3i::fill(6),
-            "OctreeSet only support 6 levels. Make your chunk shape larger or make your superchunk shape smaller.
-             superchunk shape = {:?}, log2 = {:?}
-             chunk shape      = {:?}, log2 = {:?}",
-            superchunk_shape,
-            superchunk_log2,
-            chunk_shape,
-            chunk_log2
-        );
+        // Assume chunks are cubes.
+        let chunk_log2 = chunk_log2.x();
 
         let superchunk_shape_in_chunks = superchunk_shape >> chunk_log2;
 
@@ -179,14 +161,11 @@ impl OctreeChunkIndex {
             superchunk_octrees.insert(lod_chunk_key, octree);
         }
 
-        let index = Self {
+        Self {
             superchunk_octrees: ChunkedOctreeSet::new(superchunk_shape, superchunk_octrees),
             chunk_shape,
             num_lods,
-        };
-        assert!(index.num_lods <= index.max_lods());
-
-        index
+        }
     }
 
     pub fn clipmap_config(&self, clip_box_radius: u16) -> ClipMapConfig3 {
@@ -243,4 +222,35 @@ impl OctreeChunkIndex {
     pub fn visit_octrees(&self, extent: &Extent3i, visitor: &mut impl FnMut(&OctreeSet)) {
         self.superchunk_octrees.visit_octrees(extent, visitor)
     }
+}
+
+fn validate_params(
+    superchunk_shape: Point3i,
+    chunk_shape: Point3i,
+    num_lods: u8,
+) -> (Point3i, Point3i) {
+    assert!(superchunk_shape.dimensions_are_powers_of_2());
+    assert!(chunk_shape.dimensions_are_powers_of_2());
+    assert!(chunk_shape.is_cube());
+
+    let superchunk_log2 = superchunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
+    let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
+    assert!(superchunk_log2 > chunk_log2);
+
+    assert!(
+        superchunk_log2 - chunk_log2 < Point3i::fill(6),
+        "OctreeSet only support 6 levels. Make your chunk shape larger or make your superchunk shape smaller.
+            superchunk shape = {:?}, log2 = {:?}
+            chunk shape      = {:?}, log2 = {:?}",
+        superchunk_shape,
+        superchunk_log2,
+        chunk_shape,
+        chunk_log2
+    );
+
+    // Assumes the chunk shape is a cube.
+    let max_lods = superchunk_log2.x() - chunk_log2.x() + 1;
+    assert!(num_lods as i32 <= max_lods);
+
+    (superchunk_log2, chunk_log2)
 }

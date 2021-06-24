@@ -173,15 +173,25 @@
 
 // TODO: when cargo-readme supports intra-doc links, replace URLs above
 
-pub use building_blocks_core as core;
-pub use building_blocks_storage as storage;
+pub mod core {
+    pub use building_blocks_core::*;
+}
+
+pub mod storage {
+    pub use building_blocks_storage::*;
+}
+
+#[cfg(feature = "mesh")]
+pub mod mesh {
+    pub use building_blocks_mesh::*;
+}
+
+#[cfg(feature = "search")]
+pub mod search {
+    pub use building_blocks_search::*;
+}
 
 pub mod prelude {
     pub use super::core::prelude::*;
     pub use super::storage::prelude::*;
 }
-
-#[cfg(feature = "mesh")]
-pub use building_blocks_mesh as mesh;
-#[cfg(feature = "search")]
-pub use building_blocks_search as search;

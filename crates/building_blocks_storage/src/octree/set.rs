@@ -718,20 +718,24 @@ impl OctreeSet {
         }
     }
 
-    /// Get all of the points in this set collected into a `Vec`.
-    pub fn collect_points(&self) -> Vec<Point3i> {
-        let mut leaves = Vec::new();
+    pub fn visit_all_points(&self, mut visitor: impl FnMut(Point3i)) {
         self.visit_all_octants_in_preorder(&mut |node: &OctreeNode| {
             if node.is_full() {
                 for p in Extent3i::from(*node.octant()).iter_points() {
-                    leaves.push(p);
+                    visitor(p);
                 }
             }
 
             VisitStatus::Continue
         });
+    }
 
-        leaves
+    /// Get all of the points in this set collected into a `Vec`.
+    pub fn collect_all_points(&self) -> Vec<Point3i> {
+        let mut points = Vec::new();
+        self.visit_all_points(|p| points.push(p));
+
+        points
     }
 }
 

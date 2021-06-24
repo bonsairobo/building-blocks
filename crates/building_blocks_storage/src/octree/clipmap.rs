@@ -298,7 +298,7 @@ mod test {
             Point3i::fill(-1),
             Point3i::fill(2),
         ));
-        let lod1_set = lod1_set.collect_points().into_iter().map(|p| ChunkKey {
+        let lod1_set = lod1_set.collect_all_points().into_iter().map(|p| ChunkKey {
             minimum: p * CHUNK_SHAPE,
             lod: 1,
         });

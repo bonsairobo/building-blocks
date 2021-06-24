@@ -26,6 +26,10 @@ impl ChunkedOctreeSet {
         Self::new(chunk_shape, SmallKeyHashMap::default())
     }
 
+    pub fn insert_chunk(&mut self, chunk_min: Point3i, octree: OctreeSet) -> Option<OctreeSet> {
+        self.octrees.insert(chunk_min, octree)
+    }
+
     pub fn visit_octrees(&self, extent: &Extent3i, visitor: &mut impl FnMut(&OctreeSet)) {
         for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
             if let Some(octree) = self.octrees.get(&chunk_min) {

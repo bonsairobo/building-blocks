@@ -98,6 +98,12 @@ impl OctreeChunkIndex {
         self.num_lods
     }
 
+    #[inline]
+    fn chunk_log2(&self) -> Point3i {
+        self.chunk_shape
+            .map_components_unary(|c| c.trailing_zeros() as i32)
+    }
+
     /// Same as `index_lod0_chunks`, but using the chunk keys and chunk shape from `chunk_map`.
     pub fn index_chunk_map<T, Ch, Store>(
         superchunk_shape: Point3i,
@@ -141,11 +147,11 @@ impl OctreeChunkIndex {
         let mut superchunk_bitsets = SmallKeyHashMap::default();
         for chunk_key in chunk_keys {
             assert_eq!(chunk_key.lod, 0);
-            let superchunk_key = chunk_key.minimum & superchunk_mask;
-            let bitset = superchunk_bitsets.entry(superchunk_key).or_insert_with(|| {
+            let superchunk_min = chunk_key.minimum & superchunk_mask;
+            let bitset = superchunk_bitsets.entry(superchunk_min).or_insert_with(|| {
                 Array3x1::fill(
                     Extent3i::from_min_and_shape(
-                        superchunk_key >> chunk_log2,
+                        superchunk_min >> chunk_log2,
                         superchunk_shape_in_chunks,
                     ),
                     false,
@@ -166,6 +172,30 @@ impl OctreeChunkIndex {
             chunk_shape,
             num_lods,
         }
+    }
+
+    /// Inserts all of the chunks for one superchunk. Panics if any of the chunk keys fall outside of the superchunk extent.
+    /// Returns the old `OctreeSet` for the superchunk if one existed.
+    pub fn insert_superchunk<'a>(
+        &mut self,
+        superchunk_min: Point3i,
+        chunk_keys: impl Iterator<Item = &'a ChunkKey3>,
+    ) -> Option<OctreeSet> {
+        // Assume chunks are cubes.
+        let chunk_log2 = self.chunk_log2().x();
+
+        let superchunk_extent =
+            Extent3i::from_min_and_shape(superchunk_min, self.superchunk_shape());
+        let super_chunk_extent_in_chunks = superchunk_extent >> chunk_log2;
+
+        let mut bitset = Array3x1::fill(super_chunk_extent_in_chunks, false);
+        for chunk_key in chunk_keys {
+            assert_eq!(chunk_key.lod, 0);
+            *bitset.get_mut(chunk_key.minimum >> chunk_log2) = true;
+        }
+        let octree = OctreeSet::from_array3(&bitset, *bitset.extent());
+
+        self.superchunk_octrees.insert_chunk(superchunk_min, octree)
     }
 
     pub fn clipmap_config(&self, clip_box_radius: u16) -> ClipMapConfig3 {

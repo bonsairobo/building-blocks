@@ -1,6 +1,9 @@
 use crate::voxel_map::VoxelMap;
 
-use bevy_utilities::{bevy::tasks::ComputeTaskPool, noise::generate_noise_chunks};
+use bevy_utilities::{
+    bevy::tasks::ComputeTaskPool,
+    noise::{generate_noise_chunks, generate_noise_chunks_warp},
+};
 use building_blocks::{
     mesh::{
         greedy_quads, padded_greedy_quads_chunk_extent, GreedyQuadsBuffer, IsOpaque, MergeVoxel,
@@ -17,9 +20,11 @@ const SUPERCHUNK_SHAPE: Point3i = PointN([1 << (CHUNK_LOG2 + NUM_LODS as i32 - 1
 const CLIP_BOX_RADIUS: u16 = 8;
 
 const WORLD_CHUNKS_EXTENT: Extent3i = Extent3i {
-    minimum: PointN([-100, 0, -100]),
-    shape: PointN([200, 1, 200]),
+    minimum: PointN([-50, -4, -50]),
+    shape: PointN([100, 8, 100]),
 };
+
+const AMBIENT_VALUE: f32 = 0.0;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Voxel(pub u8);
@@ -57,18 +62,79 @@ pub struct BlockyVoxelMap {
 impl VoxelMap for BlockyVoxelMap {
     type MeshBuffers = MeshBuffers;
 
-    fn generate(pool: &ComputeTaskPool, freq: f32, scale: f32, seed: i32) -> Self {
-        let noise_chunks =
-            generate_noise_chunks(pool, Self::world_chunks_extent(), CHUNK_SHAPE, freq, seed);
+    fn generate(
+        pool: &ComputeTaskPool,
+        freq: f32,
+        scale: f32,
+        seed: i32,
+        octaves: u8,
+        freq_warp: f32,
+        scale_warp: f32,
+    ) -> Self {
+        let noise_chunks = generate_noise_chunks(
+            pool,
+            Self::world_chunks_extent(),
+            CHUNK_SHAPE,
+            freq,
+            seed,
+            octaves,
+        );
+
+        let noise_chunks_warp = generate_noise_chunks_warp(
+            pool,
+            Self::world_chunks_extent(),
+            CHUNK_SHAPE,
+            freq_warp,
+            seed,
+        );
+        let warp_builder =
+            ChunkMapBuilder3x3::new(CHUNK_SHAPE, (AMBIENT_VALUE, AMBIENT_VALUE, AMBIENT_VALUE));
+
+        let mut warp_chunks = warp_builder.build_with_hash_map_storage();
+
+        for (chunk_min, mut noise) in noise_chunks_warp.into_iter() {
+            // Rescale the noise.
+            let array = noise.array_mut();
+            let extent = *array.extent();
+            array.for_each_mut(&extent, |_: (), (x, y, z)| {
+                *x *= scale_warp;
+                *y *= scale_warp;
+                *z *= scale_warp;
+            });
+
+            warp_chunks.write_chunk(ChunkKey::new(0, chunk_min), noise);
+        }
+
+        let noise_builder = ChunkMapBuilder3x1::new(CHUNK_SHAPE, AMBIENT_VALUE);
+        let mut noise_chunk_map = noise_builder.build_with_hash_map_storage();
 
         let builder = ChunkMapBuilder3x1::new(CHUNK_SHAPE, Voxel::EMPTY);
         let mut chunks = builder.build_with_hash_map_storage();
 
-        for (chunk_min, noise) in noise_chunks.into_iter() {
-            chunks.write_chunk(
-                ChunkKey::new(0, chunk_min),
-                blocky_voxels_from_noise(&noise, scale),
-            );
+        for (chunk_min, mut noise) in noise_chunks.into_iter() {
+            // Rescale the noise.
+            let array = noise.array_mut();
+            let extent = *array.extent();
+            array.for_each_mut(&extent, |p: Point3i, x: &mut f32| {
+                *x = p.y() as f32 + *x * scale;
+            });
+
+            noise_chunk_map.write_chunk(ChunkKey::new(0, chunk_min), noise);
+        }
+        for (warp_key, warp) in warp_chunks.take_storage() {
+            let extent = warp.extent();
+            let mut chunk = Array3x1::fill(*extent, Voxel::EMPTY);
+            chunk.for_each_mut(&extent, |p: Point3i, v: &mut Voxel| {
+                let (warp_x, warp_y, warp_z) = warp.get(p);
+                let sample_p = p + PointN([warp_x as i32, warp_y as i32, warp_z as i32]);
+                *v = if p.y() as f32 + noise_chunk_map.get_point(0, sample_p) * scale < 0.0 {
+                    Voxel::FILLED
+                } else {
+                    Voxel::EMPTY
+                }
+            });
+
+            chunks.write_chunk(warp_key, chunk);
         }
 
         let index = OctreeChunkIndex::index_chunk_map(SUPERCHUNK_SHAPE, NUM_LODS, &chunks);
@@ -150,22 +216,6 @@ impl VoxelMap for BlockyVoxelMap {
             Some(mesh)
         }
     }
-}
-
-fn blocky_voxels_from_noise(noise: &Array3x1<f32>, scale: f32) -> Array3x1<Voxel> {
-    let mut voxels = Array3x1::fill(*noise.extent(), Voxel::EMPTY);
-
-    // Convert the f32 noise into Voxels.
-    let sdf_voxel_noise = TransformMap::new(noise, |d: f32| {
-        if scale * d < 0.0 {
-            Voxel::FILLED
-        } else {
-            Voxel::EMPTY
-        }
-    });
-    copy_extent(noise.extent(), &sdf_voxel_noise, &mut voxels);
-
-    voxels
 }
 
 pub struct MeshBuffers {

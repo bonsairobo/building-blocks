@@ -8,7 +8,15 @@ use building_blocks::{
 pub trait VoxelMap: ecs::component::Component {
     type MeshBuffers: Send;
 
-    fn generate(pool: &ComputeTaskPool, freq: f32, scale: f32, seed: i32) -> Self;
+    fn generate(
+        pool: &ComputeTaskPool,
+        freq: f32,
+        scale: f32,
+        seed: i32,
+        octaves: u8,
+        freq_heightmap: f32,
+        scale_heightmap: f32,
+    ) -> Self;
 
     fn world_chunks_extent() -> Extent3i;
     fn chunk_log2() -> i32;

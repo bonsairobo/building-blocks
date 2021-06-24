@@ -198,6 +198,10 @@ impl OctreeChunkIndex {
         self.superchunk_octrees.insert_chunk(superchunk_min, octree)
     }
 
+    pub fn pop_superchunk(&mut self, superchunk_min: Point3i) -> Option<OctreeSet> {
+        self.superchunk_octrees.pop_chunk(superchunk_min)
+    }
+
     pub fn clipmap_config(&self, clip_box_radius: u16) -> ClipMapConfig3 {
         assert!(self.superchunk_octrees.indexer.chunk_shape().is_cube());
         assert!(self.chunk_shape().is_cube());

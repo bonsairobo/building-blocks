@@ -30,6 +30,10 @@ impl ChunkedOctreeSet {
         self.octrees.insert(chunk_min, octree)
     }
 
+    pub fn pop_chunk(&mut self, chunk_min: Point3i) -> Option<OctreeSet> {
+        self.octrees.remove(&chunk_min)
+    }
+
     pub fn visit_octrees(&self, extent: &Extent3i, visitor: &mut impl FnMut(&OctreeSet)) {
         for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
             if let Some(octree) = self.octrees.get(&chunk_min) {

@@ -2,6 +2,7 @@ use building_blocks_core::{ConstZero, IntegerPoint, PointN};
 
 use core::ops::{Add, AddAssign, Deref, Mul, Sub, SubAssign};
 use num::Zero;
+use serde::{Deserialize, Serialize};
 
 /// Map-local coordinates.
 ///
@@ -120,7 +121,7 @@ impl SubAssign for Stride {
 }
 
 /// A newtype wrapper for `PointN` or `ExtentN` where each point represents exactly one chunk.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ChunkUnits<T>(pub T);
 
 impl<N> ChunkUnits<PointN<N>>

@@ -101,7 +101,7 @@ fn apply_mesh_commands<Map: VoxelMap>(
                     s.spawn(async move {
                         let mesh_tls = local_mesh_buffers.get();
                         let mut mesh_buffers = mesh_tls
-                            .get_or_create_with(|| RefCell::new(Map::init_mesh_buffers()))
+                            .get_or_create_with(|| RefCell::new(voxel_map.init_mesh_buffers()))
                             .borrow_mut();
 
                         (key, voxel_map.create_mesh_for_chunk(key, &mut mesh_buffers))
@@ -120,7 +120,7 @@ fn apply_mesh_commands<Map: VoxelMap>(
                                     let mesh_tls = local_mesh_buffers.get();
                                     let mut mesh_buffers = mesh_tls
                                         .get_or_create_with(|| {
-                                            RefCell::new(Map::init_mesh_buffers())
+                                            RefCell::new(voxel_map.init_mesh_buffers())
                                         })
                                         .borrow_mut();
 
@@ -138,7 +138,7 @@ fn apply_mesh_commands<Map: VoxelMap>(
                             s.spawn(async move {
                                 let mesh_tls = local_mesh_buffers.get();
                                 let mut mesh_buffers = mesh_tls
-                                    .get_or_create_with(|| RefCell::new(Map::init_mesh_buffers()))
+                                    .get_or_create_with(|| RefCell::new(voxel_map.init_mesh_buffers()))
                                     .borrow_mut();
 
                                 (

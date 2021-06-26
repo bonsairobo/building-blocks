@@ -1,0 +1,16 @@
+(
+    superchunk_shape: ((256, 256, 256)),
+    chunk_shape: ((16, 16, 16)),
+    num_lods: 4,
+    clip_box_radius: 12,
+    world_chunks_extent: ((
+        minimum: ((-50, -2, -50)),
+        shape: ((100, 4, 100)),
+    )),
+    noise: (
+        freq: 0.25,
+        scale: 5.0,
+        seed: 666,
+        octaves: 6,
+    ),
+)

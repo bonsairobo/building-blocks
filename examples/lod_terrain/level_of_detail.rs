@@ -32,15 +32,18 @@ pub fn level_of_detail_system<Map: VoxelMap>(
         return;
     };
 
-    let lod0_center = ChunkUnits(Point3f::from(camera_position).in_voxel() >> Map::chunk_log2());
+    let map_config = voxel_map.config();
+
+    let lod0_center =
+        ChunkUnits(Point3f::from(camera_position).in_voxel() >> map_config.chunk_log2());
 
     if lod0_center == lod_state.old_lod0_center {
         return;
     }
 
     voxel_map.chunk_index().find_clipmap_chunk_updates(
-        &Map::world_extent(),
-        Map::clip_box_radius(),
+        &map_config.world_extent(),
+        map_config.clip_box_radius,
         lod_state.old_lod0_center,
         lod0_center,
         |update| mesh_commands.enqueue(MeshCommand::Update(update)),

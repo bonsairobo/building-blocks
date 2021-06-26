@@ -8,12 +8,13 @@ use level_of_detail::{level_of_detail_system, LodState};
 use mesh_generator::{
     mesh_generator_system, ChunkMeshes, MeshCommand, MeshCommandQueue, MeshMaterials,
 };
-use voxel_map::VoxelMap;
+use voxel_map::{MapConfig, VoxelMap};
 
 use building_blocks::{core::prelude::*, storage::ChunkUnits};
 
 use bevy_utilities::{
     bevy::{
+        pbr::AmbientLight,
         prelude::*,
         render::camera::PerspectiveProjection,
         // render::wireframe::{WireframeConfig, WireframePlugin},
@@ -44,6 +45,8 @@ fn main() {
 }
 
 fn run_example<Map: VoxelMap>() {
+    let map_config = MapConfig::read_file("lod_terrain/map.ron").unwrap();
+
     let window_desc = WindowDescriptor {
         width: 1600.0,
         height: 900.0,
@@ -52,6 +55,7 @@ fn run_example<Map: VoxelMap>() {
     };
 
     App::build()
+        .insert_resource(map_config)
         .insert_resource(window_desc)
         .insert_resource(Msaa { samples: 4 })
         // .insert_resource(WgpuOptions {
@@ -61,10 +65,10 @@ fn run_example<Map: VoxelMap>() {
         //     },
         //     ..Default::default()
         // })
+        // .add_plugin(WireframePlugin)
         .add_plugins(DefaultPlugins)
         .add_plugin(LookTransformPlugin)
         .add_plugin(FpsCameraPlugin)
-        // .add_plugin(WireframePlugin)
         .add_startup_system(setup::<Map>.system())
         .add_system(level_of_detail_system::<Map>.system())
         .add_system(mesh_generator_system::<Map>.system())
@@ -72,6 +76,7 @@ fn run_example<Map: VoxelMap>() {
 }
 
 fn setup<Map: VoxelMap>(
+    map_config: Res<MapConfig>,
     mut commands: Commands,
     // mut wireframe_config: ResMut<WireframeConfig>,
     pool: Res<ComputeTaskPool>,
@@ -80,17 +85,14 @@ fn setup<Map: VoxelMap>(
     // wireframe_config.global = true;
 
     // Generate a voxel map from noise.
-    let freq = 0.15;
-    let scale = 1.0;
-    let seed = 666;
-    let map = Map::generate(&*pool, freq, scale, seed);
+    let map = Map::generate(&*pool, *map_config);
 
     // Queue up commands to initialize the chunk meshes to their appropriate LODs given the starting camera position.
     let init_lod0_center = ChunkUnits(Point3i::ZERO);
     let mut mesh_commands = MeshCommandQueue::default();
     map.chunk_index().active_clipmap_lod_chunks(
-        &Map::world_extent(),
-        Map::clip_box_radius(),
+        &map.config().world_extent(),
+        map.config().clip_box_radius,
         init_lod0_center,
         |chunk_key| mesh_commands.enqueue(MeshCommand::Create(chunk_key)),
     );
@@ -104,7 +106,10 @@ fn setup<Map: VoxelMap>(
 
     // Lights, camera, action!
     commands.spawn_bundle(FpsCameraBundle::new(
-        FpsCameraController::default(),
+        FpsCameraController {
+            smoothing_weight: 0.7,
+            ..Default::default()
+        },
         PerspectiveCameraBundle {
             perspective_projection: PerspectiveProjection {
                 far: 10000.0,
@@ -115,6 +120,11 @@ fn setup<Map: VoxelMap>(
         Vec3::splat(100.0),
         Vec3::splat(0.0),
     ));
+
+    commands.insert_resource(AmbientLight {
+        color: Color::WHITE,
+        brightness: 1.0 / 5.0f32,
+    });
     commands.spawn_bundle(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 500.0, 0.0)),
         light: Light {

@@ -12,6 +12,8 @@ release = { lto = "thin" }
 bench = { lto = "thin" }
 
 [dev-dependencies]
+ron = "0.6"
+serde = "1.0"
 structopt = "0.3"
 
 bevy_utilities = { path = "bevy_utilities" }

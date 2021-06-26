@@ -1,4 +1,4 @@
-use crate::voxel_map::VoxelMap;
+use crate::voxel_map::{MapConfig, NoiseConfig, VoxelMap};
 
 use bevy_utilities::{bevy::tasks::ComputeTaskPool, noise::generate_noise_chunks};
 use building_blocks::{
@@ -7,20 +7,10 @@ use building_blocks::{
     storage::{ChunkHashMap3x1, ChunkKey3, OctreeChunkIndex},
 };
 
-const CHUNK_LOG2: i32 = 4;
-const CHUNK_SHAPE: Point3i = PointN([1 << CHUNK_LOG2; 3]);
-const NUM_LODS: u8 = 4;
-const SUPERCHUNK_SHAPE: Point3i = PointN([1 << (CHUNK_LOG2 + NUM_LODS as i32 - 1); 3]);
-const CLIP_BOX_RADIUS: u16 = 12;
-
-const WORLD_CHUNKS_EXTENT: Extent3i = Extent3i {
-    minimum: PointN([-100, 0, -100]),
-    shape: PointN([200, 1, 200]),
-};
-
 const AMBIENT_VALUE: f32 = 1.0;
 
 pub struct SmoothVoxelMap {
+    config: MapConfig,
     chunks: ChunkHashMap3x1<f32>,
     index: OctreeChunkIndex,
 }
@@ -28,52 +18,63 @@ pub struct SmoothVoxelMap {
 impl VoxelMap for SmoothVoxelMap {
     type MeshBuffers = MeshBuffers;
 
-    fn generate(pool: &ComputeTaskPool, freq: f32, scale: f32, seed: i32) -> Self {
-        let noise_chunks =
-            generate_noise_chunks(pool, Self::world_chunks_extent(), CHUNK_SHAPE, freq, seed);
+    fn generate(pool: &ComputeTaskPool, config: MapConfig) -> Self {
+        let MapConfig {
+            superchunk_shape,
+            chunk_shape,
+            num_lods,
+            world_chunks_extent,
+            noise:
+                NoiseConfig {
+                    freq,
+                    scale,
+                    seed,
+                    octaves,
+                },
+            ..
+        } = config;
 
-        let builder = ChunkMapBuilder3x1::new(CHUNK_SHAPE, AMBIENT_VALUE);
+        let noise_chunks = generate_noise_chunks(
+            pool,
+            world_chunks_extent,
+            chunk_shape,
+            freq,
+            scale,
+            seed,
+            octaves,
+            true,
+        );
+
+        let builder = ChunkMapBuilder3x1::new(chunk_shape, AMBIENT_VALUE);
         let mut chunks = builder.build_with_hash_map_storage();
 
-        for (chunk_min, mut noise) in noise_chunks.into_iter() {
-            // Rescale the noise.
-            let array = noise.array_mut();
-            let extent = *array.extent();
-            array.for_each_mut(&extent, |_: (), x| {
-                *x *= scale;
-            });
+        for (chunk_min, noise) in noise_chunks.into_iter() {
             chunks.write_chunk(ChunkKey::new(0, chunk_min), noise);
         }
 
-        let index = OctreeChunkIndex::index_chunk_map(SUPERCHUNK_SHAPE, NUM_LODS, &chunks);
+        let index = OctreeChunkIndex::index_chunk_map(superchunk_shape, num_lods, &chunks);
 
-        let world_extent = Self::world_chunks_extent() * CHUNK_SHAPE;
-        chunks.downsample_chunks_with_index(&index, &PointDownsampler, &world_extent);
+        chunks.downsample_chunks_with_index(&index, &PointDownsampler, &config.world_extent());
 
-        Self { chunks, index }
+        Self {
+            chunks,
+            index,
+            config,
+        }
     }
 
-    fn chunk_log2() -> i32 {
-        CHUNK_LOG2
-    }
-    fn clip_box_radius() -> u16 {
-        CLIP_BOX_RADIUS
-    }
-    fn world_chunks_extent() -> Extent3i {
-        WORLD_CHUNKS_EXTENT
-    }
-    fn world_extent() -> Extent3i {
-        Self::world_chunks_extent() * CHUNK_SHAPE
+    fn config(&self) -> &MapConfig {
+        &self.config
     }
 
     fn chunk_index(&self) -> &OctreeChunkIndex {
         &self.index
     }
 
-    fn init_mesh_buffers() -> Self::MeshBuffers {
+    fn init_mesh_buffers(&self) -> Self::MeshBuffers {
         let extent = padded_surface_nets_chunk_extent(&Extent3i::from_min_and_shape(
             Point3i::ZERO,
-            CHUNK_SHAPE,
+            self.chunks.chunk_shape(),
         ));
 
         MeshBuffers {

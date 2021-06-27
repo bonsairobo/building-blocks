@@ -9,12 +9,20 @@ use bevy::{
 };
 
 pub fn create_mesh_bundle(
-    mesh: PosNormMesh,
+    mut mesh: PosNormMesh,
     material: Handle<StandardMaterial>,
     meshes: &mut Assets<Mesh>,
 ) -> PbrBundle {
     assert_eq!(mesh.positions.len(), mesh.normals.len());
     let num_vertices = mesh.positions.len();
+
+    // Bevy might not normalize our surface normals in the vertex shader (before interpolation).
+    for n in &mut mesh.normals {
+        let norm = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
+        n[0] = n[0] / norm;
+        n[1] = n[1] / norm;
+        n[2] = n[2] / norm;
+    }
 
     let mut render_mesh = Mesh::new(PrimitiveTopology::TriangleList);
     render_mesh.set_attribute(

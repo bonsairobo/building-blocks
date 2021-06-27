@@ -1,6 +1,6 @@
 use crate::voxel_map::{MapConfig, NoiseConfig, VoxelMap};
 
-use bevy_utilities::{bevy::tasks::ComputeTaskPool, noise::generate_noise_chunks};
+use bevy_utilities::{bevy::tasks::ComputeTaskPool, noise::generate_noise_chunks3};
 use building_blocks::{
     mesh::{
         greedy_quads, padded_greedy_quads_chunk_extent, GreedyQuadsBuffer, IsOpaque, MergeVoxel,
@@ -63,7 +63,7 @@ impl VoxelMap for BlockyVoxelMap {
             ..
         } = config;
 
-        let noise_chunks = generate_noise_chunks(
+        let noise_chunks = generate_noise_chunks3(
             pool,
             world_chunks_extent,
             chunk_shape,
@@ -78,10 +78,7 @@ impl VoxelMap for BlockyVoxelMap {
         let mut chunks = builder.build_with_hash_map_storage();
 
         for (chunk_min, noise) in noise_chunks.into_iter() {
-            chunks.write_chunk(
-                ChunkKey::new(0, chunk_min),
-                blocky_voxels_from_noise(&noise, scale),
-            );
+            chunks.write_chunk(ChunkKey::new(0, chunk_min), blocky_voxels_from_sdf(&noise));
         }
 
         let index = OctreeChunkIndex::index_chunk_map(superchunk_shape, num_lods, &chunks);
@@ -159,18 +156,22 @@ impl VoxelMap for BlockyVoxelMap {
     }
 }
 
-fn blocky_voxels_from_noise(noise: &Array3x1<f32>, scale: f32) -> Array3x1<Voxel> {
-    let mut voxels = Array3x1::fill(*noise.extent(), Voxel::EMPTY);
+fn blocky_voxels_from_sdf(sdf: &Array3x1<f32>) -> Array3x1<Voxel> {
+    let mut voxels = Array3x1::fill(*sdf.extent(), Voxel::EMPTY);
 
-    // Convert the f32 noise into Voxels.
-    let sdf_voxel_noise = TransformMap::new(noise, |d: f32| {
-        if scale * d < 0.0 {
-            Voxel::FILLED
-        } else {
-            Voxel::EMPTY
-        }
-    });
-    copy_extent(noise.extent(), &sdf_voxel_noise, &mut voxels);
+    // Convert the f32 SDF into Voxels.
+    let sdf_voxel_noise =
+        TransformMap::new(
+            sdf,
+            |d: f32| {
+                if d < 0.0 {
+                    Voxel::FILLED
+                } else {
+                    Voxel::EMPTY
+                }
+            },
+        );
+    copy_extent(sdf.extent(), &sdf_voxel_noise, &mut voxels);
 
     voxels
 }

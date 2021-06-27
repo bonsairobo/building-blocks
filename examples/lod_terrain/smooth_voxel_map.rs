@@ -1,6 +1,6 @@
 use crate::voxel_map::{MapConfig, NoiseConfig, VoxelMap};
 
-use bevy_utilities::{bevy::tasks::ComputeTaskPool, noise::generate_noise_chunks};
+use bevy_utilities::{bevy::tasks::ComputeTaskPool, noise::generate_noise_chunks3};
 use building_blocks::{
     mesh::{padded_surface_nets_chunk_extent, surface_nets, PosNormMesh, SurfaceNetsBuffer},
     prelude::*,
@@ -34,7 +34,7 @@ impl VoxelMap for SmoothVoxelMap {
             ..
         } = config;
 
-        let noise_chunks = generate_noise_chunks(
+        let noise_chunks = generate_noise_chunks3(
             pool,
             world_chunks_extent,
             chunk_shape,

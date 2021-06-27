@@ -19,19 +19,17 @@ We focus on generally useful data structures and algorithms. Features include:
   - [`ChunkMap`](crate::storage::chunk::map) with generic chunk storage
   - [`ChunkDb`](crate::storage::database) for compressed, persistent voxel worlds, backed by the `sled` embedded database
   - [`OctreeSet`](crate::storage::octree::set) hierarchical bitset of voxel points
-- mesh generation
-  - Surface Nets isosurface extraction
-  - Minecraft-style greedy meshing
-  - height maps
-- spatial queries
-  - sparse traversal and search over octrees
-  - ray casting and sphere casting against octrees with [`ncollide3d`](https://www.ncollide.org/)
-  - Amanatides and Woo ray grid traversal
-  - pathfinding
 - level of detail
   - `ChunkMap` can downsample chunks into lower resolutions within the same storage
   - dynamic 3D clipmap for keeping high detail close to a focal point
-  - multiresolution Surface Nets (TODO)
+- mesh generation
+  - Surface Nets isosurface extraction (TODO: multiresolution)
+  - Minecraft-style greedy meshing
+  - height maps
+- spatial queries
+  - ray and ball casting against octrees with [`ncollide3d`](https://www.ncollide.org/)
+  - Amanatides and Woo ray grid traversal
+  - pathfinding
 - procedural generation
   - sampling signed distance fields
   - constructive solid geometry with [`sdfu`](https://docs.rs/sdfu)

@@ -58,7 +58,7 @@ where
 {
     /// Insert a set of chunks. This will compress all of the chunks asynchronously then insert them into the database.
     /// Pre-existing chunks will be overwritten.
-    pub async fn write_chunks<'a, Data>(
+    pub async fn write_chunks<Data>(
         &self,
         chunks: impl Iterator<Item = (ChunkKey<N>, Data)>,
     ) -> sled::Result<()>

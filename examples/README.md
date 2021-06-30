@@ -64,7 +64,8 @@ cargo run --example lod_terrain smooth
 
 ## Official Related Projects
 
-- [building-blocks-editor](https://github.com/bonsairobo/building-blocks-editor): A voxel map editor built with Bevy
+- [feldspar](https://github.com/bonsairobo/feldspar): A smooth voxel plugin for Bevy Engine
+- [feldspar-editor](https://github.com/bonsairobo/feldspar-editor): A map editor for feldspar
 
 ## Community Projects Using building-blocks
 

@@ -20,8 +20,8 @@ impl VoxelMap for SmoothVoxelMap {
 
     fn generate(pool: &ComputeTaskPool, config: MapConfig) -> Self {
         let MapConfig {
-            superchunk_shape,
-            chunk_shape,
+            superchunk_exponent,
+            chunk_exponent,
             num_lods,
             world_chunks_extent,
             noise:
@@ -33,6 +33,8 @@ impl VoxelMap for SmoothVoxelMap {
                 },
             ..
         } = config;
+
+        let chunk_shape = Point3i::fill(1 << chunk_exponent);
 
         let noise_chunks = generate_noise_chunks3(
             pool,
@@ -52,7 +54,7 @@ impl VoxelMap for SmoothVoxelMap {
             chunks.write_chunk(ChunkKey::new(0, chunk_min), noise);
         }
 
-        let index = OctreeChunkIndex::index_chunk_map(superchunk_shape, num_lods, &chunks);
+        let index = OctreeChunkIndex::index_chunk_map(superchunk_exponent, num_lods, &chunks);
 
         chunks.downsample_chunks_with_index(&index, &PointDownsampler, &config.world_extent());
 

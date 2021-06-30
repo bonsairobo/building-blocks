@@ -13,7 +13,9 @@
 //! # use building_blocks_storage::prelude::*;
 //! # use std::collections::HashSet;
 //! #
-//! let chunk_shape = Point3i::fill(16);
+//! let superchunk_exponent = 9;
+//! let chunk_exponent = 4;
+//! let chunk_shape = Point3i::fill(1 << chunk_exponent);
 //! let ambient_value = 0;
 //! let builder = ChunkMapBuilder3x1::new(chunk_shape, ambient_value);
 //! let mut map = builder.build_with_hash_map_storage();
@@ -23,9 +25,8 @@
 //! map.fill_extent(0, &extent, 1);
 //!
 //! // Now we index the currently populated set of chunks.
-//! let superchunk_shape = Point3i::fill(512);
 //! let num_lods = 5; // Up to 6 supported for now.
-//! let mut index = OctreeChunkIndex::index_chunk_map(superchunk_shape, num_lods, &map);
+//! let mut index = OctreeChunkIndex::index_chunk_map(superchunk_exponent, num_lods, &map);
 //!
 //! // Just make sure everything's here. A unit test to help you understand this structure.
 //! let mut chunk_keys = HashSet::new();
@@ -65,18 +66,23 @@ use serde::{Deserialize, Serialize};
 pub struct OctreeChunkIndex {
     /// An unbounded set of chunk keys, but scaled down to be contiguous, i.e. it operates in `ChunkUnits`.
     superchunk_octrees: ChunkedOctreeSet,
-    chunk_shape: Point3i,
-    /// Independent from the superchunk_shape, although it may not be larger than self.max_lods().
+
+    superchunk_exponent: u8,
+    chunk_exponent: u8,
+    /// Independent from the superchunk_exponent, although it may not be larger than self.max_lods().
     num_lods: u8,
 }
 
 impl OctreeChunkIndex {
-    pub fn new_empty(superchunk_shape: Point3i, chunk_shape: Point3i, num_lods: u8) -> Self {
-        validate_params(superchunk_shape, chunk_shape, num_lods);
+    pub fn new_empty(superchunk_exponent: u8, chunk_exponent: u8, num_lods: u8) -> Self {
+        validate_params(superchunk_exponent, chunk_exponent, num_lods);
 
         Self {
-            superchunk_octrees: ChunkedOctreeSet::new_empty(superchunk_shape),
-            chunk_shape,
+            superchunk_octrees: ChunkedOctreeSet::new_empty(Point3i::fill(
+                1i32 << superchunk_exponent,
+            )),
+            superchunk_exponent,
+            chunk_exponent,
             num_lods,
         }
     }
@@ -84,7 +90,7 @@ impl OctreeChunkIndex {
     /// The shape of the world extent convered by a single chunk (a leaf of an octree).
     #[inline]
     pub fn chunk_shape(&self) -> Point3i {
-        self.chunk_shape
+        Point3i::fill(1i32 << self.chunk_exponent)
     }
 
     /// The shape of the world extent covered by a single octree, i.e. all of its chunks when full.
@@ -98,26 +104,21 @@ impl OctreeChunkIndex {
         self.num_lods
     }
 
-    #[inline]
-    fn chunk_log2(&self) -> Point3i {
-        self.chunk_shape
-            .map_components_unary(|c| c.trailing_zeros() as i32)
-    }
-
     /// Same as `index_lod0_chunks`, but using the chunk keys and chunk shape from `chunk_map`.
     pub fn index_chunk_map<T, Ch, Store>(
-        superchunk_shape: Point3i,
+        superchunk_exponent: u8,
         num_lods: u8,
         chunk_map: &ChunkMap3<T, Ch, Store>,
     ) -> Self
     where
         Store: for<'r> IterChunkKeys<'r, [i32; 3]>,
     {
-        let chunk_shape = chunk_map.indexer.chunk_shape();
+        assert!(chunk_map.indexer.chunk_shape().is_cube());
+        let chunk_exponent = chunk_map.indexer.chunk_shape().x().trailing_zeros() as u8;
 
         Self::index_lod0_chunks(
-            superchunk_shape,
-            chunk_shape,
+            superchunk_exponent,
+            chunk_exponent,
             num_lods,
             chunk_map.storage().chunk_keys().filter(|k| k.lod == 0),
         )
@@ -127,22 +128,20 @@ impl OctreeChunkIndex {
     /// corresponds to the relative sizes of the chunks and superchunks. A superchunk is a chunk of the domain that contains a
     /// single octree of many smaller chunks. Superchunk shape, like chunk shape, must have all dimensions be powers of 2.
     /// Because of the static limitations on `OctreeSet` size, you can only have up to 6 levels of detail. This means
-    /// `superchunk_shape / chunk_shape` must be less than `2 ^ [6, 6, 6] = [64, 64, 64]`. For example, if your chunk shape is
-    /// `[16, 16, 16]`, then your superchunk shape can be at most `[512, 512, 512]`.
+    /// `superchunk_exponent - chunk_exponent` must be less than `6`. For example, if your chunk shape is `[2^4, 2^4, 2^4]`,
+    /// then your superchunk shape can be at most `[2^9, 2^9, 2^9]`.
     pub fn index_lod0_chunks<'a>(
-        superchunk_shape: Point3i,
-        chunk_shape: Point3i,
+        superchunk_exponent: u8,
+        chunk_exponent: u8,
         num_lods: u8,
         chunk_keys: impl Iterator<Item = &'a ChunkKey3>,
     ) -> Self {
-        let (_, chunk_log2) = validate_params(superchunk_shape, chunk_shape, num_lods);
+        validate_params(superchunk_exponent, chunk_exponent, num_lods);
 
-        // Assume chunks are cubes.
-        let chunk_log2 = chunk_log2.x();
+        let superchunk_exponent_in_chunks =
+            Point3i::fill(1i32 << (superchunk_exponent - chunk_exponent));
 
-        let superchunk_shape_in_chunks = superchunk_shape >> chunk_log2;
-
-        let superchunk_mask = !(superchunk_shape - Point3i::ONES);
+        let superchunk_mask = Point3i::fill(!((1i32 << superchunk_exponent) - 1));
 
         let mut superchunk_bitsets = SmallKeyHashMap::default();
         for chunk_key in chunk_keys {
@@ -151,13 +150,13 @@ impl OctreeChunkIndex {
             let bitset = superchunk_bitsets.entry(superchunk_min).or_insert_with(|| {
                 Array3x1::fill(
                     Extent3i::from_min_and_shape(
-                        superchunk_min >> chunk_log2,
-                        superchunk_shape_in_chunks,
+                        superchunk_min >> chunk_exponent as i32,
+                        superchunk_exponent_in_chunks,
                     ),
                     false,
                 )
             });
-            *bitset.get_mut(chunk_key.minimum >> chunk_log2) = true;
+            *bitset.get_mut(chunk_key.minimum >> chunk_exponent as i32) = true;
         }
 
         // PERF: could be done in parallel
@@ -168,8 +167,12 @@ impl OctreeChunkIndex {
         }
 
         Self {
-            superchunk_octrees: ChunkedOctreeSet::new(superchunk_shape, superchunk_octrees),
-            chunk_shape,
+            superchunk_octrees: ChunkedOctreeSet::new(
+                Point3i::fill(1i32 << superchunk_exponent),
+                superchunk_octrees,
+            ),
+            superchunk_exponent,
+            chunk_exponent,
             num_lods,
         }
     }
@@ -181,17 +184,14 @@ impl OctreeChunkIndex {
         superchunk_min: Point3i,
         chunk_keys: impl Iterator<Item = &'a ChunkKey3>,
     ) -> Option<OctreeSet> {
-        // Assume chunks are cubes.
-        let chunk_log2 = self.chunk_log2().x();
-
         let superchunk_extent =
             Extent3i::from_min_and_shape(superchunk_min, self.superchunk_shape());
-        let super_chunk_extent_in_chunks = superchunk_extent >> chunk_log2;
+        let super_chunk_extent_in_chunks = superchunk_extent >> self.chunk_exponent as i32;
 
         let mut bitset = Array3x1::fill(super_chunk_extent_in_chunks, false);
         for chunk_key in chunk_keys {
             assert_eq!(chunk_key.lod, 0);
-            *bitset.get_mut(chunk_key.minimum >> chunk_log2) = true;
+            *bitset.get_mut(chunk_key.minimum >> self.chunk_exponent as i32) = true;
         }
         let octree = OctreeSet::from_array3(&bitset, *bitset.extent());
 
@@ -258,33 +258,19 @@ impl OctreeChunkIndex {
     }
 }
 
-fn validate_params(
-    superchunk_shape: Point3i,
-    chunk_shape: Point3i,
-    num_lods: u8,
-) -> (Point3i, Point3i) {
-    assert!(superchunk_shape.dimensions_are_powers_of_2());
-    assert!(chunk_shape.dimensions_are_powers_of_2());
-    assert!(chunk_shape.is_cube());
-
-    let superchunk_log2 = superchunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
-    let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
-    assert!(superchunk_log2 > chunk_log2);
-
+fn validate_params(superchunk_exponent: u8, chunk_exponent: u8, num_lods: u8) {
+    assert!(superchunk_exponent > chunk_exponent);
     assert!(
-        superchunk_log2 - chunk_log2 < Point3i::fill(6),
+        superchunk_exponent - chunk_exponent < 6,
         "OctreeSet only support 6 levels. Make your chunk shape larger or make your superchunk shape smaller.
             superchunk shape = {:?}, log2 = {:?}
             chunk shape      = {:?}, log2 = {:?}",
-        superchunk_shape,
-        superchunk_log2,
-        chunk_shape,
-        chunk_log2
+        superchunk_exponent,
+        superchunk_exponent,
+        chunk_exponent,
+        chunk_exponent
     );
 
-    // Assumes the chunk shape is a cube.
-    let max_lods = superchunk_log2.x() - chunk_log2.x() + 1;
-    assert!(num_lods as i32 <= max_lods);
-
-    (superchunk_log2, chunk_log2)
+    let max_lods = superchunk_exponent - chunk_exponent + 1;
+    assert!(num_lods <= max_lods);
 }

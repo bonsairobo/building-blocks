@@ -23,8 +23,8 @@ pub trait VoxelMap: ecs::component::Component {
 
 #[derive(Clone, Copy, Deserialize, Serialize)]
 pub struct MapConfig {
-    pub superchunk_shape: Point3i,
-    pub chunk_shape: Point3i,
+    pub superchunk_exponent: u8,
+    pub chunk_exponent: u8,
     pub num_lods: u8,
     pub clip_box_radius: u16,
     pub world_chunks_extent: ChunkUnits<Extent3i>,
@@ -39,11 +39,11 @@ impl MapConfig {
     }
 
     pub fn world_extent(&self) -> Extent3i {
-        self.world_chunks_extent.0 * self.chunk_shape
+        self.world_chunks_extent.0 * self.chunk_shape()
     }
 
-    pub fn chunk_log2(&self) -> i32 {
-        self.chunk_shape.x().trailing_zeros() as i32
+    pub fn chunk_shape(&self) -> Point3i {
+        Point3i::fill(1 << self.chunk_exponent)
     }
 }
 

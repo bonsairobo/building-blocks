@@ -297,7 +297,6 @@ mod tests {
     fn downsample_multichannel_chunks_with_index() {
         let num_lods = 6;
         let chunk_shape = Point3i::fill(16);
-        let superchunk_shape = Point3i::fill(512);
 
         let lod0_extent =
             Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(2)) * chunk_shape;
@@ -311,7 +310,7 @@ mod tests {
         let lodn_builder = ChunkMapBuilder3x1::new(chunk_shape, Sd8::ONE);
         let mut lodn = lodn_builder.build_with_hash_map_storage();
 
-        let index = OctreeChunkIndex::index_chunk_map(superchunk_shape, num_lods, &lod0);
+        let index = OctreeChunkIndex::index_chunk_map(9, num_lods, &lod0);
 
         // Since we're downsampling multichannel chunks, we need to project them onto the one channel that we're downsampling.
         let get_lod0_chunk = |p| {

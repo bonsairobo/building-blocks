@@ -63,8 +63,9 @@ fn sdf_mean_downsample_chunk_map(c: &mut Criterion) {
             |b, &map_chunks| {
                 b.iter_with_setup(
                     || {
-                        let chunk_shape = Point3i::fill(16);
-                        let superchunk_shape = Point3i::fill((1 << (num_lods - 1)) * 16);
+                        let chunk_exponent = 4;
+                        let superchunk_exponent = chunk_exponent + num_lods - 1;
+                        let chunk_shape = Point3i::fill(1 << chunk_exponent);
 
                         let builder = ChunkMapBuilder3x1::new(chunk_shape, Sd8::ONE);
                         let mut map = builder.build_with_hash_map_storage();
@@ -75,7 +76,7 @@ fn sdf_mean_downsample_chunk_map(c: &mut Criterion) {
                         map.fill_extent(0, &map_extent, Sd8::NEG_ONE);
 
                         let index =
-                            OctreeChunkIndex::index_chunk_map(superchunk_shape, num_lods, &map);
+                            OctreeChunkIndex::index_chunk_map(superchunk_exponent, num_lods, &map);
 
                         (map, index, map_extent)
                     },

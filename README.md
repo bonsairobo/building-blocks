@@ -14,10 +14,10 @@ Terrain](https://media.githubusercontent.com/media/bonsairobo/building-blocks/ma
 We focus on generally useful data structures and algorithms. Features include:
 
 - 2D and 3D data storage
-  - [`Array`](crate::storage::array) with structure-of-arrays (SoA) storage of multiple data channels per spatial
-    dimension
+  - [`Array`](crate::storage::array) with structure-of-arrays (SoA) storage of multiple data channels per spatial dimension
   - [`ChunkMap`](crate::storage::chunk::map) with generic chunk storage
-  - [`ChunkDb`](crate::storage::database) for compressed, persistent voxel worlds, backed by the `sled` embedded database
+  - [`ChunkDb`](crate::storage::database) for compressed, persistent voxel worlds, backed by the
+    [`sled`](https://docs.rs/sled) embedded database
   - [`OctreeSet`](crate::storage::octree::set) hierarchical bitset of voxel points
 - level of detail
   - `ChunkMap` can downsample chunks into lower resolutions within the same storage

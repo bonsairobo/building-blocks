@@ -114,8 +114,7 @@ where
                     let src_lod = node.octant().exponent();
                     let dst_lod = src_lod + 1;
                     if dst_lod < index.num_lods() {
-                        let src_chunk_min =
-                            (node.octant().minimum() << chunk_log2) >> src_lod as i32;
+                        let src_chunk_min = (node.octant().minimum() << chunk_log2) >> src_lod;
                         self.downsample_chunk(
                             sampler,
                             ChunkKey::new(src_lod, src_chunk_min),
@@ -155,8 +154,7 @@ where
                     let src_lod = node.octant().exponent();
                     let dst_lod = src_lod + 1;
                     if dst_lod < index.num_lods() {
-                        let src_chunk_min =
-                            (node.octant().minimum() << chunk_log2) >> src_lod as i32;
+                        let src_chunk_min = (node.octant().minimum() << chunk_log2) >> src_lod;
                         let src_chunk_key = ChunkKey::new(src_lod, src_chunk_min);
 
                         if src_lod == 0 {

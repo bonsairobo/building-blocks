@@ -287,7 +287,11 @@ macro_rules! impl_unary_integer_ops {
                 self.map_components_unary(|c| c.rem_euclid(rhs))
             }
         }
+    };
+}
 
+macro_rules! impl_shr_shl {
+    ($t:ty, $scalar:ty) => {
         impl Shl<$scalar> for $t {
             type Output = Self;
 

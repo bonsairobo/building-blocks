@@ -224,7 +224,7 @@ fn find_merge_or_split_descendants(
 
 fn get_offset_from_lod_center(octant: &Octant, centers: &[Point3i]) -> i32 {
     let lod = octant.exponent();
-    let lod_p = octant.minimum() >> lod as i32;
+    let lod_p = octant.minimum() >> lod;
     let lod_center = centers[lod as usize];
 
     (lod_p - lod_center)
@@ -250,7 +250,7 @@ fn octant_chunk_key(chunk_log2: i32, octant: &Octant) -> ChunkKey3 {
 
     ChunkKey {
         lod,
-        minimum: (octant.minimum() << chunk_log2) >> lod as i32,
+        minimum: (octant.minimum() << chunk_log2) >> lod,
     }
 }
 

@@ -150,13 +150,13 @@ impl OctreeChunkIndex {
             let bitset = superchunk_bitsets.entry(superchunk_min).or_insert_with(|| {
                 Array3x1::fill(
                     Extent3i::from_min_and_shape(
-                        superchunk_min >> chunk_exponent as i32,
+                        superchunk_min >> chunk_exponent,
                         superchunk_exponent_in_chunks,
                     ),
                     false,
                 )
             });
-            *bitset.get_mut(chunk_key.minimum >> chunk_exponent as i32) = true;
+            *bitset.get_mut(chunk_key.minimum >> chunk_exponent) = true;
         }
 
         // PERF: could be done in parallel
@@ -186,12 +186,12 @@ impl OctreeChunkIndex {
     ) -> Option<OctreeSet> {
         let superchunk_extent =
             Extent3i::from_min_and_shape(superchunk_min, self.superchunk_shape());
-        let super_chunk_extent_in_chunks = superchunk_extent >> self.chunk_exponent as i32;
+        let super_chunk_extent_in_chunks = superchunk_extent >> self.chunk_exponent;
 
         let mut bitset = Array3x1::fill(super_chunk_extent_in_chunks, false);
         for chunk_key in chunk_keys {
             assert_eq!(chunk_key.lod, 0);
-            *bitset.get_mut(chunk_key.minimum >> self.chunk_exponent as i32) = true;
+            *bitset.get_mut(chunk_key.minimum >> self.chunk_exponent) = true;
         }
         let octree = OctreeSet::from_array3(&bitset, *bitset.extent());
 

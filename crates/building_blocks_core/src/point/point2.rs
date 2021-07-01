@@ -385,6 +385,13 @@ impl_binary_ops!(Point2f, f32);
 
 impl_unary_integer_ops!(Point2i, i32);
 
+impl_shr_shl!(Point2i, i8);
+impl_shr_shl!(Point2i, i16);
+impl_shr_shl!(Point2i, i32);
+impl_shr_shl!(Point2i, u8);
+impl_shr_shl!(Point2i, u16);
+impl_shr_shl!(Point2i, u32);
+
 impl_binary_integer_ops!(Point2i);
 
 impl_float_div!(Point2f, f32);

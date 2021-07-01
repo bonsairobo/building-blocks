@@ -241,14 +241,15 @@ where
     }
 }
 
-impl<N> Shl<PointN<N>> for ExtentN<N>
+impl<N, T> Shl<T> for ExtentN<N>
 where
-    PointN<N>: Copy + Shl<Output = PointN<N>>,
+    PointN<N>: Copy + Shl<T, Output = PointN<N>>,
+    T: Copy,
 {
     type Output = Self;
 
     #[inline]
-    fn shl(self, rhs: PointN<N>) -> Self::Output {
+    fn shl(self, rhs: T) -> Self::Output {
         ExtentN {
             minimum: self.minimum << rhs,
             shape: self.shape << rhs,
@@ -256,44 +257,19 @@ where
     }
 }
 
-impl<N> Shr<PointN<N>> for ExtentN<N>
+impl<N, T> Shr<T> for ExtentN<N>
 where
-    PointN<N>: Copy + Shr<Output = PointN<N>>,
+    PointN<N>: Copy + Shr<T, Output = PointN<N>>,
+    T: Copy,
 {
     type Output = Self;
 
     #[inline]
-    fn shr(self, rhs: PointN<N>) -> Self::Output {
+    fn shr(self, rhs: T) -> Self::Output {
         ExtentN {
             minimum: self.minimum >> rhs,
             shape: self.shape >> rhs,
         }
-    }
-}
-
-impl<N> Shl<i32> for ExtentN<N>
-where
-    Self: Shl<PointN<N>, Output = Self>,
-    PointN<N>: Point<Scalar = i32>,
-{
-    type Output = Self;
-
-    #[inline]
-    fn shl(self, rhs: i32) -> Self::Output {
-        self << PointN::fill(rhs)
-    }
-}
-
-impl<N> Shr<i32> for ExtentN<N>
-where
-    Self: Shr<PointN<N>, Output = Self>,
-    PointN<N>: Point<Scalar = i32>,
-{
-    type Output = Self;
-
-    #[inline]
-    fn shr(self, rhs: i32) -> Self::Output {
-        self >> PointN::fill(rhs)
     }
 }
 

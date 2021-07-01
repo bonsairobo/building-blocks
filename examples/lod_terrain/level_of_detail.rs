@@ -35,7 +35,7 @@ pub fn level_of_detail_system<Map: VoxelMap>(
     let map_config = voxel_map.config();
 
     let lod0_center =
-        ChunkUnits(Point3f::from(camera_position).in_voxel() >> (map_config.chunk_exponent) as i32);
+        ChunkUnits(Point3f::from(camera_position).in_voxel() >> map_config.chunk_exponent);
 
     if lod0_center == lod_state.old_lod0_center {
         return;

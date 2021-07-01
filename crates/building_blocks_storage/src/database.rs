@@ -280,7 +280,7 @@ mod test {
             .collect();
 
         let db = sled::Config::default()
-            .path("/tmp/world1".to_owned())
+            .path("/tmp/bb-test".to_owned())
             .use_compression(false)
             .mode(sled::Mode::LowSpace)
             .open()?;

@@ -57,7 +57,7 @@ mod test {
         let dst_min = Local(Point3i::ZERO);
         PointDownsampler.downsample(&src_chunk, &mut dst_chunk, dst_min, lod_delta);
 
-        let dst_extent = chunk_extent >> lod_delta as i32;
+        let dst_extent = chunk_extent >> lod_delta;
         dst_chunk.for_each(&dst_extent, |p: Point3i, x| assert_eq!(x, 1, "p = {:?}", p));
     }
 }

@@ -1,7 +1,4 @@
-use crate::{
-    round_down_multiple_of_pow2, Extent2i, Extent3i, ExtentN, IntegerPoint, MapComponents, Point,
-    Point2i, Point3i, PointN,
-};
+use crate::{Extent2i, Extent3i, ExtentN, IntegerPoint, Point, Point2i, Point3i, PointN};
 
 /// An extent for which, given some fixed power of 2 called P, satisfies:
 /// - each component of the minimum is a multiple of P
@@ -91,18 +88,8 @@ pub fn orthants_covering_extent<N>(
 where
     PointN<N>: IntegerPoint<N>,
 {
-    let power = 1 << exponent;
-
-    // Round down the minimum to the nearest multiple of power.
-    let rounded_min = extent
-        .minimum
-        .map_components_unary(|c| round_down_multiple_of_pow2(c, power));
-    // Round up the maximum to the nearest multiple of power.
-    let rounded_max = extent
-        .max()
-        .map_components_unary(|c| round_down_multiple_of_pow2(c, power));
-
-    let scaled_extent = ExtentN::from_min_and_max(rounded_min >> exponent, rounded_max >> exponent);
+    let scaled_extent =
+        ExtentN::from_min_and_max(extent.minimum >> exponent, extent.max() >> exponent);
 
     scaled_extent
         .iter_points()

@@ -137,7 +137,7 @@ pub mod multichannel_aliases {
         N,
         A,
         ChunkMapBuilderNxM<N, A, Channel<A>>,
-        FastArrayCompression<N, FastChannelsCompression<By, A>>,
+        FastArrayCompression<N, FastChannelsCompression<By, Channel<A>>>,
     >;
 
     pub type CompressibleChunkMapReader2x1<'a, By, A> =

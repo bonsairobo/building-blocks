@@ -340,7 +340,7 @@ pub mod multichannel_aliases {
         N,
         A,
         ChunkMapBuilderNxM<N, A, Channel<A>>,
-        FastArrayCompression<N, FastChannelsCompression<By, A>>,
+        FastArrayCompression<N, FastChannelsCompression<By, Channel<A>>>,
     >;
 
     pub type CompressibleChunkMap2x1<By, A> = CompressibleChunkMapNx1<[i32; 2], By, A>;

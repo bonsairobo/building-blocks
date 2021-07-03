@@ -2,9 +2,9 @@ use crate::{ChunkKey, ChunkKey2, ChunkKey3, Compression};
 
 use building_blocks_core::{orthants_covering_extent, prelude::*};
 
-use core::ops::RangeInclusive;
+use core::ops::{RangeBounds, RangeInclusive};
 use futures::future::join_all;
-use sled::Tree;
+use sled::{IVec, Tree};
 use std::borrow::Borrow;
 
 pub use sled;
@@ -38,6 +38,9 @@ pub trait DatabaseKey<N> {
     fn ord_key_from_be_bytes(bytes: &[u8]) -> Self::Key;
 
     fn orthant_range(lod: u8, orthant: Orthant<N>) -> RangeInclusive<Self::KeyBytes>;
+
+    fn min_key(lod: u8) -> Self::Key;
+    fn max_key(lod: u8) -> Self::Key;
 }
 
 impl<N, Compr> ChunkDb<N, Compr> {
@@ -100,29 +103,11 @@ where
         &self,
         lod: u8,
         orthant: Orthant<N>,
-        mut chunk_rx: impl FnMut(ChunkKey<N>, Compr::Data),
+        chunk_rx: impl FnMut(ChunkKey<N>, Compr::Data),
     ) -> sled::Result<()> {
         let range = ChunkKey::<N>::orthant_range(lod, orthant);
 
-        let read_kvs = self.tree.range(range).collect::<Result<Vec<_>, _>>()?;
-
-        for batch in read_kvs.chunks(16) {
-            for (chunk_key, chunk) in
-                join_all(batch.into_iter().map(|(key, compressed_chunk)| async move {
-                    let ord_key = ChunkKey::<N>::ord_key_from_be_bytes(key.as_ref());
-                    let chunk_key = ChunkKey::<N>::from_ord_key(ord_key);
-
-                    let chunk = Compr::decompress_from_reader(compressed_chunk.as_ref()).unwrap();
-
-                    (chunk_key, chunk)
-                }))
-                .await
-            {
-                chunk_rx(chunk_key, chunk);
-            }
-        }
-
-        Ok(())
+        self.read_range(range, chunk_rx).await
     }
 
     /// This is like `read_chunks_in_orthant`, but it works for the given `extent`. Since Morton order only guarantees
@@ -144,6 +129,53 @@ where
         }
 
         Ok(())
+    }
+
+    /// Reads all chunks in the given `lod`, passing them to `chunk_rx`.
+    pub async fn read_all_chunks(
+        &self,
+        lod: u8,
+        chunk_rx: impl FnMut(ChunkKey<N>, Compr::Data),
+    ) -> sled::Result<()> {
+        let range = ChunkKey::<N>::ord_key_to_be_bytes(ChunkKey::<N>::min_key(lod))
+            ..=ChunkKey::<N>::ord_key_to_be_bytes(ChunkKey::<N>::max_key(lod));
+
+        self.read_range(range, chunk_rx).await
+    }
+
+    async fn read_range<R>(
+        &self,
+        range: R,
+        chunk_rx: impl FnMut(ChunkKey<N>, Compr::Data),
+    ) -> sled::Result<()>
+    where
+        R: RangeBounds<<ChunkKey<N> as DatabaseKey<N>>::KeyBytes>,
+    {
+        let read_kvs = self.tree.range(range).collect::<Result<Vec<_>, _>>()?;
+        Self::decompress_in_batches(read_kvs, chunk_rx).await;
+
+        Ok(())
+    }
+
+    async fn decompress_in_batches(
+        kvs: Vec<(IVec, IVec)>,
+        mut chunk_rx: impl FnMut(ChunkKey<N>, Compr::Data),
+    ) {
+        for batch in kvs.chunks(16) {
+            for (chunk_key, chunk) in
+                join_all(batch.into_iter().map(|(key, compressed_chunk)| async move {
+                    let ord_key = ChunkKey::<N>::ord_key_from_be_bytes(key.as_ref());
+                    let chunk_key = ChunkKey::<N>::from_ord_key(ord_key);
+
+                    let chunk = Compr::decompress_from_reader(compressed_chunk.as_ref()).unwrap();
+
+                    (chunk_key, chunk)
+                }))
+                .await
+            {
+                chunk_rx(chunk_key, chunk);
+            }
+        }
     }
 
     pub fn tree(&self) -> &Tree {
@@ -196,6 +228,16 @@ impl DatabaseKey<[i32; 2]> for ChunkKey2 {
 
         min_bytes..=max_bytes
     }
+
+    #[inline]
+    fn min_key(lod: u8) -> Self::Key {
+        (lod, Morton2::from(Point2i::MIN))
+    }
+
+    #[inline]
+    fn max_key(lod: u8) -> Self::Key {
+        (lod, Morton2::from(Point2i::MAX))
+    }
 }
 
 impl DatabaseKey<[i32; 3]> for ChunkKey3 {
@@ -244,6 +286,16 @@ impl DatabaseKey<[i32; 3]> for ChunkKey3 {
         let max_bytes = Self::ord_key_to_be_bytes((lod, max_morton));
 
         min_bytes..=max_bytes
+    }
+
+    #[inline]
+    fn min_key(lod: u8) -> Self::Key {
+        (lod, Morton3::from(Point3i::MIN))
+    }
+
+    #[inline]
+    fn max_key(lod: u8) -> Self::Key {
+        (lod, Morton3::from(Point3i::MAX))
     }
 }
 

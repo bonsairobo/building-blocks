@@ -18,6 +18,7 @@ pub use morton::*;
 pub use orthant::*;
 pub use point::{point_traits::*, Point2, Point2f, Point2i, Point3, Point3f, Point3i, PointN};
 
+pub use bytemuck;
 pub use num;
 
 pub mod prelude {

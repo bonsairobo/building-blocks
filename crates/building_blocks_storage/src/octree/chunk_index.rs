@@ -179,10 +179,10 @@ impl OctreeChunkIndex {
 
     /// Inserts all of the chunks for one superchunk. Panics if any of the chunk keys fall outside of the superchunk extent.
     /// Returns the old `OctreeSet` for the superchunk if one existed.
-    pub fn insert_superchunk<'a>(
+    pub fn insert_superchunk(
         &mut self,
         superchunk_min: Point3i,
-        chunk_keys: impl Iterator<Item = &'a ChunkKey3>,
+        chunk_keys: impl Iterator<Item = ChunkKey3>,
     ) -> Option<OctreeSet> {
         let superchunk_extent =
             Extent3i::from_min_and_shape(superchunk_min, self.superchunk_shape());

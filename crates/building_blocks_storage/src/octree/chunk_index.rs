@@ -87,6 +87,19 @@ impl OctreeChunkIndex {
         }
     }
 
+    pub fn superchunk_exponent(&self) -> u8 {
+        self.superchunk_exponent
+    }
+
+    pub fn chunk_exponent(&self) -> u8 {
+        self.chunk_exponent
+    }
+
+    #[inline]
+    pub fn num_lods(&self) -> u8 {
+        self.num_lods
+    }
+
     /// The shape of the world extent convered by a single chunk (a leaf of an octree).
     #[inline]
     pub fn chunk_shape(&self) -> Point3i {
@@ -97,11 +110,6 @@ impl OctreeChunkIndex {
     #[inline]
     pub fn superchunk_shape(&self) -> Point3i {
         self.superchunk_octrees.indexer.chunk_shape()
-    }
-
-    #[inline]
-    pub fn num_lods(&self) -> u8 {
-        self.num_lods
     }
 
     /// Same as `index_lod0_chunks`, but using the chunk keys and chunk shape from `chunk_map`.

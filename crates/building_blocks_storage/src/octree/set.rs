@@ -262,6 +262,10 @@ impl OctreeSet {
 
     /// Same as `visit_branches_and_fat_leaves_in_preorder`, but descendants of fat leaves are also visited.
     pub fn visit_all_octants_in_preorder(&self, visitor: &mut impl OctreeVisitor) -> VisitStatus {
+        if !self.root_exists {
+            return VisitStatus::Continue;
+        }
+
         self._visit_all_octants_in_preorder(LocationCode::ROOT, self.octant(), visitor)
     }
 
@@ -271,6 +275,10 @@ impl OctreeSet {
         predicate: &impl Fn(&OctreeNode) -> bool,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
+        if !self.root_exists {
+            return VisitStatus::Continue;
+        }
+
         self._visit_all_octants_in_postorder(LocationCode::ROOT, self.octant(), predicate, visitor)
     }
 

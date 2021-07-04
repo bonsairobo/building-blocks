@@ -1,4 +1,4 @@
-use crate::{point::point_traits::*, Point2, Point3, PointN};
+use crate::{point::point_traits::*, Point2, Point2f, Point3, Point3f, PointN};
 
 use bytemuck::{Pod, Zeroable};
 use core::ops::{Add, AddAssign, Mul, Shl, Shr, Sub, SubAssign};
@@ -319,6 +319,7 @@ where
     T: Copy,
     Point2<T>: Point,
 {
+    #[inline]
     pub fn corners(&self) -> [Point2<T>; 4] {
         let min = self.minimum;
         let lub = self.least_upper_bound();
@@ -337,6 +338,7 @@ where
     T: Copy,
     Point3<T>: Point,
 {
+    #[inline]
     pub fn corners(&self) -> [Point3<T>; 8] {
         let min = self.minimum;
         let lub = self.least_upper_bound();
@@ -351,6 +353,20 @@ where
             PointN([min.x(), lub.y(), lub.z()]),
             PointN([lub.x(), lub.y(), lub.z()]),
         ]
+    }
+}
+
+impl From<Extent2i> for Extent2f {
+    #[inline]
+    fn from(other: Extent2i) -> Self {
+        Self::from_min_and_shape(Point2f::from(other.minimum), Point2f::from(other.shape))
+    }
+}
+
+impl From<Extent3i> for Extent3f {
+    #[inline]
+    fn from(other: Extent3i) -> Self {
+        Self::from_min_and_shape(Point3f::from(other.minimum), Point3f::from(other.shape))
     }
 }
 

@@ -41,3 +41,22 @@ pub use nalgebra as na;
 
 #[cfg(feature = "sdfu")]
 pub use sdfu;
+
+/// Given an array of 4 corners of a rectangle, this contains pairs of indices that make up the edges.
+pub const EDGES_2: [[usize; 2]; 4] = [[0b00, 0b01], [0b00, 0b10], [0b10, 0b11], [0b01, 0b11]];
+
+/// Given an array of 8 corners of a rectangular prism, this contains pairs of indices that make up the edges.
+pub const EDGES_3: [[usize; 2]; 12] = [
+    [0b000, 0b001],
+    [0b000, 0b010],
+    [0b000, 0b100],
+    [0b001, 0b011],
+    [0b001, 0b101],
+    [0b010, 0b011],
+    [0b010, 0b110],
+    [0b011, 0b111],
+    [0b100, 0b101],
+    [0b100, 0b110],
+    [0b101, 0b111],
+    [0b110, 0b111],
+];

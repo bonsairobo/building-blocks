@@ -1,6 +1,6 @@
 use super::PosNormMesh;
 
-use building_blocks_core::prelude::*;
+use building_blocks_core::{prelude::*, EDGES_3};
 use building_blocks_storage::{prelude::*, ArrayForEach};
 
 /// Pads the given chunk extent with exactly the amount of space required for running the `surface_nets` algorithm.
@@ -112,21 +112,6 @@ fn estimate_surface<A, T>(
     });
 }
 
-const CUBE_EDGES: [[usize; 2]; 12] = [
-    [0b000, 0b001],
-    [0b000, 0b010],
-    [0b000, 0b100],
-    [0b001, 0b011],
-    [0b001, 0b101],
-    [0b010, 0b011],
-    [0b010, 0b110],
-    [0b011, 0b111],
-    [0b100, 0b101],
-    [0b100, 0b110],
-    [0b101, 0b111],
-    [0b110, 0b111],
-];
-
 // Consider the grid-aligned cube where `point` is the minimal corner. Find a point inside this cube that is approximately on
 // the isosurface.
 //
@@ -168,7 +153,7 @@ where
 fn centroid_of_edge_intersections(dists: &[f32; 8]) -> Point3f {
     let mut count = 0;
     let mut sum = Point3f::ZERO;
-    for [corner1, corner2] in CUBE_EDGES.iter() {
+    for [corner1, corner2] in EDGES_3.iter() {
         let d1 = dists[*corner1];
         let d2 = dists[*corner2];
         if (d1 < 0.0) != (d2 < 0.0) {

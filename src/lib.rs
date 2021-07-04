@@ -94,7 +94,7 @@
 //! - [extent](https://docs.rs/building_blocks_core/latest/building_blocks_core/extent/struct.ExtentN.html)
 //! - [array](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/array/index.html)
 //! - [access traits](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/access_traits/index.html)
-//! - [chunk map](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/chunk_map/index.html)
+//! - [chunk map](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/chunk/map/index.html)
 //! - [transform map](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/transform_map/index.html)
 //! - [fn map](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/func/index.html)
 //! - [octrees](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/octree/index.html)

@@ -1,4 +1,4 @@
-use crate::{point::point_traits::*, PointN};
+use crate::{point::point_traits::*, Point2, Point3, PointN};
 
 use bytemuck::{Pod, Zeroable};
 use core::ops::{Add, AddAssign, Mul, Shl, Shr, Sub, SubAssign};
@@ -314,12 +314,52 @@ where
     ExtentN::from_min_and_max(min_point, max_point)
 }
 
-// ████████╗███████╗███████╗████████╗███████╗
-// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝██╔════╝
-//    ██║   █████╗  ███████╗   ██║   ███████╗
-//    ██║   ██╔══╝  ╚════██║   ██║   ╚════██║
-//    ██║   ███████╗███████║   ██║   ███████║
-//    ╚═╝   ╚══════╝╚══════╝   ╚═╝   ╚══════╝
+impl<T> Extent2<T>
+where
+    T: Copy,
+    Point2<T>: Point,
+{
+    pub fn corners(&self) -> [Point2<T>; 4] {
+        let min = self.minimum;
+        let lub = self.least_upper_bound();
+
+        [
+            PointN([min.x(), min.y()]),
+            PointN([lub.x(), min.y()]),
+            PointN([min.x(), lub.y()]),
+            PointN([lub.x(), lub.y()]),
+        ]
+    }
+}
+
+impl<T> Extent3<T>
+where
+    T: Copy,
+    Point3<T>: Point,
+{
+    pub fn corners(&self) -> [Point3<T>; 8] {
+        let min = self.minimum;
+        let lub = self.least_upper_bound();
+
+        [
+            PointN([min.x(), min.y(), min.z()]),
+            PointN([lub.x(), min.y(), min.z()]),
+            PointN([min.x(), lub.y(), min.z()]),
+            PointN([lub.x(), lub.y(), min.z()]),
+            PointN([min.x(), min.y(), lub.z()]),
+            PointN([lub.x(), min.y(), lub.z()]),
+            PointN([min.x(), lub.y(), lub.z()]),
+            PointN([lub.x(), lub.y(), lub.z()]),
+        ]
+    }
+}
+
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
 
 #[cfg(test)]
 mod test {

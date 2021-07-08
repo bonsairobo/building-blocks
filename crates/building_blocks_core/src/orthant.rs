@@ -1,4 +1,9 @@
-use crate::{Extent2i, Extent3i, ExtentN, IntegerPoint, Point, Point2i, Point3i, PointN};
+use crate::{
+    point::point_traits::*, Extent2i, Extent3i, ExtentN, IntegerPoint, Point, Point2i, Point3i,
+    PointN,
+};
+
+use std::convert::TryFrom;
 
 /// An extent for which, given some fixed power of 2 called P, satisfies:
 /// - each component of the minimum is a multiple of P
@@ -76,6 +81,39 @@ impl From<Octant> for Extent3i {
     fn from(octant: Octant) -> Self {
         Extent3i::from_min_and_shape(octant.minimum, Point3i::fill(octant.edge_length))
     }
+}
+
+macro_rules! impl_try_from_extent_for_orthant {
+    ($extent_ty:ty, $point_ty:ty, $orthant_ty:ty) => {
+        impl TryFrom<$extent_ty> for $orthant_ty {
+            type Error = ExtentIsNotOrthantError;
+
+            #[inline]
+            fn try_from(extent: $extent_ty) -> Result<Self, Self::Error> {
+                let edge_length = extent.shape.x();
+
+                if !extent.shape.dimensions_are_powers_of_2() {
+                    Err(ExtentIsNotOrthantError::ShapeNotPow2)
+                } else if !extent.shape.is_cube() {
+                    Err(ExtentIsNotOrthantError::ShapeNotCube)
+                } else if (extent.minimum % edge_length) != <$point_ty>::ZERO {
+                    Err(ExtentIsNotOrthantError::MinimumNotPow2Multiple)
+                } else {
+                    Ok(<$orthant_ty>::new_unchecked(extent.minimum, edge_length))
+                }
+            }
+        }
+    };
+}
+
+impl_try_from_extent_for_orthant!(Extent2i, Point2i, Quadrant);
+impl_try_from_extent_for_orthant!(Extent3i, Point3i, Octant);
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ExtentIsNotOrthantError {
+    MinimumNotPow2Multiple,
+    ShapeNotPow2,
+    ShapeNotCube,
 }
 
 /// Returns the smallest set of `Orthant`s required to cover `extent`. All `Orthant`s have the same shape, as determined by

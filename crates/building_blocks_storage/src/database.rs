@@ -84,13 +84,14 @@ where
         // Sort them by the Ord key.
         compressed_chunks.sort_by_key(|(k, _)| *k);
 
-        // Then write them to the database.
+        // Then atomically write them all to the database.
+        let mut batch = sled::Batch::default();
         for (db_key, chunk) in compressed_chunks.into_iter() {
             let key_bytes = ChunkKey::<N>::ord_key_to_be_bytes(db_key);
-            // PERF: use a Batch instead?
             // PERF: IVec will copy the bytes instead of moving, because it needs to also allocate room for an internal header
-            self.tree.insert(key_bytes, chunk.take_bytes())?;
+            batch.insert(key_bytes.as_ref(), chunk.take_bytes());
         }
+        self.tree.apply_batch(batch)?;
 
         Ok(())
     }

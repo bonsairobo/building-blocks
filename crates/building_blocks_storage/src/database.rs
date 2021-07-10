@@ -313,6 +313,8 @@ mod test {
 
     use super::*;
 
+    use tempdir::TempDir;
+
     #[test]
     fn db_round_trip() -> sled::Result<()> {
         let chunk_mins = [
@@ -332,8 +334,9 @@ mod test {
             })
             .collect();
 
+        let tmp = TempDir::new("bb-test").unwrap();
         let db = sled::Config::default()
-            .path("/tmp/bb-test".to_owned())
+            .path(&tmp)
             .use_compression(false)
             .mode(sled::Mode::LowSpace)
             .open()?;

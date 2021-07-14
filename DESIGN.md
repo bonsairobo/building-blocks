@@ -43,8 +43,6 @@ The design of Building Blocks is driven by a few guiding principles:
 
 ## Architecture
 
-![storage diagram](https://i.imgur.com/VPy3K36.png)
-
 Noting the above principles, here is a quick summary of the design decisions
 which brought about the current feature set:
 

@@ -21,6 +21,7 @@ pub use point::{point_traits::*, Point2, Point2f, Point2i, Point3, Point3f, Poin
 pub use bytemuck;
 pub use num;
 
+#[doc(hidden)]
 pub mod prelude {
     pub use super::{
         point::point_traits::*, Axis2, Axis3, Bounded, ConstZero, Distance, DotProduct, Extent2,

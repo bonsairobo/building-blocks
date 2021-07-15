@@ -3,7 +3,7 @@ use crate::{
     FillChannels, SmallKeyHashMap,
 };
 
-use building_blocks_core::{ExtentN, IntegerPoint, PointN};
+use building_blocks_core::{point_traits::IntegerPoint, ExtentN, PointN};
 
 use core::hash::Hash;
 

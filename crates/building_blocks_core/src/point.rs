@@ -15,7 +15,8 @@ mod point3;
 
 pub use point2::*;
 pub use point3::*;
-pub use point_traits::*;
+
+use point_traits::*;
 
 use bytemuck::{Pod, Zeroable};
 use core::ops::{Add, AddAssign, Neg, Sub, SubAssign};

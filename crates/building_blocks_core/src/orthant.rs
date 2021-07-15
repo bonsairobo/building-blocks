@@ -1,7 +1,4 @@
-use crate::{
-    point::point_traits::*, Extent2i, Extent3i, ExtentN, IntegerPoint, Point, Point2i, Point3i,
-    PointN,
-};
+use crate::{point::point_traits::*, Extent2i, Extent3i, ExtentN, Point2i, Point3i, PointN};
 
 use std::convert::TryFrom;
 

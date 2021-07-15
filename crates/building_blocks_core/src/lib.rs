@@ -22,10 +22,9 @@ pub use num;
 #[doc(hidden)]
 pub mod prelude {
     pub use super::{
-        point::point_traits::*, Axis2, Axis3, Bounded, ConstZero, Distance, DotProduct, Extent2,
-        Extent2f, Extent2i, Extent3, Extent3f, Extent3i, ExtentN, GetComponent, IntegerPoint,
-        MapComponents, Morton2, Morton3, Neighborhoods, Norm, Octant, Ones, Orthant, Point, Point2,
-        Point2f, Point2i, Point3, Point3f, Point3i, PointN, Quadrant,
+        point::point_traits::*, Axis2, Axis3, Extent2, Extent2f, Extent2i, Extent3, Extent3f,
+        Extent3i, ExtentN, Morton2, Morton3, Octant, Orthant, Point2, Point2f, Point2i, Point3,
+        Point3f, Point3i, PointN, Quadrant,
     };
 }
 

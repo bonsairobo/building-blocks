@@ -68,6 +68,7 @@ pub type SmallKeyHashMap<K, V> = ahash::AHashMap<K, V>;
 pub type SmallKeyHashSet<K> = ahash::AHashSet<K>;
 pub type SmallKeyBuildHasher = ahash::RandomState;
 
+#[doc(hidden)]
 pub mod prelude {
     pub use super::{
         copy_extent, Chunk, ChunkKey, ChunkKey2, ChunkKey3, ChunkMapBuilder, ChunkReadStorage,

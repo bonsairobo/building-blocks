@@ -185,6 +185,7 @@ pub mod search {
     pub use building_blocks_search::*;
 }
 
+#[doc(hidden)]
 pub mod prelude {
     pub use super::core::prelude::*;
     pub use super::storage::prelude::*;

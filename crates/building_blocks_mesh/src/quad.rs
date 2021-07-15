@@ -1,9 +1,6 @@
 use super::{PosNormMesh, PosNormTexMesh};
 
-use building_blocks_core::{
-    axis::{Axis3Permutation, SignedAxis3},
-    prelude::*,
-};
+use building_blocks_core::{prelude::*, Axis3Permutation, SignedAxis3};
 
 /// Metadata that's used to aid in the geometric calculations for one of the 6 possible cube faces.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -30,6 +30,7 @@ pub mod caching;
 pub mod chunk;
 pub mod compression;
 pub mod func;
+#[doc(hidden)]
 pub mod multi_ptr;
 pub mod octree;
 pub mod signed_distance;
@@ -54,6 +55,7 @@ pub type SmallKeyHashMap<K, V> = ahash::AHashMap<K, V>;
 pub type SmallKeyHashSet<K> = ahash::AHashSet<K>;
 pub type SmallKeyBuildHasher = ahash::RandomState;
 
+#[doc(hidden)]
 pub mod prelude {
     pub use super::{
         array::{IndexedArray, Local, Stride},
@@ -91,6 +93,7 @@ pub mod prelude {
 }
 
 /// Includes all of `prelude` plus the extra-generic types and internal traits used for library development.
+#[doc(hidden)]
 pub mod dev_prelude {
     pub use super::prelude::*;
 

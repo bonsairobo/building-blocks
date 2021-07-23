@@ -1,7 +1,6 @@
 use core::mem::MaybeUninit;
 
 /// Used for variadic conversion from `&(A, B, ...)` to `(&A, &B, ...)`.
-#[doc(hidden)]
 pub trait MultiRef<'a> {
     type Data;
 
@@ -18,7 +17,6 @@ impl<'a, T> MultiRef<'a> for &'a T {
 }
 
 /// Used for variadic conversion from `(*mut A, *mut B, ...)` to `(&'a mut A, &'a mut B, ...)`.
-#[doc(hidden)]
 pub trait IntoMultiMut<'a> {
     type MultiMut;
 
@@ -38,7 +36,6 @@ where
 }
 
 /// Used for variadic conversion from `(*mut MaybeUninit<A>, *mut MaybeUninit<B>, ...)` to `(*mut A, *mut B)`.
-#[doc(hidden)]
 pub trait IntoMultiMutPtr {
     type Data;
     type Ptr: MultiMutPtr<Data = Self::Data>;
@@ -59,7 +56,6 @@ impl<T> IntoMultiMutPtr for *mut MaybeUninit<T> {
 }
 
 /// Used for variadic copying of source data `(A, B, ...)` to destination pointers `(*mut A, *mut B, ...)`.
-#[doc(hidden)]
 pub trait MultiMutPtr {
     type Data;
 

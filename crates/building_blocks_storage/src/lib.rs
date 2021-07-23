@@ -117,6 +117,10 @@ pub mod dev_prelude {
 mod dot_vox_conversions;
 #[cfg(feature = "dot_vox")]
 pub use dot_vox_conversions::*;
+#[cfg(feature = "vox-format")]
+mod vox_format_conversions;
+#[cfg(feature = "vox-format")]
+pub use vox_format_conversions::*;
 #[cfg(feature = "image")]
 mod image_conversions;
 #[cfg(feature = "image")]

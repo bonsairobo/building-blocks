@@ -158,8 +158,12 @@ pub use for_each::*;
 pub use indexer::*;
 
 use crate::{
-    ChunkCopySrc, FillExtent, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetMutPtr, GetRef,
-    IntoMultiMut, IntoMultiMutPtr, MultiMutPtr, ReadExtent, TransformMap, WriteExtent,
+    chunk::ChunkCopySrc,
+    dev_prelude::{
+        FillExtent, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetMutPtr, GetRef, ReadExtent,
+        TransformMap, WriteExtent,
+    },
+    multi_ptr::*,
 };
 
 use building_blocks_core::prelude::*;
@@ -776,7 +780,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{copy_extent, Array2x1, Array3x1, Get};
+    use crate::prelude::{copy_extent, Array2x1, Array3x1, Get};
     use core::mem::MaybeUninit;
 
     #[test]

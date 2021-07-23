@@ -1,4 +1,4 @@
-use crate::{
+use crate::array::{
     for_each2, for_each3, Array2ForEach, Array3ForEach, ArrayForEach, ArrayStrideIter, Local,
     Local2i, Local3i, LockStepArrayForEach, LockStepArrayForEach2, LockStepArrayForEach3, Stride,
 };

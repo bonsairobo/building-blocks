@@ -52,9 +52,11 @@
 //! ```
 
 use crate::{
-    active_clipmap_lod_chunks, Array3x1, ChunkKey3, ChunkMap3, ChunkUnits, ChunkedOctreeSet,
-    ClipMapConfig3, ClipMapUpdate3, GetMut, IterChunkKeys, LodChunkUpdate3, OctreeSet,
-    SmallKeyHashMap,
+    dev_prelude::{
+        Array3x1, ChunkKey3, ChunkMap3, ChunkUnits, ChunkedOctreeSet, ClipMapConfig3,
+        ClipMapUpdate3, GetMut, IterChunkKeys, LodChunkUpdate3, OctreeSet, SmallKeyHashMap,
+    },
+    octree::active_clipmap_lod_chunks,
 };
 
 use building_blocks_core::prelude::*;

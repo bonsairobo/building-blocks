@@ -1,7 +1,7 @@
 use super::PosNormMesh;
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{prelude::*, ArrayForEach};
+use building_blocks_storage::{array::ArrayForEach, dev_prelude::*};
 
 pub trait Height {
     fn height(&self) -> f32;

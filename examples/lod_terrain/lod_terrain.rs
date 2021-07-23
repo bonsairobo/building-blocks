@@ -17,9 +17,9 @@ use bevy_utilities::{
         pbr::AmbientLight,
         prelude::*,
         render::camera::PerspectiveProjection,
-        // render::wireframe::{WireframeConfig, WireframePlugin},
+        render::wireframe::{WireframeConfig, WireframePlugin},
         tasks::ComputeTaskPool,
-        // wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
+        wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
     },
     smooth_cameras::{controllers::fps::*, LookTransformPlugin},
 };
@@ -58,15 +58,15 @@ fn run_example<Map: VoxelMap>() {
         .insert_resource(map_config)
         .insert_resource(window_desc)
         .insert_resource(Msaa { samples: 4 })
-        // .insert_resource(WgpuOptions {
-        //     features: WgpuFeatures {
-        //         // The Wireframe requires NonFillPolygonMode feature
-        //         features: vec![WgpuFeature::NonFillPolygonMode],
-        //     },
-        //     ..Default::default()
-        // })
-        // .add_plugin(WireframePlugin)
+        .insert_resource(WgpuOptions {
+            features: WgpuFeatures {
+                // The Wireframe requires NonFillPolygonMode feature
+                features: vec![WgpuFeature::NonFillPolygonMode],
+            },
+            ..Default::default()
+        })
         .add_plugins(DefaultPlugins)
+        .add_plugin(WireframePlugin)
         .add_plugin(LookTransformPlugin)
         .add_plugin(FpsCameraPlugin)
         .add_startup_system(setup::<Map>.system())
@@ -78,11 +78,11 @@ fn run_example<Map: VoxelMap>() {
 fn setup<Map: VoxelMap>(
     map_config: Res<MapConfig>,
     mut commands: Commands,
-    // mut wireframe_config: ResMut<WireframeConfig>,
+    mut wireframe_config: ResMut<WireframeConfig>,
     pool: Res<ComputeTaskPool>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // wireframe_config.global = true;
+    wireframe_config.global = true;
 
     // Generate a voxel map from noise.
     let map = Map::generate(&*pool, *map_config);

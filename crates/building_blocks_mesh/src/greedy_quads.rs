@@ -4,7 +4,7 @@ use super::{
 };
 
 use building_blocks_core::{prelude::*, Axis3Permutation};
-use building_blocks_storage::prelude::*;
+use building_blocks_storage::dev_prelude::*;
 
 /// Contains the output from the `greedy_quads` algorithm. The quads can be used to generate a mesh. See the methods on
 /// `OrientedCubeFace` and `UnorientedQuad` for details.

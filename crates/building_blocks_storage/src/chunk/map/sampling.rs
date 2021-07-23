@@ -4,7 +4,10 @@ pub mod sdf_mean;
 pub use point::*;
 pub use sdf_mean::*;
 
-use crate::{prelude::*, ArrayIndexer, ChunkMap, ChunkMap3, LockStepArrayForEach};
+use crate::{
+    array::{ArrayIndexer, LockStepArrayForEach},
+    dev_prelude::*,
+};
 
 use building_blocks_core::prelude::*;
 use std::borrow::Borrow;
@@ -237,7 +240,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Sd8, SdfMeanDownsampler};
+    use crate::prelude::{Sd8, SdfMeanDownsampler};
 
     #[test]
     fn downsample_destination_for_one_level_up() {

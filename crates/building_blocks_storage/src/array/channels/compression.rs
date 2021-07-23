@@ -1,4 +1,4 @@
-use crate::{BytesCompression, Channel, Compression, FromBytesCompression};
+use crate::dev_prelude::{BytesCompression, Channel, Compression, FromBytesCompression};
 
 use bytemuck::{bytes_of, bytes_of_mut, cast_slice, cast_slice_mut, Pod};
 use std::io;

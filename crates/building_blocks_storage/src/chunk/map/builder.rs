@@ -1,6 +1,9 @@
 use crate::{
-    Array, Channel, Chunk, ChunkHashMap, ChunkKey, ChunkMap, ChunkReadStorage, ChunkWriteStorage,
-    FillChannels, SmallKeyHashMap,
+    array::FillChannels,
+    dev_prelude::{
+        Array, Channel, Chunk, ChunkHashMap, ChunkKey, ChunkMap, ChunkReadStorage,
+        ChunkWriteStorage, SmallKeyHashMap,
+    },
 };
 
 use building_blocks_core::{ExtentN, IntegerPoint, PointN};

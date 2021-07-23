@@ -1,8 +1,7 @@
-use building_blocks_core::{ConstZero, IntegerPoint, PointN};
+use building_blocks_core::{ConstZero, PointN};
 
 use core::ops::{Add, AddAssign, Deref, Mul, Sub, SubAssign};
 use num::Zero;
-use serde::{Deserialize, Serialize};
 
 /// Map-local coordinates.
 ///
@@ -117,18 +116,5 @@ impl SubAssign for Stride {
     #[inline]
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
-    }
-}
-
-/// A newtype wrapper for `PointN` or `ExtentN` where each point represents exactly one chunk.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct ChunkUnits<T>(pub T);
-
-impl<N> ChunkUnits<PointN<N>>
-where
-    PointN<N>: IntegerPoint<N>,
-{
-    pub fn chunk_min(&self, chunk_shape: PointN<N>) -> PointN<N> {
-        chunk_shape * self.0
     }
 }

@@ -1,5 +1,8 @@
 use super::chunk_downsample_for_each;
-use crate::{ArrayIndexer, ChunkDownsampler, Get, GetMut, IndexedArray, Local, Stride};
+use crate::{
+    array::ArrayIndexer,
+    dev_prelude::{ChunkDownsampler, Get, GetMut, IndexedArray, Local, Stride},
+};
 
 use building_blocks_core::prelude::*;
 
@@ -34,7 +37,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{Array3x1, ForEach};
+    use crate::prelude::{Array3x1, ForEach};
 
     #[test]
     fn point_downsample_only_ones() {

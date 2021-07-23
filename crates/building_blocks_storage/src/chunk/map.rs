@@ -139,8 +139,12 @@ pub use lod_view::*;
 pub use sampling::*;
 
 use crate::{
-    Array, ChunkIndexer, ChunkKey, ChunkReadStorage, ChunkWriteStorage, FillExtent, ForEach, Get,
-    GetMut, GetRef, IterChunkKeys, MultiRef,
+    chunk::ChunkIndexer,
+    dev_prelude::{
+        Array, ChunkKey, ChunkReadStorage, ChunkWriteStorage, FillExtent, ForEach, Get, GetMut,
+        GetRef, IterChunkKeys,
+    },
+    multi_ptr::MultiRef,
 };
 
 use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
@@ -573,7 +577,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::{access_traits::*, Array3x1};
+    use crate::prelude::Array3x1;
 
     use building_blocks_core::prelude::*;
 

@@ -1,7 +1,11 @@
 use crate::{
-    CacheEntry, Channel, ChunkKey, ChunkMap, ChunkReadStorage, CompressedChunks,
-    CompressibleChunkStorage, Compression, IterChunkKeys, LocalCache, LruChunkCacheEntries,
-    LruChunkCacheKeys, SmallKeyBuildHasher,
+    caching::{CacheEntry, LocalCache},
+    chunk::{CompressedChunks, LruChunkCacheEntries, LruChunkCacheKeys},
+    dev_prelude::{
+        Channel, ChunkKey, ChunkMap, ChunkReadStorage, CompressibleChunkStorage, Compression,
+        IterChunkKeys,
+    },
+    SmallKeyBuildHasher,
 };
 
 use core::hash::Hash;
@@ -118,7 +122,7 @@ pub type CompressibleChunkMapReader<'a, N, T, Bldr, Compr> =
 
 pub mod multichannel_aliases {
     use super::*;
-    use crate::{ChunkMapBuilderNxM, FastArrayCompression, FastChannelsCompression};
+    use crate::dev_prelude::{ChunkMapBuilderNxM, FastArrayCompression, FastChannelsCompression};
 
     macro_rules! compressible_map_reader_type_alias {
         ($name:ident, $dim:ty, $( $chan:ident ),+ ) => {

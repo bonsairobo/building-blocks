@@ -1,6 +1,7 @@
 use super::chunk_downsample_for_each;
 use crate::{
-    ArrayForEach, ArrayIndexer, ChunkDownsampler, Get, GetMut, IndexedArray, Local, Stride,
+    array::{ArrayForEach, ArrayIndexer},
+    dev_prelude::{ChunkDownsampler, Get, GetMut, IndexedArray, Local, Stride},
 };
 
 use building_blocks_core::prelude::*;

@@ -1,4 +1,4 @@
-use crate::{ArrayIndexer, ArrayStrideIter, Local, Stride};
+use crate::array::{ArrayIndexer, ArrayStrideIter, Local, Stride};
 
 use building_blocks_core::prelude::*;
 

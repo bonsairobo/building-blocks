@@ -1,6 +1,9 @@
 use crate::{
-    BorrowChannels, BorrowChannelsMut, Channel, Channels, Compression, CopySlices,
-    FastChannelsCompression, FillChannels, ResetChannels, Slices, SlicesMut, UninitChannels,
+    array::{
+        BorrowChannels, BorrowChannelsMut, Channel, Channels, CopySlices, FastChannelsCompression,
+        FillChannels, ResetChannels, Slices, SlicesMut, UninitChannels,
+    },
+    prelude::Compression,
 };
 
 use std::io;
@@ -189,7 +192,7 @@ pub use multichannel_aliases::*;
 mod test {
     use super::*;
 
-    use crate::{FromBytesCompression, Get, GetMut, GetRef};
+    use crate::prelude::{FromBytesCompression, Get, GetMut, GetRef};
 
     #[test]
     fn tuple_of_channels_can_get() {

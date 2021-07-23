@@ -35,22 +35,8 @@ pub mod octree;
 pub mod signed_distance;
 pub mod transform_map;
 
-pub use access_traits::*;
-pub use array::*;
-pub use caching::*;
-pub use chunk::*;
-pub use compression::*;
-pub use func::*;
-pub use multi_ptr::*;
-pub use octree::*;
-pub use signed_distance::*;
-pub use transform_map::*;
-
 #[cfg(feature = "sled")]
 pub mod database;
-
-#[cfg(feature = "sled")]
-pub use database::*;
 
 /// Used in many generic algorithms to check if a voxel is considered empty.
 pub trait IsEmpty {
@@ -70,16 +56,26 @@ pub type SmallKeyBuildHasher = ahash::RandomState;
 
 pub mod prelude {
     pub use super::{
-        copy_extent, Chunk, ChunkKey, ChunkKey2, ChunkKey3, ChunkMapBuilder, ChunkReadStorage,
-        ChunkUnits, ChunkWriteStorage, Compressed, CompressibleChunkMap,
-        CompressibleChunkMapReader, CompressibleChunkStorage, CompressibleChunkStorageReader,
-        Compression, FastCompressibleChunkStorage, FillExtent, FromBytesCompression, Func,
-        IndexedArray, IsEmpty, IterChunkKeys, Local, LocalChunkCache2, LocalChunkCache3,
-        OctreeChunkIndex, OctreeNode, OctreeSet, PointDownsampler, Sd16, Sd8, SdfMeanDownsampler,
-        SignedDistance, SmallKeyHashMap, Stride, TransformMap, VisitStatus,
+        array::{Local, Stride},
+        chunk::{
+            AmbientExtent, Chunk, ChunkDownsampler, ChunkKey, ChunkKey2, ChunkKey3,
+            ChunkMapBuilder, ChunkReadStorage, ChunkUnits, ChunkWriteStorage, IterChunkKeys,
+            LocalChunkCache, LocalChunkCache2, LocalChunkCache3, PointDownsampler,
+            SdfMeanDownsampler,
+        },
+        compression::{BytesCompression, Compressed, Compression, FromBytesCompression},
+        func::Func,
+        octree::{
+            ChunkedOctreeSet, ClipMapConfig3, ClipMapUpdate3, LodChunkUpdate3, OctreeChunkIndex,
+            OctreeNode, OctreeSet, VisitStatus,
+        },
+        signed_distance::{Sd16, Sd8, SignedDistance},
+        transform_map::TransformMap,
+        IsEmpty,
     };
 
     pub use super::access_traits::*;
+    pub use super::array::compression::multichannel_aliases::*;
     pub use super::array::multichannel_aliases::*;
     pub use super::chunk::map::multichannel_aliases::*;
     pub use super::chunk::storage::compressible::multichannel_aliases::*;
@@ -87,11 +83,27 @@ pub mod prelude {
     pub use super::chunk::storage::hash_map::multichannel_aliases::*;
 
     #[cfg(feature = "lz4")]
-    pub use super::Lz4;
+    pub use super::compression::Lz4;
     #[cfg(feature = "snap")]
-    pub use super::Snappy;
+    pub use super::compression::Snappy;
     #[cfg(feature = "sled")]
-    pub use super::{ChunkDb, ChunkDb2, ChunkDb3};
+    pub use super::database::{ChunkDb, ChunkDb2, ChunkDb3};
+}
+
+/// Includes all of `prelude` plus the extra-generic types and internal traits used for library development.
+pub mod dev_prelude {
+    pub use super::prelude::*;
+
+    pub use super::{
+        array::{
+            Array, Channel, Channels, FastArrayCompression, FastChannelsCompression, IndexedArray,
+        },
+        chunk::{
+            ChunkHashMap, ChunkMap, ChunkMap2, ChunkMap3, ChunkMapBuilderNxM,
+            CompressibleChunkMapReader, CompressibleChunkStorage, CompressibleChunkStorageReader,
+        },
+        SmallKeyHashMap, SmallKeyHashSet,
+    };
 }
 
 #[cfg(feature = "dot_vox")]

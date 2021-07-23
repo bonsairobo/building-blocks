@@ -103,9 +103,9 @@ pub trait GetMutPtr<L> {
 // We need this macro because doing a blanket impl causes conflicts due to Rust's orphan rules.
 macro_rules! impl_get_via_get_ref_and_clone {
     ($map:ty, $($type_params:ident),*) => {
-        impl<L, $($type_params),*> $crate::Get<L> for $map
+        impl<L, $($type_params),*> $crate::access_traits::Get<L> for $map
         where
-            Self: for<'r> $crate::GetRef<'r, L, Item = &'r T>,
+            Self: for<'r> $crate::access_traits::GetRef<'r, L, Item = &'r T>,
             T: Clone,
         {
             type Item = T;

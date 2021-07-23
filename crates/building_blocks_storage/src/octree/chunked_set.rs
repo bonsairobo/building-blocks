@@ -1,4 +1,4 @@
-use crate::{ChunkIndexer, OctreeSet, SmallKeyHashMap};
+use crate::{chunk::ChunkIndexer, octree::OctreeSet, SmallKeyHashMap};
 
 use building_blocks_core::prelude::*;
 

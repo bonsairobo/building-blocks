@@ -6,7 +6,7 @@ pub use channel::*;
 pub use compression::*;
 pub use multichannel::*;
 
-use crate::MultiMutPtr;
+use crate::multi_ptr::MultiMutPtr;
 
 /// Implemented by any tuple of `Channel`s to indicate the types of data being stored.
 pub trait Channels {

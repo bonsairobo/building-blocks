@@ -1,4 +1,4 @@
-use crate::{ChunkKey, ChunkKey2, ChunkKey3, Compression};
+use crate::prelude::{ChunkKey, ChunkKey2, ChunkKey3, Compression};
 
 use building_blocks_core::{orthants_covering_extent, prelude::*};
 
@@ -309,7 +309,7 @@ impl DatabaseKey<[i32; 3]> for ChunkKey3 {
 
 #[cfg(test)]
 mod test {
-    use crate::{Array3x2, FastArrayCompressionNx2, FromBytesCompression, Lz4};
+    use crate::prelude::{Array3x2, FastArrayCompressionNx2, FromBytesCompression, Lz4};
 
     use super::*;
 

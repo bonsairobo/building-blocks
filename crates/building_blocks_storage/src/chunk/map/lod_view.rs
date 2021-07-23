@@ -1,7 +1,11 @@
 use crate::{
-    AmbientExtent, ArrayCopySrc, Chunk, ChunkKey, ChunkMap, ChunkMapBuilder, ChunkReadStorage,
-    ChunkWriteStorage, FillExtent, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetRef,
-    IntoMultiMut, MultiMutPtr, MultiRef, ReadExtent, WriteExtent,
+    array::ArrayCopySrc,
+    dev_prelude::{
+        AmbientExtent, Chunk, ChunkKey, ChunkMap, ChunkMapBuilder, ChunkReadStorage,
+        ChunkWriteStorage, FillExtent, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetRef,
+        ReadExtent, WriteExtent,
+    },
+    multi_ptr::*,
 };
 
 use building_blocks_core::{ExtentN, IntegerPoint, PointN};

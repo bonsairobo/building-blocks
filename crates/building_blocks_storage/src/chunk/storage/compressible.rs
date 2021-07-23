@@ -1,8 +1,12 @@
 use crate::{
-    CacheEntry, ChunkKey, ChunkMap, ChunkMapBuilder, ChunkWriteStorage, Compressed,
-    CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression, FastArrayCompression,
-    FastChannelsCompression, FromBytesCompression, IterChunkKeys, LocalChunkCache, LruCacheEntries,
-    LruCacheIntoIter, LruCacheKeys, MaybeCompressed, SmallKeyLruCache,
+    caching::*,
+    compression::MaybeCompressed,
+    dev_prelude::{
+        ChunkKey, ChunkMap, ChunkMapBuilder, ChunkWriteStorage, Compressed,
+        CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression,
+        FastArrayCompression, FastChannelsCompression, FromBytesCompression, IterChunkKeys,
+        LocalChunkCache,
+    },
 };
 
 use building_blocks_core::prelude::*;
@@ -310,7 +314,7 @@ pub type CompressibleChunkMap<N, T, Bldr, Compr> =
 pub mod multichannel_aliases {
     use super::*;
     use crate::array::compression::multichannel_aliases::*;
-    use crate::{Channel, ChunkMapBuilderNxM};
+    use crate::dev_prelude::{Channel, ChunkMapBuilderNxM};
 
     pub type FastCompressibleChunkStorageNx1<N, By, A> =
         CompressibleChunkStorage<N, FastArrayCompressionNx1<N, By, A>>;

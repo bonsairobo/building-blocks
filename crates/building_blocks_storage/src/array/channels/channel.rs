@@ -1,6 +1,9 @@
 use crate::{
-    BorrowChannels, BorrowChannelsMut, Channels, CopySlices, FillChannels, GetMut, GetMutPtr,
-    GetRef, ResetChannels, Slices, SlicesMut, UninitChannels,
+    array::{
+        BorrowChannels, BorrowChannelsMut, CopySlices, FillChannels, ResetChannels, Slices,
+        SlicesMut, UninitChannels,
+    },
+    dev_prelude::{Channels, GetMut, GetMutPtr, GetRef},
 };
 
 use core::mem::MaybeUninit;

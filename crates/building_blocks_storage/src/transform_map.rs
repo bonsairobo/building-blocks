@@ -39,8 +39,12 @@
 //! ```
 
 use crate::{
-    AmbientExtent, Array, ArrayCopySrc, ChunkCopySrc, ChunkCopySrcIter, ChunkMap, ChunkMapBuilder,
-    ChunkMapLodView, ChunkReadStorage, ForEach, Get, IndexedArray, ReadExtent,
+    array::ArrayCopySrc,
+    chunk::{ChunkCopySrc, ChunkCopySrcIter, ChunkMapLodView},
+    dev_prelude::{
+        AmbientExtent, Array, ChunkMap, ChunkMapBuilder, ChunkReadStorage, ForEach, Get,
+        IndexedArray, ReadExtent,
+    },
 };
 
 use building_blocks_core::prelude::*;

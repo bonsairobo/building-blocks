@@ -1,4 +1,4 @@
-use crate::{Array, Compression, FromBytesCompression};
+use crate::dev_prelude::{Array, Compression, FromBytesCompression};
 
 use building_blocks_core::prelude::*;
 
@@ -97,15 +97,15 @@ pub use multichannel_aliases::*;
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{Array3x1, BytesCompression};
+    use crate::prelude::{Array3x1, BytesCompression};
 
     use crate::test_utilities::sphere_bit_array;
     use utilities::test::test_print;
 
     #[cfg(feature = "lz4")]
-    use crate::Lz4;
+    use crate::compression::Lz4;
     #[cfg(feature = "snap")]
-    use crate::Snappy;
+    use crate::compression::Snappy;
 
     #[cfg(feature = "snap")]
     #[test]

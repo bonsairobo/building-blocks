@@ -1,4 +1,4 @@
-use crate::{ChunkKey, ChunkKey3, ChunkUnits, OctreeNode, OctreeSet, VisitStatus};
+use crate::prelude::{ChunkKey, ChunkKey3, ChunkUnits, OctreeNode, OctreeSet, VisitStatus};
 
 use building_blocks_core::prelude::*;
 
@@ -263,7 +263,7 @@ fn octant_chunk_key(chunk_log2: i32, octant: &Octant) -> ChunkKey3 {
 
 #[cfg(test)]
 mod test {
-    use crate::{ChunkUnits, SmallKeyHashSet};
+    use crate::dev_prelude::{ChunkUnits, SmallKeyHashSet};
 
     use super::*;
 

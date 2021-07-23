@@ -12,7 +12,7 @@
 //! copy_extent(&sample_extent, &Func(|p: Point3i| (p.dot(p) - 10) as f32), &mut sampled_sphere);
 //!```
 
-use crate::{ForEach, Get, ReadExtent};
+use crate::prelude::{ForEach, Get, ReadExtent};
 
 use building_blocks_core::prelude::*;
 

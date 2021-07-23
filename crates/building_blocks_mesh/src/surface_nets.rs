@@ -1,7 +1,7 @@
 use super::PosNormMesh;
 
 use building_blocks_core::{prelude::*, EDGES_3};
-use building_blocks_storage::{prelude::*, ArrayForEach};
+use building_blocks_storage::{array::ArrayForEach, dev_prelude::*};
 
 /// Pads the given chunk extent with exactly the amount of space required for running the `surface_nets` algorithm.
 pub fn padded_surface_nets_chunk_extent(chunk_extent: &Extent3i) -> Extent3i {

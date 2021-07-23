@@ -139,23 +139,26 @@
 //! ```
 
 mod coords;
-#[macro_use]
-mod for_each;
 mod indexer;
 
 pub mod channels;
 pub mod compression;
+#[macro_use]
+pub mod for_each;
 
 #[cfg(feature = "dot_vox")]
 mod dot_vox_conversions;
 #[cfg(feature = "image")]
 mod image_conversions;
 
-pub use channels::*;
-pub use compression::*;
+pub use channels::Channel;
 pub use coords::*;
-pub use for_each::*;
-pub use indexer::*;
+pub use for_each::ArrayForEach;
+pub use indexer::IndexedArray;
+
+pub(crate) use channels::*;
+pub(crate) use for_each::*;
+pub(crate) use indexer::*;
 
 use crate::{
     chunk::ChunkCopySrc,

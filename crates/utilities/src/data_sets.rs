@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::Array3x1;
+use building_blocks_storage::prelude::Array3x1;
 
 // TODO: it would be nice if all crates could share this module, but it causes this issue:
 // https://github.com/rust-lang/cargo/issues/6765

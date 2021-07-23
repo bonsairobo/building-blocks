@@ -96,7 +96,9 @@ pub mod dev_prelude {
 
     pub use super::{
         array::{
-            Array, Channel, Channels, FastArrayCompression, FastChannelsCompression, IndexedArray,
+            channels::{Channel, Channels, FastChannelsCompression},
+            compression::FastArrayCompression,
+            Array, IndexedArray,
         },
         chunk::{
             ChunkHashMap, ChunkMap, ChunkMap2, ChunkMap3, ChunkMapBuilderNxM,

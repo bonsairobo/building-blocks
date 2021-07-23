@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{Array2x1, Array3x1};
+use building_blocks_storage::prelude::{Array2x1, Array3x1};
 use simdnoise::NoiseBuilder;
 
 pub fn noise_array2(extent: Extent2i, freq: f32, seed: i32, octaves: u8) -> Array2x1<f32> {

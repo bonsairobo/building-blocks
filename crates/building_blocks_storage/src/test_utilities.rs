@@ -1,4 +1,4 @@
-use crate::Array3x1;
+use crate::prelude::Array3x1;
 
 use building_blocks_core::prelude::*;
 

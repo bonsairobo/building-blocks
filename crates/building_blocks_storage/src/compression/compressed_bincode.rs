@@ -69,7 +69,7 @@ where
 #[cfg(all(test, feature = "snap"))]
 mod tests {
     use super::*;
-    use crate::Snappy;
+    use crate::prelude::Snappy;
     use serde::Deserialize;
 
     #[derive(Clone, Debug, Eq, Deserialize, Serialize, PartialEq)]

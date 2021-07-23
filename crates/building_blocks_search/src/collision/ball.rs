@@ -3,7 +3,7 @@ use super::impact_with_leaf_octant;
 use crate::{OctreeDbvt, OctreeDbvtVisitor, VoxelImpact};
 
 use building_blocks_core::prelude::*;
-use building_blocks_storage::VisitStatus;
+use building_blocks_storage::prelude::VisitStatus;
 
 use core::hash::Hash;
 use nalgebra::{self as na, zero, Isometry3, Translation3, UnitQuaternion};

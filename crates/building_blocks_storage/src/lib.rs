@@ -56,7 +56,7 @@ pub type SmallKeyBuildHasher = ahash::RandomState;
 
 pub mod prelude {
     pub use super::{
-        array::{Local, Stride},
+        array::{IndexedArray, Local, Stride},
         chunk::{
             AmbientExtent, Chunk, ChunkDownsampler, ChunkKey, ChunkKey2, ChunkKey3,
             ChunkMapBuilder, ChunkReadStorage, ChunkUnits, ChunkWriteStorage, IterChunkKeys,
@@ -67,7 +67,7 @@ pub mod prelude {
         func::Func,
         octree::{
             ChunkedOctreeSet, ClipMapConfig3, ClipMapUpdate3, LodChunkUpdate3, OctreeChunkIndex,
-            OctreeNode, OctreeSet, VisitStatus,
+            OctreeNode, OctreeSet, OctreeVisitor, VisitStatus,
         },
         signed_distance::{Sd16, Sd8, SignedDistance},
         transform_map::TransformMap,

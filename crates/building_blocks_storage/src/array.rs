@@ -153,7 +153,6 @@ mod image_conversions;
 
 pub use channels::Channel;
 pub use coords::*;
-pub use for_each::ArrayForEach;
 pub use indexer::IndexedArray;
 
 pub(crate) use channels::*;

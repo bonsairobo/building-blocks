@@ -577,7 +577,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::prelude::Array3x1;
+    use crate::prelude::*;
 
     use building_blocks_core::prelude::*;
 
@@ -676,7 +676,7 @@ mod tests {
     #[cfg(feature = "lz4")]
     #[test]
     fn multichannel_compressed_accessors() {
-        use crate::{FastCompressibleChunkStorageNx2, LocalChunkCache, Lz4};
+        use crate::prelude::{FastCompressibleChunkStorageNx2, LocalChunkCache, Lz4};
 
         let builder = ChunkMapBuilder3x2::new(CHUNK_SHAPE, (0, b'a'));
         let mut map = builder.build_with_write_storage(

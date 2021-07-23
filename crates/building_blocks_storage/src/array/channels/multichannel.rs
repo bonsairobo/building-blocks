@@ -213,7 +213,7 @@ mod test {
     #[cfg(feature = "lz4")]
     #[test]
     fn multichannel_compression() {
-        use crate::Lz4;
+        use crate::prelude::Lz4;
 
         let channels = (Channel::fill(0, 10), Channel::fill(b'a', 10));
 

@@ -13,12 +13,12 @@ mod sdfu_integration;
 mod point2;
 mod point3;
 
-use bytemuck::{Pod, Zeroable};
 pub use point2::*;
 pub use point3::*;
 
 use point_traits::*;
 
+use bytemuck::{Pod, Zeroable};
 use core::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 use num::{Signed, Zero};
 use serde::{Deserialize, Serialize};

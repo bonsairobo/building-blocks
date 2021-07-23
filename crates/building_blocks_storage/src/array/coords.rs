@@ -1,4 +1,4 @@
-use building_blocks_core::{ConstZero, PointN};
+use building_blocks_core::prelude::{ConstZero, PointN};
 
 use core::ops::{Add, AddAssign, Deref, Mul, Sub, SubAssign};
 use num::Zero;

@@ -147,7 +147,7 @@ use crate::{
     multi_ptr::MultiRef,
 };
 
-use building_blocks_core::{bounding_extent, ExtentN, IntegerPoint, PointN};
+use building_blocks_core::{bounding_extent, point_traits::IntegerPoint, ExtentN, PointN};
 
 use either::Either;
 

@@ -4,15 +4,15 @@
     clippy::too_many_arguments
 )]
 
-pub mod find_surface;
-pub mod flood_fill;
-pub mod grid_ray_traversal;
-pub mod pathfinding;
+mod find_surface;
+mod flood_fill;
+mod grid_ray_traversal;
+mod pathfinding;
 
+pub use self::pathfinding::*;
 pub use find_surface::*;
 pub use flood_fill::*;
 pub use grid_ray_traversal::*;
-pub use self::pathfinding::*;
 
 #[cfg(feature = "ncollide")]
 pub mod collision;

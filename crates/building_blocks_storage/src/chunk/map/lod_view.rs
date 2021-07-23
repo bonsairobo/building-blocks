@@ -8,7 +8,7 @@ use crate::{
     multi_ptr::*,
 };
 
-use building_blocks_core::{ExtentN, IntegerPoint, PointN};
+use building_blocks_core::{point_traits::IntegerPoint, ExtentN, PointN};
 
 use either::Either;
 use std::ops::{Deref, DerefMut};

@@ -6,7 +6,7 @@ pub use indexer::*;
 pub use map::*;
 pub use storage::*;
 
-use building_blocks_core::{IntegerPoint, PointN};
+use building_blocks_core::prelude::{IntegerPoint, PointN};
 use serde::{Deserialize, Serialize};
 
 /// A newtype wrapper for `PointN` or `ExtentN` where each point represents exactly one chunk.

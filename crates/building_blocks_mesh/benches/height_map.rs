@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_mesh::height_map::*;
+use building_blocks_mesh::*;
 use building_blocks_storage::prelude::*;
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};

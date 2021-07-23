@@ -47,7 +47,7 @@ impl<Ni, Nf> GridRayTraversal<Ni, Nf> {
 }
 
 impl GridRayTraversal2 {
-    /// Move the the next closest pixel along the ray.
+    /// Move to the next closest pixel along the ray.
     #[inline]
     pub fn step(&mut self) {
         if self.t_max.x() < self.t_max.y() {

@@ -1,6 +1,6 @@
 use bevy::tasks::TaskPool;
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{Array3x1, Array2x1, ChunkUnits, access_traits::*};
+use building_blocks_storage::{access_traits::*, prelude::{Array3x1, Array2x1, ChunkUnits}};
 use utilities::noise::{noise_array2, noise_array3};
 
 pub fn generate_noise_chunks2(

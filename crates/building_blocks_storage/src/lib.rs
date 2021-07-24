@@ -65,7 +65,9 @@ pub mod prelude {
             LocalChunkCache, LocalChunkCache2, LocalChunkCache3, PointDownsampler,
             SdfMeanDownsampler,
         },
-        compression::{BytesCompression, Compressed, Compression, FromBytesCompression},
+        compression::{
+            BincodeCompression, BytesCompression, Compressed, Compression, FromBytesCompression,
+        },
         func::Func,
         octree::{
             ChunkedOctreeSet, ClipMapConfig3, ClipMapUpdate3, LodChunkUpdate3, OctreeChunkIndex,

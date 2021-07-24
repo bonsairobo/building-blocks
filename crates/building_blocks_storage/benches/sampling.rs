@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{
+use building_blocks_storage::prelude::{
     Array3x1, ChunkDownsampler, ChunkMapBuilder, ChunkMapBuilder3x1, Local, OctreeChunkIndex,
     PointDownsampler, Sd8, SdfMeanDownsampler,
 };

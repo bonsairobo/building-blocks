@@ -1,12 +1,12 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{prelude::*, BincodeCompression, FastArrayCompressionNx1};
+use building_blocks_storage::prelude::*;
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 #[cfg(feature = "lz4")]
-use building_blocks_storage::Lz4;
+use building_blocks_storage::compression::Lz4;
 #[cfg(feature = "snap")]
-use building_blocks_storage::Snappy;
+use building_blocks_storage::compression::Snappy;
 
 #[cfg(feature = "lz4")]
 fn decompress_array_with_bincode_lz4(c: &mut Criterion) {

@@ -4,6 +4,7 @@ use crate::{
         SlicesMut, UninitChannels,
     },
     dev_prelude::{Channels, GetMut, GetMutPtr, GetRef},
+    prelude::{GetMutUnchecked, GetRefUnchecked},
 };
 
 use core::mem::MaybeUninit;
@@ -184,6 +185,19 @@ impl<T> UninitChannels for Channel<MaybeUninit<T>> {
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
+impl<'a, T, Store> GetRefUnchecked<'a, usize> for Channel<T, Store>
+where
+    T: 'a,
+    Store: Deref<Target = [T]>,
+{
+    type Item = &'a T;
+
+    #[inline]
+    unsafe fn get_ref_unchecked(&'a self, offset: usize) -> Self::Item {
+        self.store.get_unchecked(offset)
+    }
+}
+
 impl<'a, T, Store> GetRef<'a, usize> for Channel<T, Store>
 where
     T: 'a,
@@ -193,11 +207,20 @@ where
 
     #[inline]
     fn get_ref(&'a self, offset: usize) -> Self::Item {
-        if cfg!(debug_assertions) {
-            &self.store[offset]
-        } else {
-            unsafe { self.store.get_unchecked(offset) }
-        }
+        &self.store[offset]
+    }
+}
+
+impl<'a, T, Store> GetMutUnchecked<'a, usize> for Channel<T, Store>
+where
+    T: 'a,
+    Store: DerefMut<Target = [T]>,
+{
+    type Item = &'a mut T;
+
+    #[inline]
+    unsafe fn get_mut_unchecked(&'a mut self, offset: usize) -> Self::Item {
+        self.store.get_unchecked_mut(offset)
     }
 }
 
@@ -210,11 +233,7 @@ where
 
     #[inline]
     fn get_mut(&'a mut self, offset: usize) -> Self::Item {
-        if cfg!(debug_assertions) {
-            &mut self.store[offset]
-        } else {
-            unsafe { self.store.get_unchecked_mut(offset) }
-        }
+        &mut self.store[offset]
     }
 }
 

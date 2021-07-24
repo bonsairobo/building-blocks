@@ -116,9 +116,16 @@ impl OctreeSet {
     /// must have `0 < P <= 6`, because there is a maximum fixed depth of the octree.
     pub fn from_array3<A, T>(array: &A, extent: Extent3i) -> Self
     where
-        A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
+        A: IndexedArray<[i32; 3]> + GetUnchecked<Stride, Item = T>,
         T: Clone + IsEmpty,
     {
+        assert!(
+            extent.is_subset_of(array.extent()),
+            "{:?} does not contain {:?}; would cause access out-of-bounds",
+            array.extent(),
+            extent
+        );
+
         let power = Self::check_extent(&extent);
         let edge_length = 1 << power;
 
@@ -164,13 +171,13 @@ impl OctreeSet {
         nodes: &mut SmallKeyHashMap<LocationCode, ChildBitMask>,
     ) -> (bool, bool)
     where
-        A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
+        A: IndexedArray<[i32; 3]> + GetUnchecked<Stride, Item = T>,
         T: Clone + IsEmpty,
     {
         // Base case where the octant is a single voxel. The `OctreeNode` is invalid and unnecessary in this case; we avoid using
         // it by returning early.
         if edge_length == 1 {
-            let exists = !array.get(minimum).is_empty();
+            let exists = unsafe { !array.get_unchecked(minimum).is_empty() };
             return (exists, exists);
         }
 

@@ -43,7 +43,7 @@ use crate::{
     chunk::{ChunkCopySrc, ChunkCopySrcIter, ChunkMapLodView},
     dev_prelude::{
         AmbientExtent, Array, ChunkMap, ChunkMapBuilder, ChunkReadStorage, ForEach, Get,
-        IndexedArray, ReadExtent,
+        GetUnchecked, IndexedArray, ReadExtent,
     },
 };
 
@@ -91,6 +91,19 @@ where
     #[inline]
     fn get(&self, c: Coord) -> Self::Item {
         (self.transform)(self.delegate.get(c))
+    }
+}
+
+impl<'a, Delegate, F, In, Out, Coord> GetUnchecked<Coord> for TransformMap<'a, Delegate, F>
+where
+    F: Fn(In) -> Out,
+    Delegate: GetUnchecked<Coord, Item = In>,
+{
+    type Item = Out;
+
+    #[inline]
+    unsafe fn get_unchecked(&self, c: Coord) -> Self::Item {
+        (self.transform)(self.delegate.get_unchecked(c))
     }
 }
 

@@ -9,11 +9,21 @@ pub fn find_surface_points<Map, N, T>(
     extent: &ExtentN<N>,
 ) -> (Vec<PointN<N>>, Vec<Stride>)
 where
-    Map: IndexedArray<N> + ForEach<N, (PointN<N>, Stride), Item = T> + Get<Stride, Item = T>,
+    Map: IndexedArray<N>
+        + ForEach<N, (PointN<N>, Stride), Item = T>
+        + GetUnchecked<Stride, Item = T>,
     T: IsEmpty,
     PointN<N>: IntegerPoint<N>,
+    ExtentN<N>: std::fmt::Debug,
     Local<N>: Copy,
 {
+    assert!(
+        extent.is_subset_of(map.extent()),
+        "{:?} does not contain {:?}; would cause access out-of-bounds",
+        map.extent(),
+        extent
+    );
+
     // Precompute the strides for adjacency checks.
     let vn_offsets = Local::localize_points_slice(&PointN::von_neumann_offsets());
     let mut vn_strides = vec![Stride(0); vn_offsets.len()];
@@ -27,7 +37,7 @@ where
         }
 
         for vn_stride in vn_strides.iter() {
-            if map.get(s + *vn_stride).is_empty() {
+            if unsafe { map.get_unchecked(s + *vn_stride).is_empty() } {
                 surface_points.push(p);
                 surface_strides.push(s);
                 break;

@@ -61,9 +61,16 @@ pub fn triangulate_height_map<A, H>(
 ) where
     A: IndexedArray<[i32; 2]>
         + ForEach<[i32; 2], (Point2i, Stride), Item = H>
-        + Get<Stride, Item = H>,
+        + GetUnchecked<Stride, Item = H>,
     H: Height,
 {
+    assert!(
+        extent.is_subset_of(height_map.extent()),
+        "{:?} does not contain {:?}; would cause access out-of-bounds",
+        height_map.extent(),
+        extent
+    );
+
     output.reset(height_map.extent().num_points());
 
     // Avoid accessing out of bounds with a 3x3x3 kernel.
@@ -97,10 +104,10 @@ pub fn triangulate_height_map<A, H>(
             let r_stride = stride + x_stride;
             let b_stride = stride - y_stride;
             let t_stride = stride + y_stride;
-            let l_y = height_map.get(l_stride).height();
-            let r_y = height_map.get(r_stride).height();
-            let b_y = height_map.get(b_stride).height();
-            let t_y = height_map.get(t_stride).height();
+            let l_y = unsafe { height_map.get_unchecked(l_stride).height() };
+            let r_y = unsafe { height_map.get_unchecked(r_stride).height() };
+            let b_y = unsafe { height_map.get_unchecked(b_stride).height() };
+            let t_y = unsafe { height_map.get_unchecked(t_stride).height() };
             let dy_dx = (r_y - l_y) / 2.0;
             let dy_dz = (t_y - b_y) / 2.0;
             // Not normalized, because that's done more efficiently on the GPU.

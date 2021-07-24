@@ -146,6 +146,13 @@ pub fn greedy_quads_with_merge_strategy<A, T, Merger>(
     T: IsEmpty + IsOpaque,
     Merger: MergeStrategy<Voxel = T>,
 {
+    assert!(
+        extent.is_subset_of(voxels.extent()),
+        "{:?} does not contain {:?}; would cause access out-of-bounds",
+        voxels.extent(),
+        extent
+    );
+
     output.reset(*extent);
     let GreedyQuadsBuffer {
         visited,

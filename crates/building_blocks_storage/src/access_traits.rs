@@ -77,11 +77,33 @@ pub trait Get<L> {
 }
 
 #[auto_impl(&, &mut)]
+pub trait GetUnchecked<L> {
+    type Item;
+
+    /// Get an owned value at `location`. Does not do bounds checking.
+    ///
+    /// # Safety
+    /// Accessing out of bounds is undefined behavior.
+    unsafe fn get_unchecked(&self, location: L) -> Self::Item;
+}
+
+#[auto_impl(&, &mut)]
 pub trait GetRef<'a, L> {
     type Item;
 
     /// Get an immutable reference to the value at `location`.
     fn get_ref(&'a self, location: L) -> Self::Item;
+}
+
+#[auto_impl(&, &mut)]
+pub trait GetRefUnchecked<'a, L> {
+    type Item;
+
+    /// Get an immutable reference to the value at `location`. Does not do bounds checking.
+    ///
+    /// # Safety
+    /// Accessing out of bounds is undefined behavior.
+    unsafe fn get_ref_unchecked(&'a self, location: L) -> Self::Item;
 }
 
 #[auto_impl(&mut)]
@@ -90,6 +112,17 @@ pub trait GetMut<'a, L> {
 
     /// Get a mutable reference to the value at `location`.
     fn get_mut(&'a mut self, location: L) -> Self::Item;
+}
+
+#[auto_impl(&mut)]
+pub trait GetMutUnchecked<'a, L> {
+    type Item;
+
+    /// Get a mutable reference to the value at `location`. Does not do bounds checking.
+    ///
+    /// # Safety
+    /// Accessing out of bounds is undefined behavior.
+    unsafe fn get_mut_unchecked(&'a mut self, location: L) -> Self::Item;
 }
 
 #[auto_impl(&mut)]
@@ -115,6 +148,19 @@ macro_rules! impl_get_via_get_ref_and_clone {
                 self.get_ref(location).clone()
             }
         }
+
+        impl<L, $($type_params),*> $crate::access_traits::GetUnchecked<L> for $map
+        where
+            Self: for<'r> $crate::access_traits::GetRefUnchecked<'r, L, Item = &'r T>,
+            T: Clone,
+        {
+            type Item = T;
+
+            #[inline]
+            unsafe fn get_unchecked(&self, location: L) -> Self::Item {
+                self.get_ref_unchecked(location).clone()
+            }
+        }
     };
 }
 
@@ -136,6 +182,21 @@ macro_rules! impl_get_for_tuple {
             }
         }
 
+        impl<Coord, $($t),+> GetUnchecked<Coord> for ($($t,)+)
+        where
+            Coord: Copy,
+            $($t: GetUnchecked<Coord>),+
+        {
+            type Item = ($($t::Item,)+);
+
+            #[inline]
+            unsafe fn get_unchecked(&self, offset: Coord) -> Self::Item {
+                let ($($var,)+) = self;
+
+                ($($var.get_unchecked(offset),)+)
+            }
+        }
+
         impl<'a, Coord, $($t),+> GetRef<'a, Coord> for ($($t,)+)
         where
             Coord: Copy,
@@ -151,6 +212,21 @@ macro_rules! impl_get_for_tuple {
             }
         }
 
+        impl<'a, Coord, $($t),+> GetRefUnchecked<'a, Coord> for ($($t,)+)
+        where
+            Coord: Copy,
+            $($t: GetRefUnchecked<'a, Coord>),+
+        {
+            type Item = ($($t::Item,)+);
+
+            #[inline]
+            unsafe fn get_ref_unchecked(&'a self, offset: Coord) -> Self::Item {
+                let ($($var,)+) = self;
+
+                ($($var.get_ref_unchecked(offset),)+)
+            }
+        }
+
         impl<'a, Coord, $($t),+> GetMut<'a, Coord> for ($($t,)+)
         where
             Coord: Copy,
@@ -163,6 +239,21 @@ macro_rules! impl_get_for_tuple {
                 let ($($var,)+) = self;
 
                 ($($var.get_mut(offset),)+)
+            }
+        }
+
+        impl<'a, Coord, $($t),+> GetMutUnchecked<'a, Coord> for ($($t,)+)
+        where
+            Coord: Copy,
+            $($t: GetMutUnchecked<'a, Coord>),+
+        {
+            type Item = ($($t::Item,)+);
+
+            #[inline]
+            unsafe fn get_mut_unchecked(&'a mut self, offset: Coord) -> Self::Item {
+                let ($($var,)+) = self;
+
+                ($($var.get_mut_unchecked(offset),)+)
             }
         }
 

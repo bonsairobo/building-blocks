@@ -2,8 +2,8 @@ use crate::{
     array::ArrayCopySrc,
     dev_prelude::{
         AmbientExtent, Chunk, ChunkKey, ChunkMap, ChunkMapBuilder, ChunkReadStorage,
-        ChunkWriteStorage, FillExtent, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetRef,
-        ReadExtent, WriteExtent,
+        ChunkWriteStorage, FillExtent, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut,
+        GetMutUnchecked, GetRef, GetRefUnchecked, GetUnchecked, ReadExtent, WriteExtent,
     },
     multi_ptr::*,
 };
@@ -39,7 +39,7 @@ where
     PointN<N>: IntegerPoint<N>,
     T: Clone,
     Bldr: ChunkMapBuilder<N, T>,
-    <Bldr::Chunk as Chunk>::Array: Get<PointN<N>, Item = T>,
+    <Bldr::Chunk as Chunk>::Array: GetUnchecked<PointN<N>, Item = T>,
     Store: ChunkReadStorage<N, Bldr::Chunk>,
 {
     type Item = T;
@@ -55,7 +55,7 @@ where
     Delegate: Deref<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     Bldr: 'a + ChunkMapBuilder<N, T>,
-    <Bldr::Chunk as Chunk>::Array: GetRef<'a, PointN<N>, Item = Ref>,
+    <Bldr::Chunk as Chunk>::Array: GetRefUnchecked<'a, PointN<N>, Item = Ref>,
     Store: 'a + ChunkReadStorage<N, Bldr::Chunk>,
     Ref: MultiRef<'a, Data = T>,
 {
@@ -72,7 +72,7 @@ where
     Delegate: DerefMut<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     Bldr: 'a + ChunkMapBuilder<N, T>,
-    <Bldr::Chunk as Chunk>::Array: GetMut<'a, PointN<N>, Item = Mut>,
+    <Bldr::Chunk as Chunk>::Array: GetMutUnchecked<'a, PointN<N>, Item = Mut>,
     Store: 'a + ChunkWriteStorage<N, Bldr::Chunk>,
 {
     type Item = Mut;

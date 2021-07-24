@@ -10,8 +10,8 @@
 //!   - `Get*<Local<N>>`: N-dimensional point in extent-local coordinates (i.e. min = `[0, 0, 0]`)
 //!   - `Get*<PointN<N>>`: N-dimensional point in global (ambient) coordinates
 //!
-//! Indexing assumes that the coordinates are in-bounds of the array, panicking otherwise. Bounds checking is only enabled in
-//! debug mode.
+//! The safe traits will panic on out-of-bounds access, but this has a significant runtime cost. For faster unchecked access,
+//! you can use the unsafe `Get*Unchecked` traits.
 //!
 //! # Iteration
 //!
@@ -166,6 +166,7 @@ use crate::{
         TransformMap, WriteExtent,
     },
     multi_ptr::*,
+    prelude::{GetMutUnchecked, GetRefUnchecked, GetUnchecked},
 };
 
 use building_blocks_core::prelude::*;
@@ -437,6 +438,18 @@ where
     }
 }
 
+impl<N, Chan> GetUnchecked<Stride> for Array<N, Chan>
+where
+    Chan: GetUnchecked<usize>,
+{
+    type Item = Chan::Item;
+
+    #[inline]
+    unsafe fn get_unchecked(&self, stride: Stride) -> Self::Item {
+        self.channels.get_unchecked(stride.0)
+    }
+}
+
 impl<'a, N, Chan> GetRef<'a, Stride> for Array<N, Chan>
 where
     Chan: GetRef<'a, usize>,
@@ -449,6 +462,18 @@ where
     }
 }
 
+impl<'a, N, Chan> GetRefUnchecked<'a, Stride> for Array<N, Chan>
+where
+    Chan: GetRefUnchecked<'a, usize>,
+{
+    type Item = Chan::Item;
+
+    #[inline]
+    unsafe fn get_ref_unchecked(&'a self, stride: Stride) -> Self::Item {
+        self.channels.get_ref_unchecked(stride.0)
+    }
+}
+
 impl<'a, N, Chan> GetMut<'a, Stride> for Array<N, Chan>
 where
     Chan: GetMut<'a, usize>,
@@ -458,6 +483,18 @@ where
     #[inline]
     fn get_mut(&'a mut self, stride: Stride) -> Self::Item {
         self.channels.get_mut(stride.0)
+    }
+}
+
+impl<'a, N, Chan> GetMutUnchecked<'a, Stride> for Array<N, Chan>
+where
+    Chan: GetMutUnchecked<'a, usize>,
+{
+    type Item = Chan::Item;
+
+    #[inline]
+    unsafe fn get_mut_unchecked(&'a mut self, stride: Stride) -> Self::Item {
+        self.channels.get_mut_unchecked(stride.0)
     }
 }
 
@@ -486,6 +523,19 @@ where
     }
 }
 
+impl<N, Chan> GetUnchecked<Local<N>> for Array<N, Chan>
+where
+    Self: IndexedArray<N> + GetUnchecked<Stride>,
+    PointN<N>: Copy,
+{
+    type Item = <Self as GetUnchecked<Stride>>::Item;
+
+    #[inline]
+    unsafe fn get_unchecked(&self, p: Local<N>) -> Self::Item {
+        self.get_unchecked(self.stride_from_local_point(p))
+    }
+}
+
 impl<'a, N, Chan> GetRef<'a, Local<N>> for Array<N, Chan>
 where
     Self: IndexedArray<N> + GetRef<'a, Stride>,
@@ -499,6 +549,19 @@ where
     }
 }
 
+impl<'a, N, Chan> GetRefUnchecked<'a, Local<N>> for Array<N, Chan>
+where
+    Self: IndexedArray<N> + GetRefUnchecked<'a, Stride>,
+    PointN<N>: Copy,
+{
+    type Item = <Self as GetRefUnchecked<'a, Stride>>::Item;
+
+    #[inline]
+    unsafe fn get_ref_unchecked(&'a self, p: Local<N>) -> Self::Item {
+        self.get_ref_unchecked(self.stride_from_local_point(p))
+    }
+}
+
 impl<'a, N, Chan> GetMut<'a, Local<N>> for Array<N, Chan>
 where
     Self: IndexedArray<N> + GetMut<'a, Stride>,
@@ -509,6 +572,19 @@ where
     #[inline]
     fn get_mut(&'a mut self, p: Local<N>) -> Self::Item {
         self.get_mut(self.stride_from_local_point(p))
+    }
+}
+
+impl<'a, N, Chan> GetMutUnchecked<'a, Local<N>> for Array<N, Chan>
+where
+    Self: IndexedArray<N> + GetMutUnchecked<'a, Stride>,
+    PointN<N>: Copy,
+{
+    type Item = <Self as GetMutUnchecked<'a, Stride>>::Item;
+
+    #[inline]
+    unsafe fn get_mut_unchecked(&'a mut self, p: Local<N>) -> Self::Item {
+        self.get_mut_unchecked(self.stride_from_local_point(p))
     }
 }
 
@@ -527,6 +603,21 @@ where
     }
 }
 
+impl<N, Chan> GetUnchecked<PointN<N>> for Array<N, Chan>
+where
+    Self: IndexedArray<N> + GetUnchecked<Local<N>>,
+    PointN<N>: Point,
+{
+    type Item = <Self as GetUnchecked<Local<N>>>::Item;
+
+    #[inline]
+    unsafe fn get_unchecked(&self, p: PointN<N>) -> Self::Item {
+        let local_p = p - self.extent().minimum;
+
+        self.get_unchecked(Local(local_p))
+    }
+}
+
 impl<'a, N, Chan> GetRef<'a, PointN<N>> for Array<N, Chan>
 where
     Self: IndexedArray<N> + GetRef<'a, Local<N>>,
@@ -539,6 +630,21 @@ where
         let local_p = p - self.extent().minimum;
 
         self.get_ref(Local(local_p))
+    }
+}
+
+impl<'a, N, Chan> GetRefUnchecked<'a, PointN<N>> for Array<N, Chan>
+where
+    Self: IndexedArray<N> + GetRefUnchecked<'a, Local<N>>,
+    PointN<N>: Point,
+{
+    type Item = <Self as GetRefUnchecked<'a, Local<N>>>::Item;
+
+    #[inline]
+    unsafe fn get_ref_unchecked(&'a self, p: PointN<N>) -> Self::Item {
+        let local_p = p - self.extent().minimum;
+
+        self.get_ref_unchecked(Local(local_p))
     }
 }
 
@@ -557,6 +663,21 @@ where
     }
 }
 
+impl<'a, N, Chan> GetMutUnchecked<'a, PointN<N>> for Array<N, Chan>
+where
+    Self: IndexedArray<N> + GetMutUnchecked<'a, Local<N>>,
+    PointN<N>: Point,
+{
+    type Item = <Self as GetMutUnchecked<'a, Local<N>>>::Item;
+
+    #[inline]
+    unsafe fn get_mut_unchecked(&'a mut self, p: PointN<N>) -> Self::Item {
+        let local_p = p - self.extent().minimum;
+
+        self.get_mut_unchecked(Local(local_p))
+    }
+}
+
 // ███████╗ ██████╗ ██████╗     ███████╗ █████╗  ██████╗██╗  ██╗
 // ██╔════╝██╔═══██╗██╔══██╗    ██╔════╝██╔══██╗██╔════╝██║  ██║
 // █████╗  ██║   ██║██████╔╝    █████╗  ███████║██║     ███████║
@@ -568,16 +689,19 @@ macro_rules! impl_array_for_each {
     (coords: $coords:ty; forwarder = |$p:ident, $stride:ident| $forward_coords:expr;) => {
         impl<N, Chan> ForEach<N, $coords> for Array<N, Chan>
         where
-            Self: Get<Stride>,
+            Self: GetUnchecked<Stride>,
             N: ArrayIndexer<N>,
             PointN<N>: IntegerPoint<N>,
         {
-            type Item = <Self as Get<Stride>>::Item;
+            type Item = <Self as GetUnchecked<Stride>>::Item;
 
             #[inline]
             fn for_each(&self, iter_extent: &ExtentN<N>, mut f: impl FnMut($coords, Self::Item)) {
                 let visitor = ArrayForEach::new_global(*self.extent(), *iter_extent);
-                visitor.for_each(|$p, $stride| f($forward_coords, self.get($stride)));
+                visitor.for_each(|$p, $stride| {
+                    // This is safe because we guarantee that we don't access out of bounds.
+                    f($forward_coords, unsafe { self.get_unchecked($stride) })
+                });
             }
         }
 
@@ -782,7 +906,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prelude::{copy_extent, Array2x1, Array3x1, Get};
+    use crate::prelude::{copy_extent, Array2x1, Array3x1};
     use core::mem::MaybeUninit;
 
     #[test]

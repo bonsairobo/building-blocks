@@ -64,9 +64,16 @@ pub fn surface_nets<A, T>(
     voxel_size: f32,
     output: &mut SurfaceNetsBuffer,
 ) where
-    A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
+    A: IndexedArray<[i32; 3]> + GetUnchecked<Stride, Item = T>,
     T: SignedDistance,
 {
+    assert!(
+        extent.is_subset_of(sdf.extent()),
+        "{:?} does not contain {:?}; would cause access out-of-bounds",
+        sdf.extent(),
+        extent
+    );
+
     output.reset(sdf.extent().num_points());
 
     estimate_surface(sdf, extent, voxel_size, output);
@@ -81,7 +88,7 @@ fn estimate_surface<A, T>(
     voxel_size: f32,
     output: &mut SurfaceNetsBuffer,
 ) where
-    A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
+    A: IndexedArray<[i32; 3]> + GetUnchecked<Stride, Item = T>,
     T: SignedDistance,
 {
     // Precalculate these offsets to do faster linear indexing.
@@ -124,14 +131,14 @@ fn estimate_surface_in_cube<A, T>(
     corner_strides: &[Stride],
 ) -> Option<([f32; 3], [f32; 3])>
 where
-    A: Get<Stride, Item = T>,
+    A: GetUnchecked<Stride, Item = T>,
     T: SignedDistance,
 {
     // Get the signed distance values at each corner of this cube.
     let mut corner_dists = [0.0; 8];
     let mut num_negative = 0;
     for (i, dist) in corner_dists.iter_mut().enumerate() {
-        let d = sdf.get(corner_strides[i]).into();
+        let d = unsafe { sdf.get_unchecked(corner_strides[i]).into() };
         *dist = d;
         if d < 0.0 {
             num_negative += 1;
@@ -212,7 +219,7 @@ fn sdf_gradient(dists: &[f32; 8], s: &Point3f) -> [f32; 3] {
 // comments on `maybe_make_quad` to help with understanding the indexing.
 fn make_all_quads<A, T>(sdf: &A, extent: &Extent3i, output: &mut SurfaceNetsBuffer)
 where
-    A: IndexedArray<[i32; 3]> + Get<Stride, Item = T>,
+    A: IndexedArray<[i32; 3]> + GetUnchecked<Stride, Item = T>,
     T: SignedDistance,
 {
     let mut xyz_strides = [Stride(0); 3];
@@ -313,11 +320,11 @@ fn maybe_make_quad<A, T>(
     axis_c_stride: Stride,
     indices: &mut Vec<u32>,
 ) where
-    A: Get<Stride, Item = T>,
+    A: GetUnchecked<Stride, Item = T>,
     T: SignedDistance,
 {
-    let d1 = sdf.get(p1);
-    let d2 = sdf.get(p2);
+    let d1 = unsafe { sdf.get_unchecked(p1) };
+    let d2 = unsafe { sdf.get_unchecked(p2) };
     let negative_face = match (d1.is_negative(), d2.is_negative()) {
         (true, false) => false,
         (false, true) => true,

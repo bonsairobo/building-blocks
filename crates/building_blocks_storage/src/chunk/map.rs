@@ -141,8 +141,8 @@ pub use sampling::*;
 use crate::{
     chunk::ChunkIndexer,
     dev_prelude::{
-        Array, ChunkKey, ChunkReadStorage, ChunkWriteStorage, FillExtent, ForEach, Get, GetMut,
-        GetRef, IterChunkKeys,
+        Array, ChunkKey, ChunkReadStorage, ChunkWriteStorage, FillExtent, ForEach, GetMutUnchecked,
+        GetRefUnchecked, GetUnchecked, IterChunkKeys,
     },
     multi_ptr::MultiRef,
 };
@@ -314,12 +314,12 @@ where
     pub fn clone_point(&self, lod: u8, p: PointN<N>) -> T
     where
         T: Clone,
-        <Bldr::Chunk as Chunk>::Array: Get<PointN<N>, Item = T>,
+        <Bldr::Chunk as Chunk>::Array: GetUnchecked<PointN<N>, Item = T>,
     {
         let chunk_min = self.indexer.min_of_chunk_containing_point(p);
 
         self.get_chunk(ChunkKey::new(lod, chunk_min))
-            .map(|chunk| chunk.array().get(p))
+            .map(|chunk| unsafe { chunk.array().get_unchecked(p) })
             .unwrap_or_else(|| self.ambient_value.clone())
     }
 
@@ -327,13 +327,13 @@ where
     #[inline]
     pub fn get_point<'a, Ref>(&'a self, lod: u8, p: PointN<N>) -> Ref
     where
-        <Bldr::Chunk as Chunk>::Array: GetRef<'a, PointN<N>, Item = Ref>,
+        <Bldr::Chunk as Chunk>::Array: GetRefUnchecked<'a, PointN<N>, Item = Ref>,
         Ref: MultiRef<'a, Data = T>,
     {
         let chunk_min = self.indexer.min_of_chunk_containing_point(p);
 
         self.get_chunk(ChunkKey::new(lod, chunk_min))
-            .map(|chunk| chunk.array().get_ref(p))
+            .map(|chunk| unsafe { chunk.array().get_ref_unchecked(p) })
             .unwrap_or_else(|| Ref::from_data_ref(&self.ambient_value))
     }
 
@@ -448,12 +448,12 @@ where
     #[inline]
     pub fn get_mut_point<'a, Mut>(&'a mut self, lod: u8, p: PointN<N>) -> Mut
     where
-        <Bldr::Chunk as Chunk>::Array: GetMut<'a, PointN<N>, Item = Mut>,
+        <Bldr::Chunk as Chunk>::Array: GetMutUnchecked<'a, PointN<N>, Item = Mut>,
     {
         let chunk_min = self.indexer.min_of_chunk_containing_point(p);
         let chunk = self.get_mut_chunk_or_insert_ambient(ChunkKey::new(lod, chunk_min));
 
-        chunk.array_mut().get_mut(p)
+        unsafe { chunk.array_mut().get_mut_unchecked(p) }
     }
 
     /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be created first with ambient value.

@@ -54,7 +54,8 @@
 use crate::{
     dev_prelude::{
         Array3x1, ChunkKey3, ChunkMap3, ChunkUnits, ChunkedOctreeSet, ClipMapConfig3,
-        ClipMapUpdate3, GetMut, IterChunkKeys, LodChunkUpdate3, OctreeSet, SmallKeyHashMap,
+        ClipMapUpdate3, GetMutUnchecked, IterChunkKeys, LodChunkUpdate3, OctreeSet,
+        SmallKeyHashMap,
     },
     octree::active_clipmap_lod_chunks,
 };
@@ -166,7 +167,9 @@ impl OctreeChunkIndex {
                     false,
                 )
             });
-            *bitset.get_mut(chunk_key.minimum >> chunk_exponent) = true;
+            unsafe {
+                *bitset.get_mut_unchecked(chunk_key.minimum >> chunk_exponent) = true;
+            }
         }
 
         // PERF: could be done in parallel
@@ -201,7 +204,9 @@ impl OctreeChunkIndex {
         let mut bitset = Array3x1::fill(super_chunk_extent_in_chunks, false);
         for chunk_key in chunk_keys {
             assert_eq!(chunk_key.lod, 0);
-            *bitset.get_mut(chunk_key.minimum >> self.chunk_exponent) = true;
+            unsafe {
+                *bitset.get_mut_unchecked(chunk_key.minimum >> self.chunk_exponent) = true;
+            }
         }
         let octree = OctreeSet::from_array3(&bitset, *bitset.extent());
 

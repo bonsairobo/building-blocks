@@ -1,7 +1,7 @@
 use super::chunk_downsample_for_each;
 use crate::{
     array::ArrayIndexer,
-    dev_prelude::{ChunkDownsampler, Get, GetMut, IndexedArray, Local, Stride},
+    dev_prelude::{ChunkDownsampler, GetMutUnchecked, GetUnchecked, IndexedArray, Local, Stride},
 };
 
 use building_blocks_core::prelude::*;
@@ -13,16 +13,16 @@ impl<N, Src, Dst, T> ChunkDownsampler<N, T, Src, Dst> for PointDownsampler
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
-    Src: Get<Stride, Item = T> + IndexedArray<N>,
-    Dst: for<'r> GetMut<'r, Stride, Item = &'r mut T>,
+    Src: GetUnchecked<Stride, Item = T> + IndexedArray<N>,
+    Dst: for<'r> GetMutUnchecked<'r, Stride, Item = &'r mut T>,
 {
     fn downsample(&self, src_chunk: &Src, dst_chunk: &mut Dst, dst_min: Local<N>, lod_delta: u8) {
         debug_assert!(lod_delta > 0);
         let lod_delta = lod_delta as i32;
         let chunk_shape = src_chunk.extent().shape; // Doesn't matter which chunk we choose, they should have the same shape.
         let for_each = chunk_downsample_for_each(chunk_shape, dst_min, lod_delta);
-        N::for_each_lockstep_unchecked(for_each, |_p, (s_dst, s_src)| {
-            *dst_chunk.get_mut(s_dst) = src_chunk.get(s_src);
+        N::for_each_lockstep_unchecked(for_each, |_p, (s_dst, s_src)| unsafe {
+            *dst_chunk.get_mut_unchecked(s_dst) = src_chunk.get_unchecked(s_src);
         });
     }
 }

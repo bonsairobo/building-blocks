@@ -25,7 +25,7 @@ search = ["building_blocks_search"]
 
 # Integrations.
 dot_vox = ["building_blocks_storage/dot_vox"]
-vox-format = ["building_blocks_storage/vox-format"]
+vox-format = ["building_blocks_storage/vox-format-1", "building_blocks_core/vox-format"]
 image = ["building_blocks_storage/image"]
 sdfu = ["building_blocks_core/sdfu"]
 sled = ["building_blocks_storage/sled"]

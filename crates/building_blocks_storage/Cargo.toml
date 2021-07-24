@@ -43,6 +43,12 @@ tempdir = "0.3"
 # Common code for tests and examples.
 utilities = { path = "../utilities" }
 
+[features]
+default = []
+# This can be renamed to `vox-format`, once `namespaces-features`[1] is stabilized.
+# [1] https://github.com/rust-lang/cargo/issues/5565
+vox-format-1 = ["vox-format", "building_blocks_core/vox-format"]
+
 [[bench]]
 name = "accessors"
 harness = false

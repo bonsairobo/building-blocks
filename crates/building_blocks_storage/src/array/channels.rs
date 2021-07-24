@@ -54,7 +54,7 @@ pub trait ResetChannels: Channels {
 }
 
 pub trait FillChannels: Channels {
-    fn fill(value: Self::Data, length: usize) -> Self;
+    fn fill(length: usize, value: Self::Data) -> Self;
 }
 
 pub trait UninitChannels: Channels {

@@ -358,7 +358,7 @@ where
     where
         Chan::Data: Clone,
     {
-        Self::new(extent, Chan::fill(value, extent.num_points()))
+        Self::new(extent, Chan::fill(extent.num_points(), value))
     }
 }
 

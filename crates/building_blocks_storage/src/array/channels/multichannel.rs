@@ -90,10 +90,10 @@ macro_rules! impl_channels_for_tuple {
         where
             $($t: FillChannels),+
         {
-            fn fill(value: Self::Data, length: usize) -> Self {
+            fn fill(length: usize, value: Self::Data) -> Self {
                 let ($($var1,)+) = value;
 
-                ($($t::fill($var1, length),)+)
+                ($($t::fill(length, $var1),)+)
             }
         }
 

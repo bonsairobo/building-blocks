@@ -139,7 +139,7 @@ impl<T> FillChannels for Channel<T>
 where
     T: Clone,
 {
-    fn fill(value: Self::Data, length: usize) -> Self {
+    fn fill(length: usize, value: Self::Data) -> Self {
         Self::fill(length, value)
     }
 }

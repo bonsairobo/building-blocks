@@ -164,7 +164,7 @@ where
     ) {
         for batch in kvs.chunks(16) {
             for (chunk_key, chunk) in
-                join_all(batch.into_iter().map(|(key, compressed_chunk)| async move {
+                join_all(batch.iter().map(|(key, compressed_chunk)| async move {
                     let ord_key = ChunkKey::<N>::ord_key_from_be_bytes(key.as_ref());
                     let chunk_key = ChunkKey::<N>::from_ord_key(ord_key);
 

@@ -4,7 +4,7 @@
 //! 1. [`VoxChannel`] implementations for [`ColorIndex`] and [`Color`].
 //! 1. Utility functions [`from_reader`], [`from_slice`], and [`from_file`] to read a model from a `.VOX`
 //!    file with a single function call.
-//! 
+//!
 //! If you want to load into an [`Array`] with other channel types, you can easily implement
 //! [`VoxChannel`] yourself:
 //!
@@ -63,11 +63,15 @@
 //! [magica_voxel]: https://ephtracy.github.io/
 //! [`Array`]: crate::array::Array
 
-use std::{fs::File, io::{Cursor, Read, Seek}, path::Path};
+use std::{
+    fs::File,
+    io::{Cursor, Read, Seek},
+    path::Path,
+};
 
 use vox_format::{
-    data::{VoxBuffer, VoxModelBuffer}, 
-    reader::{Error, read_vox_into}, 
+    data::{VoxBuffer, VoxModelBuffer},
+    reader::{read_vox_into, Error},
     types::{Color, ColorIndex, Palette, Size, Voxel},
 };
 
@@ -76,8 +80,7 @@ use building_blocks_core::Point3i;
 /// Re-export of the `vox-format` crate.
 pub use vox_format;
 
-use crate::{array::Array3x1, access_traits::GetMut};
-
+use crate::{access_traits::GetMut, array::Array3x1};
 
 /// Trait that defines how channel values are read from `.VOX` voxels.
 pub trait VoxChannel {
@@ -132,7 +135,8 @@ impl<C> ReadSingleModel<C> {
 }
 
 impl<C> VoxBuffer for ReadSingleModel<C>
-    where Array3x1<C>: VoxModelBuffer
+where
+    Array3x1<C>: VoxModelBuffer,
 {
     fn set_model_size(&mut self, model_size: Size) {
         if self.models_read == self.model_index {
@@ -143,7 +147,10 @@ impl<C> VoxBuffer for ReadSingleModel<C>
 
     fn set_voxel(&mut self, voxel: Voxel) {
         if self.models_read == self.model_index + 1 {
-            let model = self.model.as_mut().expect("Expected voxel array to be initialized");
+            let model = self
+                .model
+                .as_mut()
+                .expect("Expected voxel array to be initialized");
             model.set_voxel(voxel, &self.palette);
         }
     }
@@ -153,10 +160,13 @@ impl<C> VoxBuffer for ReadSingleModel<C>
     }
 }
 
-
 /// Short-hand to read a single model from a reader into an [`crate::Array3x1`].
-pub fn from_reader<C, R: Read + Seek>(reader: R, model_index: usize) -> Result<Option<Array3x1<C>>, Error>
-    where Array3x1<C>: VoxModelBuffer
+pub fn from_reader<C, R: Read + Seek>(
+    reader: R,
+    model_index: usize,
+) -> Result<Option<Array3x1<C>>, Error>
+where
+    Array3x1<C>: VoxModelBuffer,
 {
     let mut buffer = ReadSingleModel::new(model_index);
     read_vox_into(reader, &mut buffer)?;
@@ -164,8 +174,9 @@ pub fn from_reader<C, R: Read + Seek>(reader: R, model_index: usize) -> Result<O
 }
 
 /// Short-hand to read a single model from a byte slice into an [`crate::Array3x1`].
-pub fn from_slice<C>(slice: &[u8], model_index: usize) -> Result<Option<Array3x1<C>>, Error> 
-    where Array3x1<C>: VoxModelBuffer
+pub fn from_slice<C>(slice: &[u8], model_index: usize) -> Result<Option<Array3x1<C>>, Error>
+where
+    Array3x1<C>: VoxModelBuffer,
 {
     from_reader(Cursor::new(slice), model_index)
 }
@@ -183,12 +194,15 @@ pub fn from_slice<C>(slice: &[u8], model_index: usize) -> Result<Option<Array3x1
 ///   .expect("reading file failed")
 ///   .expect("no model found");
 /// ```
-pub fn from_file<C, P: AsRef<Path>>(path: P, model_index: usize) -> Result<Option<Array3x1<C>>, Error>
-    where Array3x1<C>: VoxModelBuffer
+pub fn from_file<C, P: AsRef<Path>>(
+    path: P,
+    model_index: usize,
+) -> Result<Option<Array3x1<C>>, Error>
+where
+    Array3x1<C>: VoxModelBuffer,
 {
     from_reader(File::open(path)?, model_index)
 }
-
 
 #[cfg(test)]
 mod tests {

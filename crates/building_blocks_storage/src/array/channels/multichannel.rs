@@ -196,8 +196,8 @@ mod test {
 
     #[test]
     fn tuple_of_channels_can_get() {
-        let mut ch1 = Channel::fill(0, 10);
-        let mut ch2 = Channel::fill(0, 10);
+        let mut ch1 = Channel::fill(10, 0);
+        let mut ch2 = Channel::fill(10, 0);
 
         assert_eq!((&ch1, &ch2).get(0), (0, 0));
         assert_eq!((&ch1, &ch2).get_ref(0), (&0, &0));
@@ -215,7 +215,7 @@ mod test {
     fn multichannel_compression() {
         use crate::prelude::Lz4;
 
-        let channels = (Channel::fill(0, 10), Channel::fill(b'a', 10));
+        let channels = (Channel::fill(10, 0), Channel::fill(10, b'a'));
 
         let compression = FastChannelsCompression2::from_bytes_compression(Lz4 { level: 10 });
 

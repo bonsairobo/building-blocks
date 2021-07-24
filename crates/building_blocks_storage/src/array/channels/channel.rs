@@ -43,11 +43,20 @@ impl<T, Store> Channel<T, Store> {
 }
 
 impl<T> Channel<T, Vec<T>> {
-    pub fn fill(value: T, length: usize) -> Self
+    pub fn fill(length: usize, value: T) -> Self
     where
         T: Clone,
     {
         Self::new(vec![value; length])
+    }
+
+    pub fn fill_with(length: usize, filler: impl FnMut() -> T) -> Self {
+        let mut values = Vec::with_capacity(length);
+        unsafe {
+            values.set_len(length);
+        }
+        values.fill_with(filler);
+        Self::new(values)
     }
 }
 
@@ -131,7 +140,7 @@ where
     T: Clone,
 {
     fn fill(value: Self::Data, length: usize) -> Self {
-        Self::fill(value, length)
+        Self::fill(length, value)
     }
 }
 

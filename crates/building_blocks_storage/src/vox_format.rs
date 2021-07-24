@@ -11,7 +11,7 @@
 //! ```rust
 //! use vox_format::types::{Voxel, Palette, ColorIndex};
 //! use building_blocks_core::Point3i;
-//! use building_blocks_storage::{Array3x1, vox_format::{VoxChannel, from_file}};
+//! use building_blocks_storage::{array::Array3x1, vox_format::{VoxChannel, from_file}};
 //!
 //! pub enum MyChannel {
 //!   Air,
@@ -65,7 +65,6 @@
 
 use std::{fs::File, io::{Cursor, Read, Seek}, path::Path};
 
-use crate::{Array3x1, GetMut};
 use vox_format::{
     data::{VoxBuffer, VoxModelBuffer}, 
     reader::{Error, read_vox_into}, 
@@ -76,6 +75,8 @@ use building_blocks_core::Point3i;
 
 /// Re-export of the `vox-format` crate.
 pub use vox_format;
+
+use crate::{array::Array3x1, access_traits::GetMut};
 
 
 /// Trait that defines how channel values are read from `.VOX` voxels.
@@ -194,7 +195,7 @@ mod tests {
     use building_blocks_core::Point3i;
     use vox_format::types::ColorIndex;
 
-    use crate::ForEach;
+    use crate::access_traits::ForEach;
 
     use super::from_slice;
 

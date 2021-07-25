@@ -142,8 +142,8 @@
 //!
 //! ### VOX Files
 //!
-//! ".VOX" files are supported via the [`dot_vox`](https://docs.rs/dot_vox/) crate. Enable the `dot_vox` feature to expose the
-//! generic `encode_vox` function and `Array3x1::decode_vox` constructor.
+//! ".VOX" files are supported via the [`vox-format`](https://docs.rs/vox-format/) crate. Enable the `vox-format` feature to
+//! get the `VoxModelBuffer` trait impl for `Array3x1`, which allows you to read VOX files directly into an array.
 //!
 //! ### Images
 //!

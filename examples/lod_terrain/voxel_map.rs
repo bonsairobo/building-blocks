@@ -26,7 +26,7 @@ pub struct MapConfig {
     pub superchunk_exponent: u8,
     pub chunk_exponent: u8,
     pub num_lods: u8,
-    pub clip_box_radius: u16,
+    pub clip_box_radius: ChunkUnits<u16>,
     pub world_chunks_extent: ChunkUnits<Extent3i>,
     pub noise: NoiseConfig,
 }

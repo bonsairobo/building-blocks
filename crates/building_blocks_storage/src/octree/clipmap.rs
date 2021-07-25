@@ -16,13 +16,13 @@ pub struct ClipMapConfig3 {
 }
 
 impl ClipMapConfig3 {
-    pub fn new(num_lods: u8, clip_box_radius: u16, chunk_shape: Point3i) -> Self {
-        assert!(clip_box_radius >= 2); // Radius 1 doesn't work for any more than a single LOD, so why are you using a clipmap?
+    pub fn new(num_lods: u8, clip_box_radius: ChunkUnits<u16>, chunk_shape: Point3i) -> Self {
+        assert!(clip_box_radius.0 >= 2); // Radius 1 doesn't work for any more than a single LOD, so why are you using a clipmap?
         assert!(chunk_shape.dimensions_are_powers_of_2());
 
         Self {
             num_lods,
-            clip_box_radius: clip_box_radius as i32,
+            clip_box_radius: clip_box_radius.0 as i32,
             chunk_shape,
         }
     }
@@ -272,7 +272,7 @@ mod test {
 
     #[test]
     fn active_chunks_in_lod0_and_lod1() {
-        let config = ClipMapConfig3::new(NUM_LODS, CLIP_BOX_RADIUS, CHUNK_SHAPE);
+        let config = ClipMapConfig3::new(NUM_LODS, ChunkUnits(CLIP_BOX_RADIUS), CHUNK_SHAPE);
         let lod0_center = ChunkUnits(Point3i::ZERO);
 
         let domain = Extent3i::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
@@ -310,7 +310,7 @@ mod test {
 
     #[test]
     fn no_updates_when_center_does_not_move() {
-        let config = ClipMapConfig3::new(NUM_LODS, CLIP_BOX_RADIUS, CHUNK_SHAPE);
+        let config = ClipMapConfig3::new(NUM_LODS, ChunkUnits(CLIP_BOX_RADIUS), CHUNK_SHAPE);
 
         let domain = Extent3i::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
         let octree = OctreeSet::new_full(domain);
@@ -334,7 +334,7 @@ mod test {
 
     #[test]
     fn updates_are_consistent_with_active_chunks() {
-        let config = ClipMapConfig3::new(NUM_LODS, CLIP_BOX_RADIUS, CHUNK_SHAPE);
+        let config = ClipMapConfig3::new(NUM_LODS, ChunkUnits(CLIP_BOX_RADIUS), CHUNK_SHAPE);
 
         let domain = Extent3i::from_min_and_shape(Point3i::fill(-16), Point3i::fill(32));
         let octree = OctreeSet::new_full(domain);

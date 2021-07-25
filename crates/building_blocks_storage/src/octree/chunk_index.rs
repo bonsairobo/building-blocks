@@ -217,7 +217,7 @@ impl OctreeChunkIndex {
         self.superchunk_octrees.pop_chunk(superchunk_min)
     }
 
-    pub fn clipmap_config(&self, clip_box_radius: u16) -> ClipMapConfig3 {
+    pub fn clipmap_config(&self, clip_box_radius: ChunkUnits<u16>) -> ClipMapConfig3 {
         assert!(self.superchunk_octrees.indexer.chunk_shape().is_cube());
         assert!(self.chunk_shape().is_cube());
 
@@ -229,7 +229,7 @@ impl OctreeChunkIndex {
     pub fn active_clipmap_lod_chunks(
         &self,
         extent: &Extent3i,
-        clip_box_radius: u16,
+        clip_box_radius: ChunkUnits<u16>,
         lod0_center: ChunkUnits<Point3i>,
         mut init_rx: impl FnMut(ChunkKey3),
     ) {
@@ -243,7 +243,7 @@ impl OctreeChunkIndex {
     pub fn find_clipmap_chunk_updates(
         &self,
         extent: &Extent3i,
-        clip_box_radius: u16,
+        clip_box_radius: ChunkUnits<u16>,
         old_lod0_center: ChunkUnits<Point3i>,
         new_lod0_center: ChunkUnits<Point3i>,
         mut update_rx: impl FnMut(LodChunkUpdate3),

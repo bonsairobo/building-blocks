@@ -43,6 +43,23 @@ fn decompress_array_with_fast_lz4(c: &mut Criterion) {
     group.finish();
 }
 
+#[cfg(feature = "lz4")]
+fn compress_array_with_fast_lz4(c: &mut Criterion) {
+    let mut group = c.benchmark_group("compress_array_with_fast_lz4");
+    for size in ARRAY_SIZES.iter() {
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
+            b.iter_with_setup(
+                || set_up_array(size),
+                |array| {
+                    FastArrayCompressionNx1::from_bytes_compression(Lz4 { level: 10 })
+                        .compress(&array)
+                },
+            );
+        });
+    }
+    group.finish();
+}
+
 #[cfg(feature = "snap")]
 fn decompress_array_with_bincode_snappy(c: &mut Criterion) {
     let mut group = c.benchmark_group("decompress_array_with_bincode_snappy");
@@ -83,6 +100,7 @@ criterion_group!(
     lz4_benches,
     decompress_array_with_bincode_lz4,
     decompress_array_with_fast_lz4,
+    compress_array_with_fast_lz4
 );
 #[cfg(feature = "snap")]
 criterion_group!(

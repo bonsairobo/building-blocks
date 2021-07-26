@@ -69,8 +69,7 @@ where
         Data: Borrow<Compr::Data>,
     {
         // First compress all of the chunks in parallel.
-        let mut compressed_chunks = Vec::new();
-        for (key, compressed_chunk) in join_all(chunks.map(|(key, chunk)| async move {
+        let mut compressed_chunks: Vec<_> = join_all(chunks.map(|(key, chunk)| async move {
             (
                 ChunkKey::<N>::into_ord_key(key),
                 self.compression.compress(chunk.borrow()),
@@ -78,9 +77,7 @@ where
         }))
         .await
         .into_iter()
-        {
-            compressed_chunks.push((key, compressed_chunk));
-        }
+        .collect();
         // Sort them by the Ord key.
         compressed_chunks.sort_by_key(|(k, _)| *k);
 

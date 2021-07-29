@@ -12,7 +12,7 @@ use core::ops::RangeBounds;
 use futures::future::join_all;
 use sled::{transaction::TransactionResult, IVec, Transactional, Tree};
 use sled_snapshots::{
-    transactions::{modify_current_leaf_snapshot, set_current_version},
+    transactions::{create_child_snapshot, modify_current_leaf_snapshot, set_current_version},
     *,
 };
 use std::borrow::Borrow;
@@ -121,6 +121,16 @@ where
         Ok(())
     }
 
+    pub fn take_snapshot(&mut self) -> TransactionResult<u64> {
+        let new_version = (&*self.versions, &*self.deltas).transaction(|(versions, deltas)| {
+            let versions = TransactionalVersionForest(versions);
+            let deltas = TransactionalDeltaMap(deltas);
+            create_child_snapshot(self.current_version, true, versions, deltas)
+        })?;
+        self.current_version = new_version;
+        Ok(new_version)
+    }
+
     /// Same as `ChunkDb::read_chunks_in_orthant`. Reads from the current version.
     pub async fn read_chunks_in_orthant(
         &self,
@@ -173,6 +183,14 @@ where
 
     pub fn data_tree(&self) -> &Tree {
         &self.data_tree
+    }
+
+    pub fn versions(&self) -> &VersionForest {
+        &self.versions
+    }
+
+    pub fn deltas(&self) -> &DeltaMap {
+        &self.deltas
     }
 }
 

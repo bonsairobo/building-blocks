@@ -2,6 +2,8 @@ pub use super::key::DatabaseKey;
 
 pub use sled;
 
+use super::decompress_in_batches;
+
 use crate::prelude::{ChunkKey, Compression};
 
 use building_blocks_core::{orthants_covering_extent, prelude::*};
@@ -11,10 +13,13 @@ use futures::future::join_all;
 use sled::{IVec, Tree};
 use std::borrow::Borrow;
 
-/// A persistent, transactional, crash-consistent database of chunks.
+/// A persistent, crash-consistent key-value store of compressed chunks, backed by the `sled` crate.
 ///
-/// This is essentially a B+ tree of compressed chunks (backed by the `sled` crate). The keys are Morton codes for the
-/// corresponding chunk coordinates. This ensures that all of the chunks in an orthant are stored in a contiguous key space.
+/// The keys are Morton codes for the corresponding chunk coordinates. This ensures that all of the chunks in an orthant are
+/// stored in a contiguous key space.
+///
+/// Note that while writes are applied atomically, reads are not isolated. Reads rely on iteration over Morton keys, and `sled`
+/// does not yet provide transactional iteration.
 ///
 /// The DB values are only portable if the `compression` used respects endianness of the current machine. Use
 /// `BincodeCompression` if you absolutely need portability across machines with different endianness.
@@ -54,25 +59,14 @@ where
     where
         Data: Borrow<Compr::Data>,
     {
-        // First compress all of the chunks in parallel.
-        let mut compressed_chunks: Vec<_> = join_all(chunks.map(|(key, chunk)| async move {
-            (
-                ChunkKey::<N>::into_ord_key(key),
-                self.compression.compress(chunk.borrow()),
-            )
-        }))
-        .await
-        .into_iter()
-        .collect();
-        // Sort them by the Ord key.
-        compressed_chunks.sort_by_key(|(k, _)| *k);
+        // Compress the chunks asynchronously.
+        let compressed_chunks = prepare_chunks_for_write(self.compression, chunks).await;
 
         // Then atomically write them all to the database.
         let mut batch = sled::Batch::default();
-        for (db_key, chunk) in compressed_chunks.into_iter() {
-            let key_bytes = ChunkKey::<N>::ord_key_to_be_bytes(db_key);
+        for (key_bytes, chunk_bytes) in compressed_chunks.into_iter() {
             // PERF: IVec will copy the bytes instead of moving, because it needs to also allocate room for an internal header
-            batch.insert(key_bytes.as_ref(), chunk.take_bytes());
+            batch.insert(key_bytes.as_ref(), chunk_bytes);
         }
         self.tree.apply_batch(batch)?;
 
@@ -121,10 +115,8 @@ where
         lod: u8,
         chunk_rx: impl FnMut(ChunkKey<N>, Compr::Data),
     ) -> sled::Result<()> {
-        let range = ChunkKey::<N>::ord_key_to_be_bytes(ChunkKey::<N>::min_key(lod))
-            ..=ChunkKey::<N>::ord_key_to_be_bytes(ChunkKey::<N>::max_key(lod));
-
-        self.read_range(range, chunk_rx).await
+        self.read_range(ChunkKey::<N>::full_range(lod), chunk_rx)
+            .await
     }
 
     async fn read_range<R>(
@@ -136,35 +128,45 @@ where
         R: RangeBounds<<ChunkKey<N> as DatabaseKey<N>>::KeyBytes>,
     {
         let read_kvs = self.tree.range(range).collect::<Result<Vec<_>, _>>()?;
-        Self::decompress_in_batches(read_kvs, chunk_rx).await;
+        decompress_in_batches::<_, Compr, _>(read_kvs, chunk_rx).await;
 
         Ok(())
-    }
-
-    async fn decompress_in_batches(
-        kvs: Vec<(IVec, IVec)>,
-        mut chunk_rx: impl FnMut(ChunkKey<N>, Compr::Data),
-    ) {
-        for batch in kvs.chunks(16) {
-            for (chunk_key, chunk) in
-                join_all(batch.iter().map(|(key, compressed_chunk)| async move {
-                    let ord_key = ChunkKey::<N>::ord_key_from_be_bytes(key.as_ref());
-                    let chunk_key = ChunkKey::<N>::from_ord_key(ord_key);
-
-                    let chunk = Compr::decompress_from_reader(compressed_chunk.as_ref()).unwrap();
-
-                    (chunk_key, chunk)
-                }))
-                .await
-            {
-                chunk_rx(chunk_key, chunk);
-            }
-        }
     }
 
     pub fn tree(&self) -> &Tree {
         &self.tree
     }
+}
+
+async fn prepare_chunks_for_write<N, Compr, Data>(
+    compression: Compr,
+    chunks: impl Iterator<Item = (ChunkKey<N>, Data)>,
+) -> impl Iterator<Item = (IVec, IVec)>
+where
+    ChunkKey<N>: DatabaseKey<N>,
+    Compr: Compression + Copy,
+    Data: Borrow<Compr::Data>,
+{
+    // First compress all of the chunks in parallel.
+    let mut compressed_chunks: Vec<_> = join_all(chunks.map(|(key, chunk)| async move {
+        (
+            ChunkKey::<N>::into_ord_key(key),
+            compression.compress(chunk.borrow()),
+        )
+    }))
+    .await
+    .into_iter()
+    .collect();
+    // Sort them by the Ord key.
+    compressed_chunks.sort_by_key(|(k, _)| *k);
+
+    compressed_chunks.into_iter().map(|(k, v)| {
+        // PERF: IVec will copy the bytes instead of moving, because it needs to also allocate room for an internal header
+        (
+            IVec::from(ChunkKey::<N>::ord_key_to_be_bytes(k).as_ref()),
+            IVec::from(v.take_bytes()),
+        )
+    })
 }
 
 // ████████╗███████╗███████╗████████╗
@@ -246,4 +248,3 @@ mod test {
         Ok(())
     }
 }
-

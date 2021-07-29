@@ -74,6 +74,22 @@ where
     ChunkKey<N>: DatabaseKey<N>,
     Compr: Compression + Copy,
 {
+    pub fn current_version(&self) -> u64 {
+        self.current_version
+    }
+
+    pub fn data_tree(&self) -> &Tree {
+        &self.data_tree
+    }
+
+    pub fn versions(&self) -> &VersionForest {
+        &self.versions
+    }
+
+    pub fn deltas(&self) -> &DeltaMap {
+        &self.deltas
+    }
+
     /// Applies a set of deltas. This will compress all of the inserted chunks asynchronously then insert them into the
     /// database.
     pub async fn update_current_version<Data>(
@@ -179,18 +195,6 @@ where
         let read_kvs = self.data_tree.range(range).collect::<Result<Vec<_>, _>>()?;
         decompress_in_batches::<_, Compr, _>(read_kvs, chunk_rx).await;
         Ok(())
-    }
-
-    pub fn data_tree(&self) -> &Tree {
-        &self.data_tree
-    }
-
-    pub fn versions(&self) -> &VersionForest {
-        &self.versions
-    }
-
-    pub fn deltas(&self) -> &DeltaMap {
-        &self.deltas
     }
 }
 

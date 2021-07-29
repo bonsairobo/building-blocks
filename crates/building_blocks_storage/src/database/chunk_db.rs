@@ -50,6 +50,14 @@ where
     ChunkKey<N>: DatabaseKey<N>,
     Compr: Compression + Copy,
 {
+    pub fn tree(&self) -> &Tree {
+        &self.tree
+    }
+
+    pub async fn flush(&self) -> sled::Result<usize> {
+        self.tree.flush_async().await
+    }
+
     /// Insert a set of chunks. This will compress all of the chunks asynchronously then insert them into the database.
     /// Pre-existing chunks will be overwritten.
     pub async fn write_chunks<Data>(
@@ -131,10 +139,6 @@ where
         decompress_in_batches::<_, Compr, _>(read_kvs, chunk_rx).await;
 
         Ok(())
-    }
-
-    pub fn tree(&self) -> &Tree {
-        &self.tree
     }
 }
 

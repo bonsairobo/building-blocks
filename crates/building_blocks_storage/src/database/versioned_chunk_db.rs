@@ -90,6 +90,10 @@ where
         &self.deltas
     }
 
+    pub async fn flush(&self) -> sled::Result<usize> {
+        self.data_tree.flush_async().await
+    }
+
     /// Applies a set of deltas. This will compress all of the inserted chunks asynchronously then insert them into the
     /// database.
     pub async fn update_current_version<Data>(

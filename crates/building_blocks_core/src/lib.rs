@@ -1,4 +1,5 @@
 #![deny(clippy::missing_inline_in_public_items)]
+#![warn(clippy::doc_markdown)]
 
 //! The core data types for defining 2D and 3D integer lattices:
 //! - `PointN`: an N-dimensional point, most importantly `Point2i` and `Point3i`

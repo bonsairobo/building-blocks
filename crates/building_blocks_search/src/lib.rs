@@ -3,6 +3,7 @@
     clippy::needless_collect,
     clippy::too_many_arguments
 )]
+#![warn(clippy::doc_markdown)]
 
 mod find_surface;
 mod flood_fill;

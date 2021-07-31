@@ -3,6 +3,7 @@
     clippy::needless_collect,
     clippy::too_many_arguments
 )]
+#![warn(clippy::doc_markdown)]
 
 //! Algorithms for generating triangle meshes from:
 //!   - height maps

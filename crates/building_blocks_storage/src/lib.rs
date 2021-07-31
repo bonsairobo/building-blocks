@@ -3,6 +3,7 @@
     clippy::needless_collect,
     clippy::too_many_arguments
 )]
+#![warn(clippy::doc_markdown)]
 
 //! Various types of storage and indexing for voxels in 2 or 3 dimensions.
 //!
@@ -11,17 +12,17 @@
 //!
 //! The core storage types are:
 //!   - [Array](crate::Array): N-dimensional, single resolution, bounded, dense array
-//!   - [ChunkMap](crate::ChunkMap): N-dimensional, multiple resolution, unbounded, sparse array
+//!   - [`ChunkMap`](crate::ChunkMap): N-dimensional, multiple resolution, unbounded, sparse array
 //!     - Backed by generic chunk storage, with `HashMap` or `CompressibleChunkStorage` implementations
 //!
 //! Then there are "meta" lattice maps that provide some extra utility:
-//!   - [TransformMap](crate::TransformMap): a wrapper of any kind of lattice map that performs an arbitrary transformation
+//!   - [`TransformMap`](crate::TransformMap): a wrapper of any kind of lattice map that performs an arbitrary transformation
 //!   - [Func](crate::Func): some lattice map traits are implemented for closures (like SDFs)
 //!
 //! For hierarchical indexing and level of detail:
-//!   - [OctreeSet](crate::OctreeSet): bounded bitset of points
-//!   - [ChunkedOctreeSet](crate::ChunkedOctreeSet): unbounded bitset of points
-//!   - [OctreeChunkIndex](crate::OctreeChunkIndex): just a `ChunkedOctreeSet` that tracks chunks and provides clipmap functionality
+//!   - [`OctreeSet`](crate::OctreeSet): bounded bitset of points
+//!   - [`ChunkedOctreeSet`](crate::ChunkedOctreeSet): unbounded bitset of points
+//!   - [`OctreeChunkIndex`](crate::OctreeChunkIndex): just a `ChunkedOctreeSet` that tracks chunks and provides clipmap functionality
 
 #[macro_use]
 pub mod access_traits;
@@ -117,10 +118,10 @@ pub mod dev_prelude {
 mod dot_vox_conversions;
 #[cfg(feature = "dot_vox")]
 pub use dot_vox_conversions::*;
-#[cfg(feature = "vox-format")]
-pub mod vox_format;
 #[cfg(feature = "image")]
 mod image_conversions;
+#[cfg(feature = "vox-format")]
+pub mod vox_format;
 #[cfg(feature = "image")]
 pub use image_conversions::*;
 

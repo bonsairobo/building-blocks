@@ -5,7 +5,7 @@ use std::collections::{hash_map, HashMap};
 
 /// A cache that tracks the Least Recently Used element for next eviction.
 ///
-/// For the purpose of fast, repeated random access, LRU order is only updated on insertion or by calling "touch_if_cached."
+/// For the purpose of fast, repeated random access, LRU order is only updated on insertion or by calling "`touch_if_cached`."
 ///
 /// Eviction does not happen inline; the user must explicitly call `evict_lru` to evict the LRU element. Thus the cache may grow
 /// unbounded unless evictions or explicit removals occur.

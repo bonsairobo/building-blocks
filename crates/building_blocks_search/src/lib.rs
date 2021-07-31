@@ -3,6 +3,13 @@
     clippy::needless_collect,
     clippy::too_many_arguments
 )]
+#![deny(
+    rust_2018_compatibility,
+    rust_2018_idioms,
+    nonstandard_style,
+    unused,
+    future_incompatible
+)]
 #![warn(clippy::doc_markdown)]
 
 mod find_surface;

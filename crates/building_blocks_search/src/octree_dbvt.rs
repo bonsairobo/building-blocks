@@ -78,7 +78,7 @@ where
     V: OctreeDbvtVisitor,
 {
     fn visit_octant(&mut self, node: &OctreeNode) -> VisitStatus {
-        let aabb = octant_aabb(&node.octant());
+        let aabb = octant_aabb(node.octant());
 
         self.0.visit(&aabb, Some(node.octant()), node.is_full())
     }

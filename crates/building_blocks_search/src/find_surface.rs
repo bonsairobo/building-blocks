@@ -31,7 +31,7 @@ where
 
     let mut surface_points = Vec::new();
     let mut surface_strides = Vec::new();
-    map.for_each(&extent, |(p, s), value| {
+    map.for_each(extent, |(p, s), value| {
         if value.is_empty() {
             return;
         }

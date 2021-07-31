@@ -124,7 +124,7 @@ where
                     // The contact point is the center of the ball plus the ball's "local witness."
                     let contact = self.ray.point_at(impact.toi) + impact.witness1.coords;
 
-                    let point = impact_with_leaf_octant(&octant, &contact, &impact.normal2);
+                    let point = impact_with_leaf_octant(octant, &contact, &impact.normal2);
                     if (self.predicate)(point) {
                         self.earliest_impact = Some(VoxelImpact { point, impact });
                     }

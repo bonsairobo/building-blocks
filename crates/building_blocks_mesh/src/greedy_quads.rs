@@ -247,7 +247,7 @@ fn greedy_quads_for_group<A, T, Merger>(
                     max_height,
                     &face_strides,
                     voxels,
-                    &visited,
+                    visited,
                 );
                 debug_assert!(quad_width >= 1);
                 debug_assert!(quad_width <= max_width);

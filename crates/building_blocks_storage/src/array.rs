@@ -788,7 +788,7 @@ where
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
         let in_bounds_extent = extent.intersection(self.extent());
 
-        once((in_bounds_extent, ArrayCopySrc(&self)))
+        once((in_bounds_extent, ArrayCopySrc(self)))
     }
 }
 

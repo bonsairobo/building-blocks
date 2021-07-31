@@ -83,7 +83,7 @@ where
 
                     let octant = octant.expect("All leaves are octants");
                     let point = impact_with_leaf_octant(
-                        &octant,
+                        octant,
                         &self.ray.point_at(impact.toi),
                         &impact.normal,
                     );

@@ -109,7 +109,7 @@ where
                     chunk.array().for_each(extent, |p, value| f(p, value));
                 }
                 Either::Right((chunk_extent, ambient)) => {
-                    ambient.for_each(&extent.intersection(&chunk_extent), |p, value| f(p, value))
+                    ambient.for_each(&extent.intersection(chunk_extent), |p, value| f(p, value))
                 }
             });
     }

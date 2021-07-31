@@ -54,11 +54,11 @@ pub fn active_clipmap_lod_chunks(
             return VisitStatus::Continue;
         }
 
-        let offset_from_center = get_offset_from_lod_center(&octant, &centers);
+        let offset_from_center = get_offset_from_lod_center(octant, &centers);
 
         if lod == 0 || offset_from_center > high_lod_boundary {
             // This octant can be rendered at this level of detail.
-            active_rx(octant_chunk_key(chunk_log2, &octant));
+            active_rx(octant_chunk_key(chunk_log2, octant));
 
             VisitStatus::Stop
         } else {
@@ -138,15 +138,15 @@ impl ClipMapUpdate3 {
                 return VisitStatus::Continue;
             }
 
-            let old_offset_from_center = get_offset_from_lod_center(&octant, &self.old_centers);
-            let offset_from_center = get_offset_from_lod_center(&octant, &self.new_centers);
+            let old_offset_from_center = get_offset_from_lod_center(octant, &self.old_centers);
+            let offset_from_center = get_offset_from_lod_center(octant, &self.new_centers);
 
             if old_offset_from_center > self.high_lod_boundary
                 && offset_from_center <= self.high_lod_boundary
             {
                 // Increase the detail for this octant.
                 // Create the higher detail in descendant octants.
-                let old_chunk = octant_chunk_key(self.chunk_log2, &octant);
+                let old_chunk = octant_chunk_key(self.chunk_log2, octant);
                 let new_chunks = find_merge_or_split_descendants(
                     self.chunk_log2,
                     octree,
@@ -165,7 +165,7 @@ impl ClipMapUpdate3 {
             {
                 // Decrease the detail for this octant.
                 // Delete the higher detail in descendant octants.
-                let new_chunk = octant_chunk_key(self.chunk_log2, &octant);
+                let new_chunk = octant_chunk_key(self.chunk_log2, octant);
                 let old_chunks = find_merge_or_split_descendants(
                     self.chunk_log2,
                     octree,

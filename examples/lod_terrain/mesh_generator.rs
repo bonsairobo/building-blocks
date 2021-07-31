@@ -7,7 +7,7 @@ use bevy_utilities::{
 };
 use building_blocks::{
     mesh::*,
-    storage::{ChunkKey3, LodChunkUpdate3, SmallKeyHashMap},
+    storage::{SmallKeyHashMap, prelude::{ChunkKey3, LodChunkUpdate3}},
 };
 
 use std::{cell::RefCell, collections::VecDeque};

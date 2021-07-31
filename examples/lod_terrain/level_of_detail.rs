@@ -3,7 +3,7 @@ use crate::{
     voxel_map::VoxelMap,
 };
 
-use building_blocks::{core::prelude::*, storage::ChunkUnits};
+use building_blocks::{core::prelude::*, storage::prelude::ChunkUnits};
 
 use bevy_utilities::bevy::{prelude::*, render::camera::Camera};
 

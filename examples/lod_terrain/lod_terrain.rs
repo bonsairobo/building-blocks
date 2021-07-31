@@ -10,7 +10,7 @@ use mesh_generator::{
 };
 use voxel_map::{MapConfig, VoxelMap};
 
-use building_blocks::{core::prelude::*, storage::ChunkUnits};
+use building_blocks::{core::prelude::*, storage::prelude::ChunkUnits};
 
 use bevy_utilities::{
     bevy::{

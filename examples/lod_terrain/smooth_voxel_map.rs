@@ -4,7 +4,7 @@ use bevy_utilities::{bevy::tasks::ComputeTaskPool, noise::generate_noise_chunks3
 use building_blocks::{
     mesh::{padded_surface_nets_chunk_extent, surface_nets, PosNormMesh, SurfaceNetsBuffer},
     prelude::*,
-    storage::{ChunkHashMap3x1, ChunkKey3, OctreeChunkIndex},
+    storage::prelude::{ChunkHashMap3x1, ChunkKey3, OctreeChunkIndex},
 };
 
 const AMBIENT_VALUE: f32 = 1.0;

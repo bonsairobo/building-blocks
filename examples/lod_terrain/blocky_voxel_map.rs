@@ -7,7 +7,7 @@ use building_blocks::{
         PosNormMesh, RIGHT_HANDED_Y_UP_CONFIG,
     },
     prelude::*,
-    storage::{ChunkHashMap3x1, ChunkKey3, OctreeChunkIndex},
+    storage::prelude::{ChunkHashMap3x1, ChunkKey3, OctreeChunkIndex},
 };
 
 #[derive(Copy, Clone, Eq, PartialEq)]

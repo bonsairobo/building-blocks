@@ -12,7 +12,7 @@
 //! We focus on generally useful data structures and algorithms. Features include:
 //!
 //! - 2D and 3D data storage
-//!   - [`Array`](crate::storage::array) with structure-of-arrays (SoA) storage of multiple data channels per spatial dimension
+//!   - [`Array`](crate::storage::array) with structure-of-arrays (`SoA`) storage of multiple data channels per spatial dimension
 //!   - [`ChunkMap`](crate::storage::chunk::map) with generic chunk storage
 //!   - [`ChunkDb`](crate::storage::database) for compressed, persistent voxel worlds, backed by the
 //!     [`sled`](https://docs.rs/sled) embedded database
@@ -164,6 +164,8 @@
 //! If you'd like to make a contribution, please first read the **[design
 //! philosophy](https://github.com/bonsairobo/building-blocks/blob/main/DESIGN.md)** and **[contribution
 //! guidelines](https://github.com/bonsairobo/building-blocks/blob/main/CONTRIBUTING.md)**.
+
+#![warn(clippy::doc_markdown)]
 
 // TODO: when cargo-readme supports intra-doc links, replace URLs above
 

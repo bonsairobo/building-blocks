@@ -186,7 +186,7 @@ mod test {
 
     use super::*;
 
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     #[test]
     fn db_round_trip() -> sled::Result<()> {
@@ -207,7 +207,8 @@ mod test {
             })
             .collect();
 
-        let tmp = TempDir::new("bb-test").unwrap();
+        let tmp = TempDir::new().unwrap();
+        tmp.path().join("bb-test");
         let db = sled::Config::default()
             .path(&tmp)
             .use_compression(false)

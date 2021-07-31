@@ -104,7 +104,7 @@
 //! data like `Sd8` as well as a voxel type identifier. While you can put these in a struct, that may not be the most efficient
 //! option. If you only need access to one of those fields of the struct for a particular algorithm, then you will needlessly
 //! load the entire struct into cache. To avoid this problem, `Array` supports storing multiple data "channels" in
-//! structure-of-arrays (SoA) style.
+//! structure-of-arrays (`SoA`) style.
 //!
 //! ```
 //! # use building_blocks_core::prelude::*;

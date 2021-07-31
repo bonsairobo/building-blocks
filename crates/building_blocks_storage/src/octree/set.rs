@@ -863,7 +863,7 @@ pub type ChildBitMask = u8;
 /// Just to be consistent, even though a leaf doesn't have child tree nodes, it is always "full".
 const FULL_CHILD_BIT_MASK: ChildBitMask = 0xFF;
 
-/// Uniquely identifies a OctreeNode in a given octree.
+/// Uniquely identifies a `OctreeNode` in a given octree.
 ///
 /// Supports an octree with at most 6 levels.
 /// ```text

@@ -7,10 +7,10 @@ mod glam_conversions;
 mod mint_conversions;
 #[cfg(feature = "nalgebra")]
 mod nalgebra_conversions;
-#[cfg(feature = "vox-format")]
-mod vox_format_conversions;
 #[cfg(feature = "sdfu")]
 mod sdfu_integration;
+#[cfg(feature = "vox-format")]
+mod vox_format_conversions;
 
 mod point2;
 mod point3;

@@ -1,4 +1,4 @@
-//! Provides implementations for loading [MagicaVoxel `.VOX`][magica_voxel] files with the [`vox-format`] crate:
+//! Provides implementations for loading [`MagicaVoxel` `.VOX`][magica_voxel] files with the [`vox-format`] crate:
 //!
 //! 1. [`VoxModelBuffer`] implementions for [`Array3x1`] for all channel types that implement [`VoxChannel`].
 //! 1. [`VoxChannel`] implementations for [`ColorIndex`] and [`Color`].
@@ -57,7 +57,7 @@
 //!
 //! The implementations that load models into `Array3x1<ColorIndex>` and `Array3x1<Color>` always set a color index
 //! or color, even if the voxel is not specified in the file. If no voxel is specified in the file the color index 0
-//! will be used, which is fixed by MagicaVoxel to be fully transparent.
+//! will be used, which is fixed by `MagicaVoxel` to be fully transparent.
 //!
 //! [`vox-format`]: https://docs.rs/vox-format
 //! [magica_voxel]: https://ephtracy.github.io/

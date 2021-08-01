@@ -280,13 +280,13 @@ where
 
     /// Iterate over the keys of all entries, cached or evicted.
     #[inline]
-    pub fn keys(&self) -> LruCacheKeys<K, V, E> {
+    pub fn keys(&self) -> LruCacheKeys<'_, K, V, E> {
         self.store.keys()
     }
 
     /// Iterate over all `(key, entry)` pairs.
     #[inline]
-    pub fn entries(&self) -> LruCacheEntries<K, V, E> {
+    pub fn entries(&self) -> LruCacheEntries<'_, K, V, E> {
         LruCacheEntries {
             inner: self.store.iter(),
         }
@@ -297,8 +297,8 @@ impl<K, V, E, H> IntoIterator for LruCache<K, V, E, H>
 where
     E: Copy,
 {
-    type IntoIter = LruCacheIntoIter<K, V, E>;
     type Item = (K, CacheEntry<V, E>);
+    type IntoIter = LruCacheIntoIter<K, V, E>;
 
     /// Consume `self` and iterate over all entries.
     #[inline]

@@ -165,6 +165,13 @@
 //! philosophy](https://github.com/bonsairobo/building-blocks/blob/main/DESIGN.md)** and **[contribution
 //! guidelines](https://github.com/bonsairobo/building-blocks/blob/main/CONTRIBUTING.md)**.
 
+#![deny(
+    rust_2018_compatibility,
+    rust_2018_idioms,
+    nonstandard_style,
+    unused,
+    future_incompatible
+)]
 #![warn(clippy::doc_markdown)]
 
 // TODO: when cargo-readme supports intra-doc links, replace URLs above

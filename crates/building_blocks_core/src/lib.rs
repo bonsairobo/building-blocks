@@ -1,4 +1,11 @@
 #![deny(clippy::missing_inline_in_public_items)]
+#![deny(
+    rust_2018_compatibility,
+    rust_2018_idioms,
+    nonstandard_style,
+    unused,
+    future_incompatible
+)]
 #![warn(clippy::doc_markdown)]
 
 //! The core data types for defining 2D and 3D integer lattices:

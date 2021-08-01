@@ -3,6 +3,12 @@
     clippy::needless_collect,
     clippy::too_many_arguments
 )]
+#![deny(
+    rust_2018_compatibility,
+    rust_2018_idioms,
+    nonstandard_style,
+    future_incompatible
+)]
 #![warn(clippy::doc_markdown)]
 
 //! Various types of storage and indexing for voxels in 2 or 3 dimensions.

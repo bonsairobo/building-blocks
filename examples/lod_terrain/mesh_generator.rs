@@ -87,28 +87,32 @@ fn apply_mesh_commands<Map: VoxelMap>(
     chunk_meshes: &mut ChunkMeshes,
     commands: &mut Commands,
 ) -> Vec<(ChunkKey3, Option<PosNormMesh>)> {
-    let num_chunks_to_mesh = mesh_commands.len().min(max_mesh_creations_per_frame(pool));
+    let max_meshes_per_frame = max_mesh_creations_per_frame(pool);
 
-    let mut num_creates = 0;
-    let mut num_updates = 0;
+    let mut num_commands_processed = 0;
+
     pool.scope(|s| {
+        let mut make_mesh = |key: ChunkKey3| {
+            s.spawn(async move {
+                let mesh_tls = local_mesh_buffers.get();
+                let mut mesh_buffers = mesh_tls
+                    .get_or_create_with(|| RefCell::new(voxel_map.init_mesh_buffers()))
+                    .borrow_mut();
+
+                (key, voxel_map.create_mesh_for_chunk(key, &mut mesh_buffers))
+            });
+        };
+
         let mut num_meshes_created = 0;
         for command in mesh_commands.commands.iter().rev().cloned() {
             match command {
                 MeshCommand::Create(key) => {
-                    num_creates += 1;
+                    num_commands_processed += 1;
                     num_meshes_created += 1;
-                    s.spawn(async move {
-                        let mesh_tls = local_mesh_buffers.get();
-                        let mut mesh_buffers = mesh_tls
-                            .get_or_create_with(|| RefCell::new(voxel_map.init_mesh_buffers()))
-                            .borrow_mut();
-
-                        (key, voxel_map.create_mesh_for_chunk(key, &mut mesh_buffers))
-                    });
+                    make_mesh(key)
                 }
                 MeshCommand::Update(update) => {
-                    num_updates += 1;
+                    num_commands_processed += 1;
                     match update {
                         LodChunkUpdate3::Split(split) => {
                             if let Some(entity) = chunk_meshes.entities.remove(&split.old_chunk) {
@@ -116,16 +120,7 @@ fn apply_mesh_commands<Map: VoxelMap>(
                             }
                             for &key in split.new_chunks.iter() {
                                 num_meshes_created += 1;
-                                s.spawn(async move {
-                                    let mesh_tls = local_mesh_buffers.get();
-                                    let mut mesh_buffers = mesh_tls
-                                        .get_or_create_with(|| {
-                                            RefCell::new(voxel_map.init_mesh_buffers())
-                                        })
-                                        .borrow_mut();
-
-                                    (key, voxel_map.create_mesh_for_chunk(key, &mut mesh_buffers))
-                                });
+                                make_mesh(key)
                             }
                         }
                         LodChunkUpdate3::Merge(merge) => {
@@ -135,28 +130,17 @@ fn apply_mesh_commands<Map: VoxelMap>(
                                 }
                             }
                             num_meshes_created += 1;
-                            s.spawn(async move {
-                                let mesh_tls = local_mesh_buffers.get();
-                                let mut mesh_buffers = mesh_tls
-                                    .get_or_create_with(|| RefCell::new(voxel_map.init_mesh_buffers()))
-                                    .borrow_mut();
-
-                                (
-                                    merge.new_chunk,
-                                    voxel_map
-                                        .create_mesh_for_chunk(merge.new_chunk, &mut mesh_buffers),
-                                )
-                            });
+                            make_mesh(merge.new_chunk)
                         }
                     }
                 }
             }
-            if num_meshes_created >= num_chunks_to_mesh {
+            if num_meshes_created >= max_meshes_per_frame {
                 break;
             }
         }
 
-        let new_length = mesh_commands.len() - (num_creates + num_updates);
+        let new_length = mesh_commands.len() - num_commands_processed;
         mesh_commands.commands.truncate(new_length);
     })
 }

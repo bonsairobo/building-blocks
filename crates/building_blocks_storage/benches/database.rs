@@ -1,7 +1,7 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{
     access_traits::*,
-    database::ChunkDb3,
+    database::{ChunkDb3, Delta},
     prelude::{
         ChunkMapBuilder, ChunkMapBuilder3x1, FastArrayCompressionNx1, FromBytesCompression, Lz4,
     },
@@ -44,7 +44,11 @@ fn db_write_chunks(c: &mut Criterion) {
                     },
                     |(map, chunk_db)| {
                         futures::executor::block_on(
-                            chunk_db.write_chunks(map.take_storage().into_iter()),
+                            chunk_db.update(
+                                map.take_storage()
+                                    .into_iter()
+                                    .map(|(k, v)| Delta::Insert(k, v)),
+                            ),
                         )
                         .unwrap();
                     },

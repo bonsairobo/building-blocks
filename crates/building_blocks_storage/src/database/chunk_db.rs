@@ -1,4 +1,4 @@
-pub use super::key::DatabaseKey;
+use super::{key::DatabaseKey, prepare_deltas_for_update, Delta};
 
 pub use sled;
 
@@ -9,8 +9,7 @@ use crate::prelude::{ChunkKey, Compression};
 use building_blocks_core::{orthants_covering_extent, prelude::*};
 
 use core::ops::RangeBounds;
-use futures::future::join_all;
-use sled::{IVec, Tree};
+use sled::Tree;
 use std::borrow::Borrow;
 
 /// A persistent, crash-consistent key-value store of compressed chunks, backed by the `sled` crate.
@@ -60,21 +59,26 @@ where
 
     /// Insert a set of chunks. This will compress all of the chunks asynchronously then insert them into the database.
     /// Pre-existing chunks will be overwritten.
-    pub async fn write_chunks<Data>(
+    pub async fn update<Data>(
         &self,
-        chunks: impl Iterator<Item = (ChunkKey<N>, Data)>,
+        deltas: impl Iterator<Item = Delta<ChunkKey<N>, Data>>,
     ) -> sled::Result<()>
     where
         Data: Borrow<Compr::Data>,
     {
         // Compress the chunks asynchronously.
-        let compressed_chunks = prepare_chunks_for_write(self.compression, chunks).await;
+        let compressed_deltas = prepare_deltas_for_update(self.compression, deltas).await;
 
         // Then atomically write them all to the database.
         let mut batch = sled::Batch::default();
-        for (key_bytes, chunk_bytes) in compressed_chunks.into_iter() {
-            // PERF: IVec will copy the bytes instead of moving, because it needs to also allocate room for an internal header
-            batch.insert(key_bytes.as_ref(), chunk_bytes);
+        for delta in compressed_deltas.into_iter() {
+            match delta {
+                Delta::Insert(key_bytes, chunk_bytes) => {
+                    // PERF: IVec will copy the bytes instead of moving, because it needs to also allocate room for an internal header
+                    batch.insert(key_bytes.as_ref(), chunk_bytes);
+                }
+                Delta::Remove(key_bytes) => batch.remove(key_bytes.as_ref()),
+            }
         }
         self.tree.apply_batch(batch)?;
 
@@ -142,37 +146,6 @@ where
     }
 }
 
-async fn prepare_chunks_for_write<N, Compr, Data>(
-    compression: Compr,
-    chunks: impl Iterator<Item = (ChunkKey<N>, Data)>,
-) -> impl Iterator<Item = (IVec, IVec)>
-where
-    ChunkKey<N>: DatabaseKey<N>,
-    Compr: Compression + Copy,
-    Data: Borrow<Compr::Data>,
-{
-    // First compress all of the chunks in parallel.
-    let mut compressed_chunks: Vec<_> = join_all(chunks.map(|(key, chunk)| async move {
-        (
-            ChunkKey::<N>::into_ord_key(key),
-            compression.compress(chunk.borrow()),
-        )
-    }))
-    .await
-    .into_iter()
-    .collect();
-    // Sort them by the Ord key.
-    compressed_chunks.sort_by_key(|(k, _)| *k);
-
-    compressed_chunks.into_iter().map(|(k, v)| {
-        // PERF: IVec will copy the bytes instead of moving, because it needs to also allocate room for an internal header
-        (
-            IVec::from(ChunkKey::<N>::ord_key_to_be_bytes(k).as_ref()),
-            IVec::from(v.take_bytes()),
-        )
-    })
-}
-
 // ████████╗███████╗███████╗████████╗
 // ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
 //    ██║   █████╗  ███████╗   ██║
@@ -221,7 +194,7 @@ mod test {
         let chunk_db = ChunkDb::new(tree, compression);
 
         futures::executor::block_on(
-            chunk_db.write_chunks(write_chunks.iter().map(|(k, v)| (*k, v))),
+            chunk_db.update(write_chunks.iter().map(|(k, v)| Delta::Insert(*k, v))),
         )?;
 
         // This octant should contain the chunks in the positive octant, but not the other chunk.

@@ -1,4 +1,4 @@
-pub use super::key::DatabaseKey;
+use super::{key::DatabaseKey, prepare_deltas_for_update, Delta};
 
 pub use sled;
 
@@ -9,24 +9,18 @@ use crate::prelude::{ChunkKey, Compression};
 use building_blocks_core::{orthants_covering_extent, prelude::*};
 
 use core::ops::RangeBounds;
-use futures::future::join_all;
-use sled::{transaction::TransactionResult, IVec, Transactional, Tree};
+use sled::{transaction::TransactionResult, Transactional, Tree};
 use sled_snapshots::{
     transactions::{create_child_snapshot, modify_current_leaf_snapshot, set_current_version},
     *,
 };
 use std::borrow::Borrow;
 
-pub enum Delta<K, V> {
-    Insert(K, V),
-    Remove(K),
-}
-
-impl<K, V> Delta<K, V> {
-    fn key(&self) -> &K {
-        match self {
-            Self::Insert(k, _) => &k,
-            Self::Remove(k) => &k,
+impl<T> From<Delta<T, T>> for sled_snapshots::Delta<T> {
+    fn from(d: Delta<T, T>) -> Self {
+        match d {
+            Delta::Insert(k, v) => sled_snapshots::Delta::Insert(k, v),
+            Delta::Remove(k) => sled_snapshots::Delta::Remove(k),
         }
     }
 }
@@ -104,7 +98,10 @@ where
         Data: Borrow<Compr::Data>,
     {
         // Compress the chunks asynchronously.
-        let compressed_deltas = prepare_deltas_for_update(self.compression, deltas).await;
+        let compressed_deltas: Vec<_> = prepare_deltas_for_update(self.compression, deltas)
+            .await
+            .map(|d| sled_snapshots::Delta::from(d))
+            .collect();
 
         // Then atomically update the database.
         (&*self.versions, &*self.deltas, &self.data_tree).transaction(
@@ -200,46 +197,4 @@ where
         decompress_in_batches::<_, Compr, _>(read_kvs, chunk_rx).await;
         Ok(())
     }
-}
-
-async fn prepare_deltas_for_update<N, Compr, Data>(
-    compression: Compr,
-    deltas: impl Iterator<Item = Delta<ChunkKey<N>, Data>>,
-) -> Vec<sled_snapshots::Delta<IVec>>
-where
-    ChunkKey<N>: DatabaseKey<N>,
-    Compr: Compression + Copy,
-    Data: Borrow<Compr::Data>,
-{
-    // First compress all of the chunks in parallel.
-    let mut compressed_chunks: Vec<_> = join_all(deltas.map(|delta| async move {
-        match delta {
-            Delta::Insert(k, v) => Delta::Insert(
-                ChunkKey::<N>::into_ord_key(k),
-                compression.compress(v.borrow()),
-            ),
-            Delta::Remove(k) => Delta::Remove(ChunkKey::<N>::into_ord_key(k)),
-        }
-    }))
-    .await
-    .into_iter()
-    .collect();
-    // Sort them by the Ord key.
-    compressed_chunks.sort_by_key(|delta| *delta.key());
-
-    compressed_chunks
-        .into_iter()
-        .map(|delta| {
-            // PERF: IVec will copy the bytes instead of moving, because it needs to also allocate room for an internal header
-            match delta {
-                Delta::Insert(k, v) => sled_snapshots::Delta::Insert(
-                    IVec::from(ChunkKey::<N>::ord_key_to_be_bytes(k).as_ref()),
-                    IVec::from(v.take_bytes()),
-                ),
-                Delta::Remove(k) => sled_snapshots::Delta::Remove(IVec::from(
-                    ChunkKey::<N>::ord_key_to_be_bytes(k).as_ref(),
-                )),
-            }
-        })
-        .collect()
 }

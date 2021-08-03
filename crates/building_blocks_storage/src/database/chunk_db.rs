@@ -57,8 +57,8 @@ where
         self.tree.flush_async().await
     }
 
-    /// Insert a set of chunks. This will compress all of the chunks asynchronously then insert them into the database.
-    /// Pre-existing chunks will be overwritten.
+    /// Applies a set of chunk deltas atomically. This will compress all of the inserted chunks asynchronously then insert them
+    /// into the database.
     pub async fn update<Data>(
         &self,
         deltas: impl Iterator<Item = Delta<ChunkKey<N>, Data>>,

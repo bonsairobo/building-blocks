@@ -87,8 +87,10 @@ fn setup<Map: VoxelMap>(
     // Generate a voxel map from noise.
     let map = Map::generate(&*pool, *map_config);
 
+    let eye = Vec3::splat(100.0);
+
     // Queue up commands to initialize the chunk meshes to their appropriate LODs given the starting camera position.
-    let init_lod0_center = ChunkUnits(Point3i::ZERO);
+    let init_lod0_center = ChunkUnits(Point3f::from(eye).in_voxel() / map_config.chunk_shape());
     let mut mesh_commands = MeshCommandQueue::default();
     map.chunk_index().active_clipmap_lod_chunks(
         &map.config().world_extent(),
@@ -117,7 +119,7 @@ fn setup<Map: VoxelMap>(
             },
             ..Default::default()
         },
-        Vec3::splat(100.0),
+        eye,
         Vec3::splat(0.0),
     ));
 

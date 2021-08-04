@@ -12,6 +12,9 @@ pub use versioned_chunk_db::*;
 
 pub use sled;
 
+#[cfg(feature = "sled-snapshots")]
+pub use sled_snapshots;
+
 pub enum Delta<K, V> {
     Insert(K, V),
     Remove(K),

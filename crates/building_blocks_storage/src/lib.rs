@@ -99,6 +99,8 @@ pub mod prelude {
     pub use super::compression::Snappy;
     #[cfg(feature = "sled")]
     pub use super::database::{ChunkDb, ChunkDb2, ChunkDb3};
+    #[cfg(feature = "sled-snapshots")]
+    pub use super::database::{VersionedChunkDb, VersionedChunkDb2, VersionedChunkDb3};
 }
 
 /// Includes all of `prelude` plus the extra-generic types and internal traits used for library development.

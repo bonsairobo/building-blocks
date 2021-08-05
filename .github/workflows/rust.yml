@@ -38,3 +38,5 @@ jobs:
       run: cargo build --verbose --release --all --all-features && cargo bench --all --no-run
     - name: Run tests
       run: cargo test --verbose --release --all --all-features
+    - name: Build Examples
+      run: cd examples && cargo build --verbose --release

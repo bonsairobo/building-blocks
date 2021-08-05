@@ -242,6 +242,7 @@ fn generate_surface_nets_meshes<T: 'static + Clone + Send + Sync + SignedDistanc
                     &padded_chunk_extent,
                     voxel_size,
                     &mut surface_nets_buffer,
+                    true
                 );
 
                 if surface_nets_buffer.mesh.indices.is_empty() {

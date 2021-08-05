@@ -7,7 +7,7 @@ use bevy_utilities::bevy::{
 };
 use building_blocks::core::prelude::*;
 use building_blocks::mesh::*;
-use building_blocks::storage::{prelude::*, Sd16};
+use building_blocks::storage::prelude::*;
 
 fn main() {
     App::build()
@@ -39,7 +39,13 @@ fn setup(
 
     let mut mesh_buffer = SurfaceNetsBuffer::default();
     let voxel_size = 1.0;
-    surface_nets(&samples, samples.extent(), voxel_size, &mut mesh_buffer);
+    surface_nets(
+        &samples,
+        samples.extent(),
+        voxel_size,
+        &mut mesh_buffer,
+        true,
+    );
     let mesh = mesh_buffer.mesh;
     let num_vertices = mesh.positions.len();
 

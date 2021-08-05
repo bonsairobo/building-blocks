@@ -42,6 +42,40 @@ impl PosNormMesh {
         self.normals.clear();
         self.indices.clear();
     }
+
+    pub fn process_for_flat_shading(&self) -> PosNormMesh {
+        let indices_len = self.indices.len();
+        let mut mesh = PosNormMesh {
+            positions: Vec::with_capacity(indices_len),
+            normals: Vec::with_capacity(indices_len),
+            indices: Vec::new(),
+        };
+
+        for vertices_i in self.indices.chunks(3) {
+            let p1 = self.positions[vertices_i[0] as usize];
+            let p2 = self.positions[vertices_i[1] as usize];
+            let p3 = self.positions[vertices_i[2] as usize];
+
+            let u = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
+            let v = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];
+
+            let n = [
+                u[1] * v[2] - u[2] * v[1],
+                u[2] * v[0] - u[0] * v[2],
+                u[0] * v[1] - u[1] * v[0],
+            ];
+
+            mesh.positions.push(p1);
+            mesh.positions.push(p2);
+            mesh.positions.push(p3);
+
+            mesh.normals.push(n);
+            mesh.normals.push(n);
+            mesh.normals.push(n);
+        }
+
+        mesh
+    }
 }
 
 #[derive(Clone, Default)]

@@ -23,7 +23,7 @@ A showcase of all the meshing algorithms, fetching samples from a `ChunkMap`.
 cargo run --example mesh_showcase
 ```
 
-Use the left and right arrow keys to select one of the example shapes to be meshed.
+Use the left and right arrow keys to select one of the example shapes to be meshed. Use the W key to toggle wireframe mode and the F key to toggle the flat shading mode.
 
 ![Mesh Showcase](/examples/screenshots/mesh_showcase.gif)
 

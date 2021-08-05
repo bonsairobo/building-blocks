@@ -8,14 +8,16 @@ use building_blocks::storage::prelude::*;
 use bevy_utilities::{
     bevy::{
         prelude::*,
+        render::wireframe::WireframeConfig,
         tasks::{ComputeTaskPool, TaskPool},
     },
     mesh::create_mesh_bundle,
-    noise::generate_noise_chunks3
+    noise::generate_noise_chunks3,
 };
 
 pub struct MeshGeneratorState {
     current_shape_index: i32,
+    flat_shaded: bool,
     chunk_mesh_entities: Vec<Entity>,
 }
 
@@ -23,6 +25,7 @@ impl MeshGeneratorState {
     pub fn new() -> Self {
         Self {
             current_shape_index: 0,
+            flat_shaded: false,
             chunk_mesh_entities: Vec::new(),
         }
     }
@@ -152,6 +155,7 @@ pub struct MeshMaterial(pub Handle<StandardMaterial>);
 pub fn mesh_generator_system(
     mut commands: Commands,
     pool: Res<ComputeTaskPool>,
+    mut wireframe_config: ResMut<WireframeConfig>,
     mut state: ResMut<MeshGeneratorState>,
     mut meshes: ResMut<Assets<Mesh>>,
     keyboard_input: Res<Input<KeyCode>>,
@@ -165,6 +169,13 @@ pub fn mesh_generator_system(
         new_shape_requested = true;
         state.current_shape_index = (state.current_shape_index + 1).rem_euclid(NUM_SHAPES);
     }
+    if keyboard_input.just_pressed(KeyCode::F) {
+        new_shape_requested = true;
+        state.flat_shaded = !state.flat_shaded;
+    }
+    if keyboard_input.just_pressed(KeyCode::W) {
+        wireframe_config.global = !wireframe_config.global;
+    }
 
     if new_shape_requested || state.chunk_mesh_entities.is_empty() {
         // Delete the old meshes.
@@ -174,8 +185,8 @@ pub fn mesh_generator_system(
 
         // Sample the new shape.
         let chunk_meshes = match choose_shape(state.current_shape_index) {
-            Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(sdf, &pool.0),
-            Shape::SdfNoise => generate_chunk_meshes_from_sdf_noise(&pool.0),
+            Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(sdf, &pool.0, state.flat_shaded),
+            Shape::SdfNoise => generate_chunk_meshes_from_sdf_noise(&pool.0, state.flat_shaded),
             Shape::HeightMap(hm) => generate_chunk_meshes_from_height_map(hm, &pool.0),
             Shape::Blocky(blocky) => generate_chunk_meshes_from_blocky(blocky, &pool.0),
         };
@@ -191,7 +202,11 @@ pub fn mesh_generator_system(
     }
 }
 
-fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNormMesh>> {
+fn generate_chunk_meshes_from_sdf(
+    sdf: Sdf,
+    pool: &TaskPool,
+    flat_shaded: bool,
+) -> Vec<Option<PosNormMesh>> {
     let sdf = sdf.get_sdf();
     let sample_extent =
         Extent3i::from_min_and_shape(Point3i::fill(-20), Point3i::fill(40)).padded(1);
@@ -202,14 +217,29 @@ fn generate_chunk_meshes_from_sdf(sdf: Sdf, pool: &TaskPool) -> Vec<Option<PosNo
     let mut map = builder.build_with_hash_map_storage();
     copy_extent(&sample_extent, &Func(sdf), &mut map.lod_view_mut(0));
 
-    generate_surface_nets_meshes(pool, &map)
+    generate_surface_nets_meshes(pool, &map, flat_shaded)
 }
 
-fn generate_chunk_meshes_from_sdf_noise(pool: &TaskPool) -> Vec<Option<PosNormMesh>> {
-    let chunks_extent = ChunkUnits(Extent3i::from_min_and_shape(PointN::fill(-1), PointN::fill(2)));
+fn generate_chunk_meshes_from_sdf_noise(
+    pool: &TaskPool,
+    flat_shaded: bool,
+) -> Vec<Option<PosNormMesh>> {
+    let chunks_extent = ChunkUnits(Extent3i::from_min_and_shape(
+        PointN::fill(-1),
+        PointN::fill(2),
+    ));
     let freq = 0.15;
     let seed = 313;
-    let noise_chunks = generate_noise_chunks3(pool, chunks_extent, PointN::fill(16), freq, 1.0, seed, 3, true);
+    let noise_chunks = generate_noise_chunks3(
+        pool,
+        chunks_extent,
+        PointN::fill(16),
+        freq,
+        1.0,
+        seed,
+        3,
+        true,
+    );
 
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
     // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
@@ -219,12 +249,13 @@ fn generate_chunk_meshes_from_sdf_noise(pool: &TaskPool) -> Vec<Option<PosNormMe
         map.write_chunk(ChunkKey::new(0, chunk_min), chunk);
     }
 
-    generate_surface_nets_meshes(pool, &map)
+    generate_surface_nets_meshes(pool, &map, flat_shaded)
 }
 
 fn generate_surface_nets_meshes<T: 'static + Clone + Send + Sync + SignedDistance>(
     pool: &TaskPool,
     map: &ChunkHashMap3x1<T>,
+    flat_shaded: bool,
 ) -> Vec<Option<PosNormMesh>> {
     pool.scope(|s| {
         for chunk_key in map.storage().keys() {
@@ -242,10 +273,13 @@ fn generate_surface_nets_meshes<T: 'static + Clone + Send + Sync + SignedDistanc
                     &padded_chunk_extent,
                     voxel_size,
                     &mut surface_nets_buffer,
-                    true
+                    !flat_shaded,
                 );
+                if flat_shaded {
+                    surface_nets_buffer.mesh = surface_nets_buffer.mesh.process_for_flat_shading();
+                }
 
-                if surface_nets_buffer.mesh.indices.is_empty() {
+                if surface_nets_buffer.mesh.positions.is_empty() {
                     None
                 } else {
                     Some(surface_nets_buffer.mesh)

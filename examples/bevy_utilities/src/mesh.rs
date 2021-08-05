@@ -34,7 +34,9 @@ pub fn create_mesh_bundle(
         "Vertex_Uv",
         VertexAttributeValues::Float2(vec![[0.0; 2]; num_vertices]),
     );
-    render_mesh.set_indices(Some(Indices::U32(mesh.indices)));
+    if mesh.indices.len() > 0 {
+        render_mesh.set_indices(Some(Indices::U32(mesh.indices)));
+    }
 
     PbrBundle {
         mesh: meshes.add(render_mesh),

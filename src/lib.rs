@@ -181,6 +181,8 @@ pub mod core {
 }
 
 pub mod storage {
+    #![doc = include_str!("../crates/building_blocks_storage/src/crate_doc.md")]
+
     pub use building_blocks_storage::*;
 }
 

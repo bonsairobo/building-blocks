@@ -10,25 +10,7 @@
     future_incompatible
 )]
 #![warn(clippy::doc_markdown)]
-
-//! Various types of storage and indexing for voxels in 2 or 3 dimensions.
-//!
-//! If you need to store signed distance values in your voxels, consider using the `Sd8` and `Sd16` fixed-precision types which
-//! implement the `SignedDistance` trait required for smooth meshing.
-//!
-//! The core storage types are:
-//!   - [Array](crate::Array): N-dimensional, single resolution, bounded, dense array
-//!   - [`ChunkMap`](crate::ChunkMap): N-dimensional, multiple resolution, unbounded, sparse array
-//!     - Backed by generic chunk storage, with `HashMap` or `CompressibleChunkStorage` implementations
-//!
-//! Then there are "meta" lattice maps that provide some extra utility:
-//!   - [`TransformMap`](crate::TransformMap): a wrapper of any kind of lattice map that performs an arbitrary transformation
-//!   - [Func](crate::Func): some lattice map traits are implemented for closures (like SDFs)
-//!
-//! For hierarchical indexing and level of detail:
-//!   - [`OctreeSet`](crate::OctreeSet): bounded bitset of points
-//!   - [`ChunkedOctreeSet`](crate::ChunkedOctreeSet): unbounded bitset of points
-//!   - [`OctreeChunkIndex`](crate::OctreeChunkIndex): just a `ChunkedOctreeSet` that tracks chunks and provides clipmap functionality
+#![doc = include_str!("crate_doc.md")]
 
 #[macro_use]
 pub mod access_traits;

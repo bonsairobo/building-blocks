@@ -188,6 +188,8 @@ pub mod storage {
 
 #[cfg(feature = "mesh")]
 pub mod mesh {
+    #![doc = include_str!("../crates/building_blocks_mesh/src/crate_doc.md")]
+
     pub use building_blocks_mesh::*;
 }
 

@@ -33,7 +33,7 @@ enum Shape {
     Sdf(Sdf),
     SdfNoise,
     HeightMap(HeightMap),
-    Cubic(Cubic),
+    Blocky(Blocky),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -81,14 +81,14 @@ impl HeightMap {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum Cubic {
+enum Blocky {
     Terrace,
 }
 
-impl Cubic {
+impl Blocky {
     fn get_voxels(&self) -> Array3x1<CubeVoxel> {
         match self {
-            Cubic::Terrace => {
+            Blocky::Terrace => {
                 let extent =
                     Extent3i::from_min_and_shape(Point3i::fill(-20), Point3i::fill(40)).padded(1);
                 let mut voxels = Array3x1::fill(extent, CubeVoxel(false));
@@ -141,7 +141,7 @@ fn choose_shape(index: i32) -> Shape {
         2 => Shape::Sdf(Sdf::Torus),
         3 => Shape::SdfNoise,
         4 => Shape::HeightMap(HeightMap::Wave),
-        5 => Shape::Cubic(Cubic::Terrace),
+        5 => Shape::Blocky(Blocky::Terrace),
         _ => panic!("bad shape index"),
     }
 }
@@ -177,7 +177,7 @@ pub fn mesh_generator_system(
             Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(sdf, &pool.0),
             Shape::SdfNoise => generate_chunk_meshes_from_sdf_noise(&pool.0),
             Shape::HeightMap(hm) => generate_chunk_meshes_from_height_map(hm, &pool.0),
-            Shape::Cubic(cubic) => generate_chunk_meshes_from_cubic(cubic, &pool.0),
+            Shape::Blocky(blocky) => generate_chunk_meshes_from_blocky(blocky, &pool.0),
         };
 
         for mesh in chunk_meshes.into_iter() {
@@ -304,8 +304,8 @@ fn generate_chunk_meshes_from_height_map(
     })
 }
 
-fn generate_chunk_meshes_from_cubic(cubic: Cubic, pool: &TaskPool) -> Vec<Option<PosNormMesh>> {
-    let voxels = cubic.get_voxels();
+fn generate_chunk_meshes_from_blocky(blocky: Blocky, pool: &TaskPool) -> Vec<Option<PosNormMesh>> {
+    let voxels = blocky.get_voxels();
 
     // Chunk up the voxels just to show that meshing across chunks is consistent.
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an

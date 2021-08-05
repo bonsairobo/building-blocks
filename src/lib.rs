@@ -177,6 +177,8 @@
 // TODO: when cargo-readme supports intra-doc links, replace URLs above
 
 pub mod core {
+    #![doc = include_str!("../crates/building_blocks_core/src/crate_doc.md")]
+
     pub use building_blocks_core::*;
 }
 

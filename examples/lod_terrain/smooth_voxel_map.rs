@@ -113,8 +113,8 @@ impl VoxelMap for SmoothVoxelMap {
             neighborhood_buffer,
             &padded_chunk_extent,
             voxel_size,
+            true,
             &mut *mesh_buffer,
-            true
         );
 
         if mesh_buffer.mesh.indices.is_empty() {

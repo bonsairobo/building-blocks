@@ -39,12 +39,13 @@ fn setup(
 
     let mut mesh_buffer = SurfaceNetsBuffer::default();
     let voxel_size = 1.0;
+    let estimate_normals = true;
     surface_nets(
         &samples,
         samples.extent(),
         voxel_size,
+        estimate_normals,
         &mut mesh_buffer,
-        true,
     );
     let mesh = mesh_buffer.mesh;
     let num_vertices = mesh.positions.len();

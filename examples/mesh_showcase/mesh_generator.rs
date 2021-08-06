@@ -272,8 +272,8 @@ fn generate_surface_nets_meshes<T: 'static + Clone + Send + Sync + SignedDistanc
                     &padded_chunk,
                     &padded_chunk_extent,
                     voxel_size,
-                    &mut surface_nets_buffer,
                     !flat_shaded,
+                    &mut surface_nets_buffer,
                 );
                 if flat_shaded {
                     surface_nets_buffer.mesh = surface_nets_buffer.mesh.process_for_flat_shading();

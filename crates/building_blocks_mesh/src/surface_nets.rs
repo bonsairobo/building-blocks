@@ -39,7 +39,7 @@ impl SurfaceNetsBuffer {
 ///
 /// This is basically just dual contouring a uniform grid with:
 ///   - positions estimated as the centroid of cube edge crossings
-///   - surface normals estimated with central differencing
+///   - surface normals estimated with central differencing (iff `estimate_normals` is `true`)
 ///
 /// Extracts an isosurface mesh from the [signed distance field](https://en.wikipedia.org/wiki/Signed_distance_function) `sdf`.
 /// Each value in the field determines how close that point is to the isosurface. Negative values are considered "interior" of
@@ -62,8 +62,8 @@ pub fn surface_nets<A, T>(
     sdf: &A,
     extent: &Extent3i,
     voxel_size: f32,
-    output: &mut SurfaceNetsBuffer,
     estimate_normals: bool,
+    output: &mut SurfaceNetsBuffer,
 ) where
     A: IndexedArray<[i32; 3]> + GetUnchecked<Stride, Item = T>,
     T: SignedDistance,
@@ -77,7 +77,7 @@ pub fn surface_nets<A, T>(
 
     output.reset(sdf.extent().num_points());
 
-    estimate_surface(sdf, extent, voxel_size, output, estimate_normals);
+    estimate_surface(sdf, extent, voxel_size, estimate_normals, output);
     make_all_quads(sdf, extent, output);
 }
 
@@ -87,8 +87,8 @@ fn estimate_surface<A, T>(
     sdf: &A,
     extent: &Extent3i,
     voxel_size: f32,
-    output: &mut SurfaceNetsBuffer,
     estimate_normals: bool,
+    output: &mut SurfaceNetsBuffer,
 ) where
     A: IndexedArray<[i32; 3]> + GetUnchecked<Stride, Item = T>,
     T: SignedDistance,
@@ -108,15 +108,17 @@ fn estimate_surface<A, T>(
         for i in 0..8 {
             corner_strides[i] = p_stride + corner_offset_strides[i];
         }
-
-        if let Some((position, normal)) =
-            estimate_surface_in_cube(sdf, voxel_size, &p, &corner_strides, estimate_normals)
-        {
-            output.stride_to_index[p_stride.0] = output.mesh.positions.len() as u32;
+        if estimate_surface_in_cube(
+            sdf,
+            voxel_size,
+            &p,
+            &corner_strides,
+            estimate_normals,
+            output,
+        ) {
+            output.stride_to_index[p_stride.0] = output.mesh.positions.len() as u32 - 1;
             output.surface_points.push(p);
             output.surface_strides.push(p_stride);
-            output.mesh.positions.push(position);
-            output.mesh.normals.push(normal);
         }
     });
 }
@@ -132,7 +134,8 @@ fn estimate_surface_in_cube<A, T>(
     cube_min_corner: &Point3i,
     corner_strides: &[Stride],
     estimate_normals: bool,
-) -> Option<([f32; 3], [f32; 3])>
+    output: &mut SurfaceNetsBuffer,
+) -> bool
 where
     A: GetUnchecked<Stride, Item = T>,
     T: SignedDistance,
@@ -150,19 +153,21 @@ where
 
     if num_negative == 0 || num_negative == 8 {
         // No crossings.
-        return None;
+        return false;
     }
 
     let centroid = centroid_of_edge_intersections(&corner_dists);
     let position = voxel_size * (Point3f::from(*cube_min_corner) + centroid + Point3f::fill(0.5));
 
-    let normal = if estimate_normals {
-        sdf_gradient(&corner_dists, &centroid)
-    } else {
-        [0.0, 0.0, 0.0]
-    };
+    output.mesh.positions.push(position.0);
+    if estimate_normals {
+        output
+            .mesh
+            .normals
+            .push(sdf_gradient(&corner_dists, &centroid));
+    }
 
-    Some((position.0, normal))
+    true
 }
 
 fn centroid_of_edge_intersections(dists: &[f32; 8]) -> Point3f {

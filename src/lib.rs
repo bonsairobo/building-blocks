@@ -53,7 +53,8 @@
 //!
 //! let mut mesh_buffer = SurfaceNetsBuffer::default();
 //! let voxel_size = 2.0; // length of the edge of a voxel
-//! surface_nets(&samples, samples.extent(), voxel_size, &mut mesh_buffer);
+//! let estimate_normals = true; // use the SDF to estimate normals instead of flat shading
+//! surface_nets(&samples, samples.extent(), voxel_size, estimate_normals, &mut mesh_buffer);
 //! ```
 //!
 //! # Learning

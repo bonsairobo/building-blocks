@@ -23,12 +23,12 @@ fn surface_nets_sine_sdf(c: &mut Criterion) {
 
                         // Do a single run first to allocate the buffer to the right size.
                         let mut buffer = SurfaceNetsBuffer::default();
-                        surface_nets(&samples, samples.extent(), 1.0, &mut buffer);
+                        surface_nets(&samples, samples.extent(), 1.0, true, &mut buffer);
 
                         (samples, buffer)
                     },
                     |(samples, mut buffer)| {
-                        surface_nets(&samples, samples.extent(), 1.0, &mut buffer)
+                        surface_nets(&samples, samples.extent(), 1.0, true, &mut buffer)
                     },
                 );
             },

@@ -39,4 +39,4 @@ jobs:
     - name: Run tests
       run: cargo test --verbose --release --all --all-features
     - name: Build Examples
-      run: cd examples && cargo build --verbose --release
+      run: cd examples && cargo build --examples --verbose --release

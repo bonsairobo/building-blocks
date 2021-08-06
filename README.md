@@ -14,7 +14,7 @@ Terrain](https://media.githubusercontent.com/media/bonsairobo/building-blocks/ma
 We focus on generally useful data structures and algorithms. Features include:
 
 - 2D and 3D data storage
-  - [`Array`](crate::storage::array) with structure-of-arrays (SoA) storage of multiple data channels per spatial dimension
+  - [`Array`](crate::storage::array) with structure-of-arrays (`SoA`) storage of multiple data channels per spatial dimension
   - [`ChunkMap`](crate::storage::chunk::map) with generic chunk storage
   - [`ChunkDb`](crate::storage::database) for compressed, persistent voxel worlds, backed by the
     [`sled`](https://docs.rs/sled) embedded database
@@ -55,7 +55,8 @@ let mut samples = Array3x1::fill_with(extent, |p| sphere_sdf.dist(Point3f::from(
 
 let mut mesh_buffer = SurfaceNetsBuffer::default();
 let voxel_size = 2.0; // length of the edge of a voxel
-surface_nets(&samples, samples.extent(), voxel_size, &mut mesh_buffer);
+let estimate_normals = true; // use the SDF to estimate normals instead of flat shading
+surface_nets(&samples, samples.extent(), voxel_size, estimate_normals, &mut mesh_buffer);
 ```
 
 ## Learning

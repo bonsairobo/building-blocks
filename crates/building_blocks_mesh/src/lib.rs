@@ -43,6 +43,9 @@ impl PosNormMesh {
         self.indices.clear();
     }
 
+    /// Create a new mesh with equivalent triangles such that no vertex is shared by any two triangles.
+    ///
+    /// Also computes a normal for each triangle using the cross product. The pre-existing normals are not used.
     pub fn process_for_flat_shading(&self) -> PosNormMesh {
         let indices_len = self.indices.len();
         let mut mesh = PosNormMesh {
@@ -51,10 +54,10 @@ impl PosNormMesh {
             indices: Vec::new(),
         };
 
-        for vertices_i in self.indices.chunks(3) {
-            let p1 = self.positions[vertices_i[0] as usize];
-            let p2 = self.positions[vertices_i[1] as usize];
-            let p3 = self.positions[vertices_i[2] as usize];
+        for triangle_i in self.indices.chunks(3) {
+            let p1 = self.positions[triangle_i[0] as usize];
+            let p2 = self.positions[triangle_i[1] as usize];
+            let p3 = self.positions[triangle_i[2] as usize];
 
             let u = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
             let v = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];

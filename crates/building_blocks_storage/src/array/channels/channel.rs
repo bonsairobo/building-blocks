@@ -8,7 +8,6 @@ use crate::{
 };
 
 use core::mem::MaybeUninit;
-use core::ops::{Deref, DerefMut};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -62,14 +61,14 @@ impl<T> Channel<T, Vec<T>> {
 
 impl<T, Store> Channel<T, Store>
 where
-    Store: DerefMut<Target = [T]>,
+    Store: AsMut<[T]>,
 {
     #[inline]
     pub fn reset_values(&mut self, value: T)
     where
         T: Clone,
     {
-        self.store.fill(value);
+        self.store.as_mut().fill(value);
     }
 }
 
@@ -81,57 +80,57 @@ impl<T, Store> Channels for Channel<T, Store> {
 
 impl<'a, T: 'a, Store> Slices<'a> for Channel<T, Store>
 where
-    Store: Deref<Target = [T]>,
+    Store: AsRef<[T]>,
 {
     type Target = &'a [T];
 
     fn slices(&'a self) -> Self::Target {
-        self.store.deref()
+        self.store.as_ref()
     }
 }
 
 impl<'a, T: 'a, Store> SlicesMut<'a> for Channel<T, Store>
 where
-    Store: DerefMut<Target = [T]>,
+    Store: AsMut<[T]>,
 {
     type Target = &'a [T];
 
     fn slices_mut(&'a mut self) -> Self::Target {
-        self.store.deref_mut()
+        self.store.as_mut()
     }
 }
 
 impl<'a, T: 'a, Store> CopySlices<'a> for Channel<T, Store>
 where
     T: Clone,
-    Store: DerefMut<Target = [T]>,
+    Store: AsMut<[T]>,
 {
     type Src = &'a [T];
 
     fn copy_slices(&mut self, src: Self::Src) {
-        self.store.clone_from_slice(src)
+        self.store.as_mut().clone_from_slice(src)
     }
 }
 
 impl<'a, T: 'a, Store> BorrowChannels<'a> for Channel<T, Store>
 where
-    Store: Deref<Target = [T]>,
+    Store: AsRef<[T]>,
 {
     type Borrowed = Channel<T, &'a [T]>;
 
     fn borrow(&'a self) -> Self::Borrowed {
-        Channel::new(self.store.deref())
+        Channel::new(self.store.as_ref())
     }
 }
 
 impl<'a, T: 'a, Store> BorrowChannelsMut<'a> for Channel<T, Store>
 where
-    Store: DerefMut<Target = [T]>,
+    Store: AsMut<[T]>,
 {
     type Borrowed = Channel<T, &'a mut [T]>;
 
     fn borrow_mut(&'a mut self) -> Self::Borrowed {
-        Channel::new(self.store.deref_mut())
+        Channel::new(self.store.as_mut())
     }
 }
 
@@ -147,7 +146,7 @@ where
 impl<T, Store> ResetChannels for Channel<T, Store>
 where
     T: Clone,
-    Store: DerefMut<Target = [T]>,
+    Store: AsMut<[T]>,
 {
     fn reset_values(&mut self, value: Self::Data) {
         self.reset_values(value)
@@ -197,64 +196,64 @@ impl<T> UninitChannels for Channel<MaybeUninit<T>> {
 impl<'a, T, Store> GetRefUnchecked<'a, usize> for Channel<T, Store>
 where
     T: 'a,
-    Store: Deref<Target = [T]>,
+    Store: AsRef<[T]>,
 {
     type Item = &'a T;
 
     #[inline]
     unsafe fn get_ref_unchecked(&'a self, offset: usize) -> Self::Item {
-        self.store.get_unchecked(offset)
+        self.store.as_ref().get_unchecked(offset)
     }
 }
 
 impl<'a, T, Store> GetRef<'a, usize> for Channel<T, Store>
 where
     T: 'a,
-    Store: Deref<Target = [T]>,
+    Store: AsRef<[T]>,
 {
     type Item = &'a T;
 
     #[inline]
     fn get_ref(&'a self, offset: usize) -> Self::Item {
-        &self.store[offset]
+        &self.store.as_ref()[offset]
     }
 }
 
 impl<'a, T, Store> GetMutUnchecked<'a, usize> for Channel<T, Store>
 where
     T: 'a,
-    Store: DerefMut<Target = [T]>,
+    Store: AsMut<[T]>,
 {
     type Item = &'a mut T;
 
     #[inline]
     unsafe fn get_mut_unchecked(&'a mut self, offset: usize) -> Self::Item {
-        self.store.get_unchecked_mut(offset)
+        self.store.as_mut().get_unchecked_mut(offset)
     }
 }
 
 impl<'a, T, Store> GetMut<'a, usize> for Channel<T, Store>
 where
     T: 'a,
-    Store: DerefMut<Target = [T]>,
+    Store: AsMut<[T]>,
 {
     type Item = &'a mut T;
 
     #[inline]
     fn get_mut(&'a mut self, offset: usize) -> Self::Item {
-        &mut self.store[offset]
+        &mut self.store.as_mut()[offset]
     }
 }
 
 impl<T, Store> GetMutPtr<usize> for Channel<T, Store>
 where
-    Store: DerefMut<Target = [T]>,
+    Store: AsMut<[T]>,
 {
     type Item = *mut T;
 
     #[inline]
     unsafe fn get_mut_ptr(&mut self, offset: usize) -> Self::Item {
-        self.store.as_mut_ptr().add(offset)
+        self.store.as_mut().as_mut_ptr().add(offset)
     }
 }
 

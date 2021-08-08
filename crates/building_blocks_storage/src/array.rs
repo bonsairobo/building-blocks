@@ -74,8 +74,8 @@
 //!
 //! # Storage
 //!
-//! By default, `Array` uses a `Vec` to store elements. But any type that implements `Deref<Target = [T]>` or `DerefMut<Target =
-//! [T]>` should be usable. This means you can construct an array with most pointer types.
+//! By default, `Array` uses a `Vec` to store elements. But any type that implements `AsRef<[T]>` or `AsMut<[T]>` should be
+//! usable. This means you can construct an array with most pointer types.
 //!
 //! ```
 //! # use building_blocks_core::prelude::*;

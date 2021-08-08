@@ -187,7 +187,7 @@ pub fn mesh_generator_system(
         let chunk_meshes = match choose_shape(state.current_shape_index) {
             Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(sdf, &pool.0, state.flat_shaded),
             Shape::SdfNoise => generate_chunk_meshes_from_sdf_noise(&pool.0, state.flat_shaded),
-            Shape::HeightMap(hm) => generate_chunk_meshes_from_height_map(hm, &pool.0),
+            Shape::HeightMap(hm) => generate_chunk_meshes_from_height_map(hm, &pool.0, state.flat_shaded),
             Shape::Blocky(blocky) => generate_chunk_meshes_from_blocky(blocky, &pool.0),
         };
 
@@ -292,6 +292,7 @@ fn generate_surface_nets_meshes<T: 'static + Clone + Send + Sync + SignedDistanc
 fn generate_chunk_meshes_from_height_map(
     hm: HeightMap,
     pool: &TaskPool,
+    flat_shaded: bool
 ) -> Vec<Option<PosNormMesh>> {
     let height_map = hm.get_height_map();
     let sample_extent =
@@ -328,11 +329,16 @@ fn generate_chunk_meshes_from_height_map(
                     &padded_chunk_extent,
                     &mut height_map_mesh_buffer,
                 );
+                let mesh = if flat_shaded {
+                    height_map_mesh_buffer.mesh.process_for_flat_shading()
+                } else {
+                    height_map_mesh_buffer.mesh
+                };
 
-                if height_map_mesh_buffer.mesh.indices.is_empty() {
+                if mesh.positions.is_empty() {
                     None
                 } else {
-                    Some(height_map_mesh_buffer.mesh)
+                    Some(mesh)
                 }
             })
         }

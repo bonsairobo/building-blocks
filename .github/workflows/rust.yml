@@ -32,6 +32,8 @@ jobs:
         toolchain: stable
         default: true
         components: clippy
+    - name: Install Dependencies
+      run: sudo apt install libasound2-dev
     - name: Lint
       run: cargo clippy --all --all-features
     - name: Build

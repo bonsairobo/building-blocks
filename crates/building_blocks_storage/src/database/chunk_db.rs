@@ -1,4 +1,4 @@
-use super::{key::DatabaseKey, prepare_deltas_for_update, Delta};
+use super::{key::DatabaseKey, Delta, DeltaBatchBuilder};
 
 pub use sled;
 
@@ -66,23 +66,10 @@ where
     where
         Data: Borrow<Compr::Data>,
     {
-        // Compress the chunks asynchronously.
-        let compressed_deltas = prepare_deltas_for_update(self.compression, deltas).await;
-
-        // Then atomically write them all to the database.
-        let mut batch = sled::Batch::default();
-        for delta in compressed_deltas.into_iter() {
-            match delta {
-                Delta::Insert(key_bytes, chunk_bytes) => {
-                    // PERF: IVec will copy the bytes instead of moving, because it needs to also allocate room for an internal header
-                    batch.insert(key_bytes.as_ref(), chunk_bytes);
-                }
-                Delta::Remove(key_bytes) => batch.remove(key_bytes.as_ref()),
-            }
-        }
-        self.tree.apply_batch(batch)?;
-
-        Ok(())
+        let mut builder = DeltaBatchBuilder::default();
+        builder.add_deltas(self.compression, deltas).await;
+        let batch = sled::Batch::from(builder.build());
+        self.tree.apply_batch(batch)
     }
 
     /// Scans the given orthant for chunks, decompresses them, then passes them to `chunk_rx`. Because chunk keys are stored in

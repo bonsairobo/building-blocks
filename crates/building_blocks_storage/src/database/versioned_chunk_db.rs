@@ -1,4 +1,4 @@
-use super::{key::DatabaseKey, prepare_deltas_for_update, Delta};
+use super::{key::DatabaseKey, Delta, DeltaBatchBuilder};
 
 pub use sled;
 
@@ -97,9 +97,12 @@ where
     where
         Data: Borrow<Compr::Data>,
     {
-        // Compress the chunks asynchronously.
-        let compressed_deltas: Vec<_> = prepare_deltas_for_update(self.compression, deltas)
-            .await
+        let mut builder = DeltaBatchBuilder::default();
+        builder.add_deltas(self.compression, deltas).await;
+        let batch = builder.build();
+        let batch_deltas: Vec<_> = batch
+            .deltas
+            .into_iter()
             .map(|d| sled_snapshots::Delta::from(d))
             .collect();
 
@@ -113,7 +116,7 @@ where
                     versions,
                     deltas,
                     data_tree,
-                    &compressed_deltas,
+                    &batch_deltas,
                 )
             },
         )

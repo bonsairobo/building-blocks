@@ -1,10 +1,12 @@
 mod chunk_db;
+mod delta_batch;
 mod key;
 
 #[cfg(feature = "sled-snapshots")]
 mod versioned_chunk_db;
 
 pub use chunk_db::*;
+pub use delta_batch::*;
 pub use key::*;
 
 #[cfg(feature = "sled-snapshots")]
@@ -14,6 +16,10 @@ pub use sled;
 
 #[cfg(feature = "sled-snapshots")]
 pub use sled_snapshots;
+
+use crate::dev_prelude::{ChunkKey, Compression};
+use futures::future::join_all;
+use sled::IVec;
 
 pub enum Delta<K, V> {
     Insert(K, V),
@@ -28,11 +34,6 @@ impl<K, V> Delta<K, V> {
         }
     }
 }
-
-use crate::dev_prelude::{ChunkKey, Compression};
-use futures::future::join_all;
-use sled::IVec;
-use std::borrow::Borrow;
 
 async fn decompress_in_batches<N, Compr, F>(kvs: Vec<(IVec, IVec)>, mut chunk_rx: F)
 where
@@ -54,43 +55,4 @@ where
             chunk_rx(chunk_key, chunk);
         }
     }
-}
-
-async fn prepare_deltas_for_update<N, Compr, Data>(
-    compression: Compr,
-    deltas: impl Iterator<Item = Delta<ChunkKey<N>, Data>>,
-) -> impl Iterator<Item = Delta<IVec, IVec>>
-where
-    ChunkKey<N>: DatabaseKey<N>,
-    Compr: Compression + Copy,
-    Data: Borrow<Compr::Data>,
-{
-    // First compress all of the chunks in parallel.
-    let mut compressed_chunks: Vec<_> = join_all(deltas.map(|delta| async move {
-        match delta {
-            Delta::Insert(k, v) => Delta::Insert(
-                ChunkKey::<N>::into_ord_key(k),
-                compression.compress(v.borrow()),
-            ),
-            Delta::Remove(k) => Delta::Remove(ChunkKey::<N>::into_ord_key(k)),
-        }
-    }))
-    .await
-    .into_iter()
-    .collect();
-    // Sort them by the Ord key.
-    compressed_chunks.sort_by_key(|delta| *delta.key());
-
-    compressed_chunks.into_iter().map(|delta| {
-        // PERF: IVec will copy the bytes instead of moving, because it needs to also allocate room for an internal header
-        match delta {
-            Delta::Insert(k, v) => Delta::Insert(
-                IVec::from(ChunkKey::<N>::ord_key_to_be_bytes(k).as_ref()),
-                IVec::from(v.take_bytes()),
-            ),
-            Delta::Remove(k) => {
-                Delta::Remove(IVec::from(ChunkKey::<N>::ord_key_to_be_bytes(k).as_ref()))
-            }
-        }
-    })
 }

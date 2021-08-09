@@ -8,22 +8,25 @@ use sled::IVec;
 use std::borrow::Borrow;
 
 /// Creates a [DeltaBatch]. This handles sorting the deltas in Morton order and compressing the chunk data.
-pub struct DeltaBatchBuilder<N, K> {
+pub struct DeltaBatchBuilder<N, K, Compr> {
     compressed_deltas: Vec<Delta<K, IVec>>,
+    compression: Compr,
     marker: std::marker::PhantomData<N>,
 }
 
-impl<N, K> Default for DeltaBatchBuilder<N, K> {
-    fn default() -> Self {
+impl<N, K, Compr> DeltaBatchBuilder<N, K, Compr> {
+    pub fn new(compression: Compr) -> Self {
         Self {
             compressed_deltas: Default::default(),
+            compression,
             marker: Default::default(),
         }
     }
 }
 
-impl<N, K> DeltaBatchBuilder<N, K>
+impl<N, K, Compr> DeltaBatchBuilder<N, K, Compr>
 where
+    Compr: Compression + Copy,
     ChunkKey<N>: DatabaseKey<N, OrdKey = K>,
 {
     pub fn add_compressed_deltas(
@@ -37,15 +40,13 @@ where
             }));
     }
 
-    pub async fn add_deltas<Compr, Data>(
-        &mut self,
-        compression: Compr,
-        deltas: impl Iterator<Item = Delta<ChunkKey<N>, Data>>,
-    ) where
-        Compr: Compression + Copy,
+    /// Compresses `deltas` concurrently and adds them to the batch.
+    pub async fn add_deltas<Data>(&mut self, deltas: impl Iterator<Item = Delta<ChunkKey<N>, Data>>)
+    where
         Data: Borrow<Compr::Data>,
     {
         // Compress all of the chunks in parallel.
+        let compression = self.compression.clone();
         let mut compressed_deltas: Vec<_> = join_all(deltas.map(|delta| async move {
             match delta {
                 Delta::Insert(k, v) => Delta::Insert(
@@ -61,6 +62,7 @@ where
         self.compressed_deltas.append(&mut compressed_deltas);
     }
 
+    /// Sorts the deltas by Morton key and converts them to `IVec` key-value pairs for `sled`.
     pub fn build(mut self) -> DeltaBatch
     where
         K: Copy + Ord,
@@ -89,7 +91,7 @@ where
 /// A set of [Delta]s to be atomically applied to a [ChunkDb](super::ChunkDb) or [VersionedChunkDb](super::VersionedChunkDb).
 #[derive(Default)]
 pub struct DeltaBatch {
-    pub deltas: Vec<Delta<IVec, IVec>>,
+    pub(crate) deltas: Vec<Delta<IVec, IVec>>,
 }
 
 impl From<DeltaBatch> for sled::Batch {

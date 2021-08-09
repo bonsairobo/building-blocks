@@ -1,4 +1,4 @@
-use super::{key::DatabaseKey, Delta, DeltaBatchBuilder};
+use super::{key::DatabaseKey, DeltaBatch, DeltaBatchBuilder};
 
 pub use sled;
 
@@ -10,7 +10,6 @@ use building_blocks_core::{orthants_covering_extent, prelude::*};
 
 use core::ops::RangeBounds;
 use sled::Tree;
-use std::borrow::Borrow;
 
 /// A persistent, crash-consistent key-value store of compressed chunks, backed by the `sled` crate.
 ///
@@ -57,19 +56,15 @@ where
         self.tree.flush_async().await
     }
 
-    /// Applies a set of chunk deltas atomically. This will compress all of the inserted chunks asynchronously then insert them
-    /// into the database.
-    pub async fn update<Data>(
+    pub fn start_delta_batch(
         &self,
-        deltas: impl Iterator<Item = Delta<ChunkKey<N>, Data>>,
-    ) -> sled::Result<()>
-    where
-        Data: Borrow<Compr::Data>,
-    {
-        let mut builder = DeltaBatchBuilder::default();
-        builder.add_deltas(self.compression, deltas).await;
-        let batch = sled::Batch::from(builder.build());
-        self.tree.apply_batch(batch)
+    ) -> DeltaBatchBuilder<N, <ChunkKey<N> as DatabaseKey<N>>::OrdKey, Compr> {
+        DeltaBatchBuilder::new(self.compression)
+    }
+
+    /// Applies a set of chunk deltas atomically.
+    pub fn apply_deltas(&self, batch: DeltaBatch) -> sled::Result<()> {
+        self.tree.apply_batch(sled::Batch::from(batch))
     }
 
     /// Scans the given orthant for chunks, decompresses them, then passes them to `chunk_rx`. Because chunk keys are stored in
@@ -142,7 +137,10 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::prelude::{Array3x2, ChunkKey3, FastArrayCompressionNx2, FromBytesCompression, Lz4};
+    use crate::{
+        database::Delta,
+        prelude::{Array3x2, ChunkKey3, FastArrayCompressionNx2, FromBytesCompression, Lz4},
+    };
 
     use super::*;
 
@@ -176,9 +174,11 @@ mod test {
         let compression = FastArrayCompressionNx2::from_bytes_compression(Lz4 { level: 10 });
         let chunk_db = ChunkDb::new(tree, compression);
 
+        let mut batch = chunk_db.start_delta_batch();
         futures::executor::block_on(
-            chunk_db.update(write_chunks.iter().map(|(k, v)| Delta::Insert(*k, v))),
-        )?;
+            batch.add_deltas(write_chunks.iter().map(|(k, v)| Delta::Insert(*k, v))),
+        );
+        chunk_db.apply_deltas(batch.build())?;
 
         // This octant should contain the chunks in the positive octant, but not the other chunk.
         let octant = Octant::new_unchecked(Point3i::ZERO, 32);

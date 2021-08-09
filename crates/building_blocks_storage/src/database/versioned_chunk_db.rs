@@ -1,4 +1,4 @@
-use super::{key::DatabaseKey, Delta, DeltaBatchBuilder};
+use super::{key::DatabaseKey, Delta, DeltaBatch, DeltaBatchBuilder};
 
 pub use sled;
 
@@ -14,7 +14,6 @@ use sled_snapshots::{
     transactions::{create_child_snapshot, modify_current_leaf_snapshot, set_current_version},
     *,
 };
-use std::borrow::Borrow;
 
 impl<T> From<Delta<T, T>> for sled_snapshots::Delta<T> {
     fn from(d: Delta<T, T>) -> Self {
@@ -88,18 +87,15 @@ where
         self.data_tree.flush_async().await
     }
 
+    pub fn start_delta_batch(
+        &self,
+    ) -> DeltaBatchBuilder<N, <ChunkKey<N> as DatabaseKey<N>>::OrdKey, Compr> {
+        DeltaBatchBuilder::new(self.compression)
+    }
+
     /// Applies a set of chunk deltas atomically. This will compress all of the inserted chunks asynchronously then insert them
     /// into the database.
-    pub async fn update_current_version<Data>(
-        &self,
-        deltas: impl Iterator<Item = Delta<ChunkKey<N>, Data>>,
-    ) -> TransactionResult<()>
-    where
-        Data: Borrow<Compr::Data>,
-    {
-        let mut builder = DeltaBatchBuilder::default();
-        builder.add_deltas(self.compression, deltas).await;
-        let batch = builder.build();
+    pub fn apply_deltas_to_current_version(&self, batch: DeltaBatch) -> TransactionResult<()> {
         let batch_deltas: Vec<_> = batch
             .deltas
             .into_iter()

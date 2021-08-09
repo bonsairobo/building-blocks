@@ -17,14 +17,14 @@ pub trait ChunkDownsampler<N, T, Src, Dst> {
     fn downsample(&self, src_chunk: &Src, dst_chunk: &mut Dst, dst_min: Local<N>, lod_delta: u8);
 }
 
-impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store>
+impl<N, T, Ch, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
     ChunkKey<N>: Copy,
     T: Clone,
-    Bldr: ChunkMapBuilder<N, T>,
-    Bldr::Chunk: FillExtent<N, Item = T> + IndexedArray<N>,
-    Store: ChunkWriteStorage<N, Bldr::Chunk>,
+    Ch: Chunk + FillExtent<N, Item = T> + IndexedArray<N>,
+    Bldr: ChunkMapBuilder<N, T, Chunk = Ch>,
+    Store: ChunkWriteStorage<N, Chunk = Ch>,
 {
     /// Downsamples the chunk at `src_chunk_key` into the specified destination level `dst_lod`.
     pub fn downsample_chunk<Samp>(
@@ -33,7 +33,7 @@ where
         src_chunk_key: ChunkKey<N>,
         dst_lod: u8,
     ) where
-        Samp: ChunkDownsampler<N, T, Bldr::Chunk, Bldr::Chunk>,
+        Samp: ChunkDownsampler<N, T, Ch, Ch>,
     {
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
         if let Some(src_chunk) = self.pop_chunk(src_chunk_key) {
@@ -52,7 +52,7 @@ where
         src_chunk: &Src,
         dst_lod: u8,
     ) where
-        Samp: ChunkDownsampler<N, T, Src, Bldr::Chunk>,
+        Samp: ChunkDownsampler<N, T, Src, Ch>,
     {
         assert!(dst_lod > src_chunk_key.lod);
 
@@ -84,12 +84,12 @@ where
     }
 }
 
-impl<T, Bldr, Store> ChunkMap3<T, Bldr, Store>
+impl<T, Ch, Bldr, Store> ChunkMap3<T, Bldr, Store>
 where
     T: Clone,
-    Bldr: ChunkMapBuilder<[i32; 3], T>,
-    Bldr::Chunk: FillExtent<[i32; 3], Item = T> + IndexedArray<[i32; 3]>,
-    Store: ChunkWriteStorage<[i32; 3], Bldr::Chunk>,
+    Ch: Chunk + FillExtent<[i32; 3], Item = T> + IndexedArray<[i32; 3]>,
+    Bldr: ChunkMapBuilder<[i32; 3], T, Chunk = Ch>,
+    Store: ChunkWriteStorage<[i32; 3], Chunk = Ch>,
 {
     /// Downsamples all chunks that both:
     ///   1. overlap `extent`
@@ -102,7 +102,7 @@ where
         sampler: &Samp,
         extent: &Extent3i,
     ) where
-        Samp: ChunkDownsampler<[i32; 3], T, Bldr::Chunk, Bldr::Chunk>,
+        Samp: ChunkDownsampler<[i32; 3], T, Ch, Ch>,
     {
         let chunk_shape = self.chunk_shape();
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
@@ -141,8 +141,8 @@ where
         extent: &Extent3i,
     ) where
         Lod0Ch: Borrow<Lod0ChBorrow>,
-        Samp: ChunkDownsampler<[i32; 3], T, Bldr::Chunk, Bldr::Chunk>
-            + ChunkDownsampler<[i32; 3], T, Lod0ChBorrow, Bldr::Chunk>,
+        Samp:
+            ChunkDownsampler<[i32; 3], T, Ch, Ch> + ChunkDownsampler<[i32; 3], T, Lod0ChBorrow, Ch>,
     {
         let chunk_shape = self.chunk_shape();
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);

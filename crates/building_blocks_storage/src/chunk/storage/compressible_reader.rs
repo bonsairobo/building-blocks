@@ -22,11 +22,13 @@ where
     pub local_cache: &'a LocalChunkCache<N, Compr::Data>,
 }
 
-impl<'a, N, Compr> ChunkReadStorage<N, Compr::Data> for CompressibleChunkStorageReader<'a, N, Compr>
+impl<'a, N, Compr> ChunkReadStorage<N> for CompressibleChunkStorageReader<'a, N, Compr>
 where
     ChunkKey<N>: Clone + Eq + Hash,
     Compr: Compression,
 {
+    type Chunk = Compr::Data;
+
     #[inline]
     fn get(&self, key: ChunkKey<N>) -> Option<&Compr::Data> {
         let Self {

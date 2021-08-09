@@ -33,14 +33,14 @@ impl<Delegate> ChunkMapLodView<Delegate> {
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<'a, Delegate, N, T, Bldr, Store> Get<PointN<N>> for ChunkMapLodView<Delegate>
+impl<'a, Delegate, N, T, Ch, Bldr, Store> Get<PointN<N>> for ChunkMapLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     T: Clone,
-    Bldr: ChunkMapBuilder<N, T>,
-    <Bldr::Chunk as Chunk>::Array: GetUnchecked<PointN<N>, Item = T>,
-    Store: ChunkReadStorage<N, Bldr::Chunk>,
+    Ch: Chunk,
+    Ch::Array: GetUnchecked<PointN<N>, Item = T>,
+    Store: ChunkReadStorage<N, Chunk = Ch>,
 {
     type Item = T;
 
@@ -50,13 +50,15 @@ where
     }
 }
 
-impl<'a, Delegate, N, T: 'a, Bldr, Store, Ref> GetRef<'a, PointN<N>> for ChunkMapLodView<Delegate>
+impl<'a, Delegate, N, T: 'a, Ch: 'a, Bldr: 'a, Store: 'a, Ref> GetRef<'a, PointN<N>>
+    for ChunkMapLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
-    Bldr: 'a + ChunkMapBuilder<N, T>,
-    <Bldr::Chunk as Chunk>::Array: GetRefUnchecked<'a, PointN<N>, Item = Ref>,
-    Store: 'a + ChunkReadStorage<N, Bldr::Chunk>,
+    T: Clone,
+    Ch: Chunk,
+    Ch::Array: GetRefUnchecked<'a, PointN<N>, Item = Ref>,
+    Store: ChunkReadStorage<N, Chunk = Ch>,
     Ref: MultiRef<'a, Data = T>,
 {
     type Item = Ref;
@@ -67,13 +69,15 @@ where
     }
 }
 
-impl<'a, Delegate, N, T: 'a, Bldr, Store, Mut> GetMut<'a, PointN<N>> for ChunkMapLodView<Delegate>
+impl<'a, Delegate, N, T: 'a, Ch: 'a, Bldr: 'a, Store: 'a, Mut> GetMut<'a, PointN<N>>
+    for ChunkMapLodView<Delegate>
 where
     Delegate: DerefMut<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
-    Bldr: 'a + ChunkMapBuilder<N, T>,
-    <Bldr::Chunk as Chunk>::Array: GetMutUnchecked<'a, PointN<N>, Item = Mut>,
-    Store: 'a + ChunkWriteStorage<N, Bldr::Chunk>,
+    Ch: Chunk,
+    Ch::Array: GetMutUnchecked<'a, PointN<N>, Item = Mut>,
+    Bldr: ChunkMapBuilder<N, T, Chunk = Ch>,
+    Store: ChunkWriteStorage<N, Chunk = Ch>,
 {
     type Item = Mut;
 
@@ -90,14 +94,14 @@ where
 // ██║     ╚██████╔╝██║  ██║    ███████╗██║  ██║╚██████╗██║  ██║
 // ╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
-impl<Delegate, N, T, Bldr, Store> ForEach<N, PointN<N>> for ChunkMapLodView<Delegate>
+impl<Delegate, N, T, Ch, Bldr, Store> ForEach<N, PointN<N>> for ChunkMapLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
-    Bldr: ChunkMapBuilder<N, T>,
-    <Bldr::Chunk as Chunk>::Array: ForEach<N, PointN<N>, Item = T>,
     T: Clone,
-    Store: ChunkReadStorage<N, Bldr::Chunk>,
+    Ch: Chunk,
+    Ch::Array: ForEach<N, PointN<N>, Item = T>,
+    Store: ChunkReadStorage<N, Chunk = Ch>,
 {
     type Item = T;
 
@@ -115,13 +119,15 @@ where
     }
 }
 
-impl<Delegate, N, T, Bldr, Store, MutPtr> ForEachMutPtr<N, PointN<N>> for ChunkMapLodView<Delegate>
+impl<Delegate, N, T, Ch, Bldr, Store, MutPtr> ForEachMutPtr<N, PointN<N>>
+    for ChunkMapLodView<Delegate>
 where
     Delegate: DerefMut<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
-    Bldr: ChunkMapBuilder<N, T>,
-    <Bldr::Chunk as Chunk>::Array: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
-    Store: ChunkWriteStorage<N, Bldr::Chunk>,
+    Ch: Chunk,
+    Ch::Array: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
+    Bldr: ChunkMapBuilder<N, T, Chunk = Ch>,
+    Store: ChunkWriteStorage<N, Chunk = Ch>,
 {
     type Item = MutPtr;
 
@@ -177,16 +183,17 @@ where
 // ╚██████╗╚██████╔╝██║        ██║
 //  ╚═════╝ ╚═════╝ ╚═╝        ╚═╝
 
-impl<'a, Delegate, N, T, Bldr, Store> ReadExtent<'a, N> for ChunkMapLodView<Delegate>
+impl<'a, Delegate, N, T: 'a, Ch: 'a, Bldr: 'a, Store: 'a> ReadExtent<'a, N>
+    for ChunkMapLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
-    Bldr: 'a + ChunkMapBuilder<N, T>,
-    T: 'a + Clone,
-    Store: 'a + ChunkReadStorage<N, Bldr::Chunk>,
+    T: Clone,
+    Ch: Chunk,
+    Store: ChunkReadStorage<N, Chunk = Ch>,
 {
-    type Src = ChunkCopySrc<N, T, &'a Bldr::Chunk>;
-    type SrcIter = ChunkCopySrcIter<N, T, &'a Bldr::Chunk>;
+    type Src = ChunkCopySrc<N, T, &'a Ch>;
+    type SrcIter = ChunkCopySrcIter<N, T, &'a Ch>;
 
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
         let chunk_iters = self
@@ -203,7 +210,7 @@ where
                         .get_chunk(ChunkKey::new(self.lod, chunk_min))
                         .map(|chunk| Either::Left(ArrayCopySrc(chunk)))
                         .unwrap_or_else(|| {
-                            Either::Right(AmbientExtent::new(self.delegate.builder.ambient_value()))
+                            Either::Right(AmbientExtent::new(self.delegate.ambient_value.clone()))
                         }),
                 )
             })
@@ -214,13 +221,14 @@ where
 }
 
 // If `Array` supports writing from type Src, then so does ChunkMap.
-impl<Delegate, N, T, Bldr, Store, Src> WriteExtent<N, Src> for ChunkMapLodView<Delegate>
+impl<Delegate, N, T, Ch, Bldr, Store, Src> WriteExtent<N, Src> for ChunkMapLodView<Delegate>
 where
     Delegate: DerefMut<Target = ChunkMap<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
-    Bldr: ChunkMapBuilder<N, T>,
-    <Bldr::Chunk as Chunk>::Array: WriteExtent<N, Src>,
-    Store: ChunkWriteStorage<N, Bldr::Chunk>,
+    Ch: Chunk,
+    Ch::Array: WriteExtent<N, Src>,
+    Bldr: ChunkMapBuilder<N, T, Chunk = Ch>,
+    Store: ChunkWriteStorage<N, Chunk = Ch>,
     Src: Clone,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src) {

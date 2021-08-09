@@ -190,11 +190,13 @@ where
     }
 }
 
-impl<N, Compr> ChunkWriteStorage<N, Compr::Data> for CompressibleChunkStorage<N, Compr>
+impl<N, Compr> ChunkWriteStorage<N> for CompressibleChunkStorage<N, Compr>
 where
     ChunkKey<N>: Clone + Eq + Hash,
     Compr: Compression,
 {
+    type Chunk = Compr::Data;
+
     #[inline]
     fn get_mut(&mut self, key: ChunkKey<N>) -> Option<&mut Compr::Data> {
         let Self {
@@ -281,17 +283,17 @@ where
     }
 }
 
-impl<N, T, Bldr, Compr> CompressibleChunkMap<N, T, Bldr, Compr>
+impl<N, T, Ch, Bldr, Compr> CompressibleChunkMap<N, T, Bldr, Compr>
 where
     ChunkKey<N>: Clone + Eq + Hash,
     PointN<N>: IntegerPoint<N>,
-    Bldr: ChunkMapBuilder<N, T> + Clone,
-    Compr: Compression<Data = Bldr::Chunk>,
+    Bldr: ChunkMapBuilder<N, T, Chunk = Ch> + Clone,
+    Compr: Compression<Data = Ch>,
 {
     /// Construct a reader for this map.
     pub fn reader<'a>(
         &'a self,
-        local_cache: &'a LocalChunkCache<N, Bldr::Chunk>,
+        local_cache: &'a LocalChunkCache<N, Ch>,
     ) -> CompressibleChunkMapReader<'a, N, T, Bldr, Compr> {
         self.builder()
             .clone()

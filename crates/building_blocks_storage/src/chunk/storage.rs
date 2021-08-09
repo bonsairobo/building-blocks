@@ -36,35 +36,39 @@ impl<N> ChunkKey<N> {
 
 /// Methods for reading chunks from storage.
 #[auto_impl(&, &mut)]
-pub trait ChunkReadStorage<N, Ch> {
+pub trait ChunkReadStorage<N> {
+    type Chunk;
+
     /// Borrow the chunk at `key`.
-    fn get(&self, key: ChunkKey<N>) -> Option<&Ch>;
+    fn get(&self, key: ChunkKey<N>) -> Option<&Self::Chunk>;
 }
 
 /// Methods for writing chunks from storage.
 #[auto_impl(&mut)]
-pub trait ChunkWriteStorage<N, Ch> {
+pub trait ChunkWriteStorage<N> {
+    type Chunk;
+
     /// Mutably borrow the chunk at `key`.
-    fn get_mut(&mut self, key: ChunkKey<N>) -> Option<&mut Ch>;
+    fn get_mut(&mut self, key: ChunkKey<N>) -> Option<&mut Self::Chunk>;
 
     /// Mutably borrow the chunk at `key`. If it doesn't exist, insert the return value of `create_chunk`.
     fn get_mut_or_insert_with(
         &mut self,
         key: ChunkKey<N>,
-        create_chunk: impl FnOnce() -> Ch,
-    ) -> &mut Ch;
+        create_chunk: impl FnOnce() -> Self::Chunk,
+    ) -> &mut Self::Chunk;
 
     /// Replace the chunk at `key` with `chunk`, returning the old value.
-    fn replace(&mut self, key: ChunkKey<N>, chunk: Ch) -> Option<Ch>;
+    fn replace(&mut self, key: ChunkKey<N>, chunk: Self::Chunk) -> Option<Self::Chunk>;
 
     /// Overwrite the chunk at `key` with `chunk`. Drops the previous value.
-    fn write(&mut self, key: ChunkKey<N>, chunk: Ch);
+    fn write(&mut self, key: ChunkKey<N>, chunk: Self::Chunk);
 
     /// Removes and drops the chunk at `key`.
     fn delete(&mut self, key: ChunkKey<N>);
 
     /// Removes and returns the chunk at `key`.
-    fn pop(&mut self, key: ChunkKey<N>) -> Option<Ch>;
+    fn pop(&mut self, key: ChunkKey<N>) -> Option<Self::Chunk>;
 }
 
 #[auto_impl(&, &mut)]

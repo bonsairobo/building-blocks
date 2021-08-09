@@ -1,8 +1,8 @@
 use crate::{
     array::FillChannels,
     dev_prelude::{
-        Array, Channel, Chunk, ChunkHashMap, ChunkKey, ChunkMap, ChunkReadStorage,
-        ChunkWriteStorage, SmallKeyHashMap,
+        Array, Channel, ChunkHashMap, ChunkKey, ChunkMap, ChunkReadStorage, ChunkWriteStorage,
+        SmallKeyHashMap,
     },
 };
 
@@ -12,7 +12,7 @@ use core::hash::Hash;
 
 /// An object that knows how to construct chunks for a `ChunkMap`.
 pub trait ChunkMapBuilder<N, T>: Sized {
-    type Chunk: Chunk;
+    type Chunk;
 
     fn chunk_shape(&self) -> PointN<N>;
 
@@ -25,7 +25,7 @@ pub trait ChunkMapBuilder<N, T>: Sized {
     fn build_with_rw_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Self, Store>
     where
         PointN<N>: IntegerPoint<N>,
-        Store: ChunkReadStorage<N, Self::Chunk> + ChunkWriteStorage<N, Self::Chunk>,
+        Store: ChunkReadStorage<N, Chunk = Self::Chunk> + ChunkWriteStorage<N, Chunk = Self::Chunk>,
     {
         ChunkMap::new(self, storage)
     }
@@ -34,7 +34,7 @@ pub trait ChunkMapBuilder<N, T>: Sized {
     fn build_with_read_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Self, Store>
     where
         PointN<N>: IntegerPoint<N>,
-        Store: ChunkReadStorage<N, Self::Chunk>,
+        Store: ChunkReadStorage<N, Chunk = Self::Chunk>,
     {
         ChunkMap::new(self, storage)
     }
@@ -43,7 +43,7 @@ pub trait ChunkMapBuilder<N, T>: Sized {
     fn build_with_write_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Self, Store>
     where
         PointN<N>: IntegerPoint<N>,
-        Store: ChunkWriteStorage<N, Self::Chunk>,
+        Store: ChunkWriteStorage<N, Chunk = Self::Chunk>,
     {
         ChunkMap::new(self, storage)
     }

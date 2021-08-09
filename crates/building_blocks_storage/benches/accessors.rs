@@ -225,7 +225,7 @@ fn set_up_array(size: i32) -> (Array3x1<i32>, Extent3i) {
 
 fn set_up_chunk_map<Store>(storage: Store, size: i32) -> (ChunkMap3x1<i32, Store>, Extent3i)
 where
-    Store: ChunkWriteStorage<[i32; 3], Array3x1<i32>>,
+    Store: ChunkWriteStorage<[i32; 3], Chunk = Array3x1<i32>>,
 {
     let mut map = BUILDER.build_with_write_storage(storage);
     let iter_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
@@ -240,7 +240,7 @@ fn set_up_sparse_chunk_map<Store>(
     sparsity: i32,
 ) -> (ChunkMap3x1<i32, Store>, Extent3i)
 where
-    Store: ChunkWriteStorage<[i32; 3], Array3x1<i32>>,
+    Store: ChunkWriteStorage<[i32; 3], Chunk = Array3x1<i32>>,
 {
     let mut map = BUILDER.build_with_write_storage(storage);
     let chunk_key_extent =

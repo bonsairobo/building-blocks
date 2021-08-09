@@ -40,17 +40,20 @@ fn db_write_chunks(c: &mut Criterion) {
                             FastArrayCompressionNx1::from_bytes_compression(Lz4 { level: 10 }),
                         );
 
-                        (map, chunk_db)
-                    },
-                    |(map, chunk_db)| {
+                        let mut batch = chunk_db.start_delta_batch();
                         futures::executor::block_on(
-                            chunk_db.update(
+                            batch.add_deltas(
                                 map.take_storage()
                                     .into_iter()
                                     .map(|(k, v)| Delta::Insert(k, v)),
                             ),
-                        )
-                        .unwrap();
+                        );
+
+                        (chunk_db, batch.build())
+                    },
+                    |(chunk_db, batch)| {
+                        chunk_db.apply_deltas(batch).unwrap();
+                        futures::executor::block_on(chunk_db.flush()).unwrap();
                     },
                 );
             },

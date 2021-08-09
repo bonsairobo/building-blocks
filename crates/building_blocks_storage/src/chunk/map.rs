@@ -178,22 +178,22 @@ impl<N, Chan> Chunk for Array<N, Chan> {
     }
 }
 
-/// A lattice map made up of same-shaped `Array` chunks. For each level of detail, it takes a value at every possible `PointN`,
+/// A lattice map made up of same-shaped [Array] chunks. For each level of detail, it takes a value at every possible [PointN],
 /// because accesses made outside of the stored chunks will return some ambient value specified on creation.
 ///
-/// `ChunkMap` is generic over the type used to actually store the `Chunk`s. You can use any storage that implements
-/// `ChunkReadStorage` or `ChunkWriteStorage`. Being a lattice map, `ChunkMapLodView` will implement various access traits,
+/// [ChunkMap] is generic over the type used to actually store the [Chunk]s. You can use any storage that implements
+/// [ChunkReadStorage] or [ChunkWriteStorage]. Being a lattice map, [ChunkMapLodView] will implement various access traits,
 /// depending on the capabilities of the chunk storage.
 ///
-/// If the chunk storage implements `ChunkReadStorage`, then `ChunkMapLodView` will implement:
-/// - `Get`
-/// - `ForEach`
-/// - `ReadExtent`
+/// If the chunk storage implements [ChunkReadStorage], then [ChunkMapLodView] will implement:
+/// - [Get](crate::access_traits::Get)
+/// - [ForEach](crate::access_traits::ForEach)
+/// - [ReadExtent](crate::access_traits::ReadExtent)
 ///
-/// If the chunk storage implements `ChunkWriteStorage`, then `ChunkMapLodView` will implement:
-/// - `GetMut`
-/// - `ForEachMut`
-/// - `WriteExtent`
+/// If the chunk storage implements [ChunkWriteStorage], then [ChunkMapLodView] will implement:
+/// - [GetMut](crate::access_traits::GetMut)
+/// - [ForEachMut](crate::access_traits::ForEachMut)
+/// - [WriteExtent](crate::access_traits::WriteExtent)
 pub struct ChunkMap<N, T, Bldr, Store> {
     /// Translates from lattice coordinates to chunk key space.
     pub indexer: ChunkIndexer<N>,

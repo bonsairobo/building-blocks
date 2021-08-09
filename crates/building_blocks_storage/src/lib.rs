@@ -105,15 +105,11 @@ pub mod dev_prelude {
 }
 
 #[cfg(feature = "dot_vox")]
-mod dot_vox_conversions;
-#[cfg(feature = "dot_vox")]
-pub use dot_vox_conversions::*;
+pub mod dot_vox_conversions;
 #[cfg(feature = "image")]
-mod image_conversions;
+pub mod image_conversions;
 #[cfg(feature = "vox-format")]
 pub mod vox_format;
-#[cfg(feature = "image")]
-pub use image_conversions::*;
 
 #[cfg(test)]
 mod test_utilities;

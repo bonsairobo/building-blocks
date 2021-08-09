@@ -160,7 +160,7 @@ where
     }
 }
 
-/// Short-hand to read a single model from a reader into an [`crate::Array3x1`].
+/// Short-hand to read a single model from a reader into an [`Array3x1`](`crate::array::Array3x1`).
 pub fn from_reader<C, R: Read + Seek>(
     reader: R,
     model_index: usize,
@@ -173,7 +173,7 @@ where
     Ok(buffer.model)
 }
 
-/// Short-hand to read a single model from a byte slice into an [`crate::Array3x1`].
+/// Short-hand to read a single model from a byte slice into an [`Array3x1`](crate::array::Array3x1).
 pub fn from_slice<C>(slice: &[u8], model_index: usize) -> Result<Option<Array3x1<C>>, Error>
 where
     Array3x1<C>: VoxModelBuffer,
@@ -181,7 +181,7 @@ where
     from_reader(Cursor::new(slice), model_index)
 }
 
-/// Short-hand to read a single model from a file into an [`crate::Array3x1`].
+/// Short-hand to read a single model from a file into an [`Array3x1`](crate::array::Array3x1).
 ///
 /// This example loads a `Array3x1<ChannelIndex>` from a vox file:
 ///

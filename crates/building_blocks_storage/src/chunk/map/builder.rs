@@ -9,6 +9,7 @@ use crate::{
 use building_blocks_core::{point_traits::IntegerPoint, ExtentN, PointN};
 
 use core::hash::Hash;
+use serde::{Deserialize, Serialize};
 
 /// An object that knows how to construct chunks for a `ChunkMap`.
 pub trait ChunkMapBuilder<N, T>: Sized {
@@ -59,7 +60,7 @@ pub trait ChunkMapBuilder<N, T>: Sized {
 }
 
 /// A `ChunkMapBuilder` for `Array` chunks.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Deserialize, Serialize)]
 pub struct ChunkMapBuilderNxM<N, T, Chan> {
     pub chunk_shape: PointN<N>,
     pub ambient_value: T,

@@ -89,6 +89,8 @@ where
 }
 
 /// A set of [Delta]s to be atomically applied to a [ChunkDb](super::ChunkDb) or [VersionedChunkDb](super::VersionedChunkDb).
+///
+/// Can be created with a [DeltaBatchBuilder].
 #[derive(Default)]
 pub struct DeltaBatch {
     pub(crate) deltas: Vec<Delta<IVec, IVec>>,

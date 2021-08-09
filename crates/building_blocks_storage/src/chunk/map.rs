@@ -30,12 +30,16 @@
 //! `ChunkMap<N, T, Bldr, Store>` depends on a backing chunk storage `Store`, which can implement some of `ChunkReadStorage` or
 //! `ChunkWriteStorage`. A storage can be as simple as a `HashMap`, which provides good performance for both iteration and
 //! random access. It could also be something more memory efficient like `FastCompressibleChunkStorage` or
-//! `CompressibleChunkStorageReader`, which perform nearly as well but involve some extra management of the cache.
+//! `CompressibleChunkStorageReader`, which perform nearly as well but involve some extra management of a cache.
 //!
 //! # Serialization
 //!
-//! In order to efficiently serialize a `ChunkMap`, you can first use `SerializableChunks::from_iter` to create a compact
-//! serializable representation. It will compress the bincode representation of the chunks.
+//! While `ChunkMap` derives `Deserialize` and `Serialize`, it will only be serializable if its constituent types are
+//! serializable. You should expect a `ChunkHashMap` with simple `Array` chunks to be serializable, but a `CompressibleChunkMap`
+//! is *not*.
+//!
+//! However using `serde` for serializing large dynamic chunk maps is discouraged. Instead there is a `ChunkDb` backed by the
+//! `sled` embedded database which supports transactions and compression.
 //!
 //! # Example `ChunkHashMap` Usage
 //! ```
@@ -150,6 +154,7 @@ use crate::{
 use building_blocks_core::{bounding_extent, point_traits::IntegerPoint, ExtentN, PointN};
 
 use either::Either;
+use serde::{Deserialize, Serialize};
 
 /// One piece of a chunked lattice map.
 pub trait Chunk {
@@ -194,6 +199,7 @@ impl<N, Chan> Chunk for Array<N, Chan> {
 /// - [GetMut](crate::access_traits::GetMut)
 /// - [ForEachMut](crate::access_traits::ForEachMut)
 /// - [WriteExtent](crate::access_traits::WriteExtent)
+#[derive(Deserialize, Serialize)]
 pub struct ChunkMap<N, T, Bldr, Store> {
     /// Translates from lattice coordinates to chunk key space.
     pub indexer: ChunkIndexer<N>,

@@ -1,4 +1,4 @@
-use crate::{prelude::*, VoxColor};
+use crate::{dot_vox_conversions::VoxColor, prelude::*};
 
 pub use dot_vox;
 

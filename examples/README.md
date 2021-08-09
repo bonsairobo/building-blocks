@@ -23,7 +23,11 @@ A showcase of all the meshing algorithms, fetching samples from a `ChunkMap`.
 cargo run --example mesh_showcase
 ```
 
-Use the left and right arrow keys to select one of the example shapes to be meshed. Use the W key to toggle wireframe mode and the F key to toggle the flat shading mode.
+Controls:
+
+- Left and right arrow keys cycle through shapes
+- W key to toggle wireframes
+- F key to toggle flat shading
 
 ![Mesh Showcase](/examples/screenshots/mesh_showcase.gif)
 
@@ -55,10 +59,17 @@ A larger scale example of terrain generated with 3D fractional brownian motion
 downsampled. Chunk meshes are dynamically generated as the camera moves.
 
 You can run with either a blocky map or a smooth map.
+
 ```sh
 cargo run --example lod_terrain blocky
 cargo run --example lod_terrain smooth
 ```
+
+Controls:
+
+- WASD to move the camera in XZ plane
+- Shift and spacebar to move the camera on Y axis
+- Mouse to rotate the camera
 
 ![LOD Terrain](/examples/screenshots/lod_terrain.png)
 

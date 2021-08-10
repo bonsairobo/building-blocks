@@ -3,6 +3,7 @@ use crate::dev_prelude::{ChunkKey, Compression, DatabaseKey};
 use futures::future::join_all;
 use sled::IVec;
 
+/// A wrapper around key-value pairs read from a `ChunkDb`.
 pub struct ReadResult<Compr> {
     pub(crate) key_value_pairs: Vec<(IVec, IVec)>,
     marker: std::marker::PhantomData<Compr>,
@@ -22,14 +23,29 @@ impl<Compr> ReadResult<Compr> {
         }
     }
 
-    pub fn append(&mut self, mut result: Self) {
+    pub(crate) fn append(&mut self, mut result: Self) {
         self.key_value_pairs.append(&mut result.key_value_pairs)
     }
 
-    pub fn take_raw(self) -> Vec<(IVec, IVec)> {
+    /// Take the key-value pairs where keys and values are left in a raw byte format.
+    pub fn take_with_raw_key_values<N>(self) -> Vec<(IVec, IVec)> {
         self.key_value_pairs
     }
 
+    /// Take the key-value pairs where values are left in a raw byte format.
+    pub fn take_with_raw_values<N>(self) -> impl Iterator<Item = (ChunkKey<N>, IVec)>
+    where
+        ChunkKey<N>: DatabaseKey<N>,
+    {
+        self.key_value_pairs.into_iter().map(|(k, v)| {
+            (
+                ChunkKey::from_ord_key(ChunkKey::ord_key_from_be_bytes(&k)),
+                v,
+            )
+        })
+    }
+
+    /// Concurrently decompress all values, calling `chunk_rx` on each key-value pair.
     pub async fn decompress<N, F>(self, mut chunk_rx: F)
     where
         ChunkKey<N>: DatabaseKey<N>,

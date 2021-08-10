@@ -5,8 +5,8 @@ use sled::IVec;
 use std::borrow::Borrow;
 
 /// Creates a [DeltaBatch]. This handles sorting the deltas in Morton order and compressing the chunk data.
-pub struct DeltaBatchBuilder<N, K, Compr> {
-    compressed_deltas: Vec<Delta<K, IVec>>,
+pub struct DeltaBatchBuilder<N, K, Compr = ()> {
+    raw_deltas: Vec<Delta<K, IVec>>,
     compression: Compr,
     marker: std::marker::PhantomData<N>,
 }
@@ -14,7 +14,7 @@ pub struct DeltaBatchBuilder<N, K, Compr> {
 impl<N, K, Compr> DeltaBatchBuilder<N, K, Compr> {
     pub fn new(compression: Compr) -> Self {
         Self {
-            compressed_deltas: Default::default(),
+            raw_deltas: Default::default(),
             compression,
             marker: Default::default(),
         }
@@ -23,28 +23,26 @@ impl<N, K, Compr> DeltaBatchBuilder<N, K, Compr> {
 
 impl<N, K, Compr> DeltaBatchBuilder<N, K, Compr>
 where
-    Compr: Compression + Copy,
     ChunkKey<N>: DatabaseKey<N, OrdKey = K>,
 {
-    pub fn add_compressed_deltas(
-        &mut self,
-        deltas: impl Iterator<Item = Delta<ChunkKey<N>, IVec>>,
-    ) {
-        self.compressed_deltas
-            .extend(deltas.map(|delta| match delta {
-                Delta::Insert(k, v) => Delta::Insert(ChunkKey::<N>::into_ord_key(k), v),
-                Delta::Remove(k) => Delta::Remove(ChunkKey::<N>::into_ord_key(k)),
-            }));
+    pub fn add_raw_deltas(&mut self, deltas: impl Iterator<Item = Delta<ChunkKey<N>, IVec>>) {
+        self.raw_deltas.extend(deltas.map(|delta| match delta {
+            Delta::Insert(k, v) => Delta::Insert(ChunkKey::<N>::into_ord_key(k), v),
+            Delta::Remove(k) => Delta::Remove(ChunkKey::<N>::into_ord_key(k)),
+        }));
     }
 
     /// Compresses `deltas` concurrently and adds them to the batch.
-    pub async fn add_deltas<Data>(&mut self, deltas: impl Iterator<Item = Delta<ChunkKey<N>, Data>>)
-    where
+    pub async fn add_and_compress_deltas<Data>(
+        &mut self,
+        deltas: impl Iterator<Item = Delta<ChunkKey<N>, Data>>,
+    ) where
+        Compr: Compression + Copy,
         Data: Borrow<Compr::Data>,
     {
         // Compress all of the chunks in parallel.
         let compression = self.compression.clone();
-        let mut compressed_deltas: Vec<_> = join_all(deltas.map(|delta| async move {
+        let mut raw_deltas: Vec<_> = join_all(deltas.map(|delta| async move {
             match delta {
                 Delta::Insert(k, v) => Delta::Insert(
                     ChunkKey::<N>::into_ord_key(k),
@@ -56,7 +54,7 @@ where
             }
         }))
         .await;
-        self.compressed_deltas.append(&mut compressed_deltas);
+        self.raw_deltas.append(&mut raw_deltas);
     }
 
     /// Sorts the deltas by Morton key and converts them to `IVec` key-value pairs for `sled`.
@@ -65,10 +63,10 @@ where
         K: Copy + Ord,
     {
         // Sort them by the Ord key.
-        self.compressed_deltas.sort_by_key(|delta| *delta.key());
+        self.raw_deltas.sort_by_key(|delta| *delta.key());
 
         let deltas: Vec<_> = self
-            .compressed_deltas
+            .raw_deltas
             .into_iter()
             .map(|delta| match delta {
                 Delta::Insert(k, v) => Delta::Insert(

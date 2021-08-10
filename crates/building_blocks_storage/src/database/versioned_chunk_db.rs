@@ -4,7 +4,7 @@ pub use sled;
 
 use super::key::map_bound;
 
-use crate::prelude::{ChunkKey, Compression};
+use crate::prelude::ChunkKey;
 
 use building_blocks_core::{orthants_covering_extent, prelude::*};
 
@@ -65,7 +65,7 @@ impl<N, Compr> VersionedChunkDb<N, Compr>
 where
     PointN<N>: IntegerPoint<N>,
     ChunkKey<N>: DatabaseKey<N>,
-    Compr: Compression + Copy,
+    Compr: Copy,
 {
     pub fn current_version(&self) -> u64 {
         self.current_version

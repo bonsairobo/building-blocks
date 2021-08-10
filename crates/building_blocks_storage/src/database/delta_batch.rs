@@ -1,7 +1,4 @@
-use crate::{
-    database::{DatabaseKey, Delta},
-    dev_prelude::{ChunkKey, Compression},
-};
+use crate::dev_prelude::{ChunkKey, Compression, DatabaseKey, Delta};
 
 use futures::future::join_all;
 use sled::IVec;

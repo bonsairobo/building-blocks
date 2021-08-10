@@ -2,7 +2,7 @@ use crate::prelude::{ChunkKey, ChunkKey2, ChunkKey3};
 
 use building_blocks_core::prelude::*;
 
-use core::ops::RangeInclusive;
+use core::ops::{Bound, RangeInclusive};
 
 pub trait DatabaseKey<N> {
     type OrdKey: Copy + Ord;
@@ -14,14 +14,13 @@ pub trait DatabaseKey<N> {
     fn ord_key_to_be_bytes(key: Self::OrdKey) -> Self::KeyBytes;
     fn ord_key_from_be_bytes(bytes: &[u8]) -> Self::OrdKey;
 
-    fn orthant_range(lod: u8, orthant: Orthant<N>) -> RangeInclusive<Self::KeyBytes>;
+    fn orthant_range(lod: u8, orthant: Orthant<N>) -> RangeInclusive<Self::OrdKey>;
 
     fn min_key(lod: u8) -> Self::OrdKey;
     fn max_key(lod: u8) -> Self::OrdKey;
 
-    fn full_range(lod: u8) -> RangeInclusive<Self::KeyBytes> {
-        Self::ord_key_to_be_bytes(Self::min_key(lod))
-            ..=Self::ord_key_to_be_bytes(Self::max_key(lod))
+    fn full_range(lod: u8) -> RangeInclusive<Self::OrdKey> {
+        Self::min_key(lod)..=Self::max_key(lod)
     }
 }
 
@@ -46,7 +45,6 @@ impl DatabaseKey<[i32; 2]> for ChunkKey2 {
         let mut bytes = [0; 9];
         bytes[0] = lod;
         bytes[1..].copy_from_slice(&morton.0.to_be_bytes());
-
         bytes
     }
 
@@ -56,19 +54,15 @@ impl DatabaseKey<[i32; 2]> for ChunkKey2 {
         let mut morton_bytes = [0; 8];
         morton_bytes.copy_from_slice(&bytes[1..]);
         let morton_int = u64::from_be_bytes(morton_bytes);
-
         (lod, Morton2(morton_int))
     }
 
     #[inline]
-    fn orthant_range(lod: u8, quad: Quadrant) -> RangeInclusive<Self::KeyBytes> {
+    fn orthant_range(lod: u8, quad: Quadrant) -> RangeInclusive<Self::OrdKey> {
         let extent = Extent2i::from(quad);
         let min_morton = Morton2::from(extent.minimum);
         let max_morton = Morton2::from(extent.max());
-        let min_bytes = Self::ord_key_to_be_bytes((lod, min_morton));
-        let max_bytes = Self::ord_key_to_be_bytes((lod, max_morton));
-
-        min_bytes..=max_bytes
+        (lod, min_morton)..=(lod, max_morton)
     }
 
     #[inline]
@@ -104,7 +98,6 @@ impl DatabaseKey<[i32; 3]> for ChunkKey3 {
         let mut bytes = [0; 13];
         bytes[0] = lod;
         bytes[1..].copy_from_slice(&morton.0.to_be_bytes()[4..]);
-
         bytes
     }
 
@@ -115,19 +108,15 @@ impl DatabaseKey<[i32; 3]> for ChunkKey3 {
         let mut morton_bytes = [0; 16];
         morton_bytes[4..16].copy_from_slice(&bytes[1..]);
         let morton_int = u128::from_be_bytes(morton_bytes);
-
         (lod, Morton3(morton_int))
     }
 
     #[inline]
-    fn orthant_range(lod: u8, octant: Octant) -> RangeInclusive<Self::KeyBytes> {
+    fn orthant_range(lod: u8, octant: Octant) -> RangeInclusive<Self::OrdKey> {
         let extent = Extent3i::from(octant);
         let min_morton = Morton3::from(extent.minimum);
         let max_morton = Morton3::from(extent.max());
-        let min_bytes = Self::ord_key_to_be_bytes((lod, min_morton));
-        let max_bytes = Self::ord_key_to_be_bytes((lod, max_morton));
-
-        min_bytes..=max_bytes
+        (lod, min_morton)..=(lod, max_morton)
     }
 
     #[inline]
@@ -138,5 +127,14 @@ impl DatabaseKey<[i32; 3]> for ChunkKey3 {
     #[inline]
     fn max_key(lod: u8) -> Self::OrdKey {
         (lod, Morton3::from(Point3i::MAX))
+    }
+}
+
+// TODO: replace this when https://github.com/rust-lang/rust/issues/86026 is stabilized
+pub(crate) fn map_bound<X, Y>(b: Bound<&X>, f: impl FnOnce(&X) -> Y) -> Bound<Y> {
+    match b {
+        Bound::Excluded(x) => Bound::Excluded(f(x)),
+        Bound::Included(x) => Bound::Included(f(x)),
+        Bound::Unbounded => Bound::Unbounded,
     }
 }

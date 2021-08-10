@@ -80,7 +80,9 @@ pub mod prelude {
     #[cfg(feature = "snap")]
     pub use super::compression::Snappy;
     #[cfg(feature = "sled")]
-    pub use super::database::{ChunkDb, ChunkDb2, ChunkDb3};
+    pub use super::database::{
+        ChunkDb, ChunkDb2, ChunkDb3, Delta, DeltaBatch, DeltaBatchBuilder, ReadResult,
+    };
     #[cfg(feature = "sled-snapshots")]
     pub use super::database::{VersionedChunkDb, VersionedChunkDb2, VersionedChunkDb3};
 }
@@ -102,6 +104,9 @@ pub mod dev_prelude {
         },
         SmallKeyHashMap, SmallKeyHashSet,
     };
+
+    #[cfg(feature = "sled")]
+    pub use super::database::DatabaseKey;
 }
 
 #[cfg(feature = "dot_vox")]

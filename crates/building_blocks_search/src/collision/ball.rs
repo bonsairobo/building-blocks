@@ -32,13 +32,13 @@ pub fn cast_ball_at_voxels<K>(
 where
     K: Eq + Hash,
 {
-    let mut visitor = VoxelSBallCast::new(radius, ray, max_toi, predicate);
+    let mut visitor = VoxelBallCast::new(radius, ray, max_toi, predicate);
     octree.visit(&mut visitor);
 
     visitor.earliest_impact
 }
 
-struct VoxelSBallCast<F> {
+struct VoxelBallCast<F> {
     earliest_impact: Option<VoxelImpact<TOI<f32>>>,
     ball: Ball<f32>,
     ball_start_isom: Isometry3<f32>,
@@ -48,7 +48,7 @@ struct VoxelSBallCast<F> {
     predicate: F,
 }
 
-impl<F> VoxelSBallCast<F> {
+impl<F> VoxelBallCast<F> {
     fn new(radius: f32, ray: Ray<f32>, max_toi: f32, predicate: F) -> Self {
         let ball = Ball::new(radius);
 
@@ -84,7 +84,7 @@ impl<F> VoxelSBallCast<F> {
     }
 }
 
-impl<F> OctreeDbvtVisitor for VoxelSBallCast<F>
+impl<F> OctreeDbvtVisitor for VoxelBallCast<F>
 where
     F: Fn(Point3i) -> bool,
 {

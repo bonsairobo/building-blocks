@@ -7,7 +7,7 @@ use std::convert::TryFrom;
 /// - the shape is a cube with edge length P
 ///
 /// Equivalently, this is the space covered by a single node of an octree centered at 0.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Orthant<N> {
     minimum: PointN<N>,
     edge_length: i32,

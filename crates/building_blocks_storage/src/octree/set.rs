@@ -72,7 +72,7 @@ pub struct OctreeSet {
     extent: Extent3i,
     power: u8,
     root_exists: bool,
-    // Save memory by using 2-byte OctreeNode codes as hash map keys instead of 64-bit node pointers. The total memory usage can
+    // Save memory by using 2-byte location codes as hash map keys instead of 64-bit node pointers. The total memory usage can
     // be approximated as 4 bytes per node, assuming the hashbrown table has 1 byte of overhead per entry.
     nodes: SmallKeyHashMap<LocationCode, ChildBitMask>,
 }
@@ -103,7 +103,7 @@ impl OctreeSet {
         assert!(extent.shape.dimensions_are_powers_of_2());
         assert!(extent.shape.is_cube());
         let power = extent.shape.x().trailing_zeros() as u8;
-        // Constrained by 16-bit OctreeNode code.
+        // Constrained by 16-bit location code.
         assert!(power > 0 && power <= 6);
 
         power
@@ -174,8 +174,8 @@ impl OctreeSet {
         A: IndexedArray<[i32; 3]> + GetUnchecked<Stride, Item = T>,
         T: Clone + IsEmpty,
     {
-        // Base case where the octant is a single voxel. The `OctreeNode` is invalid and unnecessary in this case; we avoid using
-        // it by returning early.
+        // Base case where the octant is a single voxel. The `code` is invalid and unnecessary in this case; we avoid using it
+        // by returning early.
         if edge_length == 1 {
             let exists = unsafe { !array.get_unchecked(minimum).is_empty() };
             return (exists, exists);
@@ -401,7 +401,7 @@ impl OctreeSet {
         octant: OctreeOctant,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
-        // Precondition: OctreeNode exists.
+        // Precondition: code exists.
 
         // Base case where the octant is a single leaf voxel.
         if octant.is_single_voxel() {
@@ -413,8 +413,8 @@ impl OctreeSet {
         let child_bitmask = if let Some(&child_bitmask) = self.nodes.get(&code) {
             child_bitmask
         } else {
-            // Since we know that OctreeNode exists, but it's not in the nodes map, this means that we can assume the entire
-            // octant is full. This is an implicit leaf node.
+            // Since we know that code exists, but it's not in the nodes map, this means that we can assume the entire octant is
+            // full. This is an implicit leaf node.
             return visitor.visit_octant(&OctreeNode::leaf(octant));
         };
 
@@ -451,7 +451,7 @@ impl OctreeSet {
         predicate: &impl Fn(&OctreeNode) -> bool,
         visitor: &mut impl OctreeVisitor,
     ) -> VisitStatus {
-        // Precondition: OctreeNode exists.
+        // Precondition: code exists.
 
         let mut handle_leaf = |octant: OctreeOctant| {
             let node = OctreeNode::leaf(octant);
@@ -473,7 +473,7 @@ impl OctreeSet {
         let child_bitmask = if let Some(&child_bitmask) = self.nodes.get(&code) {
             child_bitmask
         } else {
-            // Since we know that OctreeNode exists, but it's not in the nodes map, this means that we can assume the entire
+            // Since we know that code exists, but it's not in the nodes map, this means that we can assume the entire
             // octant is full. This is an implicit leaf node.
             return handle_leaf(octant);
         };
@@ -547,7 +547,7 @@ impl OctreeSet {
         let child_octant = parent.octant.child(child_index);
 
         if child_octant.is_single_voxel() {
-            // The child is a leaf, so we don't need to extend the OctreeNode or look for a child bitmask.
+            // The child is a leaf, so we don't need to extend the code or look for a child bitmask.
             return Some(OctreeNode {
                 code: LocationCode::LEAF,
                 octant: child_octant,
@@ -863,7 +863,7 @@ pub type ChildBitMask = u8;
 /// Just to be consistent, even though a leaf doesn't have child tree nodes, it is always "full".
 const FULL_CHILD_BIT_MASK: ChildBitMask = 0xFF;
 
-/// Uniquely identifies a `OctreeNode` in a given octree.
+/// Uniquely identifies a octant in a given octree.
 ///
 /// Supports an octree with at most 6 levels.
 /// ```text

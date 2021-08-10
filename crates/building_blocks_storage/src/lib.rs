@@ -82,6 +82,7 @@ pub mod prelude {
     #[cfg(feature = "sled")]
     pub use super::database::{
         ChunkDb, ChunkDb2, ChunkDb3, Delta, DeltaBatch, DeltaBatchBuilder, ReadResult,
+        ReadableChunkDb,
     };
     #[cfg(feature = "sled-snapshots")]
     pub use super::database::{VersionedChunkDb, VersionedChunkDb2, VersionedChunkDb3};

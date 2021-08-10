@@ -1,14 +1,9 @@
-use super::{DatabaseKey, Delta, DeltaBatch, DeltaBatchBuilder, ReadResult};
+use super::{DatabaseKey, Delta, DeltaBatch, DeltaBatchBuilder, ReadableChunkDb};
 
-pub use sled;
-
-use super::key::map_bound;
+use sled;
 
 use crate::prelude::ChunkKey;
 
-use building_blocks_core::{orthants_covering_extent, prelude::*};
-
-use core::ops::RangeBounds;
 use sled::{transaction::TransactionResult, Transactional, Tree};
 use sled_snapshots::{
     transactions::{create_child_snapshot, modify_current_leaf_snapshot, set_current_version},
@@ -61,18 +56,21 @@ impl<N, Compr> VersionedChunkDb<N, Compr> {
     }
 }
 
+impl<N, Compr> ReadableChunkDb for VersionedChunkDb<N, Compr> {
+    type Compr = Compr;
+
+    fn data_tree(&self) -> &sled::Tree {
+        &self.data_tree
+    }
+}
+
 impl<N, Compr> VersionedChunkDb<N, Compr>
 where
-    PointN<N>: IntegerPoint<N>,
     ChunkKey<N>: DatabaseKey<N>,
     Compr: Copy,
 {
     pub fn current_version(&self) -> u64 {
         self.current_version
-    }
-
-    pub fn data_tree(&self) -> &Tree {
-        &self.data_tree
     }
 
     pub fn versions(&self) -> &VersionForest {
@@ -145,49 +143,5 @@ where
         })?;
         self.current_version = new_version;
         Ok(new_version)
-    }
-
-    /// Same as `ChunkDb::read_chunks_in_orthant`. Reads from the current version.
-    pub fn read_chunks_in_orthant(
-        &self,
-        lod: u8,
-        orthant: Orthant<N>,
-    ) -> sled::Result<ReadResult<Compr>> {
-        let range = ChunkKey::<N>::orthant_range(lod, orthant);
-        self.read_morton_range(range)
-    }
-
-    /// Same as `ChunkDb::read_orthants_covering_extent`. Reads from the current version.
-    pub fn read_orthants_covering_extent(
-        &self,
-        lod: u8,
-        orthant_exponent: i32,
-        extent: ExtentN<N>,
-    ) -> sled::Result<ReadResult<Compr>> {
-        // PERF: more parallelism?
-        let mut result = ReadResult::default();
-        for orthant in orthants_covering_extent(extent, orthant_exponent) {
-            result.append(self.read_chunks_in_orthant(lod, orthant)?);
-        }
-        Ok(result)
-    }
-
-    /// Same as `ChunkDb::read_all_chunks`. Reads from the current version.
-    pub fn read_all_chunks(&self, lod: u8) -> sled::Result<ReadResult<Compr>> {
-        self.read_morton_range(ChunkKey::<N>::full_range(lod))
-    }
-
-    /// Same as `ChunkDb::read_morton_range`. Reads from the current version.
-    pub fn read_morton_range<R>(&self, range: R) -> sled::Result<ReadResult<Compr>>
-    where
-        R: RangeBounds<<ChunkKey<N> as DatabaseKey<N>>::OrdKey>,
-    {
-        let key_range_start = map_bound(range.start_bound(), |k| ChunkKey::ord_key_to_be_bytes(*k));
-        let key_range_end = map_bound(range.end_bound(), |k| ChunkKey::ord_key_to_be_bytes(*k));
-        let key_value_pairs = self
-            .data_tree
-            .range((key_range_start, key_range_end))
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(ReadResult::new(key_value_pairs))
     }
 }

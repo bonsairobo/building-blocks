@@ -2,6 +2,7 @@ mod chunk_db;
 mod delta_batch;
 mod key;
 mod read_result;
+mod readable;
 
 #[cfg(feature = "sled-snapshots")]
 mod versioned_chunk_db;
@@ -10,6 +11,7 @@ pub use chunk_db::*;
 pub use delta_batch::*;
 pub use key::*;
 pub use read_result::*;
+pub use readable::*;
 
 #[cfg(feature = "sled-snapshots")]
 pub use versioned_chunk_db::*;

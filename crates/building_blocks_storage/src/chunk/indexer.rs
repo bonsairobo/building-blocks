@@ -3,7 +3,7 @@ use building_blocks_core::prelude::*;
 use core::ops::{Div, Mul};
 use serde::{Deserialize, Serialize};
 
-/// Uses a bitmask to calculate the minimum of the chunk that contains a given point.
+/// Calculates chunk minimums.
 ///
 /// We use chunk minimums as keys for chunk storage.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -17,6 +17,7 @@ impl<N> ChunkIndexer<N>
 where
     PointN<N>: IntegerPoint<N>,
 {
+    #[inline]
     pub fn new(chunk_shape: PointN<N>) -> Self {
         assert!(chunk_shape.dimensions_are_powers_of_2());
 
@@ -28,26 +29,25 @@ where
     }
 
     /// Determines whether `min` is a valid chunk minimum. This means it must be a multiple of the chunk shape.
+    #[inline]
     pub fn chunk_min_is_valid(&self, min: PointN<N>) -> bool {
         self.chunk_shape.mul(min.div(self.chunk_shape)).eq(&min)
     }
 
     /// The constant shape of a chunk. The same for all chunks.
+    #[inline]
     pub fn chunk_shape(&self) -> PointN<N> {
         self.chunk_shape
     }
 
-    /// The mask used for calculating the minimum of a chunk that contains a given point.
-    pub fn chunk_shape_mask(&self) -> PointN<N> {
-        self.chunk_shape_mask
-    }
-
     /// Returns the minimum of the chunk that contains `point`.
+    #[inline]
     pub fn min_of_chunk_containing_point(&self, point: PointN<N>) -> PointN<N> {
-        self.chunk_shape_mask() & point
+        self.chunk_shape_mask & point
     }
 
     /// Returns an iterator over all chunk minimums for chunks that overlap the given extent.
+    #[inline]
     pub fn chunk_mins_for_extent(&self, extent: &ExtentN<N>) -> impl Iterator<Item = PointN<N>> {
         let range_min = extent.minimum >> self.chunk_shape_log2;
         let range_max = extent.max() >> self.chunk_shape_log2;
@@ -59,8 +59,21 @@ where
     }
 
     /// The extent spanned by the chunk at `min`.
+    #[inline]
     pub fn extent_for_chunk_with_min(&self, min: PointN<N>) -> ExtentN<N> {
         ExtentN::from_min_and_shape(min, self.chunk_shape)
+    }
+
+    /// Given a chunk at `chunk_min`, returns the minimum of the parent chunk.
+    #[inline]
+    pub fn parent_chunk_min(&self, chunk_min: PointN<N>) -> PointN<N> {
+        (chunk_min & (self.chunk_shape_mask << 1)) >> 1
+    }
+
+    /// Given a chunk at `chunk_min`, returns the minimum of the child chunk with `child_index`.
+    #[inline]
+    pub fn child_chunk_min(&self, chunk_min: PointN<N>, child_index: u8) -> PointN<N> {
+        (chunk_min << 1) + (PointN::corner_offset(child_index) << self.chunk_shape_log2)
     }
 }
 
@@ -104,5 +117,27 @@ mod tests {
         let p = Point3i::fill(-1);
         let min = indexer.min_of_chunk_containing_point(p);
         assert_eq!(min, Point3i::fill(-16));
+    }
+
+    #[test]
+    fn parent_chunk_min() {
+        let indexer = ChunkIndexer::new(Point3i::fill(4));
+        let lod0_p = Point3i::fill(15);
+        let lod0_min = indexer.min_of_chunk_containing_point(lod0_p);
+        assert_eq!(lod0_min, Point3i::fill(12));
+        let lod1_min = indexer.parent_chunk_min(lod0_min);
+        assert_eq!(lod1_min, Point3i::fill(4));
+        let lod2_min = indexer.parent_chunk_min(lod1_min);
+        assert_eq!(lod2_min, Point3i::fill(0));
+    }
+
+    #[test]
+    fn child_chunk_min() {
+        let indexer = ChunkIndexer::new(Point3i::fill(4));
+        let lod2_min = Point3i::fill(0);
+        let lod1_min = indexer.child_chunk_min(lod2_min, 0b111);
+        assert_eq!(lod1_min, Point3i::fill(4));
+        let lod0_min = indexer.child_chunk_min(lod1_min, 0b111);
+        assert_eq!(lod0_min, Point3i::fill(12));
     }
 }

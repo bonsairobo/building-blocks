@@ -441,8 +441,13 @@ macro_rules! impl_integer_div {
 }
 
 pub trait Neighborhoods: Sized {
+    const NUM_CORNERS: u8;
+
     /// All corners of an N-dimensional unit cube.
     fn corner_offsets() -> Vec<Self>;
+
+    /// Get the corner offset for the given index, which resembles a Morton code i.e. `0bYX` in 2D or `0bZYX` in 3D.
+    fn corner_offset(index: u8) -> Self;
 
     /// [Von Neumann Neighborhood](https://en.wikipedia.org/wiki/Von_Neumann_neighborhood)
     fn von_neumann_offsets() -> Vec<Self>;

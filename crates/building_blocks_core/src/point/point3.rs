@@ -380,9 +380,17 @@ impl IntegerPoint<[i32; 3]> for Point3i {
 }
 
 impl Neighborhoods for Point3i {
+    const NUM_CORNERS: u8 = 8;
+
     #[inline]
     fn corner_offsets() -> Vec<Self> {
         Self::CUBE_CORNER_OFFSETS.to_vec()
+    }
+
+    #[inline]
+    fn corner_offset(index: u8) -> Self {
+        debug_assert!(index < Self::NUM_CORNERS);
+        Self::CUBE_CORNER_OFFSETS[index as usize]
     }
 
     #[inline]

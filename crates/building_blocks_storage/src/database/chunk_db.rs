@@ -27,6 +27,7 @@ pub type ChunkDb2<Compr> = ChunkDb<[i32; 2], Compr>;
 pub type ChunkDb3<Compr> = ChunkDb<[i32; 3], Compr>;
 
 impl<N> ChunkDb<N> {
+    /// Construct a `ChunkDb` without compression.
     pub fn new(tree: Tree) -> Self {
         Self {
             tree,
@@ -37,6 +38,7 @@ impl<N> ChunkDb<N> {
 }
 
 impl<N, Compr> ChunkDb<N, Compr> {
+    /// Construct a `ChunkDb` with `compression`.
     pub fn new_with_compression(tree: Tree, compression: Compr) -> Self {
         Self {
             tree,

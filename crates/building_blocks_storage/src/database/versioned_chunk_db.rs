@@ -23,7 +23,7 @@ impl<T> From<Delta<T, T>> for sled_snapshots::Delta<T> {
 ///
 /// There is some overhead incurred for writes and removals, which must rewrite deltas for the set of keys being accessed. Reads
 /// do not incur any overhead.
-pub struct VersionedChunkDb<N, Compr> {
+pub struct VersionedChunkDb<N, Compr = ()> {
     current_version: u64,
     data_tree: Tree,
     versions: VersionForest,
@@ -37,8 +37,28 @@ pub type VersionedChunkDb2<Compr> = VersionedChunkDb<[i32; 2], Compr>;
 /// A 3D `VersionedChunkDb`.
 pub type VersionedChunkDb3<Compr> = VersionedChunkDb<[i32; 3], Compr>;
 
-impl<N, Compr> VersionedChunkDb<N, Compr> {
+impl<N> VersionedChunkDb<N> {
+    /// Construct a `ChunkDb` without compression.
     pub fn new(
+        current_version: u64,
+        data_tree: Tree,
+        versions: VersionForest,
+        deltas: DeltaMap,
+    ) -> Self {
+        Self {
+            current_version,
+            data_tree,
+            versions,
+            deltas,
+            compression: (),
+            marker: Default::default(),
+        }
+    }
+}
+
+impl<N, Compr> VersionedChunkDb<N, Compr> {
+    /// Construct a `ChunkDb` with `compression`.
+    pub fn new_with_compression(
         current_version: u64,
         data_tree: Tree,
         versions: VersionForest,

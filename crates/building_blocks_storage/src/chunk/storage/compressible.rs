@@ -299,6 +299,36 @@ where
     }
 }
 
+impl<'a, N, Compr> IntoIterator for &'a CompressibleChunkStorage<N, Compr>
+where
+    N: Send,
+    Compr: Compression,
+    Compr::Data: Send,
+    ChunkKey<N>: Clone + Eq + Hash,
+{
+    type IntoIter = Box<dyn 'a + Iterator<Item = Self::Item>>;
+    type Item = (&'a ChunkKey<N>, &'a Compr::Data);
+
+    fn into_iter(self) -> Self::IntoIter {
+        let CompressibleChunkStorage {
+            main_cache,
+            thread_local_caches,
+            compressed,
+            ..
+        } = self;
+        Box::new(main_cache.entries().map(move |(key, entry)| match entry {
+            CacheEntry::Cached(chunk) => (key, chunk),
+            CacheEntry::Evicted(location) => {
+                let local_cache = thread_local_caches.get_or(|| LocalChunkCache::default());
+                let chunk = local_cache.get_or_insert_with(key.clone(), || {
+                    compressed.get(location.0).unwrap().decompress()
+                });
+                (key, chunk)
+            }
+        }))
+    }
+}
+
 impl<N: 'static, Compr: 'static> IntoIterator for CompressibleChunkStorage<N, Compr>
 where
     N: Send,
@@ -314,7 +344,6 @@ where
             mut compressed,
             ..
         } = self;
-
         Box::new(main_cache.into_iter().map(move |(key, entry)| match entry {
             CacheEntry::Cached(chunk) => (key, chunk),
             CacheEntry::Evicted(location) => (key, compressed.remove(location.0).decompress()),

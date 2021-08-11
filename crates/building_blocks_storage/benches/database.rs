@@ -35,14 +35,14 @@ fn db_write_chunks(c: &mut Criterion) {
 
                         let db = sled::Config::default().temporary(true).open().unwrap();
                         let tree = db.open_tree("test").unwrap();
-                        let chunk_db = ChunkDb3::new(
+                        let chunk_db = ChunkDb3::new_with_compression(
                             tree,
                             FastArrayCompressionNx1::from_bytes_compression(Lz4 { level: 10 }),
                         );
 
                         let mut batch = chunk_db.start_delta_batch();
                         futures::executor::block_on(
-                            batch.add_deltas(
+                            batch.add_and_compress_deltas(
                                 map.take_storage()
                                     .into_iter()
                                     .map(|(k, v)| Delta::Insert(k, v)),

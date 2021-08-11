@@ -29,8 +29,8 @@
 //!
 //! `ChunkMap<N, T, Bldr, Store>` depends on a backing chunk storage `Store`, which can implement some of `ChunkReadStorage` or
 //! `ChunkWriteStorage`. A storage can be as simple as a `HashMap`, which provides good performance for both iteration and
-//! random access. It could also be something more memory efficient like `FastCompressibleChunkStorage` or
-//! `CompressibleChunkStorageReader`, which perform nearly as well but involve some extra management of a cache.
+//! random access. It could also be something more memory efficient like `FastCompressibleChunkStorage` which perform nearly as
+//! well but involves some overhead for caching and compression.
 //!
 //! # Serialization
 //!
@@ -102,7 +102,7 @@
 //! let chunk_shape = Point3i::fill(16);
 //! let ambient_value = 0;
 //! let builder = ChunkMapBuilder3x1::new(chunk_shape, ambient_value);
-//! let mut map = builder.build_with_write_storage(
+//! let mut map = builder.build_with_rw_storage(
 //!     FastCompressibleChunkStorageNx1::with_bytes_compression(Lz4 { level: 10 })
 //! );
 //! let mut lod0 = map.lod_view_mut(0);
@@ -117,12 +117,8 @@
 //! // decompressed and cached.
 //! map.storage_mut().compress_lru();
 //!
-//! // In order to use the read-only access traits, you need to construct a `CompressibleChunkStorageReader`.
-//! let local_cache = LocalChunkCache3::new();
-//! let reader = map.reader(&local_cache);
-//!
-//! let bounding_extent = reader.bounding_extent(0);
-//! reader.lod_view(0).for_each(&bounding_extent, |p, value| {
+//! let bounding_extent = map.bounding_extent(0);
+//! map.lod_view(0).for_each(&bounding_extent, |p, value| {
 //!     if write_points.iter().position(|pw| p == *pw) != None {
 //!         assert_eq!(value, 1);
 //!     } else {
@@ -130,8 +126,8 @@
 //!     }
 //! });
 //!
-//! // For efficient caching, you should flush your local cache back into the main storage when you are done with it.
-//! map.storage_mut().flush_local_cache(local_cache);
+//! // For efficient caching, you should occasionally flush your local caches back into the global cache.
+//! map.storage_mut().flush_thread_local_caches();
 //! ```
 
 pub mod builder;
@@ -686,7 +682,7 @@ mod tests {
     #[cfg(feature = "lz4")]
     #[test]
     fn multichannel_compressed_accessors() {
-        use crate::prelude::{FastCompressibleChunkStorageNx2, LocalChunkCache, Lz4};
+        use crate::prelude::{FastCompressibleChunkStorageNx2, Lz4};
 
         let builder = ChunkMapBuilder3x2::new(CHUNK_SHAPE, (0, b'a'));
         let mut map = builder.build_with_write_storage(
@@ -704,9 +700,7 @@ mod tests {
             *letter = b'b';
         });
 
-        let local_cache = LocalChunkCache::new();
-        let reader = map.reader(&local_cache);
-        let lod0 = reader.lod_view(0);
+        let lod0 = map.lod_view(0);
         assert_eq!(lod0.get(Point3i::fill(1)), (0, b'a'));
         assert_eq!(lod0.get_ref(Point3i::fill(1)), (&0, &b'a'));
 

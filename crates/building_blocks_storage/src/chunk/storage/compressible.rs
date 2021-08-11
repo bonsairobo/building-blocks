@@ -2,37 +2,45 @@ use crate::{
     caching::*,
     compression::MaybeCompressed,
     dev_prelude::{
-        ChunkKey, ChunkMap, ChunkMapBuilder, ChunkWriteStorage, Compressed,
-        CompressibleChunkMapReader, CompressibleChunkStorageReader, Compression,
+        ChunkKey, ChunkMap, ChunkReadStorage, ChunkWriteStorage, Compressed, Compression,
         FastArrayCompression, FastChannelsCompression, FromBytesCompression, IterChunkKeys,
-        LocalChunkCache,
     },
+    SmallKeyBuildHasher,
 };
 
 use building_blocks_core::prelude::*;
 
 use core::hash::Hash;
 use slab::Slab;
+use thread_local::ThreadLocal;
 
 /// A two-tier chunk storage. The first tier is an LRU cache of uncompressed chunks. The second tier is a `Slab` of compressed
 /// chunks.
 pub struct CompressibleChunkStorage<N, Compr>
 where
+    N: Send,
     Compr: Compression,
+    Compr::Data: Send,
 {
-    pub(crate) cache: SmallKeyLruCache<ChunkKey<N>, Compr::Data, CompressedLocation>,
-    pub(crate) compression: Compr,
-    pub(crate) compressed: CompressedChunks<Compr>,
+    main_cache: SmallKeyLruCache<ChunkKey<N>, Compr::Data, CompressedLocation>,
+    thread_local_caches: ThreadLocal<LocalChunkCache<N, Compr::Data>>,
+    compression: Compr,
+    compressed: CompressedChunks<Compr>,
 }
+
+/// A `LocalCache` of chunks.
+type LocalChunkCache<N, Ch> = LocalCache<ChunkKey<N>, Ch, SmallKeyBuildHasher>;
 
 pub type FastCompressibleChunkStorage<N, By, Chan> =
     CompressibleChunkStorage<N, FastArrayCompression<N, FastChannelsCompression<By, Chan>>>;
 
 impl<N, By, Chan> FastCompressibleChunkStorage<N, By, Chan>
 where
+    N: Send,
+    Chan: Send,
     PointN<N>: IntegerPoint<N>,
     ChunkKey<N>: Clone + Eq + Hash,
-    FastChannelsCompression<By, Chan>: Compression,
+    FastChannelsCompression<By, Chan>: Compression<Data = Chan>,
 {
     pub fn with_bytes_compression(bytes_compression: By) -> Self {
         Self::new(FastArrayCompression::from_bytes_compression(
@@ -45,7 +53,9 @@ pub type CompressedChunks<Compr> = Slab<Compressed<Compr>>;
 
 impl<N, Compr> CompressibleChunkStorage<N, Compr>
 where
+    N: Send,
     Compr: Compression,
+    Compr::Data: Send,
 {
     pub fn compression(&self) -> &Compr {
         &self.compression
@@ -54,19 +64,22 @@ where
 
 impl<N, Compr> CompressibleChunkStorage<N, Compr>
 where
+    N: Send,
     ChunkKey<N>: Clone + Eq + Hash,
     Compr: Compression,
+    Compr::Data: Send,
 {
     pub fn new(compression: Compr) -> Self {
         Self {
-            cache: SmallKeyLruCache::default(),
+            thread_local_caches: Default::default(),
+            main_cache: Default::default(),
             compression,
             compressed: Slab::new(),
         }
     }
 
     pub fn len_cached(&self) -> usize {
-        self.cache.len_cached()
+        self.main_cache.len_cached()
     }
 
     pub fn len_compressed(&self) -> usize {
@@ -81,17 +94,6 @@ where
         self.len_total() == 0
     }
 
-    /// Returns a reader that implements `ChunkReadStorage`.
-    pub fn reader<'a>(
-        &'a self,
-        local_cache: &'a LocalChunkCache<N, Compr::Data>,
-    ) -> CompressibleChunkStorageReader<'a, N, Compr> {
-        CompressibleChunkStorageReader {
-            storage: self,
-            local_cache,
-        }
-    }
-
     /// Returns a copy of the `Chunk` at `key`.
     ///
     /// WARNING: the cache will not be updated. This method should be used for a read-modify-write workflow where it would be
@@ -104,7 +106,7 @@ where
         Compr::Data: Clone,
         Compressed<Compr>: Clone,
     {
-        self.cache.get(&key).map(|entry| match entry {
+        self.main_cache.get(&key).map(|entry| match entry {
             CacheEntry::Cached(chunk) => MaybeCompressed::Decompressed(chunk.clone()),
             CacheEntry::Evicted(location) => {
                 MaybeCompressed::Compressed(self.compressed.get(location.0).unwrap().clone())
@@ -117,7 +119,7 @@ where
         &mut self,
         key: ChunkKey<N>,
     ) -> Option<MaybeCompressed<Compr::Data, Compressed<Compr>>> {
-        self.cache.remove(&key).map(|entry| match entry {
+        self.main_cache.remove(&key).map(|entry| match entry {
             CacheEntry::Cached(chunk) => MaybeCompressed::Decompressed(chunk),
             CacheEntry::Evicted(location) => {
                 MaybeCompressed::Compressed(self.compressed.remove(location.0))
@@ -130,7 +132,7 @@ where
     pub fn compress_lru(&mut self) {
         let compressed_entry = self.compressed.vacant_entry();
         if let Some((_, lru_chunk)) = self
-            .cache
+            .main_cache
             .evict_lru(CompressedLocation(compressed_entry.key()))
         {
             compressed_entry.insert(self.compression.compress(&lru_chunk));
@@ -142,7 +144,7 @@ where
     /// This is useful for removing a batch of chunks at a time before compressing them in parallel. Then call
     /// `insert_compressed`.
     pub fn remove_lru(&mut self) -> Option<(ChunkKey<N>, Compr::Data)> {
-        self.cache.remove_lru()
+        self.main_cache.remove_lru()
     }
 
     /// Insert a compressed chunk. Returns the old chunk if one exists.
@@ -153,7 +155,7 @@ where
     ) -> Option<MaybeCompressed<Compr::Data, Compressed<Compr>>> {
         let compressed_entry = self.compressed.vacant_entry();
         let old_entry = self
-            .cache
+            .main_cache
             .evict(key, CompressedLocation(compressed_entry.key()));
         compressed_entry.insert(compressed_chunk);
 
@@ -165,11 +167,14 @@ where
         })
     }
 
-    /// Consumes and flushes the chunk cache into the chunk map. This is not strictly necessary, but
-    /// it will help with caching efficiency.
-    pub fn flush_local_cache(&mut self, local_cache: LocalChunkCache<N, Compr::Data>) {
-        for (key, chunk) in local_cache.flush_iter() {
-            self.insert_chunk(key, chunk);
+    /// Consumes and flushes all thread local caches into the global cache. This should be done occasionally to reduce memory
+    /// usage and improve caching efficiency.
+    pub fn flush_thread_local_caches(&mut self) {
+        let taken_caches = std::mem::replace(&mut self.thread_local_caches, ThreadLocal::new());
+        for mut cache in taken_caches.into_iter() {
+            for (k, v) in cache.drain_iter() {
+                self.main_cache.insert(k, v);
+            }
         }
     }
 
@@ -179,7 +184,7 @@ where
         key: ChunkKey<N>,
         chunk: Compr::Data,
     ) -> Option<MaybeCompressed<Compr::Data, Compressed<Compr>>> {
-        self.cache
+        self.main_cache
             .insert(key, chunk)
             .map(|old_entry| match old_entry {
                 CacheEntry::Cached(old_chunk) => MaybeCompressed::Decompressed(old_chunk),
@@ -190,20 +195,51 @@ where
     }
 }
 
-impl<N, Compr> ChunkWriteStorage<N> for CompressibleChunkStorage<N, Compr>
+impl<N, Compr> ChunkReadStorage<N> for CompressibleChunkStorage<N, Compr>
 where
+    N: Send,
     ChunkKey<N>: Clone + Eq + Hash,
     Compr: Compression,
+    Compr::Data: Send,
+{
+    type Chunk = Compr::Data;
+
+    /// Borrow the chunk at `key`.
+    fn get(&self, key: ChunkKey<N>) -> Option<&Self::Chunk> {
+        let Self {
+            thread_local_caches,
+            main_cache,
+            compressed,
+            ..
+        } = self;
+        main_cache.get(&key).map(|entry| match entry {
+            CacheEntry::Cached(value) => value,
+            CacheEntry::Evicted(location) => thread_local_caches
+                .get_or(|| LocalChunkCache::default())
+                .get_or_insert_with(key, || compressed.get(location.0).unwrap().decompress()),
+        })
+    }
+}
+
+impl<N, Compr> ChunkWriteStorage<N> for CompressibleChunkStorage<N, Compr>
+where
+    N: Send,
+    ChunkKey<N>: Clone + Eq + Hash,
+    Compr: Compression,
+    Compr::Data: Send,
 {
     type Chunk = Compr::Data;
 
     #[inline]
     fn get_mut(&mut self, key: ChunkKey<N>) -> Option<&mut Compr::Data> {
         let Self {
-            cache, compressed, ..
+            main_cache,
+            compressed,
+            ..
         } = self;
 
-        cache.get_mut_or_repopulate_with(key, |location| compressed.remove(location.0).decompress())
+        main_cache
+            .get_mut_or_repopulate_with(key, |location| compressed.remove(location.0).decompress())
     }
 
     #[inline]
@@ -213,9 +249,11 @@ where
         create_chunk: impl FnOnce() -> Compr::Data,
     ) -> &mut Compr::Data {
         let Self {
-            cache, compressed, ..
+            main_cache,
+            compressed,
+            ..
         } = self;
-        cache.get_mut_or_insert_with(
+        main_cache.get_mut_or_insert_with(
             key,
             |location| compressed.remove(location.0).decompress(),
             create_chunk,
@@ -247,57 +285,40 @@ where
     }
 }
 
-impl<'a, N, Compr> IterChunkKeys<'a, N> for CompressibleChunkStorage<N, Compr>
+impl<'a, N: 'a, Compr> IterChunkKeys<'a, N> for CompressibleChunkStorage<N, Compr>
 where
-    N: 'a,
+    N: Send,
     ChunkKey<N>: Clone + Eq + Hash,
-    Compr::Data: 'a,
     Compr: Compression,
+    Compr::Data: 'a + Send,
 {
     type Iter = LruChunkCacheKeys<'a, N, Compr::Data>;
 
     fn chunk_keys(&'a self) -> Self::Iter {
-        self.cache.keys()
+        self.main_cache.keys()
     }
 }
 
-impl<N, Compr> IntoIterator for CompressibleChunkStorage<N, Compr>
+impl<N: 'static, Compr: 'static> IntoIterator for CompressibleChunkStorage<N, Compr>
 where
-    N: 'static,
-    Compr: 'static + Compression,
+    N: Send,
+    Compr: Compression,
+    Compr::Data: Send,
 {
     type IntoIter = Box<dyn Iterator<Item = Self::Item>>;
     type Item = (ChunkKey<N>, Compr::Data);
 
     fn into_iter(self) -> Self::IntoIter {
         let Self {
-            cache,
+            main_cache,
             mut compressed,
             ..
         } = self;
 
-        Box::new(cache.into_iter().map(move |(key, entry)| match entry {
+        Box::new(main_cache.into_iter().map(move |(key, entry)| match entry {
             CacheEntry::Cached(chunk) => (key, chunk),
             CacheEntry::Evicted(location) => (key, compressed.remove(location.0).decompress()),
         }))
-    }
-}
-
-impl<N, T, Ch, Bldr, Compr> CompressibleChunkMap<N, T, Bldr, Compr>
-where
-    ChunkKey<N>: Clone + Eq + Hash,
-    PointN<N>: IntegerPoint<N>,
-    Bldr: ChunkMapBuilder<N, T, Chunk = Ch> + Clone,
-    Compr: Compression<Data = Ch>,
-{
-    /// Construct a reader for this map.
-    pub fn reader<'a>(
-        &'a self,
-        local_cache: &'a LocalChunkCache<N, Ch>,
-    ) -> CompressibleChunkMapReader<'a, N, T, Bldr, Compr> {
-        self.builder()
-            .clone()
-            .build_with_read_storage(self.storage().reader(local_cache))
     }
 }
 

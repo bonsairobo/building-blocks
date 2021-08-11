@@ -51,8 +51,7 @@ pub mod prelude {
         chunk::{
             AmbientExtent, Chunk, ChunkDownsampler, ChunkKey, ChunkKey2, ChunkKey3,
             ChunkMapBuilder, ChunkReadStorage, ChunkUnits, ChunkWriteStorage, IterChunkKeys,
-            LocalChunkCache, LocalChunkCache2, LocalChunkCache3, PointDownsampler,
-            SdfMeanDownsampler,
+            PointDownsampler, SdfMeanDownsampler,
         },
         compression::{
             BincodeCompression, BytesCompression, Compressed, Compression, FromBytesCompression,
@@ -72,7 +71,6 @@ pub mod prelude {
     pub use super::array::multichannel_aliases::*;
     pub use super::chunk::map::multichannel_aliases::*;
     pub use super::chunk::storage::compressible::multichannel_aliases::*;
-    pub use super::chunk::storage::compressible_reader::multichannel_aliases::*;
     pub use super::chunk::storage::hash_map::multichannel_aliases::*;
 
     #[cfg(feature = "lz4")]
@@ -101,7 +99,7 @@ pub mod dev_prelude {
         },
         chunk::{
             ChunkHashMap, ChunkMap, ChunkMap2, ChunkMap3, ChunkMapBuilderNxM,
-            CompressibleChunkMapReader, CompressibleChunkStorage, CompressibleChunkStorageReader,
+            CompressibleChunkStorage,
         },
         SmallKeyHashMap, SmallKeyHashSet,
     };

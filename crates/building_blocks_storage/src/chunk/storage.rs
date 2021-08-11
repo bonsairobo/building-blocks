@@ -1,9 +1,7 @@
 pub mod compressible;
-pub mod compressible_reader;
 pub mod hash_map;
 
 pub use compressible::*;
-pub use compressible_reader::*;
 pub use hash_map::*;
 
 use building_blocks_core::prelude::*;

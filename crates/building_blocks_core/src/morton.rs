@@ -10,7 +10,7 @@ use std::fmt;
 // ███████╗██████╔╝
 // ╚══════╝╚═════╝
 
-/// A Morton-encoded `Point2i`. Uses a `u64` to support the full set of `Point3i`s.
+/// A Morton-encoded `Point2i`. Uses a `u64` to support the full set of `Point2i`s.
 ///
 /// <https://en.wikipedia.org/wiki/Z-order_curve>
 #[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]

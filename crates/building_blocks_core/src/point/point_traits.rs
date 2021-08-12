@@ -122,6 +122,8 @@ pub trait IntegerPoint<N>:
     + Shl<i32, Output = Self>
     + Shr<i32, Output = Self>
 {
+    type Morton;
+
     /// Returns `true` iff all dimensions are powers of 2.
     fn dimensions_are_powers_of_2(self) -> bool;
 

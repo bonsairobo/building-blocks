@@ -1,4 +1,4 @@
-use crate::Axis2;
+use crate::{Axis2, Morton2};
 
 use super::{point_traits::*, PointN};
 
@@ -266,6 +266,8 @@ where
 }
 
 impl IntegerPoint<[i32; 2]> for Point2i {
+    type Morton = Morton2;
+
     #[inline]
     fn dimensions_are_powers_of_2(self) -> bool {
         self.x().is_positive()

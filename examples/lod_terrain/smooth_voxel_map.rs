@@ -56,7 +56,7 @@ impl VoxelMap for SmoothVoxelMap {
 
         let index = OctreeChunkIndex::index_chunk_map(superchunk_exponent, num_lods, &chunks);
 
-        chunks.downsample_chunks_with_index(&index, &PointDownsampler, &config.world_extent());
+        chunks.downsample_chunks_with_index(&index, &SdfMeanDownsampler, &config.world_extent());
 
         Self {
             chunks,

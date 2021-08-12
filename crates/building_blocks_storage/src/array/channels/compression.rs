@@ -1,7 +1,7 @@
 use crate::dev_prelude::{BytesCompression, Channel, Compression, FromBytesCompression};
 
 use bytemuck::{bytes_of, bytes_of_mut, cast_slice, cast_slice_mut, Pod};
-use std::io;
+use std::{io, mem::MaybeUninit};
 
 /// Compresses a tuple of `Channel`s into a tuple of `FastCompressedChannel`s.
 pub struct FastChannelsCompression<By, Chan> {
@@ -72,9 +72,9 @@ where
         let mut num_values = 0usize;
         compressed_bytes.read_exact(bytes_of_mut(&mut num_values))?;
 
-        // Allocate the vector with element type T so the alignment is correct.
-        let mut decompressed_values: Vec<T> = Vec::with_capacity(num_values);
-        unsafe { decompressed_values.set_len(num_values) };
+        // Allocate the vector with element type T so the alignment is correct. T: Pod implies T: Zeroable so this is sound.
+        let mut decompressed_values: Vec<T> =
+            vec![unsafe { MaybeUninit::zeroed().assume_init() }; num_values];
 
         // Decompress the values by consuming the rest of the bytes.
         By::decompress_bytes(

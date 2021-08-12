@@ -49,13 +49,10 @@ impl<T> Channel<T> {
         Self::new(vec![value; length].into_boxed_slice())
     }
 
-    pub fn fill_with(length: usize, filler: impl FnMut() -> T) -> Self {
-        let mut values = Vec::with_capacity(length);
-        unsafe {
-            values.set_len(length);
-        }
-        values.fill_with(filler);
-        Self::new(values.into_boxed_slice())
+    pub fn fill_with(length: usize, mut filler: impl FnMut() -> T) -> Self {
+        let mut chan = unsafe { Channel::maybe_uninit(length) };
+        chan.store.fill_with(|| MaybeUninit::new(filler()));
+        unsafe { chan.assume_init() }
     }
 }
 

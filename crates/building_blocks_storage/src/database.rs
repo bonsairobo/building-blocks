@@ -29,8 +29,8 @@ pub enum Delta<K, V> {
 impl<K, V> Delta<K, V> {
     fn key(&self) -> &K {
         match self {
-            Self::Insert(k, _) => &k,
-            Self::Remove(k) => &k,
+            Self::Insert(k, _) => k,
+            Self::Remove(k) => k,
         }
     }
 }

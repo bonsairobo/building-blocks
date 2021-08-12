@@ -4,7 +4,7 @@ use futures::future::join_all;
 use sled::IVec;
 use std::borrow::Borrow;
 
-/// Creates a [DeltaBatch]. This handles sorting the deltas in Morton order and compressing the chunk data.
+/// Creates a [`DeltaBatch`]. This handles sorting the deltas in Morton order and compressing the chunk data.
 pub struct DeltaBatchBuilder<N, K, Compr = ()> {
     raw_deltas: Vec<Delta<K, IVec>>,
     compression: Compr,
@@ -41,7 +41,7 @@ where
         Data: Borrow<Compr::Data>,
     {
         // Compress all of the chunks in parallel.
-        let compression = self.compression.clone();
+        let compression = self.compression;
         let mut raw_deltas: Vec<_> = join_all(deltas.map(|delta| async move {
             match delta {
                 Delta::Insert(k, v) => Delta::Insert(
@@ -83,9 +83,10 @@ where
     }
 }
 
-/// A set of [Delta]s to be atomically applied to a [ChunkDb](super::ChunkDb) or [VersionedChunkDb](super::VersionedChunkDb).
+/// A set of [Delta]s to be atomically applied to a [`ChunkDb`](super::ChunkDb) or
+/// [`VersionedChunkDb`](super::VersionedChunkDb).
 ///
-/// Can be created with a [DeltaBatchBuilder].
+/// Can be created with a [`DeltaBatchBuilder`].
 #[derive(Default)]
 pub struct DeltaBatch {
     pub(crate) deltas: Vec<Delta<IVec, IVec>>,

@@ -215,7 +215,7 @@ where
         main_cache.get(&key).map(|entry| match entry {
             CacheEntry::Cached(value) => value,
             CacheEntry::Evicted(location) => thread_local_caches
-                .get_or(|| LocalChunkCache::default())
+                .get_or(LocalChunkCache::default)
                 .get_or_insert_with(key, || compressed.get(location.0).unwrap().decompress()),
         })
     }
@@ -319,7 +319,7 @@ where
         Box::new(main_cache.entries().map(move |(key, entry)| match entry {
             CacheEntry::Cached(chunk) => (key, chunk),
             CacheEntry::Evicted(location) => {
-                let local_cache = thread_local_caches.get_or(|| LocalChunkCache::default());
+                let local_cache = thread_local_caches.get_or(LocalChunkCache::default);
                 let chunk = local_cache.get_or_insert_with(key.clone(), || {
                     compressed.get(location.0).unwrap().decompress()
                 });

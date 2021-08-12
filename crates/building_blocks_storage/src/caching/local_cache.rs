@@ -51,7 +51,7 @@ where
     }
 
     /// Consume and iterate over all (key, value) pairs.
-    pub fn drain_iter<'a>(&'a mut self) -> impl 'a + Iterator<Item = (K, V)> {
+    pub fn drain_iter(&mut self) -> impl '_ + Iterator<Item = (K, V)> {
         self.store
             .get_mut()
             .drain()

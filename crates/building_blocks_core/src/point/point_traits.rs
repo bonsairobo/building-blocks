@@ -130,6 +130,10 @@ pub trait IntegerPoint<N>:
 }
 
 pub trait IntegerDiv {
+    fn vector_div(self, rhs: Self) -> Self;
+
+    fn scalar_div(self, rhs: i32) -> Self;
+
     fn vector_div_floor(self, rhs: Self) -> Self;
 
     fn scalar_div_floor(self, rhs: i32) -> Self;
@@ -394,29 +398,35 @@ macro_rules! impl_float_div {
 
 macro_rules! impl_integer_div {
     ($t:ty, $scalar:ty) => {
-        // Use specialized implementation for integers because the default Div impl rounds towards zero, which is not what we
-        // want.
         impl Div<$scalar> for $t {
             type Output = Self;
 
             #[inline]
             fn div(self, rhs: $scalar) -> Self {
-                self.scalar_div_floor(rhs)
+                self.scalar_div(rhs)
             }
         }
 
-        // Use specialized implementation for integers because the default Div impl rounds towards zero,
-        // which is not what we want.
         impl Div<Self> for $t {
             type Output = Self;
 
             #[inline]
             fn div(self, rhs: Self) -> Self {
-                self.vector_div_floor(rhs)
+                self.vector_div(rhs)
             }
         }
 
         impl IntegerDiv for $t {
+            #[inline]
+            fn vector_div(self, rhs: Self) -> Self {
+                self.map_components_binary(rhs, |c1, c2| c1.div(&c2))
+            }
+
+            #[inline]
+            fn scalar_div(self, rhs: i32) -> Self {
+                self.map_components_unary(|c| c.div(&rhs))
+            }
+
             #[inline]
             fn vector_div_floor(self, rhs: Self) -> Self {
                 self.map_components_binary(rhs, |c1, c2| c1.div_floor(&c2))

@@ -54,12 +54,6 @@ use serde::{Deserialize, Serialize};
 /// assert_eq!(p1 * p2, PointN([3, 8]));
 /// assert_eq!(p1 / p2, PointN([0, 0]));
 /// assert_eq!(p2 / p1, PointN([3, 2]));
-///
-/// // Note that integer division is always floored in the "negative direction" which is not the default for Rust integers.
-/// assert_eq!(Point2i::fill(-1) / Point2i::fill(4), Point2i::fill(-1));
-/// // Rust does this differently. ¯\_(ツ)_/¯
-/// assert_eq!(1 / 4, 0);
-/// assert_eq!(-1 / 4, 0);
 /// ```
 ///
 /// There is also a partial order defined on points which says that a point A is greater than a

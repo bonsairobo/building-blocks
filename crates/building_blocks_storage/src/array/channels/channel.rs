@@ -11,7 +11,7 @@ use core::mem::MaybeUninit;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct Channel<T, Store = Vec<T>> {
+pub struct Channel<T, Store = Box<[T]>> {
     store: Store,
     marker: std::marker::PhantomData<T>,
 }
@@ -41,12 +41,12 @@ impl<T, Store> Channel<T, Store> {
     }
 }
 
-impl<T> Channel<T, Vec<T>> {
+impl<T> Channel<T> {
     pub fn fill(length: usize, value: T) -> Self
     where
         T: Clone,
     {
-        Self::new(vec![value; length])
+        Self::new(vec![value; length].into_boxed_slice())
     }
 
     pub fn fill_with(length: usize, filler: impl FnMut() -> T) -> Self {
@@ -55,7 +55,7 @@ impl<T> Channel<T, Vec<T>> {
             values.set_len(length);
         }
         values.fill_with(filler);
-        Self::new(values)
+        Self::new(values.into_boxed_slice())
     }
 }
 
@@ -160,26 +160,24 @@ impl<T> UninitChannels for Channel<MaybeUninit<T>> {
     /// # Safety
     /// Call `assume_init` after manually initializing all of the values.
     unsafe fn maybe_uninit(size: usize) -> Self {
+        // TODO: use Box::new_uninit_slice when it's stable
         let mut store = Vec::with_capacity(size);
         store.set_len(size);
-
-        Channel::new(store)
+        Channel::new(store.into_boxed_slice())
     }
 
     /// Transmutes the channel values from `MaybeUninit<T>` to `T` after manual initialization. The implementation just
-    /// reconstructs the internal `Vec` after transmuting the data pointer, so the overhead is minimal.
+    /// reconstructs the internal `Box<[T]>` after transmuting the data pointer, so the overhead is minimal.
     /// # Safety
     /// All elements of the channel must be initialized.
     unsafe fn assume_init(self) -> Self::InitSelf {
         let transmuted_values = {
-            // Ensure the original vector is not dropped.
+            // Ensure the original slice is not dropped.
             let mut v_clone = core::mem::ManuallyDrop::new(self.store);
-
-            Vec::from_raw_parts(
+            Box::from_raw(std::slice::from_raw_parts_mut(
                 v_clone.as_mut_ptr() as *mut T,
                 v_clone.len(),
-                v_clone.capacity(),
-            )
+            ))
         };
 
         Channel::new(transmuted_values)

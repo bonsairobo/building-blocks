@@ -42,10 +42,11 @@ impl<By, Chan> FromBytesCompression<By> for FastChannelsCompression<By, Chan> {
     }
 }
 
-impl<By, T> Compression for FastChannelsCompression<By, Channel<T>>
+impl<By, T, Store> Compression for FastChannelsCompression<By, Channel<T, Store>>
 where
     By: BytesCompression,
     T: Pod,
+    Store: AsRef<[T]>,
 {
     type Data = Channel<T>;
 
@@ -63,7 +64,7 @@ where
 
         // Compress the values.
         self.bytes_compression
-            .compress_bytes(cast_slice(data.store().as_slice()), compressed_bytes)
+            .compress_bytes(cast_slice(data.store()), compressed_bytes)
     }
 
     fn decompress_from_reader(mut compressed_bytes: impl io::Read) -> io::Result<Self::Data> {
@@ -81,6 +82,6 @@ where
             cast_slice_mut(decompressed_values.as_mut_slice()),
         )?;
 
-        Ok(Channel::new(decompressed_values))
+        Ok(Channel::new(decompressed_values.into_boxed_slice()))
     }
 }

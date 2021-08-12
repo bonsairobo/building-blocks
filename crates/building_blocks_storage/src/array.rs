@@ -72,28 +72,29 @@
 //! This means you keep the performance of simple array indexing, as opposed to indexing with a `Point3i`, which requires 2
 //! multiplications to convert to a `Stride`. You'd be surprised how important this difference can be in tight loops.
 //!
-//! # Storage
+//! # Single-Channel Array Storage
 //!
-//! By default, `Array` uses a `Vec` to store elements. But any type that implements `AsRef<[T]>` or `AsMut<[T]>` should be
-//! usable. This means you can construct an array with most pointer types.
+//! A single-channel `Array` is backed by a `Channel<T, Store>` where `Store` is some kind of fat pointer. By default,
+//! `ArrayNx1<T>` uses a boxed slice for storage.
 //!
 //! ```
 //! # use building_blocks_core::prelude::*;
 //! # use building_blocks_storage::prelude::*;
+//! # use std::sync::Arc;
 //! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
 //! // Borrow `array`'s values for the lifetime of `other_array`.
 //! let array = Array3x1::fill(extent, 1);
-//! let other_array = Array3x1::new_one_channel(extent, array.channels().store().as_slice());
+//! let other_array = Array3x1::new_one_channel(extent, array.channels().store().as_ref());
 //! assert_eq!(other_array.get(Stride(0)), 1);
 //!
-//! // A stack-allocated array.
+//! // A stack-allocated array. Note that these are more expensive to `Clone`!
 //! let mut data = [1; 32 * 32 * 32];
 //! let mut stack_array = Array3x1::new_one_channel(extent, &mut data[..]);
 //! *stack_array.get_mut(Stride(0)) = 2;
 //! assert_eq!(data[0], 2);
 //!
-//! // A boxed array.
-//! let data: Box<[u32]> = Box::new([1; 32 * 32 * 32]); // must forget the size
+//! // An Arc array.
+//! let data: Arc<[u32]> = Arc::new([1; 32 * 32 * 32]); // must forget the size
 //! let box_array = Array3x1::new_one_channel(extent, data);
 //! box_array.for_each(&extent, |p: Point3i, value| assert_eq!(value, 1));
 //! ```
@@ -185,17 +186,17 @@ pub struct Array<N, Chan> {
 
 macro_rules! array_n_type_alias {
     ($name:ident, $( $chan:ident : $store:ident ),+ ) => {
-        pub type $name<N, $( $chan ),+, $( $store = Vec<$chan> ),+> = Array<N, ($( Channel<$chan, $store> ),+)>;
+        pub type $name<N, $( $chan ),+, $( $store = Box<[$chan]> ),+> = Array<N, ($( Channel<$chan, $store> ),+)>;
     };
 }
 
 macro_rules! array_type_alias {
     ($name:ident, $dim:ty, $( $chan:ident : $store:ident ),+ ) => {
-        pub type $name<$( $chan ),+, $( $store = Vec<$chan> ),+> = Array<$dim, ($( Channel<$chan, $store> ),+)>;
+        pub type $name<$( $chan ),+, $( $store = Box<[$chan]> ),+> = Array<$dim, ($( Channel<$chan, $store> ),+)>;
     };
 }
 
-pub type ArrayNx1<N, A, S1 = Vec<A>> = Array<N, Channel<A, S1>>;
+pub type ArrayNx1<N, A, S1 = Box<[A]>> = Array<N, Channel<A, S1>>;
 array_n_type_alias!(ArrayNx2, A: S1, B: S2);
 array_n_type_alias!(ArrayNx3, A: S1, B: S2, C: S3);
 array_n_type_alias!(ArrayNx4, A: S1, B: S2, C: S3, D: S4);
@@ -205,14 +206,14 @@ array_n_type_alias!(ArrayNx6, A: S1, B: S2, C: S3, D: S4, E: S5, F: S6);
 pub mod multichannel_aliases {
     use super::*;
 
-    pub type Array2x1<A, S1 = Vec<A>> = Array<[i32; 2], Channel<A, S1>>;
+    pub type Array2x1<A, S1 = Box<[A]>> = Array<[i32; 2], Channel<A, S1>>;
     array_type_alias!(Array2x2, [i32; 2], A: S1, B: S2);
     array_type_alias!(Array2x3, [i32; 2], A: S1, B: S2, C: S3);
     array_type_alias!(Array2x4, [i32; 2], A: S1, B: S2, C: S3, D: S4);
     array_type_alias!(Array2x5, [i32; 2], A: S1, B: S2, C: S3, D: S4, E: S5);
     array_type_alias!(Array2x6, [i32; 2], A: S1, B: S2, C: S3, D: S4, E: S5, F: S6);
 
-    pub type Array3x1<A, S1 = Vec<A>> = Array<[i32; 3], Channel<A, S1>>;
+    pub type Array3x1<A, S1 = Box<[A]>> = Array<[i32; 3], Channel<A, S1>>;
     array_type_alias!(Array3x2, [i32; 3], A: S1, B: S2);
     array_type_alias!(Array3x3, [i32; 3], A: S1, B: S2, C: S3);
     array_type_alias!(Array3x4, [i32; 3], A: S1, B: S2, C: S3, D: S4);
@@ -223,8 +224,7 @@ pub mod multichannel_aliases {
 pub use multichannel_aliases::*;
 
 impl<N, Chan> Array<N, Chan> {
-    /// Create a new `Array` directly from the extent and values. This asserts that the number of points in the extent matches
-    /// the length of the values `Vec`.
+    /// Create a new `Array` directly from the extent and values.
     pub fn new(extent: ExtentN<N>, channels: Chan) -> Self {
         // TODO: assert that channels has length matching extent
         Self { channels, extent }
@@ -396,8 +396,7 @@ where
         Array::new(extent, Chan::maybe_uninit(extent.num_points()))
     }
 
-    /// Transmutes the map values from `MaybeUninit<T>` to `T` after manual initialization. The implementation just reconstructs
-    /// the internal `Vec` after transmuting the data pointer, so the overhead is minimal.
+    /// Transmutes the map values in each channel from `MaybeUninit<T>` to `T` after manual initialization.
     /// # Safety
     /// All elements of the map must be initialized.
     pub unsafe fn assume_init(self) -> Array<N, Chan::InitSelf> {

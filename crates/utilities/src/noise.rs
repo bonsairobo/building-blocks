@@ -15,7 +15,7 @@ pub fn noise_array2(extent: Extent2i, freq: f32, seed: i32, octaves: u8) -> Arra
     .with_octaves(octaves)
     .generate();
 
-    Array2x1::new_one_channel(extent, noise)
+    Array2x1::new_one_channel(extent, noise.into_boxed_slice())
 }
 
 pub fn noise_array3(extent: Extent3i, freq: f32, seed: i32, octaves: u8) -> Array3x1<f32> {
@@ -33,5 +33,5 @@ pub fn noise_array3(extent: Extent3i, freq: f32, seed: i32, octaves: u8) -> Arra
     .with_octaves(octaves)
     .generate();
 
-    Array3x1::new_one_channel(extent, noise)
+    Array3x1::new_one_channel(extent, noise.into_boxed_slice())
 }

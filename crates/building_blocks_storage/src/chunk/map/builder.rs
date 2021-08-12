@@ -1,5 +1,6 @@
 use crate::{
     array::FillChannels,
+    chunk::ChunkNode,
     dev_prelude::{
         Array, Channel, ChunkHashMap, ChunkKey, ChunkMap, ChunkStorage, SmallKeyHashMap,
     },
@@ -25,12 +26,12 @@ pub trait ChunkMapBuilder<N, T>: Sized {
     fn build_with_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Self, Store>
     where
         PointN<N>: IntegerPoint<N>,
-        Store: ChunkStorage<N, Chunk = Self::Chunk>,
+        Store: ChunkStorage<N, Chunk = ChunkNode<Self::Chunk>>,
     {
         ChunkMap::new(self, storage)
     }
 
-    /// Create a new `ChunkMap` using a `SmallKeyHashMap` as the `ChunkStorage`.
+    /// Create a new `ChunkMap` using a `SmallKeyHashMap` as the chunk storage.
     fn build_with_hash_map_storage(self) -> ChunkHashMap<N, T, Self>
     where
         PointN<N>: IntegerPoint<N>,

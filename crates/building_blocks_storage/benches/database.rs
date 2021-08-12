@@ -3,7 +3,8 @@ use building_blocks_storage::{
     access_traits::*,
     database::{ChunkDb3, Delta},
     prelude::{
-        ChunkMapBuilder, ChunkMapBuilder3x1, FastArrayCompressionNx1, FromBytesCompression, Lz4,
+        ChunkMapBuilder, ChunkMapBuilder3x1, FastArrayCompressionNx1, FastChunkCompression,
+        FromBytesCompression, Lz4,
     },
 };
 
@@ -37,7 +38,9 @@ fn db_write_chunks(c: &mut Criterion) {
                         let tree = db.open_tree("test").unwrap();
                         let chunk_db = ChunkDb3::new_with_compression(
                             tree,
-                            FastArrayCompressionNx1::from_bytes_compression(Lz4 { level: 10 }),
+                            FastChunkCompression::new(
+                                FastArrayCompressionNx1::from_bytes_compression(Lz4 { level: 10 }),
+                            ),
                         );
 
                         let mut batch = chunk_db.start_delta_batch();

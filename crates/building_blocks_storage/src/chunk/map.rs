@@ -152,10 +152,12 @@ use building_blocks_core::{bounding_extent, point_traits::IntegerPoint, ExtentN,
 use either::Either;
 use serde::{Deserialize, Serialize};
 
-/// One piece of a chunked lattice map.
-pub trait Chunk {
-    /// The inner array type. This makes it easier for `Chunk` implementations to satisfy access trait bounds by inheriting them
-    /// from existing array types like `Array`.
+/// The user-accessible data stored in each chunk of a `ChunkMap`.
+///
+/// This crate provides a blanket impl for any `Array`, but users can also provide an impl that affords further customization.
+pub trait UserChunk {
+    /// The inner array type. This makes it easier for `UserChunk` implementations to satisfy access trait bounds by inheriting
+    /// them from existing `Array` types.
     type Array;
 
     /// Borrow the inner array.
@@ -165,7 +167,7 @@ pub trait Chunk {
     fn array_mut(&mut self) -> &mut Self::Array;
 }
 
-impl<N, Chan> Chunk for Array<N, Chan> {
+impl<N, Chan> UserChunk for Array<N, Chan> {
     type Array = Self;
 
     #[inline]
@@ -179,10 +181,51 @@ impl<N, Chan> Chunk for Array<N, Chan> {
     }
 }
 
-/// A lattice map made up of same-shaped [`Array`] chunks. For each level of detail, it takes a value at every possible
+/// The container of a `U: UserChunk` that's actually stored in a chunk storage.
+pub struct ChunkNode<U> {
+    /// Parent chunks are `None` until written or downsampled into. This means that users can opt-in to storing downsampled
+    /// chunks, which requires more memory.
+    pub user_chunk: Option<U>,
+    child_mask: u8,
+}
+
+impl<U> Default for ChunkNode<U> {
+    fn default() -> Self {
+        Self {
+            user_chunk: Default::default(),
+            child_mask: Default::default(),
+        }
+    }
+}
+
+impl<U> ChunkNode<U> {
+    fn new_with_data(user_chunk: U) -> Self {
+        Self::new(Some(user_chunk), 0)
+    }
+
+    #[inline]
+    pub(crate) fn new(user_chunk: Option<U>, child_mask: u8) -> Self {
+        Self {
+            user_chunk,
+            child_mask,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn child_mask(&self) -> u8 {
+        self.child_mask
+    }
+
+    #[inline]
+    pub(crate) fn user_chunk(&self) -> Option<&U> {
+        self.user_chunk.as_ref()
+    }
+}
+
+/// A lattice map made up of same-shaped [Array] chunks. For each level of detail, it takes a value at every possible
 /// [`PointN`], because accesses made outside of the stored chunks will return some ambient value specified on creation.
 ///
-/// [`ChunkMap`] is generic over the type used to actually store the [Chunk]s. You can use any storage that implements
+/// [`ChunkMap`] is generic over the type used to actually store the [`UserChunk`]s. You can use any storage that implements
 /// [`ChunkReadStorage`] or [`ChunkWriteStorage`]. Being a lattice map, [`ChunkMapLodView`] will implement various access
 /// traits, depending on the capabilities of the chunk storage.
 ///
@@ -295,20 +338,23 @@ where
     }
 }
 
-impl<N, T, Ch, Bldr, Store> ChunkMap<N, T, Bldr, Store>
+impl<N, T, Usr, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    Ch: Chunk,
-    Store: ChunkStorage<N, Chunk = Ch>,
+    Usr: UserChunk,
+    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
 {
     /// Borrow the chunk at `key`.
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    pub fn get_chunk(&self, key: ChunkKey<N>) -> Option<&Ch> {
+    pub fn get_chunk(&self, key: ChunkKey<N>) -> Option<&Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.storage.get(key)
+        self.storage
+            .get(key)
+            .map(|ch| ch.user_chunk.as_ref())
+            .flatten()
     }
 
     /// Get the values at point `p` in level of detail `lod`.
@@ -316,7 +362,7 @@ where
     pub fn clone_point(&self, lod: u8, p: PointN<N>) -> T
     where
         T: Clone,
-        Ch::Array: GetUnchecked<PointN<N>, Item = T>,
+        Usr::Array: GetUnchecked<PointN<N>, Item = T>,
     {
         let chunk_min = self.indexer.min_of_chunk_containing_point(p);
 
@@ -329,8 +375,8 @@ where
     #[inline]
     pub fn get_point<'a, Ref>(&'a self, lod: u8, p: PointN<N>) -> Ref
     where
-        Ch: 'a,
-        Ch::Array: GetRefUnchecked<'a, PointN<N>, Item = Ref>,
+        Usr: 'a,
+        Usr::Array: GetRefUnchecked<'a, PointN<N>, Item = Ref>,
         Ref: MultiRef<'a, Data = T>,
     {
         let chunk_min = self.indexer.min_of_chunk_containing_point(p);
@@ -346,7 +392,7 @@ where
         &self,
         lod: u8,
         extent: &ExtentN<N>,
-        mut visitor: impl FnMut(Either<&Ch, (&ExtentN<N>, AmbientExtent<N, T>)>),
+        mut visitor: impl FnMut(Either<&Usr, (&ExtentN<N>, AmbientExtent<N, T>)>),
     ) where
         T: Clone,
     {
@@ -369,7 +415,7 @@ where
         &self,
         lod: u8,
         extent: &ExtentN<N>,
-        mut visitor: impl FnMut(&Ch),
+        mut visitor: impl FnMut(&Usr),
     ) {
         for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
             if let Some(chunk) = self.get_chunk(ChunkKey::new(lod, chunk_min)) {
@@ -379,41 +425,45 @@ where
     }
 }
 
-impl<N, T, Ch, Bldr, Store> ChunkMap<N, T, Bldr, Store>
+impl<N, T, Usr, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    Ch: Chunk,
-    Bldr: ChunkMapBuilder<N, T, Chunk = Ch>,
-    Store: ChunkStorage<N, Chunk = Ch>,
+    Usr: UserChunk,
+    Bldr: ChunkMapBuilder<N, T, Chunk = Usr>,
+    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
 {
     /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
     ///
     /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
     #[inline]
-    pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Ch) {
+    pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.storage.write(key, chunk);
+        self.storage.write(key, ChunkNode::new_with_data(chunk));
     }
 
     /// Replace the `Chunk` at `key` with `chunk`, returning the old value.
     ///
     /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
     #[inline]
-    pub fn replace_chunk(&mut self, key: ChunkKey<N>, chunk: Ch) -> Option<Ch> {
+    pub fn replace_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.storage.replace(key, chunk)
+        self.storage
+            .replace(key, ChunkNode::new_with_data(chunk))
+            .and_then(|c| c.user_chunk)
     }
 
     /// Mutably borrow the chunk at `key`.
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    pub fn get_mut_chunk(&mut self, key: ChunkKey<N>) -> Option<&mut Ch> {
+    pub fn get_mut_chunk(&mut self, key: ChunkKey<N>) -> Option<&mut Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.storage.get_mut(key)
+        self.storage
+            .get_mut(key)
+            .and_then(|c| c.user_chunk.as_mut())
     }
 
     /// Mutably borrow the chunk at `key`. If the chunk doesn't exist, `create_chunk` is called to insert one.
@@ -423,18 +473,21 @@ where
     pub fn get_mut_chunk_or_insert_with(
         &mut self,
         key: ChunkKey<N>,
-        create_chunk: impl FnOnce() -> Ch,
-    ) -> &mut Ch {
+        create_chunk: impl FnOnce() -> Usr,
+    ) -> &mut Usr {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.storage.get_mut_or_insert_with(key, create_chunk)
+        self.storage
+            .get_mut_or_insert_with(key, ChunkNode::default)
+            .user_chunk
+            .get_or_insert_with(|| create_chunk())
     }
 
     /// Mutably borrow the chunk at `key`. If the chunk doesn't exist, a new chunk is created with the ambient value.
     ///
     /// In debug mode only, asserts that `key` is valid.
     #[inline]
-    pub fn get_mut_chunk_or_insert_ambient(&mut self, key: ChunkKey<N>) -> &mut Ch {
+    pub fn get_mut_chunk_or_insert_ambient(&mut self, key: ChunkKey<N>) -> &mut Usr {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         let Self {
@@ -445,17 +498,20 @@ where
         } = self;
         let chunk_min = key.minimum;
 
-        storage.get_mut_or_insert_with(key, || {
-            builder.new_ambient(indexer.extent_for_chunk_with_min(chunk_min))
-        })
+        storage
+            .get_mut_or_insert_with(key, ChunkNode::default)
+            .user_chunk
+            .get_or_insert_with(|| {
+                builder.new_ambient(indexer.extent_for_chunk_with_min(chunk_min))
+            })
     }
 
     /// Get a mutable reference to the values at point `p` in level of detail `lod`.
     #[inline]
     pub fn get_mut_point<'a, Mut>(&'a mut self, lod: u8, p: PointN<N>) -> Mut
     where
-        Ch: 'a,
-        Ch::Array: GetMutUnchecked<'a, PointN<N>, Item = Mut>,
+        Usr: 'a,
+        Usr::Array: GetMutUnchecked<'a, PointN<N>, Item = Mut>,
     {
         let chunk_min = self.indexer.min_of_chunk_containing_point(p);
         let chunk = self.get_mut_chunk_or_insert_ambient(ChunkKey::new(lod, chunk_min));
@@ -469,7 +525,7 @@ where
         &mut self,
         lod: u8,
         extent: &ExtentN<N>,
-        mut visitor: impl FnMut(&mut Ch),
+        mut visitor: impl FnMut(&mut Usr),
     ) {
         for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
             visitor(self.get_mut_chunk_or_insert_ambient(ChunkKey::new(lod, chunk_min)));
@@ -482,7 +538,7 @@ where
         &mut self,
         lod: u8,
         extent: &ExtentN<N>,
-        mut visitor: impl FnMut(&mut Ch),
+        mut visitor: impl FnMut(&mut Usr),
     ) {
         for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
             if let Some(chunk) = self.get_mut_chunk(ChunkKey::new(lod, chunk_min)) {
@@ -498,10 +554,9 @@ where
     }
 
     #[inline]
-    pub fn pop_chunk(&mut self, key: ChunkKey<N>) -> Option<Ch> {
+    pub fn pop_chunk(&mut self, key: ChunkKey<N>) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
-
-        self.storage.pop(key)
+        self.storage.pop(key).and_then(|c| c.user_chunk)
     }
 }
 

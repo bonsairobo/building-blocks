@@ -40,7 +40,7 @@
 
 use crate::{
     array::ArrayCopySrc,
-    chunk::{Chunk, ChunkCopySrc, ChunkCopySrcIter, ChunkMapLodView},
+    chunk::{ChunkCopySrc, ChunkCopySrcIter, ChunkMapLodView, ChunkNode, UserChunk},
     dev_prelude::{
         AmbientExtent, Array, ChunkMap, ChunkStorage, ForEach, Get, GetUnchecked, IndexedArray,
         ReadExtent,
@@ -151,18 +151,18 @@ where
     }
 }
 
-impl<'a, Delegate, N, F, In: 'a, Out, Ch: 'a, Bldr: 'a, Store: 'a> ReadExtent<'a, N>
+impl<'a, Delegate, N, F, In: 'a, Out, Usr: 'a, Bldr: 'a, Store: 'a> ReadExtent<'a, N>
     for TransformMap<'a, ChunkMapLodView<Delegate>, F>
 where
     Delegate: Deref<Target = ChunkMap<N, In, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     F: Copy + Fn(In) -> Out,
     In: Copy,
-    Ch: Chunk,
-    Store: ChunkStorage<N, Chunk = Ch>,
+    Usr: UserChunk,
+    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
 {
-    type Src = TransformChunkCopySrc<'a, N, F, Out, Ch>;
-    type SrcIter = TransformChunkCopySrcIter<'a, N, F, In, Ch>;
+    type Src = TransformChunkCopySrc<'a, N, F, Out, Usr>;
+    type SrcIter = TransformChunkCopySrcIter<'a, N, F, In, Usr>;
 
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter {
         TransformChunkCopySrcIter {

@@ -6,6 +6,7 @@ pub use sdf_mean::*;
 
 use crate::{
     array::{ArrayIndexer, LockStepArrayForEach},
+    chunk::ChunkNode,
     dev_prelude::*,
 };
 
@@ -18,14 +19,14 @@ pub trait ChunkDownsampler<N, T, Src, Dst> {
     fn downsample(&self, src_chunk: &Src, dst_chunk: &mut Dst, dst_min: Local<N>);
 }
 
-impl<N, T, Ch, Bldr, Store> ChunkMap<N, T, Bldr, Store>
+impl<N, T, Usr, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
     ChunkKey<N>: Copy,
     T: Clone,
-    Ch: Chunk + FillExtent<N, Item = T> + IndexedArray<N>,
-    Bldr: ChunkMapBuilder<N, T, Chunk = Ch>,
-    Store: ChunkStorage<N, Chunk = Ch>,
+    Usr: UserChunk + FillExtent<N, Item = T> + IndexedArray<N>,
+    Bldr: ChunkMapBuilder<N, T, Chunk = Usr>,
+    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
 {
     /// Downsamples the chunk at `src_chunk_key` into the specified destination level `dst_lod`.
     pub fn downsample_chunk<Samp>(
@@ -34,7 +35,7 @@ where
         src_chunk_key: ChunkKey<N>,
         dst_lod: u8,
     ) where
-        Samp: ChunkDownsampler<N, T, Ch, Ch>,
+        Samp: ChunkDownsampler<N, T, Usr, Usr>,
     {
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
         if let Some(src_chunk) = self.pop_chunk(src_chunk_key) {
@@ -53,7 +54,7 @@ where
         src_chunk: &Src,
         dst_lod: u8,
     ) where
-        Samp: ChunkDownsampler<N, T, Src, Ch>,
+        Samp: ChunkDownsampler<N, T, Src, Usr>,
     {
         assert!(dst_lod > src_chunk_key.lod);
 
@@ -80,12 +81,12 @@ where
     }
 }
 
-impl<T, Ch, Bldr, Store> ChunkMap3<T, Bldr, Store>
+impl<T, Usr, Bldr, Store> ChunkMap3<T, Bldr, Store>
 where
     T: Clone,
-    Ch: Chunk + FillExtent<[i32; 3], Item = T> + IndexedArray<[i32; 3]>,
-    Bldr: ChunkMapBuilder<[i32; 3], T, Chunk = Ch>,
-    Store: ChunkStorage<[i32; 3], Chunk = Ch>,
+    Usr: UserChunk + FillExtent<[i32; 3], Item = T> + IndexedArray<[i32; 3]>,
+    Bldr: ChunkMapBuilder<[i32; 3], T, Chunk = Usr>,
+    Store: ChunkStorage<[i32; 3], Chunk = ChunkNode<Usr>>,
 {
     /// Downsamples all chunks that both:
     ///   1. overlap `extent`
@@ -98,7 +99,7 @@ where
         sampler: &Samp,
         extent: &Extent3i,
     ) where
-        Samp: ChunkDownsampler<[i32; 3], T, Ch, Ch>,
+        Samp: ChunkDownsampler<[i32; 3], T, Usr, Usr>,
     {
         let chunk_shape = self.chunk_shape();
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
@@ -137,8 +138,8 @@ where
         extent: &Extent3i,
     ) where
         Lod0Ch: Borrow<Lod0ChBorrow>,
-        Samp:
-            ChunkDownsampler<[i32; 3], T, Ch, Ch> + ChunkDownsampler<[i32; 3], T, Lod0ChBorrow, Ch>,
+        Samp: ChunkDownsampler<[i32; 3], T, Usr, Usr>
+            + ChunkDownsampler<[i32; 3], T, Lod0ChBorrow, Usr>,
     {
         let chunk_shape = self.chunk_shape();
         let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);

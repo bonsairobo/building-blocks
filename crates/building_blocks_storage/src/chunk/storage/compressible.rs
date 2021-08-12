@@ -3,7 +3,7 @@ use crate::{
     compression::MaybeCompressed,
     dev_prelude::{
         ChunkKey, ChunkMap, ChunkStorage, Compressed, Compression, FastArrayCompression,
-        FastChannelsCompression, FromBytesCompression, IterChunkKeys,
+        FastChannelsCompression, FastChunkCompression, FromBytesCompression, IterChunkKeys,
     },
     SmallKeyBuildHasher,
 };
@@ -31,8 +31,10 @@ where
 /// A `LocalCache` of chunks.
 type LocalChunkCache<N, Ch> = LocalCache<ChunkKey<N>, Ch, SmallKeyBuildHasher>;
 
-pub type FastCompressibleChunkStorage<N, By, Chan> =
-    CompressibleChunkStorage<N, FastArrayCompression<N, FastChannelsCompression<By, Chan>>>;
+pub type FastCompressibleChunkStorage<N, By, Chan> = CompressibleChunkStorage<
+    N,
+    FastChunkCompression<FastArrayCompression<N, FastChannelsCompression<By, Chan>>>,
+>;
 
 impl<N, By, Chan> FastCompressibleChunkStorage<N, By, Chan>
 where
@@ -43,8 +45,8 @@ where
     FastChannelsCompression<By, Chan>: Compression<Data = Chan>,
 {
     pub fn with_bytes_compression(bytes_compression: By) -> Self {
-        Self::new(FastArrayCompression::from_bytes_compression(
-            bytes_compression,
+        Self::new(FastChunkCompression::new(
+            FastArrayCompression::from_bytes_compression(bytes_compression),
         ))
     }
 }
@@ -359,17 +361,23 @@ pub mod multichannel_aliases {
     use crate::dev_prelude::{Channel, ChunkMapBuilderNxM};
 
     pub type FastCompressibleChunkStorageNx1<N, By, A> =
-        CompressibleChunkStorage<N, FastArrayCompressionNx1<N, By, A>>;
+        CompressibleChunkStorage<N, FastChunkCompression<FastArrayCompressionNx1<N, By, A>>>;
     pub type FastCompressibleChunkStorageNx2<N, By, A, B> =
-        CompressibleChunkStorage<N, FastArrayCompressionNx2<N, By, A, B>>;
+        CompressibleChunkStorage<N, FastChunkCompression<FastArrayCompressionNx2<N, By, A, B>>>;
     pub type FastCompressibleChunkStorageNx3<N, By, A, B, C> =
-        CompressibleChunkStorage<N, FastArrayCompressionNx3<N, By, A, B, C>>;
-    pub type FastCompressibleChunkStorageNx4<N, By, A, B, C, D> =
-        CompressibleChunkStorage<N, FastArrayCompressionNx4<N, By, A, B, C, D>>;
-    pub type FastCompressibleChunkStorageNx5<N, By, A, B, C, D, E> =
-        CompressibleChunkStorage<N, FastArrayCompressionNx5<N, By, A, B, C, D, E>>;
-    pub type FastCompressibleChunkStorageNx6<N, By, A, B, C, D, E, F> =
-        CompressibleChunkStorage<N, FastArrayCompressionNx6<N, By, A, B, C, D, E, F>>;
+        CompressibleChunkStorage<N, FastChunkCompression<FastArrayCompressionNx3<N, By, A, B, C>>>;
+    pub type FastCompressibleChunkStorageNx4<N, By, A, B, C, D> = CompressibleChunkStorage<
+        N,
+        FastChunkCompression<FastArrayCompressionNx4<N, By, A, B, C, D>>,
+    >;
+    pub type FastCompressibleChunkStorageNx5<N, By, A, B, C, D, E> = CompressibleChunkStorage<
+        N,
+        FastChunkCompression<FastArrayCompressionNx5<N, By, A, B, C, D, E>>,
+    >;
+    pub type FastCompressibleChunkStorageNx6<N, By, A, B, C, D, E, F> = CompressibleChunkStorage<
+        N,
+        FastChunkCompression<FastArrayCompressionNx6<N, By, A, B, C, D, E, F>>,
+    >;
 
     macro_rules! compressible_map_type_alias {
         ($name:ident, $dim:ty, $( $chan:ident ),+ ) => {
@@ -377,7 +385,7 @@ pub mod multichannel_aliases {
                 $dim,
                 ($($chan,)+),
                 ChunkMapBuilderNxM<$dim, ($($chan,)+), ($(Channel<$chan>,)+)>,
-                FastArrayCompression<$dim, FastChannelsCompression<By, ($(Channel<$chan>,)+)>>,
+                FastChunkCompression<FastArrayCompression<$dim, FastChannelsCompression<By, ($(Channel<$chan>,)+)>>>,
             >;
         };
     }
@@ -386,7 +394,7 @@ pub mod multichannel_aliases {
         N,
         A,
         ChunkMapBuilderNxM<N, A, Channel<A>>,
-        FastArrayCompression<N, FastChannelsCompression<By, Channel<A>>>,
+        FastChunkCompression<FastArrayCompression<N, FastChannelsCompression<By, Channel<A>>>>,
     >;
 
     pub type CompressibleChunkMap2x1<By, A> = CompressibleChunkMapNx1<[i32; 2], By, A>;

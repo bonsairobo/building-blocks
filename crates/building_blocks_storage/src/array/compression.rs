@@ -9,7 +9,7 @@ use std::io;
 /// portable.
 #[derive(Clone, Copy, Debug)]
 pub struct FastArrayCompression<N, C> {
-    pub channels_compression: C,
+    channels_compression: C,
     marker: std::marker::PhantomData<N>,
 }
 

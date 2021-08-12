@@ -1,4 +1,7 @@
-use crate::dev_prelude::{ChunkMap, ChunkMapBuilder, SmallKeyHashMap};
+use crate::{
+    chunk::ChunkNode,
+    dev_prelude::{ChunkMap, ChunkMapBuilder, SmallKeyHashMap},
+};
 
 use super::{ChunkKey, ChunkStorage, IterChunkKeys};
 
@@ -64,8 +67,12 @@ where
 }
 
 /// A `ChunkMap` using `HashMap` as chunk storage.
-pub type ChunkHashMap<N, T, Bldr> =
-    ChunkMap<N, T, Bldr, SmallKeyHashMap<ChunkKey<N>, <Bldr as ChunkMapBuilder<N, T>>::Chunk>>;
+pub type ChunkHashMap<N, T, Bldr> = ChunkMap<
+    N,
+    T,
+    Bldr,
+    SmallKeyHashMap<ChunkKey<N>, ChunkNode<<Bldr as ChunkMapBuilder<N, T>>::Chunk>>,
+>;
 /// A 2-dimensional `ChunkHashMap`.
 pub type ChunkHashMap2<T, Bldr> = ChunkHashMap<[i32; 2], T, Bldr>;
 /// A 3-dimensional `ChunkHashMap`.

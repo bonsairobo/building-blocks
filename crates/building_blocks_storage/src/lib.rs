@@ -49,9 +49,9 @@ pub mod prelude {
     pub use super::{
         array::{IndexedArray, Local, Stride},
         chunk::{
-            AmbientExtent, Chunk, ChunkDownsampler, ChunkKey, ChunkKey2, ChunkKey3,
-            ChunkMapBuilder, ChunkStorage, ChunkUnits, IterChunkKeys, PointDownsampler,
-            SdfMeanDownsampler,
+            AmbientExtent, ChunkDownsampler, ChunkKey, ChunkKey2, ChunkKey3, ChunkMapBuilder,
+            ChunkStorage, ChunkUnits, FastChunkCompression, IterChunkKeys, PointDownsampler,
+            SdfMeanDownsampler, UserChunk,
         },
         compression::{
             BincodeCompression, BytesCompression, Compressed, Compression, FromBytesCompression,
@@ -99,7 +99,7 @@ pub mod dev_prelude {
         },
         chunk::{
             ChunkHashMap, ChunkMap, ChunkMap2, ChunkMap3, ChunkMapBuilderNxM,
-            CompressibleChunkStorage,
+            CompressibleChunkStorage, FastChunkCompression,
         },
         SmallKeyHashMap, SmallKeyHashSet,
     };

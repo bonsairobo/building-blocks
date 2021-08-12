@@ -13,8 +13,9 @@ use building_blocks_core::prelude::*;
 use std::borrow::Borrow;
 
 pub trait ChunkDownsampler<N, T, Src, Dst> {
-    /// Samples `src_chunk` in order to write out just a portion of `dst_chunk`, starting at `dst_min`.
-    fn downsample(&self, src_chunk: &Src, dst_chunk: &mut Dst, dst_min: Local<N>, lod_delta: u8);
+    /// Samples `src_chunk` in order to write out just a portion of `dst_chunk`, starting at `dst_min`, where the destination
+    /// has half the resolution (sample rate) of the source.
+    fn downsample(&self, src_chunk: &Src, dst_chunk: &mut Dst, dst_min: Local<N>);
 }
 
 impl<N, T, Ch, Bldr, Store> ChunkMap<N, T, Bldr, Store>
@@ -56,13 +57,10 @@ where
     {
         assert!(dst_lod > src_chunk_key.lod);
 
-        let chunk_shape = self.chunk_shape();
-        let lod_delta = dst_lod - src_chunk_key.lod;
-        let dst =
-            DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_key.minimum, lod_delta);
+        let dst = self.indexer.downsample_destination(src_chunk_key.minimum);
         let dst_chunk =
             self.get_mut_chunk_or_insert_ambient(ChunkKey::new(dst_lod, dst.dst_chunk_min));
-        sampler.downsample(src_chunk, dst_chunk, dst.dst_offset, lod_delta);
+        sampler.downsample(src_chunk, dst_chunk, dst.dst_offset);
     }
 
     /// Fill the destination samples with the ambient value.
@@ -71,9 +69,7 @@ where
 
         let chunk_shape = self.chunk_shape();
         let ambient_value = self.ambient_value.clone();
-        let lod_delta = dst_lod - src_chunk_key.lod;
-        let dst =
-            DownsampleDestination::for_source_chunk(chunk_shape, src_chunk_key.minimum, lod_delta);
+        let dst = self.indexer.downsample_destination(src_chunk_key.minimum);
         let dst_chunk =
             self.get_mut_chunk_or_insert_ambient(ChunkKey::new(dst_lod, dst.dst_chunk_min));
         let dst_extent = ExtentN::from_min_and_shape(
@@ -183,49 +179,20 @@ where
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct DownsampleDestination<N> {
-    dst_chunk_min: PointN<N>,
-    dst_offset: Local<N>,
-}
-
-impl<N> DownsampleDestination<N>
-where
-    PointN<N>: IntegerPoint<N>,
-{
-    /// When downsampling a chunk at level `N`, the samples are used at the returned destination within level `N + level_delta`
-    /// in the clipmap.
-    fn for_source_chunk(chunk_shape: PointN<N>, src_chunk_min: PointN<N>, lod_delta: u8) -> Self {
-        let lod_delta = lod_delta as i32;
-        let chunk_shape_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
-        let level_up_log2 = chunk_shape_log2 + PointN::fill(lod_delta);
-        let level_up_shape = chunk_shape << lod_delta;
-        let dst_chunk_min = (src_chunk_min >> level_up_log2) << chunk_shape_log2;
-        let offset = src_chunk_min % level_up_shape;
-        let dst_offset = Local(offset >> lod_delta);
-
-        Self {
-            dst_chunk_min,
-            dst_offset,
-        }
-    }
-}
-
 fn chunk_downsample_for_each<N>(
     chunk_shape: PointN<N>,
     dst_min: Local<N>,
-    lod_delta: i32,
 ) -> LockStepArrayForEach<N>
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,
 {
-    let dst_shape = chunk_shape >> lod_delta;
+    let dst_shape = chunk_shape >> 1;
     debug_assert!(dst_shape > PointN::ZERO);
 
     let iter_extent = ExtentN::from_min_and_shape(PointN::ZERO, dst_shape);
     let dst_iter = N::make_stride_iter(chunk_shape, dst_min, PointN::ONES);
-    let src_iter = N::make_stride_iter(chunk_shape, Local(PointN::ZERO), PointN::ONES << lod_delta);
+    let src_iter = N::make_stride_iter(chunk_shape, Local(PointN::ZERO), PointN::fill(2));
 
     LockStepArrayForEach::new(iter_extent, dst_iter, src_iter)
 }
@@ -241,58 +208,6 @@ where
 mod tests {
     use super::*;
     use crate::prelude::{Sd8, SdfMeanDownsampler};
-
-    #[test]
-    fn downsample_destination_for_one_level_up() {
-        let chunk_shape = Point3i::fill(16);
-        let level_delta = 1;
-
-        let src_key = chunk_shape;
-        let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_key, level_delta);
-        assert_eq!(
-            dst,
-            DownsampleDestination {
-                dst_chunk_min: Point3i::ZERO,
-                dst_offset: Local(chunk_shape / 2),
-            }
-        );
-
-        let src_key = 2 * chunk_shape;
-        let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_key, level_delta);
-        assert_eq!(
-            dst,
-            DownsampleDestination {
-                dst_chunk_min: chunk_shape,
-                dst_offset: Local(Point3i::ZERO),
-            }
-        );
-    }
-
-    #[test]
-    fn downsample_destination_for_two_levels_up() {
-        let chunk_shape = Point3i::fill(16);
-        let level_delta = 2;
-
-        let src_key = 3 * chunk_shape;
-        let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_key, level_delta);
-        assert_eq!(
-            dst,
-            DownsampleDestination {
-                dst_chunk_min: Point3i::ZERO,
-                dst_offset: Local(3 * chunk_shape / 4),
-            }
-        );
-
-        let src_key = 4 * chunk_shape;
-        let dst = DownsampleDestination::for_source_chunk(chunk_shape, src_key, level_delta);
-        assert_eq!(
-            dst,
-            DownsampleDestination {
-                dst_chunk_min: chunk_shape,
-                dst_offset: Local(Point3i::ZERO),
-            }
-        );
-    }
 
     #[test]
     fn downsample_multichannel_chunks_with_index() {

@@ -1,11 +1,11 @@
+use crate::dev_prelude::Local;
+
 use building_blocks_core::prelude::*;
 
 use core::ops::{Div, Mul};
 use serde::{Deserialize, Serialize};
 
-/// Calculates chunk minimums.
-///
-/// We use chunk minimums as keys for chunk storage.
+/// Calculates chunk locations, e.g. minimums and downsampling destinations.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct ChunkIndexer<N> {
     chunk_shape: PointN<N>,
@@ -75,6 +75,25 @@ where
     pub fn child_chunk_min(&self, chunk_min: PointN<N>, child_index: u8) -> PointN<N> {
         (chunk_min << 1) + (PointN::corner_offset(child_index) << self.chunk_shape_log2)
     }
+
+    /// When downsampling a chunk at level `L`, the samples are used at the returned destination within level `L + 1`.
+    #[inline]
+    pub fn downsample_destination(&self, src_chunk_min: PointN<N>) -> DownsampleDestination<N> {
+        let double_mask = self.chunk_shape_mask << 1;
+        let double_parent_min = src_chunk_min & double_mask;
+        let dst_chunk_min = double_parent_min >> 1;
+        let dst_offset = Local((src_chunk_min - double_parent_min) >> 1);
+        DownsampleDestination {
+            dst_chunk_min,
+            dst_offset,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DownsampleDestination<N> {
+    pub dst_chunk_min: PointN<N>,
+    pub dst_offset: Local<N>,
 }
 
 // ████████╗███████╗███████╗████████╗
@@ -139,5 +158,31 @@ mod tests {
         assert_eq!(lod1_min, Point3i::fill(4));
         let lod0_min = indexer.child_chunk_min(lod1_min, 0b111);
         assert_eq!(lod0_min, Point3i::fill(12));
+    }
+
+    #[test]
+    fn downsample_destination() {
+        let chunk_shape = Point3i::fill(16);
+        let indexer = ChunkIndexer::new(chunk_shape);
+
+        let src_key = chunk_shape;
+        let dst = indexer.downsample_destination(src_key);
+        assert_eq!(
+            dst,
+            DownsampleDestination {
+                dst_chunk_min: Point3i::ZERO,
+                dst_offset: Local(chunk_shape / 2),
+            }
+        );
+
+        let src_key = 2 * chunk_shape;
+        let dst = indexer.downsample_destination(src_key);
+        assert_eq!(
+            dst,
+            DownsampleDestination {
+                dst_chunk_min: chunk_shape,
+                dst_offset: Local(Point3i::ZERO),
+            }
+        );
     }
 }

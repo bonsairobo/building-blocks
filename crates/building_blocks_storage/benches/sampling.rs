@@ -20,7 +20,7 @@ fn point_downsample3(c: &mut Criterion) {
                     (src, dst, chunk_shape)
                 },
                 |(src, mut dst, chunk_shape)| {
-                    PointDownsampler.downsample(&src, &mut dst, Local(chunk_shape / 2), 1);
+                    PointDownsampler.downsample(&src, &mut dst, Local(chunk_shape / 2));
                     black_box(dst);
                 },
             );
@@ -43,7 +43,7 @@ fn sdf_mean_downsample3(c: &mut Criterion) {
                     (src, dst, chunk_shape)
                 },
                 |(src, mut dst, chunk_shape)| {
-                    SdfMeanDownsampler.downsample(&src, &mut dst, Local(chunk_shape / 2), 1);
+                    SdfMeanDownsampler.downsample(&src, &mut dst, Local(chunk_shape / 2));
                     black_box(dst);
                 },
             );

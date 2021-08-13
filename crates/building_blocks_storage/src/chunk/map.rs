@@ -199,10 +199,6 @@ impl<U> Default for ChunkNode<U> {
 }
 
 impl<U> ChunkNode<U> {
-    fn new_with_data(user_chunk: U) -> Self {
-        Self::new(Some(user_chunk), 0)
-    }
-
     #[inline]
     pub(crate) fn new(user_chunk: Option<U>, child_mask: u8) -> Self {
         Self {
@@ -438,6 +434,40 @@ where
     Bldr: ChunkMapBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
 {
+    fn link_node(&mut self, mut key: ChunkKey<N>) {
+        // PERF: when writing many chunks, we would revisit nodes many times as we travels up to the root for every chunk. We
+        // might do better by inserting them in a batch and sorting the chunks in morton order before linking into the tree.
+        while key.lod < self.root_lod() {
+            let parent = self.indexer.parent_chunk_key(key);
+            let mut parent_already_exists = true;
+            let parent_node = self.storage.get_mut_or_insert_with(parent, || {
+                parent_already_exists = false;
+                ChunkNode::default()
+            });
+            let child_corner_index = self.indexer.corner_index(key.minimum);
+            parent_node.child_mask |= 1 << child_corner_index;
+            if parent_already_exists {
+                return;
+            }
+            key = parent;
+        }
+    }
+
+    fn unlink_node(&mut self, mut key: ChunkKey<N>) {
+        // PERF: when removing many chunks, we would revisit nodes many times as we travels up to the root for every chunk. We
+        // might do better by removing them in a batch and sorting the chunks in morton order before unlinking from the tree.
+        while key.lod < self.root_lod() {
+            let parent = self.indexer.parent_chunk_key(key);
+            let parent_node = self.storage.get_mut(parent).unwrap();
+            let child_corner_index = self.indexer.corner_index(key.minimum);
+            parent_node.child_mask &= !(1 << child_corner_index);
+            if parent_node.child_mask != 0 || parent_node.user_chunk.is_some() {
+                return;
+            }
+            key = parent;
+        }
+    }
+
     /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
     ///
     /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
@@ -445,7 +475,10 @@ where
     pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.storage.write(key, ChunkNode::new_with_data(chunk));
+        let node = self.storage.get_mut_or_insert_with(key, ChunkNode::default);
+        node.user_chunk = Some(chunk);
+
+        self.link_node(key);
     }
 
     /// Replace the `Chunk` at `key` with `chunk`, returning the old value.
@@ -455,9 +488,12 @@ where
     pub fn replace_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.storage
-            .replace(key, ChunkNode::new_with_data(chunk))
-            .and_then(|c| c.user_chunk)
+        let node = self.storage.get_mut_or_insert_with(key, ChunkNode::default);
+        let old_chunk = node.user_chunk.replace(chunk);
+
+        self.link_node(key);
+
+        old_chunk
     }
 
     /// Mutably borrow the chunk at `key`.
@@ -483,6 +519,8 @@ where
     ) -> &mut Usr {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
+        self.link_node(key);
+
         self.storage
             .get_mut_or_insert_with(key, ChunkNode::default)
             .user_chunk
@@ -495,6 +533,8 @@ where
     #[inline]
     pub fn get_mut_chunk_or_insert_ambient(&mut self, key: ChunkKey<N>) -> &mut Usr {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+
+        self.link_node(key);
 
         let Self {
             indexer,
@@ -556,12 +596,14 @@ where
     #[inline]
     pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+        self.unlink_node(key);
         self.storage.delete(key);
     }
 
     #[inline]
     pub fn pop_chunk(&mut self, key: ChunkKey<N>) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+        self.unlink_node(key);
         self.storage.pop(key).and_then(|c| c.user_chunk)
     }
 }

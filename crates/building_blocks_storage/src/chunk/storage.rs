@@ -10,12 +10,37 @@ use auto_impl::auto_impl;
 use serde::{Deserialize, Serialize};
 
 /// The key for a chunk at a particular level of detail.
-#[derive(Clone, Copy, Debug, Deserialize, Hash, Eq, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Hash, Eq, Serialize)]
 pub struct ChunkKey<N> {
     /// The minimum point of the chunk.
     pub minimum: PointN<N>,
     /// The level of detail. From highest resolution at 0 to lowest resolution at MAX_LOD.
     pub lod: u8,
+}
+
+// A few of these traits could be derived. But it seems that derive will not help the compiler infer trait bounds as well.
+
+impl<N> Clone for ChunkKey<N>
+where
+    PointN<N>: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            minimum: self.minimum.clone(),
+            lod: self.lod.clone(),
+        }
+    }
+}
+impl<N> Copy for ChunkKey<N> where PointN<N>: Copy {}
+
+impl<N> PartialEq for ChunkKey<N>
+where
+    PointN<N>: PartialEq,
+{
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.minimum == other.minimum && self.lod == other.lod
+    }
 }
 
 /// A 2-dimensional `ChunkKey`.

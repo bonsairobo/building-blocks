@@ -33,7 +33,7 @@ impl<Ni, Nf> GridRayTraversal<Ni, Nf> {
 
         // For each axis, calculate the time delta we need to reach a pixel boundary on that axis. For a positive velocity, this
         // is just the next pixel, but for negative, it's the current pixel (hence the join with zero).
-        let next_bounds: PointN<Nf> = (current_grid_point + step.join(PointN::ZERO)).into();
+        let next_bounds = PointN::<Nf>::from(current_grid_point + step.join(PointN::ZERO));
         let delta_to_next_bounds = next_bounds - start;
         let t_max = delta_to_next_bounds / velocity;
 

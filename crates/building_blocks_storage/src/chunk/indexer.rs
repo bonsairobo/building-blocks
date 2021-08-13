@@ -1,4 +1,4 @@
-use crate::dev_prelude::Local;
+use crate::dev_prelude::{ChunkKey, Local};
 
 use building_blocks_core::prelude::*;
 
@@ -69,10 +69,32 @@ where
         (chunk_min & (self.chunk_shape_mask << 1)) >> 1
     }
 
-    /// Given a chunk at `chunk_min`, returns the minimum of the child chunk with `child_index`.
+    /// Given a chunk key, returns the key of the parent chunk.
     #[inline]
-    pub fn child_chunk_min(&self, chunk_min: PointN<N>, child_index: u8) -> PointN<N> {
-        (chunk_min << 1) + (PointN::corner_offset(child_index) << self.chunk_shape_log2)
+    pub fn parent_chunk_key(&self, key: ChunkKey<N>) -> ChunkKey<N> {
+        ChunkKey::new(key.lod + 1, self.parent_chunk_min(key.minimum))
+    }
+
+    /// Given a chunk at `chunk_min`, returns the minimum of the child chunk with `corner_index`.
+    #[inline]
+    pub fn child_chunk_min(&self, chunk_min: PointN<N>, corner_index: u8) -> PointN<N> {
+        (chunk_min << 1) + (PointN::corner_offset(corner_index) << self.chunk_shape_log2)
+    }
+
+    /// Given a chunk key, returns the key of the child chunk with `corner_index`.
+    #[inline]
+    pub fn child_chunk_key(&self, key: ChunkKey<N>, corner_index: u8) -> ChunkKey<N> {
+        debug_assert!(key.lod > 0);
+        ChunkKey::new(key.lod - 1, self.child_chunk_min(key.minimum, corner_index))
+    }
+
+    /// Given a child location `chunk_min`, returns the corner index relative to its parent.
+    #[inline]
+    pub fn corner_index(&self, chunk_min: PointN<N>) -> u8 {
+        let double_mask = self.chunk_shape_mask << 1;
+        let double_parent_min = chunk_min & double_mask;
+        let offset = (chunk_min - double_parent_min) >> self.chunk_shape_log2;
+        offset.as_corner_index()
     }
 
     /// When downsampling a chunk at level `L`, the samples are used at the returned destination within level `L + 1`.
@@ -183,5 +205,19 @@ mod tests {
                 dst_offset: Local(Point3i::ZERO),
             }
         );
+    }
+
+    #[test]
+    fn corner_index_matches_children() {
+        let chunk_shape = PointN([4, 8, 16]);
+        let indexer = ChunkIndexer::new(chunk_shape);
+
+        let parent_chunk_min = PointN([-4, 0, 16]);
+        for corner_index in 0..Point3i::NUM_CORNERS {
+            assert_eq!(
+                indexer.corner_index(indexer.child_chunk_min(parent_chunk_min, corner_index)),
+                corner_index
+            );
+        }
     }
 }

@@ -108,12 +108,15 @@ pub trait IntegerPoint<N>:
     + BitAnd<i32, Output = Self>
     + BitOr<i32, Output = Self>
     + BitXor<i32, Output = Self>
+    + From<Self::Morton>
     + Eq
     + IntegerDiv
+    + Into<Self::Morton>
     + IterExtent<N>
     + LatticeOrder
     + Neighborhoods
     + Not<Output = Self>
+    + PartialEq
     + Point<Scalar = i32>
     + Rem<Self, Output = Self>
     + Shl<Self, Output = Self>
@@ -122,6 +125,7 @@ pub trait IntegerPoint<N>:
     + Shl<i32, Output = Self>
     + Shr<i32, Output = Self>
 {
+    /// The Morton code (Z order) for this point.
     type Morton;
 
     /// Returns `true` iff all dimensions are powers of 2.
@@ -460,6 +464,10 @@ pub trait Neighborhoods: Sized {
 
     /// Get the corner offset for the given index, which resembles a Morton code i.e. `0bYX` in 2D or `0bZYX` in 3D.
     fn corner_offset(index: u8) -> Self;
+
+    /// Converts a corner offset into an index. This is the inverse of `Neighborhoods::corner_offset`. All dimensions must be
+    /// eiher 0 or 1.
+    fn as_corner_index(&self) -> u8;
 
     /// [Von Neumann Neighborhood](https://en.wikipedia.org/wiki/Von_Neumann_neighborhood)
     fn von_neumann_offsets() -> Vec<Self>;

@@ -396,6 +396,11 @@ impl Neighborhoods for Point3i {
     }
 
     #[inline]
+    fn as_corner_index(&self) -> u8 {
+        self.x() as u8 | ((self.y() as u8) << 1) | ((self.z() as u8) << 2)
+    }
+
+    #[inline]
     fn von_neumann_offsets() -> Vec<Self> {
         Self::VON_NEUMANN_OFFSETS.to_vec()
     }
@@ -509,3 +514,15 @@ impl_binary_integer_ops!(Point3i);
 
 impl_float_div!(Point3f, f32);
 impl_integer_div!(Point3i, i32);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn corner_index_matches_offsets() {
+        for c in 0..Point3i::NUM_CORNERS {
+            assert_eq!(Point3i::corner_offset(c).as_corner_index(), c);
+        }
+    }
+}

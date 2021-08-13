@@ -87,7 +87,7 @@
 //! let other_array = Array3x1::new_one_channel(extent, array.channels().store().as_ref());
 //! assert_eq!(other_array.get(Stride(0)), 1);
 //!
-//! // A stack-allocated array. Note that these are more expensive to `Clone`!
+//! // A stack-allocated array.
 //! let mut data = [1; 32 * 32 * 32];
 //! let mut stack_array = Array3x1::new_one_channel(extent, &mut data[..]);
 //! *stack_array.get_mut(Stride(0)) = 2;

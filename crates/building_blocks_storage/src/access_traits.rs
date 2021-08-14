@@ -48,7 +48,7 @@
 //! // `WriteExtent` can be a copy destination, and any map that implements `ReadExtent` can be a
 //! // copy source.
 //! let chunk_shape = Point3i::fill(16);
-//! let builder = ChunkMapBuilder3x1::new(chunk_shape, 0);
+//! let builder = ChunkMapBuilder3x1::new(ChunkMapConfig { chunk_shape, ambient_value: 0, root_lod: 0 });
 //! let mut other_map = builder.build_with_hash_map_storage();
 //! copy_extent(&subextent, &map, &mut other_map.lod_view_mut(0));
 //! copy_extent(&subextent, &other_map.lod_view(0), &mut map);

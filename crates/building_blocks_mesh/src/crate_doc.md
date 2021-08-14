@@ -24,7 +24,7 @@ use building_blocks_mesh::*;
 use std::collections::HashSet;
 
 let chunk_shape = PointN([16; 2]);
-let builder = ChunkMapBuilder2x1::new(chunk_shape, 0.0);
+let builder = ChunkMapBuilder2x1::new(ChunkMapConfig { chunk_shape, ambient_value: 0.0, root_lod: 0 });
 let mut map = builder.build_with_hash_map_storage();
 
 // ...mutate one or more of the chunks...

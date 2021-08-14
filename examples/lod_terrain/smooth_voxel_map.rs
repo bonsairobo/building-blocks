@@ -47,7 +47,11 @@ impl VoxelMap for SmoothVoxelMap {
             true,
         );
 
-        let builder = ChunkMapBuilder3x1::new(chunk_shape, AMBIENT_VALUE);
+        let builder = ChunkMapBuilder3x1::new(ChunkMapConfig {
+            chunk_shape,
+            ambient_value: AMBIENT_VALUE,
+            root_lod: num_lods - 1,
+        });
         let mut chunks = builder.build_with_hash_map_storage();
 
         for (chunk_min, noise) in noise_chunks.into_iter() {

@@ -32,7 +32,7 @@ impl<N> ChunkKey<N> {
     }
 }
 
-/// Methods for writing chunks from storage.
+/// Methods for reading and writing chunks from/to storage.
 pub trait ChunkStorage<N> {
     type Chunk;
 

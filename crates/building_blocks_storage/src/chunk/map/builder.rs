@@ -11,21 +11,53 @@ use building_blocks_core::{point_traits::IntegerPoint, ExtentN, PointN};
 use core::hash::Hash;
 use serde::{Deserialize, Serialize};
 
+/// Constant parameters required to construct a [`ChunkMapBuilder`].
+#[derive(Clone, Copy, Deserialize, Serialize)]
+pub struct ChunkMapConfig<N, T> {
+    /// The shape of every chunk.
+    pub chunk_shape: PointN<N>,
+    /// The voxel value taken in regions where chunks are vacant.
+    pub ambient_value: T,
+    /// The level of detail of root nodes. This implies there are `root_lod + 1` levels of detail, where level 0 (leaves of the
+    /// tree) has the highest sample rate.
+    pub root_lod: u8,
+}
+
 /// An object that knows how to construct chunks for a `ChunkMap`.
 pub trait ChunkMapBuilder<N, T>: Sized {
     type Chunk;
 
-    fn chunk_shape(&self) -> PointN<N>;
-
-    fn ambient_value(&self) -> T;
+    fn config(&self) -> &ChunkMapConfig<N, T>;
 
     /// Construct a new chunk with entirely ambient values.
     fn new_ambient(&self, extent: ExtentN<N>) -> Self::Chunk;
 
-    /// Create a new `ChunkMap` with the given `storage` which must implement `ChunkStorage`.
+    #[inline]
+    fn chunk_shape(&self) -> PointN<N>
+    where
+        PointN<N>: Clone,
+    {
+        self.config().chunk_shape.clone()
+    }
+
+    #[inline]
+    fn ambient_value(&self) -> T
+    where
+        T: Clone,
+    {
+        self.config().ambient_value.clone()
+    }
+
+    #[inline]
+    fn root_lod(&self) -> u8 {
+        self.config().root_lod
+    }
+
+    /// Create a new `ChunkMap` with the given `storage` which must implement both `ChunkReadStorage` and `ChunkWriteStorage`.
     fn build_with_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Self, Store>
     where
         PointN<N>: IntegerPoint<N>,
+        T: Clone,
         Store: ChunkStorage<N, Chunk = ChunkNode<Self::Chunk>>,
     {
         ChunkMap::new(self, storage)
@@ -35,6 +67,7 @@ pub trait ChunkMapBuilder<N, T>: Sized {
     fn build_with_hash_map_storage(self) -> ChunkHashMap<N, T, Self>
     where
         PointN<N>: IntegerPoint<N>,
+        T: Clone,
         ChunkKey<N>: Eq + Hash,
     {
         Self::build_with_storage(self, SmallKeyHashMap::default())
@@ -44,16 +77,14 @@ pub trait ChunkMapBuilder<N, T>: Sized {
 /// A `ChunkMapBuilder` for `Array` chunks.
 #[derive(Clone, Copy, Deserialize, Serialize)]
 pub struct ChunkMapBuilderNxM<N, T, Chan> {
-    pub chunk_shape: PointN<N>,
-    pub ambient_value: T,
+    pub config: ChunkMapConfig<N, T>,
     marker: std::marker::PhantomData<Chan>,
 }
 
 impl<N, T, Chan> ChunkMapBuilderNxM<N, T, Chan> {
-    pub const fn new(chunk_shape: PointN<N>, ambient_value: T) -> Self {
+    pub const fn new(config: ChunkMapConfig<N, T>) -> Self {
         Self {
-            chunk_shape,
-            ambient_value,
+            config,
             marker: std::marker::PhantomData,
         }
     }
@@ -98,12 +129,8 @@ where
 {
     type Chunk = Array<N, Chan>;
 
-    fn chunk_shape(&self) -> PointN<N> {
-        self.chunk_shape
-    }
-
-    fn ambient_value(&self) -> T {
-        self.ambient_value.clone()
+    fn config(&self) -> &ChunkMapConfig<N, T> {
+        &self.config
     }
 
     fn new_ambient(&self, extent: ExtentN<N>) -> Self::Chunk {

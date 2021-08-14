@@ -48,7 +48,7 @@
 //!
 //! let chunk_shape = Point3i::fill(16);
 //! let ambient_value = 0;
-//! let builder = ChunkMapBuilder3x1::new(chunk_shape, ambient_value);
+//! let builder = ChunkMapBuilder3x1::new(ChunkMapConfig { chunk_shape, ambient_value, root_lod: 0 });
 //! let mut map = builder.build_with_hash_map_storage();
 //!
 //! // We need to focus on a specific level of detail to use the access traits.
@@ -101,7 +101,7 @@
 //! #
 //! let chunk_shape = Point3i::fill(16);
 //! let ambient_value = 0;
-//! let builder = ChunkMapBuilder3x1::new(chunk_shape, ambient_value);
+//! let builder = ChunkMapBuilder3x1::new(ChunkMapConfig { chunk_shape, ambient_value, root_lod: 0 });
 //! let mut map = builder.build_with_storage(
 //!     FastCompressibleChunkStorageNx1::with_bytes_compression(Lz4 { level: 10 })
 //! );
@@ -262,6 +262,7 @@ pub type ChunkMap3x1<T, Store> = ChunkMapNx1<[i32; 3], T, Store>;
 impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
+    T: Clone,
     Bldr: ChunkMapBuilder<N, T>,
 {
     /// Creates a map using the given `storage`.
@@ -277,6 +278,26 @@ where
             builder,
             ambient_value,
         }
+    }
+
+    #[inline]
+    pub fn chunk_shape(&self) -> PointN<N> {
+        self.builder().chunk_shape()
+    }
+
+    #[inline]
+    pub fn ambient_value(&self) -> T {
+        self.builder().ambient_value()
+    }
+}
+
+impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store>
+where
+    Bldr: ChunkMapBuilder<N, T>,
+{
+    #[inline]
+    pub fn root_lod(&self) -> u8 {
+        self.builder().root_lod()
     }
 }
 
@@ -320,21 +341,6 @@ impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store> {
             delegate: self,
             lod,
         }
-    }
-}
-
-impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store>
-where
-    Bldr: ChunkMapBuilder<N, T>,
-{
-    #[inline]
-    pub fn chunk_shape(&self) -> PointN<N> {
-        self.builder().chunk_shape()
-    }
-
-    #[inline]
-    pub fn ambient_value(&self) -> T {
-        self.builder().ambient_value()
     }
 }
 
@@ -644,11 +650,20 @@ mod tests {
     use building_blocks_core::prelude::*;
 
     const CHUNK_SHAPE: Point3i = PointN([16; 3]);
-    const BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1::new(CHUNK_SHAPE, 0);
+    const MAP_CONFIG: ChunkMapConfig<[i32; 3], i32> = ChunkMapConfig {
+        chunk_shape: CHUNK_SHAPE,
+        ambient_value: 0,
+        root_lod: 0,
+    };
+    const MULTICHAN_MAP_CONFIG: ChunkMapConfig<[i32; 3], (i32, u8)> = ChunkMapConfig {
+        chunk_shape: CHUNK_SHAPE,
+        ambient_value: (0, b'a'),
+        root_lod: 0,
+    };
 
     #[test]
     fn write_and_read_points() {
-        let mut map = BUILDER.build_with_hash_map_storage();
+        let mut map = ChunkMapBuilder3x1::new(MAP_CONFIG).build_with_hash_map_storage();
 
         let mut lod0 = map.lod_view_mut(0);
 
@@ -671,7 +686,7 @@ mod tests {
 
     #[test]
     fn write_extent_with_for_each_then_read() {
-        let mut map = BUILDER.build_with_hash_map_storage();
+        let mut map = ChunkMapBuilder3x1::new(MAP_CONFIG).build_with_hash_map_storage();
 
         let mut lod0 = map.lod_view_mut(0);
 
@@ -693,7 +708,7 @@ mod tests {
         let extent_to_copy = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(80));
         let array = Array3x1::fill(extent_to_copy, 1);
 
-        let mut map = BUILDER.build_with_hash_map_storage();
+        let mut map = ChunkMapBuilder3x1::new(MAP_CONFIG).build_with_hash_map_storage();
 
         let mut lod0 = map.lod_view_mut(0);
 
@@ -711,28 +726,28 @@ mod tests {
 
     #[test]
     fn multichannel_accessors() {
-        let builder = ChunkMapBuilder3x2::new(CHUNK_SHAPE, (0, 'a'));
+        let builder = ChunkMapBuilder3x2::new(MULTICHAN_MAP_CONFIG);
         let mut map = builder.build_with_hash_map_storage();
 
         let mut lod0 = map.lod_view_mut(0);
 
-        assert_eq!(lod0.get(Point3i::fill(1)), (0, 'a'));
-        assert_eq!(lod0.get_ref(Point3i::fill(1)), (&0, &'a'));
-        assert_eq!(lod0.get_mut(Point3i::fill(1)), (&mut 0, &mut 'a'));
+        assert_eq!(lod0.get(Point3i::fill(1)), (0, b'a'));
+        assert_eq!(lod0.get_ref(Point3i::fill(1)), (&0, &b'a'));
+        assert_eq!(lod0.get_mut(Point3i::fill(1)), (&mut 0, &mut b'a'));
 
         let extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(80));
 
         lod0.for_each_mut(&extent, |_p, (num, letter)| {
             *num = 1;
-            *letter = 'b';
+            *letter = b'b';
         });
 
         lod0.for_each(&extent, |_p, (num, letter)| {
             assert_eq!(num, 1);
-            assert_eq!(letter, 'b');
+            assert_eq!(letter, b'b');
         });
 
-        map.fill_extent(0, &extent, (1, 'b'));
+        map.fill_extent(0, &extent, (1, b'b'));
     }
 
     #[cfg(feature = "lz4")]
@@ -740,7 +755,7 @@ mod tests {
     fn multichannel_compressed_accessors() {
         use crate::prelude::{FastCompressibleChunkStorageNx2, Lz4};
 
-        let builder = ChunkMapBuilder3x2::new(CHUNK_SHAPE, (0, b'a'));
+        let builder = ChunkMapBuilder3x2::new(MULTICHAN_MAP_CONFIG);
         let mut map = builder.build_with_storage(
             FastCompressibleChunkStorageNx2::with_bytes_compression(Lz4 { level: 10 }),
         );

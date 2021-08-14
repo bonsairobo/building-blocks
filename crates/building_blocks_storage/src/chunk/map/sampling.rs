@@ -214,17 +214,25 @@ mod tests {
     fn downsample_multichannel_chunks_with_index() {
         let num_lods = 6;
         let chunk_shape = Point3i::fill(16);
+        let ambient = (Sd8::ONE, 'a');
 
         let lod0_extent =
             Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(2)) * chunk_shape;
 
         // Build a multichannel chunk map for LOD0.
-        let ambient = (Sd8::ONE, 'a');
-        let lod0_builder = ChunkMapBuilder3x2::new(chunk_shape, ambient);
+        let lod0_builder = ChunkMapBuilder3x2::new(ChunkMapConfig {
+            chunk_shape,
+            ambient_value: ambient,
+            root_lod: num_lods - 1,
+        });
         let mut lod0 = lod0_builder.build_with_hash_map_storage();
         lod0.fill_extent(0, &lod0_extent, ambient);
 
-        let lodn_builder = ChunkMapBuilder3x1::new(chunk_shape, Sd8::ONE);
+        let lodn_builder = ChunkMapBuilder3x1::new(ChunkMapConfig {
+            chunk_shape,
+            ambient_value: Sd8::ONE,
+            root_lod: num_lods - 1,
+        });
         let mut lodn = lodn_builder.build_with_hash_map_storage();
 
         let index = OctreeChunkIndex::index_chunk_map(9, num_lods, &lod0);

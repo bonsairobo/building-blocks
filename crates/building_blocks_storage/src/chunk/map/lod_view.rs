@@ -109,7 +109,7 @@ where
     #[inline]
     fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Item)) {
         self.delegate
-            .visit_chunks(self.lod, extent, |chunk| match chunk {
+            .visit_chunks(self.lod, *extent, |chunk| match chunk {
                 Either::Left(chunk) => {
                     chunk.array().for_each(extent, |p, value| f(p, value));
                 }

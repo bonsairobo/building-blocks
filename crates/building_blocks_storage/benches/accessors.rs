@@ -141,7 +141,7 @@ fn chunk_hash_map_visit_chunks_sparse(c: &mut Criterion) {
             b.iter_with_setup(
                 || set_up_sparse_chunk_map(SmallKeyHashMap::default(), size, 3),
                 |(chunk_map, iter_extent)| {
-                    chunk_map.visit_occupied_chunks(0, &iter_extent, |chunk| {
+                    chunk_map.visit_occupied_chunks(0, iter_extent, |chunk| {
                         black_box(chunk);
                     });
                 },
@@ -291,5 +291,5 @@ const CHUNK_SHAPE: Point3i = PointN([16; 3]);
 const BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1::new(ChunkMapConfig {
     chunk_shape: CHUNK_SHAPE,
     ambient_value: 0,
-    root_lod: 5, // 6 levels total
+    root_lod: 7, // 8 levels total
 });

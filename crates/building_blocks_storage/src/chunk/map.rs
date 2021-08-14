@@ -147,7 +147,11 @@ use crate::{
     multi_ptr::MultiRef,
 };
 
-use building_blocks_core::{bounding_extent, point_traits::IntegerPoint, ExtentN, PointN};
+use building_blocks_core::{
+    bounding_extent,
+    point_traits::{IntegerPoint, Neighborhoods},
+    ExtentN, PointN,
+};
 
 use either::Either;
 use serde::{Deserialize, Serialize};
@@ -215,6 +219,10 @@ impl<U> ChunkNode<U> {
     #[inline]
     pub(crate) fn user_chunk(&self) -> Option<&U> {
         self.user_chunk.as_ref()
+    }
+
+    fn has_child(&self, corner_index: u8) -> bool {
+        self.child_mask & (1 << corner_index) != 0
     }
 }
 
@@ -393,12 +401,13 @@ where
     pub fn visit_chunks(
         &self,
         lod: u8,
-        extent: &ExtentN<N>,
+        extent: ExtentN<N>,
         mut visitor: impl FnMut(Either<&Usr, (&ExtentN<N>, AmbientExtent<N, T>)>),
     ) where
         T: Clone,
     {
-        for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
+        // PERF: we could traverse the octree to avoid using hashing to check for occupancy
+        for chunk_min in self.indexer.chunk_mins_for_extent(&extent) {
             if let Some(chunk) = self.get_chunk(ChunkKey::new(lod, chunk_min)) {
                 visitor(Either::Left(chunk))
             } else {
@@ -407,21 +416,6 @@ where
                     &chunk_extent,
                     AmbientExtent::new(self.ambient_value.clone()),
                 )))
-            }
-        }
-    }
-
-    /// Call `visitor` on all occupied chunks that overlap `extent`.
-    #[inline]
-    pub fn visit_occupied_chunks(
-        &self,
-        lod: u8,
-        extent: &ExtentN<N>,
-        mut visitor: impl FnMut(&Usr),
-    ) {
-        for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
-            if let Some(chunk) = self.get_chunk(ChunkKey::new(lod, chunk_min)) {
-                visitor(chunk)
             }
         }
     }
@@ -434,6 +428,47 @@ where
     Bldr: ChunkMapBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
 {
+    /// Call `visitor` on all occupied chunks that overlap `extent`.
+    #[inline]
+    pub fn visit_occupied_chunks(
+        &self,
+        lod: u8,
+        extent: ExtentN<N>,
+        mut visitor: impl FnMut(&Usr),
+    ) {
+        let root_lod = self.root_lod();
+        assert!(lod <= root_lod);
+        let levels_to_root = root_lod - lod;
+        let root_extent = self
+            .indexer
+            .covering_ancestor_extent(extent, levels_to_root as i32);
+        for root_chunk_min in self.indexer.chunk_mins_for_extent(&root_extent) {
+            self.visit_chunks_in_octree(ChunkKey::new(root_lod, root_chunk_min), lod, &mut visitor);
+        }
+    }
+
+    fn visit_chunks_in_octree(
+        &self,
+        node_key: ChunkKey<N>,
+        lod: u8,
+        visitor: &mut impl FnMut(&Usr),
+    ) {
+        if let Some(node) = self.storage.get(node_key) {
+            if node_key.lod == lod {
+                if let Some(chunk) = &node.user_chunk {
+                    visitor(chunk);
+                }
+                return;
+            }
+            for child_i in 0..PointN::NUM_CORNERS {
+                if node.has_child(child_i) {
+                    let child_key = self.indexer.child_chunk_key(node_key, child_i);
+                    self.visit_chunks_in_octree(child_key, lod, visitor)
+                }
+            }
+        }
+    }
+
     fn link_node(&mut self, mut key: ChunkKey<N>) {
         // PERF: when writing many chunks, we would revisit nodes many times as we travels up to the root for every chunk. We
         // might do better by inserting them in a batch and sorting the chunks in morton order before linking into the tree.
@@ -578,21 +613,6 @@ where
         }
     }
 
-    /// Call `visitor` on all occupied chunks that overlap `extent`.
-    #[inline]
-    pub fn visit_occupied_mut_chunks(
-        &mut self,
-        lod: u8,
-        extent: &ExtentN<N>,
-        mut visitor: impl FnMut(&mut Usr),
-    ) {
-        for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
-            if let Some(chunk) = self.get_mut_chunk(ChunkKey::new(lod, chunk_min)) {
-                visitor(chunk)
-            }
-        }
-    }
-
     #[inline]
     pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
@@ -695,7 +715,7 @@ mod tests {
     const MAP_CONFIG: ChunkMapConfig<[i32; 3], i32> = ChunkMapConfig {
         chunk_shape: CHUNK_SHAPE,
         ambient_value: 0,
-        root_lod: 0,
+        root_lod: 2,
     };
     const MULTICHAN_MAP_CONFIG: ChunkMapConfig<[i32; 3], (i32, u8)> = ChunkMapConfig {
         chunk_shape: CHUNK_SHAPE,
@@ -764,6 +784,29 @@ mod tests {
                 assert_eq!(lod0.get(p), 0);
             }
         }
+    }
+
+    #[test]
+    fn visit_occupied_chunks() {
+        let mut map = ChunkMapBuilder3x1::new(MAP_CONFIG).build_with_hash_map_storage();
+
+        let insert_chunk_mins = [PointN([0, 0, 0]), PointN([16, 0, 0]), PointN([32, 0, 0])];
+        for chunk_min in insert_chunk_mins.iter() {
+            let chunk_extent = map.indexer.extent_for_chunk_with_min(*chunk_min);
+            map.write_chunk(
+                ChunkKey::new(0, *chunk_min),
+                Array3x1::fill(chunk_extent, 1),
+            );
+        }
+
+        let mut visited_lod0_chunk_mins = Vec::new();
+        map.visit_occupied_chunks(
+            0,
+            Extent3i::from_min_and_max(Point3i::fill(0), Point3i::fill(32)),
+            |chunk| visited_lod0_chunk_mins.push(chunk.extent().minimum),
+        );
+
+        assert_eq!(&visited_lod0_chunk_mins, &insert_chunk_mins);
     }
 
     #[test]

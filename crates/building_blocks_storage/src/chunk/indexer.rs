@@ -63,10 +63,25 @@ where
         ExtentN::from_min_and_shape(min, self.chunk_shape)
     }
 
+    /// Given a chunk at `chunk_min`, returns the minimum of the ancestor chunk `levels` above.
+    #[inline]
+    pub fn ancestor_chunk_min(&self, chunk_min: PointN<N>, levels: i32) -> PointN<N> {
+        (chunk_min & (self.chunk_shape_mask << levels)) >> levels
+    }
+
+    /// Given an `extent`, returns the minimal extent `levels` up that covers it.
+    #[inline]
+    pub fn covering_ancestor_extent(&self, extent: ExtentN<N>, levels: i32) -> ExtentN<N> {
+        ExtentN::from_min_and_max(
+            self.ancestor_chunk_min(extent.minimum, levels),
+            self.ancestor_chunk_min(extent.max(), levels),
+        )
+    }
+
     /// Given a chunk at `chunk_min`, returns the minimum of the parent chunk.
     #[inline]
     pub fn parent_chunk_min(&self, chunk_min: PointN<N>) -> PointN<N> {
-        (chunk_min & (self.chunk_shape_mask << 1)) >> 1
+        self.ancestor_chunk_min(chunk_min, 1)
     }
 
     /// Given a chunk key, returns the key of the parent chunk.

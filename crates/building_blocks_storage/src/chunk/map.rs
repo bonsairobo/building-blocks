@@ -298,7 +298,6 @@ where
 impl<N, T, Ch, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    T: Clone,
     Ch: Chunk,
     Store: ChunkStorage<N, Chunk = Ch>,
 {
@@ -348,7 +347,9 @@ where
         lod: u8,
         extent: &ExtentN<N>,
         mut visitor: impl FnMut(Either<&Ch, (&ExtentN<N>, AmbientExtent<N, T>)>),
-    ) {
+    ) where
+        T: Clone,
+    {
         for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
             if let Some(chunk) = self.get_chunk(ChunkKey::new(lod, chunk_min)) {
                 visitor(Either::Left(chunk))

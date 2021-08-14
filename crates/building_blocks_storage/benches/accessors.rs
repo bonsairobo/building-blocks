@@ -73,6 +73,28 @@ fn chunk_hash_map_for_each_point(c: &mut Criterion) {
     group.finish();
 }
 
+fn chunk_hash_map_for_each_point_mut(c: &mut Criterion) {
+    let mut group = c.benchmark_group("chunk_hash_map_for_each_point_mut");
+    for size in ARRAY_SIZES.iter() {
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
+            b.iter_with_setup(
+                || set_up_chunk_map(SmallKeyHashMap::default(), size),
+                |(mut chunk_map, filled_extent)| {
+                    // About 42% of points are overwritten.
+                    let write_extent = filled_extent + filled_extent.shape / 4;
+                    chunk_map
+                        .lod_view_mut(0)
+                        .for_each_mut(&write_extent, |_: Point3i, value| {
+                            *value = 1;
+                        });
+                    black_box(chunk_map)
+                },
+            );
+        });
+    }
+    group.finish();
+}
+
 fn array_point_indexing(c: &mut Criterion) {
     let mut group = c.benchmark_group("array_point_indexing");
     for size in ARRAY_SIZES.iter() {
@@ -203,6 +225,7 @@ criterion_group!(
     array_point_indexing,
     array_copy,
     chunk_hash_map_for_each_point,
+    chunk_hash_map_for_each_point_mut,
     chunk_hash_map_point_indexing,
     chunk_hash_map_visit_chunks_sparse,
     chunk_hash_map_copy,

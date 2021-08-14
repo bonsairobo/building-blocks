@@ -42,7 +42,7 @@ use crate::{
     array::ArrayCopySrc,
     chunk::{Chunk, ChunkCopySrc, ChunkCopySrcIter, ChunkMapLodView},
     dev_prelude::{
-        AmbientExtent, Array, ChunkMap, ChunkReadStorage, ForEach, Get, GetUnchecked, IndexedArray,
+        AmbientExtent, Array, ChunkMap, ChunkStorage, ForEach, Get, GetUnchecked, IndexedArray,
         ReadExtent,
     },
 };
@@ -159,7 +159,7 @@ where
     F: Copy + Fn(In) -> Out,
     In: Copy,
     Ch: Chunk,
-    Store: ChunkReadStorage<N, Chunk = Ch>,
+    Store: ChunkStorage<N, Chunk = Ch>,
 {
     type Src = TransformChunkCopySrc<'a, N, F, Out, Ch>;
     type SrcIter = TransformChunkCopySrcIter<'a, N, F, In, Ch>;

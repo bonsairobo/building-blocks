@@ -32,19 +32,12 @@ impl<N> ChunkKey<N> {
     }
 }
 
-/// Methods for reading chunks from storage.
-#[auto_impl(&, &mut)]
-pub trait ChunkReadStorage<N> {
+/// Methods for writing chunks from storage.
+pub trait ChunkStorage<N> {
     type Chunk;
 
     /// Borrow the chunk at `key`.
     fn get(&self, key: ChunkKey<N>) -> Option<&Self::Chunk>;
-}
-
-/// Methods for writing chunks from storage.
-#[auto_impl(&mut)]
-pub trait ChunkWriteStorage<N> {
-    type Chunk;
 
     /// Mutably borrow the chunk at `key`.
     fn get_mut(&mut self, key: ChunkKey<N>) -> Option<&mut Self::Chunk>;

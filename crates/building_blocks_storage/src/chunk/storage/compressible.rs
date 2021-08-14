@@ -2,8 +2,8 @@ use crate::{
     caching::*,
     compression::MaybeCompressed,
     dev_prelude::{
-        ChunkKey, ChunkMap, ChunkReadStorage, ChunkWriteStorage, Compressed, Compression,
-        FastArrayCompression, FastChannelsCompression, FromBytesCompression, IterChunkKeys,
+        ChunkKey, ChunkMap, ChunkStorage, Compressed, Compression, FastArrayCompression,
+        FastChannelsCompression, FromBytesCompression, IterChunkKeys,
     },
     SmallKeyBuildHasher,
 };
@@ -195,7 +195,7 @@ where
     }
 }
 
-impl<N, Compr> ChunkReadStorage<N> for CompressibleChunkStorage<N, Compr>
+impl<N, Compr> ChunkStorage<N> for CompressibleChunkStorage<N, Compr>
 where
     N: Send,
     ChunkKey<N>: Clone + Eq + Hash,
@@ -219,16 +219,6 @@ where
                 .get_or_insert_with(key, || compressed.get(location.0).unwrap().decompress()),
         })
     }
-}
-
-impl<N, Compr> ChunkWriteStorage<N> for CompressibleChunkStorage<N, Compr>
-where
-    N: Send,
-    ChunkKey<N>: Clone + Eq + Hash,
-    Compr: Compression,
-    Compr::Data: Send,
-{
-    type Chunk = Compr::Data;
 
     #[inline]
     fn get_mut(&mut self, key: ChunkKey<N>) -> Option<&mut Compr::Data> {

@@ -1,8 +1,7 @@
 use crate::{
     array::FillChannels,
     dev_prelude::{
-        Array, Channel, ChunkHashMap, ChunkKey, ChunkMap, ChunkReadStorage, ChunkWriteStorage,
-        SmallKeyHashMap,
+        Array, Channel, ChunkHashMap, ChunkKey, ChunkMap, ChunkStorage, SmallKeyHashMap,
     },
 };
 
@@ -22,40 +21,22 @@ pub trait ChunkMapBuilder<N, T>: Sized {
     /// Construct a new chunk with entirely ambient values.
     fn new_ambient(&self, extent: ExtentN<N>) -> Self::Chunk;
 
-    /// Create a new `ChunkMap` with the given `storage` which must implement both `ChunkReadStorage` and `ChunkWriteStorage`.
-    fn build_with_rw_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Self, Store>
+    /// Create a new `ChunkMap` with the given `storage` which must implement `ChunkStorage`.
+    fn build_with_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Self, Store>
     where
         PointN<N>: IntegerPoint<N>,
-        Store: ChunkReadStorage<N, Chunk = Self::Chunk> + ChunkWriteStorage<N, Chunk = Self::Chunk>,
+        Store: ChunkStorage<N, Chunk = Self::Chunk>,
     {
         ChunkMap::new(self, storage)
     }
 
-    /// Create a new `ChunkMap` with the given `storage` which must implement `ChunkReadStorage`.
-    fn build_with_read_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Self, Store>
-    where
-        PointN<N>: IntegerPoint<N>,
-        Store: ChunkReadStorage<N, Chunk = Self::Chunk>,
-    {
-        ChunkMap::new(self, storage)
-    }
-
-    /// Create a new `ChunkMap` with the given `storage` which must implement `ChunkWriteStorage`.
-    fn build_with_write_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Self, Store>
-    where
-        PointN<N>: IntegerPoint<N>,
-        Store: ChunkWriteStorage<N, Chunk = Self::Chunk>,
-    {
-        ChunkMap::new(self, storage)
-    }
-
-    /// Create a new `ChunkMap` using a `SmallKeyHashMap` as the chunk storage.
+    /// Create a new `ChunkMap` using a `SmallKeyHashMap` as the `ChunkStorage`.
     fn build_with_hash_map_storage(self) -> ChunkHashMap<N, T, Self>
     where
         PointN<N>: IntegerPoint<N>,
         ChunkKey<N>: Eq + Hash,
     {
-        Self::build_with_rw_storage(self, SmallKeyHashMap::default())
+        Self::build_with_storage(self, SmallKeyHashMap::default())
     }
 }
 

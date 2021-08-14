@@ -1,11 +1,11 @@
 use crate::dev_prelude::{ChunkMap, ChunkMapBuilder, SmallKeyHashMap};
 
-use super::{ChunkKey, ChunkReadStorage, ChunkWriteStorage, IterChunkKeys};
+use super::{ChunkKey, ChunkStorage, IterChunkKeys};
 
 use core::hash::Hash;
 use std::collections::hash_map;
 
-impl<N, Ch> ChunkReadStorage<N> for SmallKeyHashMap<ChunkKey<N>, Ch>
+impl<N, Ch> ChunkStorage<N> for SmallKeyHashMap<ChunkKey<N>, Ch>
 where
     ChunkKey<N>: Hash + Eq,
 {
@@ -15,13 +15,6 @@ where
     fn get(&self, key: ChunkKey<N>) -> Option<&Ch> {
         self.get(&key)
     }
-}
-
-impl<N, Ch> ChunkWriteStorage<N> for SmallKeyHashMap<ChunkKey<N>, Ch>
-where
-    ChunkKey<N>: Hash + Eq,
-{
-    type Chunk = Ch;
 
     #[inline]
     fn get_mut(&mut self, key: ChunkKey<N>) -> Option<&mut Ch> {

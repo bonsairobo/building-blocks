@@ -1,9 +1,9 @@
 use crate::{
     array::ArrayCopySrc,
     dev_prelude::{
-        AmbientExtent, Chunk, ChunkKey, ChunkMap, ChunkMapBuilder, ChunkReadStorage,
-        ChunkWriteStorage, FillExtent, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut,
-        GetMutUnchecked, GetRef, GetRefUnchecked, GetUnchecked, ReadExtent, WriteExtent,
+        AmbientExtent, Chunk, ChunkKey, ChunkMap, ChunkMapBuilder, ChunkStorage, FillExtent,
+        ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetMutUnchecked, GetRef, GetRefUnchecked,
+        GetUnchecked, ReadExtent, WriteExtent,
     },
     multi_ptr::*,
 };
@@ -40,7 +40,7 @@ where
     T: Clone,
     Ch: Chunk,
     Ch::Array: GetUnchecked<PointN<N>, Item = T>,
-    Store: ChunkReadStorage<N, Chunk = Ch>,
+    Store: ChunkStorage<N, Chunk = Ch>,
 {
     type Item = T;
 
@@ -58,7 +58,7 @@ where
     T: Clone,
     Ch: Chunk,
     Ch::Array: GetRefUnchecked<'a, PointN<N>, Item = Ref>,
-    Store: ChunkReadStorage<N, Chunk = Ch>,
+    Store: ChunkStorage<N, Chunk = Ch>,
     Ref: MultiRef<'a, Data = T>,
 {
     type Item = Ref;
@@ -77,7 +77,7 @@ where
     Ch: Chunk,
     Ch::Array: GetMutUnchecked<'a, PointN<N>, Item = Mut>,
     Bldr: ChunkMapBuilder<N, T, Chunk = Ch>,
-    Store: ChunkWriteStorage<N, Chunk = Ch>,
+    Store: ChunkStorage<N, Chunk = Ch>,
 {
     type Item = Mut;
 
@@ -101,7 +101,7 @@ where
     T: Clone,
     Ch: Chunk,
     Ch::Array: ForEach<N, PointN<N>, Item = T>,
-    Store: ChunkReadStorage<N, Chunk = Ch>,
+    Store: ChunkStorage<N, Chunk = Ch>,
 {
     type Item = T;
 
@@ -127,7 +127,7 @@ where
     Ch: Chunk,
     Ch::Array: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
     Bldr: ChunkMapBuilder<N, T, Chunk = Ch>,
-    Store: ChunkWriteStorage<N, Chunk = Ch>,
+    Store: ChunkStorage<N, Chunk = Ch>,
 {
     type Item = MutPtr;
 
@@ -190,7 +190,7 @@ where
     PointN<N>: IntegerPoint<N>,
     T: Clone,
     Ch: Chunk,
-    Store: ChunkReadStorage<N, Chunk = Ch>,
+    Store: ChunkStorage<N, Chunk = Ch>,
 {
     type Src = ChunkCopySrc<N, T, &'a Ch>;
     type SrcIter = ChunkCopySrcIter<N, T, &'a Ch>;
@@ -228,7 +228,7 @@ where
     Ch: Chunk,
     Ch::Array: WriteExtent<N, Src>,
     Bldr: ChunkMapBuilder<N, T, Chunk = Ch>,
-    Store: ChunkWriteStorage<N, Chunk = Ch>,
+    Store: ChunkStorage<N, Chunk = Ch>,
     Src: Clone,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src) {

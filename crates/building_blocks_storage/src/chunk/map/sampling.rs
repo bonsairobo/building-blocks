@@ -25,7 +25,7 @@ where
     T: Clone,
     Ch: Chunk + FillExtent<N, Item = T> + IndexedArray<N>,
     Bldr: ChunkMapBuilder<N, T, Chunk = Ch>,
-    Store: ChunkWriteStorage<N, Chunk = Ch>,
+    Store: ChunkStorage<N, Chunk = Ch>,
 {
     /// Downsamples the chunk at `src_chunk_key` into the specified destination level `dst_lod`.
     pub fn downsample_chunk<Samp>(
@@ -85,7 +85,7 @@ where
     T: Clone,
     Ch: Chunk + FillExtent<[i32; 3], Item = T> + IndexedArray<[i32; 3]>,
     Bldr: ChunkMapBuilder<[i32; 3], T, Chunk = Ch>,
-    Store: ChunkWriteStorage<[i32; 3], Chunk = Ch>,
+    Store: ChunkStorage<[i32; 3], Chunk = Ch>,
 {
     /// Downsamples all chunks that both:
     ///   1. overlap `extent`

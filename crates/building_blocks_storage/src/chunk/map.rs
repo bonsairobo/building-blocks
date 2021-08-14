@@ -102,7 +102,7 @@
 //! let chunk_shape = Point3i::fill(16);
 //! let ambient_value = 0;
 //! let builder = ChunkMapBuilder3x1::new(chunk_shape, ambient_value);
-//! let mut map = builder.build_with_rw_storage(
+//! let mut map = builder.build_with_storage(
 //!     FastCompressibleChunkStorageNx1::with_bytes_compression(Lz4 { level: 10 })
 //! );
 //! let mut lod0 = map.lod_view_mut(0);
@@ -141,8 +141,8 @@ pub use sampling::*;
 use crate::{
     chunk::ChunkIndexer,
     dev_prelude::{
-        Array, ChunkKey, ChunkReadStorage, ChunkWriteStorage, FillExtent, ForEach, GetMutUnchecked,
-        GetRefUnchecked, GetUnchecked, IterChunkKeys,
+        Array, ChunkKey, ChunkStorage, FillExtent, ForEach, GetMutUnchecked, GetRefUnchecked,
+        GetUnchecked, IterChunkKeys,
     },
     multi_ptr::MultiRef,
 };
@@ -300,7 +300,7 @@ where
     PointN<N>: IntegerPoint<N>,
     T: Clone,
     Ch: Chunk,
-    Store: ChunkReadStorage<N, Chunk = Ch>,
+    Store: ChunkStorage<N, Chunk = Ch>,
 {
     /// Borrow the chunk at `key`.
     ///
@@ -383,7 +383,7 @@ where
     PointN<N>: IntegerPoint<N>,
     Ch: Chunk,
     Bldr: ChunkMapBuilder<N, T, Chunk = Ch>,
-    Store: ChunkWriteStorage<N, Chunk = Ch>,
+    Store: ChunkStorage<N, Chunk = Ch>,
 {
     /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
     ///
@@ -685,7 +685,7 @@ mod tests {
         use crate::prelude::{FastCompressibleChunkStorageNx2, Lz4};
 
         let builder = ChunkMapBuilder3x2::new(CHUNK_SHAPE, (0, b'a'));
-        let mut map = builder.build_with_write_storage(
+        let mut map = builder.build_with_storage(
             FastCompressibleChunkStorageNx2::with_bytes_compression(Lz4 { level: 10 }),
         );
 

@@ -50,8 +50,8 @@ pub mod prelude {
         array::{IndexedArray, Local, Stride},
         chunk::{
             AmbientExtent, Chunk, ChunkDownsampler, ChunkKey, ChunkKey2, ChunkKey3,
-            ChunkMapBuilder, ChunkReadStorage, ChunkUnits, ChunkWriteStorage, IterChunkKeys,
-            PointDownsampler, SdfMeanDownsampler,
+            ChunkMapBuilder, ChunkStorage, ChunkUnits, IterChunkKeys, PointDownsampler,
+            SdfMeanDownsampler,
         },
         compression::{
             BincodeCompression, BytesCompression, Compressed, Compression, FromBytesCompression,

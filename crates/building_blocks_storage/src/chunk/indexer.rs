@@ -2,7 +2,6 @@ use crate::dev_prelude::Local;
 
 use building_blocks_core::prelude::*;
 
-use core::ops::{Div, Mul};
 use serde::{Deserialize, Serialize};
 
 /// Calculates chunk locations, e.g. minimums and downsampling destinations.
@@ -31,7 +30,7 @@ where
     /// Determines whether `min` is a valid chunk minimum. This means it must be a multiple of the chunk shape.
     #[inline]
     pub fn chunk_min_is_valid(&self, min: PointN<N>) -> bool {
-        self.chunk_shape.mul(min.div(self.chunk_shape)).eq(&min)
+        ((!self.chunk_shape_mask) & min) == PointN::ZERO
     }
 
     /// The constant shape of a chunk. The same for all chunks.

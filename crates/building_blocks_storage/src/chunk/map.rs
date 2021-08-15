@@ -216,11 +216,6 @@ impl<U> ChunkNode<U> {
         self.child_mask
     }
 
-    #[inline]
-    pub(crate) fn user_chunk(&self) -> Option<&U> {
-        self.user_chunk.as_ref()
-    }
-
     fn has_child(&self, corner_index: u8) -> bool {
         self.child_mask & (1 << corner_index) != 0
     }

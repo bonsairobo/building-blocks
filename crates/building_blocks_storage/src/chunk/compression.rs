@@ -35,7 +35,7 @@ where
         // First write the child_bitmask.
         compressed_bytes.write_all(bytes_of(&data.child_mask()))?;
         // Compress the user data if it exists, otherwise write a single 0 byte indicating no data left.
-        if let Some(user_chunk) = data.user_chunk() {
+        if let Some(user_chunk) = &data.user_chunk {
             compressed_bytes.write_all(&[1])?; // There is data.
             self.user_chunk_compression
                 .compress_to_writer(user_chunk, compressed_bytes)?;

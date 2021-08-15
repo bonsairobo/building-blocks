@@ -53,7 +53,7 @@ fn sdf_mean_downsample3(c: &mut Criterion) {
 }
 
 fn sdf_mean_downsample_chunk_map(c: &mut Criterion) {
-    let mut group = c.benchmark_group("sdf_mean_downsample_chunk_map_with_index");
+    let mut group = c.benchmark_group("sdf_mean_downsample_chunk_map");
 
     for map_chunks in [1, 2, 4, 8].iter() {
         group.bench_with_input(

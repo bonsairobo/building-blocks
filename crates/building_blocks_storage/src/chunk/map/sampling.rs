@@ -28,53 +28,42 @@ where
     Bldr: ChunkMapBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
 {
-    /// Downsamples the chunk at `src_chunk_key` into the specified destination level `dst_lod`.
-    pub fn downsample_chunk<Samp>(
-        &mut self,
-        sampler: &Samp,
-        src_chunk_key: ChunkKey<N>,
-        dst_lod: u8,
-    ) where
+    /// Downsamples the chunk at `src_chunk_key` into `lod + 1`.
+    pub fn downsample_chunk<Samp>(&mut self, sampler: &Samp, src_chunk_key: ChunkKey<N>)
+    where
         Samp: ChunkDownsampler<N, T, Usr, Usr>,
     {
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
         if let Some(src_chunk) = self.pop_chunk(src_chunk_key) {
-            self.downsample_external_chunk(sampler, src_chunk_key, &src_chunk, dst_lod);
+            self.downsample_external_chunk(sampler, src_chunk_key, &src_chunk);
             self.write_chunk(src_chunk_key, src_chunk);
         } else {
-            self.downsample_ambient_chunk(src_chunk_key, dst_lod)
+            self.downsample_ambient_chunk(src_chunk_key)
         }
     }
 
-    /// Downsamples all of `src_chunk` into the overlapping chunk at level `dst_lod`.
+    /// Downsamples `src_chunk` into `lod + 1`.
     pub fn downsample_external_chunk<Samp, Src>(
         &mut self,
         sampler: &Samp,
         src_chunk_key: ChunkKey<N>,
         src_chunk: &Src,
-        dst_lod: u8,
     ) where
         Samp: ChunkDownsampler<N, T, Src, Usr>,
     {
-        assert!(dst_lod > src_chunk_key.lod);
-
-        let dst = self.indexer.downsample_destination(src_chunk_key.minimum);
-        let dst_chunk =
-            self.get_mut_chunk_or_insert_ambient(ChunkKey::new(dst_lod, dst.dst_chunk_min));
-        sampler.downsample(src_chunk, dst_chunk, dst.dst_offset);
+        let dst = self.indexer.downsample_destination(src_chunk_key);
+        let dst_chunk = self.get_mut_chunk_or_insert_ambient(dst.chunk_key);
+        sampler.downsample(src_chunk, dst_chunk, dst.offset);
     }
 
     /// Fill the destination samples with the ambient value.
-    pub fn downsample_ambient_chunk(&mut self, src_chunk_key: ChunkKey<N>, dst_lod: u8) {
-        assert!(dst_lod > src_chunk_key.lod);
-
+    pub fn downsample_ambient_chunk(&mut self, src_chunk_key: ChunkKey<N>) {
         let chunk_shape = self.chunk_shape();
         let ambient_value = self.ambient_value.clone();
-        let dst = self.indexer.downsample_destination(src_chunk_key.minimum);
-        let dst_chunk =
-            self.get_mut_chunk_or_insert_ambient(ChunkKey::new(dst_lod, dst.dst_chunk_min));
+        let dst = self.indexer.downsample_destination(src_chunk_key);
+        let dst_chunk = self.get_mut_chunk_or_insert_ambient(dst.chunk_key);
         let dst_extent = ExtentN::from_min_and_shape(
-            dst_chunk.extent().minimum + dst.dst_offset.0,
+            dst_chunk.extent().minimum + dst.offset.0,
             chunk_shape >> 1,
         );
         dst_chunk.fill_extent(&dst_extent, ambient_value);
@@ -115,11 +104,7 @@ where
                     let dst_lod = src_lod + 1;
                     if dst_lod < index.num_lods() {
                         let src_chunk_min = (node.octant().minimum() << chunk_log2) >> src_lod;
-                        self.downsample_chunk(
-                            sampler,
-                            ChunkKey::new(src_lod, src_chunk_min),
-                            dst_lod,
-                        );
+                        self.downsample_chunk(sampler, ChunkKey::new(src_lod, src_chunk_min));
                     }
 
                     VisitStatus::Continue
@@ -163,13 +148,12 @@ where
                                     sampler,
                                     src_chunk_key,
                                     src_chunk.borrow(),
-                                    dst_lod,
                                 );
                             } else {
-                                self.downsample_ambient_chunk(src_chunk_key, dst_lod);
+                                self.downsample_ambient_chunk(src_chunk_key);
                             }
                         } else {
-                            self.downsample_chunk(sampler, src_chunk_key, dst_lod);
+                            self.downsample_chunk(sampler, src_chunk_key);
                         }
                     }
 

@@ -114,22 +114,22 @@ where
 
     /// When downsampling a chunk at level `L`, the samples are used at the returned destination within level `L + 1`.
     #[inline]
-    pub fn downsample_destination(&self, src_chunk_min: PointN<N>) -> DownsampleDestination<N> {
+    pub fn downsample_destination(&self, src_chunk_key: ChunkKey<N>) -> DownsampleDestination<N> {
         let double_mask = self.chunk_shape_mask << 1;
-        let double_parent_min = src_chunk_min & double_mask;
+        let double_parent_min = src_chunk_key.minimum & double_mask;
         let dst_chunk_min = double_parent_min >> 1;
-        let dst_offset = Local((src_chunk_min - double_parent_min) >> 1);
+        let dst_offset = Local((src_chunk_key.minimum - double_parent_min) >> 1);
         DownsampleDestination {
-            dst_chunk_min,
-            dst_offset,
+            chunk_key: ChunkKey::new(src_chunk_key.lod + 1, dst_chunk_min),
+            offset: dst_offset,
         }
     }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct DownsampleDestination<N> {
-    pub dst_chunk_min: PointN<N>,
-    pub dst_offset: Local<N>,
+    pub chunk_key: ChunkKey<N>,
+    pub offset: Local<N>,
 }
 
 // ████████╗███████╗███████╗████████╗
@@ -201,23 +201,23 @@ mod tests {
         let chunk_shape = Point3i::fill(16);
         let indexer = ChunkIndexer::new(chunk_shape);
 
-        let src_key = chunk_shape;
+        let src_key = ChunkKey::new(0, chunk_shape);
         let dst = indexer.downsample_destination(src_key);
         assert_eq!(
             dst,
             DownsampleDestination {
-                dst_chunk_min: Point3i::ZERO,
-                dst_offset: Local(chunk_shape / 2),
+                chunk_key: ChunkKey::new(1, Point3i::ZERO),
+                offset: Local(chunk_shape / 2),
             }
         );
 
-        let src_key = 2 * chunk_shape;
+        let src_key = ChunkKey::new(0, 2 * chunk_shape);
         let dst = indexer.downsample_destination(src_key);
         assert_eq!(
             dst,
             DownsampleDestination {
-                dst_chunk_min: chunk_shape,
-                dst_offset: Local(Point3i::ZERO),
+                chunk_key: ChunkKey::new(1, chunk_shape),
+                offset: Local(Point3i::ZERO),
             }
         );
     }

@@ -22,7 +22,6 @@ pub trait ChunkDownsampler<N, T, Src, Dst> {
 impl<N, T, Usr, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    ChunkKey<N>: Copy,
     T: Clone,
     Usr: UserChunk,
     Usr::Array: FillExtent<N, Item = T> + IndexedArray<N>,

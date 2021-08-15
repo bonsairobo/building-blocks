@@ -193,16 +193,15 @@ pub struct ChunkNode<U> {
     child_mask: u8,
 }
 
-impl<U> Default for ChunkNode<U> {
-    fn default() -> Self {
+impl<U> ChunkNode<U> {
+    #[inline]
+    pub(crate) fn new_empty() -> Self {
         Self {
-            user_chunk: Default::default(),
-            child_mask: Default::default(),
+            user_chunk: None,
+            child_mask: 0,
         }
     }
-}
 
-impl<U> ChunkNode<U> {
     #[inline]
     pub(crate) fn new(user_chunk: Option<U>, child_mask: u8) -> Self {
         Self {
@@ -465,14 +464,14 @@ where
     }
 
     fn link_node(&mut self, mut key: ChunkKey<N>) {
-        // PERF: when writing many chunks, we would revisit nodes many times as we travels up to the root for every chunk. We
+        // PERF: when writing many chunks, we would revisit nodes many times as we travel up to the root for every chunk. We
         // might do better by inserting them in a batch and sorting the chunks in morton order before linking into the tree.
         while key.lod < self.root_lod() {
             let parent = self.indexer.parent_chunk_key(key);
             let mut parent_already_exists = true;
             let parent_node = self.storage.get_mut_or_insert_with(parent, || {
                 parent_already_exists = false;
-                ChunkNode::default()
+                ChunkNode::new_empty()
             });
             let child_corner_index = self.indexer.corner_index(key.minimum);
             parent_node.child_mask |= 1 << child_corner_index;
@@ -484,7 +483,7 @@ where
     }
 
     fn unlink_node(&mut self, mut key: ChunkKey<N>) {
-        // PERF: when removing many chunks, we would revisit nodes many times as we travels up to the root for every chunk. We
+        // PERF: when removing many chunks, we would revisit nodes many times as we travel up to the root for every chunk. We
         // might do better by removing them in a batch and sorting the chunks in morton order before unlinking from the tree.
         while key.lod < self.root_lod() {
             let parent = self.indexer.parent_chunk_key(key);
@@ -505,7 +504,9 @@ where
     pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        let node = self.storage.get_mut_or_insert_with(key, ChunkNode::default);
+        let node = self
+            .storage
+            .get_mut_or_insert_with(key, ChunkNode::new_empty);
         node.user_chunk = Some(chunk);
 
         self.link_node(key);
@@ -518,7 +519,9 @@ where
     pub fn replace_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        let node = self.storage.get_mut_or_insert_with(key, ChunkNode::default);
+        let node = self
+            .storage
+            .get_mut_or_insert_with(key, ChunkNode::new_empty);
         let old_chunk = node.user_chunk.replace(chunk);
 
         self.link_node(key);
@@ -552,7 +555,7 @@ where
         self.link_node(key);
 
         self.storage
-            .get_mut_or_insert_with(key, ChunkNode::default)
+            .get_mut_or_insert_with(key, ChunkNode::new_empty)
             .user_chunk
             .get_or_insert_with(|| create_chunk())
     }
@@ -575,7 +578,7 @@ where
         let chunk_min = key.minimum;
 
         storage
-            .get_mut_or_insert_with(key, ChunkNode::default)
+            .get_mut_or_insert_with(key, ChunkNode::new_empty)
             .user_chunk
             .get_or_insert_with(|| {
                 builder.new_ambient(indexer.extent_for_chunk_with_min(chunk_min))

@@ -1,8 +1,7 @@
 (
-    superchunk_exponent: 9,
     chunk_exponent: 4,
     num_lods: 4,
-    clip_box_radius: (12),
+    clip_box_radius: 0.2,
     world_chunks_extent: ((
         minimum: ((-50, -2, -50)),
         shape: ((100, 4, 100)),

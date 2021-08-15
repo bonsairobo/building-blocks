@@ -10,7 +10,18 @@ pub trait VoxelMap: ecs::component::Component {
 
     fn config(&self) -> &MapConfig;
 
-    fn chunk_index(&self) -> &OctreeChunkIndex;
+    fn clipmap_active_chunks(
+        &self,
+        lod0_center: Point3f,
+        active_rx: impl FnMut(ChunkKey3, Point3f),
+    );
+
+    fn clipmap_updates(
+        &self,
+        old_lod0_center: Point3f,
+        new_lod0_center: Point3f,
+        update_rx: impl FnMut(LodChunkUpdate3, Point3f),
+    );
 
     fn init_mesh_buffers(&self) -> Self::MeshBuffers;
 
@@ -23,10 +34,9 @@ pub trait VoxelMap: ecs::component::Component {
 
 #[derive(Clone, Copy, Deserialize, Serialize)]
 pub struct MapConfig {
-    pub superchunk_exponent: u8,
     pub chunk_exponent: u8,
     pub num_lods: u8,
-    pub clip_box_radius: ChunkUnits<u16>,
+    pub clip_box_radius: f32,
     pub world_chunks_extent: ChunkUnits<Extent3i>,
     pub noise: NoiseConfig,
 }

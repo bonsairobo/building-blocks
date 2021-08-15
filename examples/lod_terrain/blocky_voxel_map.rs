@@ -7,7 +7,7 @@ use building_blocks::{
         PosNormMesh, RIGHT_HANDED_Y_UP_CONFIG,
     },
     prelude::*,
-    storage::prelude::{ChunkHashMap3x1, ChunkKey3, OctreeChunkIndex},
+    storage::prelude::{ChunkHashMap3x1, ChunkKey3},
 };
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -40,7 +40,6 @@ impl MergeVoxel for Voxel {
 
 pub struct BlockyVoxelMap {
     chunks: ChunkHashMap3x1<Voxel>,
-    index: OctreeChunkIndex,
     config: MapConfig,
 }
 
@@ -49,7 +48,6 @@ impl VoxelMap for BlockyVoxelMap {
 
     fn generate(pool: &ComputeTaskPool, config: MapConfig) -> Self {
         let MapConfig {
-            superchunk_exponent,
             chunk_exponent,
             num_lods,
             world_chunks_extent,
@@ -88,23 +86,41 @@ impl VoxelMap for BlockyVoxelMap {
             chunks.write_chunk(ChunkKey::new(0, chunk_min), blocky_voxels_from_sdf(&noise));
         }
 
-        let index = OctreeChunkIndex::index_chunk_map(superchunk_exponent, num_lods, &chunks);
-
         chunks.downsample_extent(&PointDownsampler, 0, root_lod, config.world_extent());
 
-        Self {
-            chunks,
-            index,
-            config,
-        }
+        Self { chunks, config }
     }
 
     fn config(&self) -> &MapConfig {
         &self.config
     }
 
-    fn chunk_index(&self) -> &OctreeChunkIndex {
-        &self.index
+    fn clipmap_active_chunks(
+        &self,
+        lod0_center: Point3f,
+        active_rx: impl FnMut(ChunkKey3, Point3f),
+    ) {
+        self.chunks.clipmap_active_chunks(
+            self.config().clip_box_radius,
+            lod0_center,
+            |_| true,
+            active_rx,
+        );
+    }
+
+    fn clipmap_updates(
+        &self,
+        old_lod0_center: Point3f,
+        new_lod0_center: Point3f,
+        update_rx: impl FnMut(LodChunkUpdate3, Point3f),
+    ) {
+        self.chunks.clipmap_updates(
+            self.config().clip_box_radius,
+            old_lod0_center,
+            new_lod0_center,
+            |_| true,
+            update_rx,
+        );
     }
 
     fn init_mesh_buffers(&self) -> Self::MeshBuffers {

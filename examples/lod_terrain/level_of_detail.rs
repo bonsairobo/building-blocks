@@ -3,19 +3,17 @@ use crate::{
     voxel_map::VoxelMap,
 };
 
-use building_blocks::{core::prelude::*, storage::prelude::ChunkUnits};
+use building_blocks::core::prelude::*;
 
 use bevy_utilities::bevy::{prelude::*, render::camera::Camera};
 
 pub struct LodState {
-    old_lod0_center: ChunkUnits<Point3i>,
+    old_lod0_center: Point3f,
 }
 
 impl LodState {
-    pub fn new(lod0_center: ChunkUnits<Point3i>) -> Self {
-        Self {
-            old_lod0_center: lod0_center,
-        }
+    pub fn new(old_lod0_center: Point3f) -> Self {
+        Self { old_lod0_center }
     }
 }
 
@@ -32,22 +30,11 @@ pub fn level_of_detail_system<Map: VoxelMap>(
         return;
     };
 
-    let map_config = voxel_map.config();
+    let lod0_center = Point3f::from(camera_position);
 
-    let lod0_center =
-        ChunkUnits(Point3f::from(camera_position).in_voxel() >> map_config.chunk_exponent);
-
-    if lod0_center == lod_state.old_lod0_center {
-        return;
-    }
-
-    voxel_map.chunk_index().find_clipmap_chunk_updates(
-        &map_config.world_extent(),
-        map_config.clip_box_radius,
-        lod_state.old_lod0_center,
-        lod0_center,
-        |update| mesh_commands.enqueue(MeshCommand::Update(update)),
-    );
+    voxel_map.clipmap_updates(lod_state.old_lod0_center, lod0_center, |update, _| {
+        mesh_commands.enqueue(MeshCommand::Update(update))
+    });
 
     lod_state.old_lod0_center = lod0_center;
 }

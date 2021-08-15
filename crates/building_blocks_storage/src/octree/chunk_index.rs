@@ -49,10 +49,9 @@
 use crate::{
     dev_prelude::{
         Array3x1, ChunkKey3, ChunkMap3, ChunkUnits, ChunkedOctreeSet, ClipMapConfig3,
-        ClipMapUpdate3, GetMutUnchecked, IterChunkKeys, LodChunkUpdate3, OctreeSet,
-        SmallKeyHashMap,
+        ClipMapUpdate3, GetMutUnchecked, IterChunkKeys, OctreeSet, SmallKeyHashMap,
     },
-    octree::active_clipmap_lod_chunks,
+    octree::{active_clipmap_lod_chunks, LodChunkUpdate3},
 };
 
 use building_blocks_core::prelude::*;

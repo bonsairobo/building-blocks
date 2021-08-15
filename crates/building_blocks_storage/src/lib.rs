@@ -51,15 +51,15 @@ pub mod prelude {
         chunk::{
             AmbientExtent, ChunkDownsampler, ChunkKey, ChunkKey2, ChunkKey3, ChunkMapBuilder,
             ChunkMapConfig, ChunkStorage, ChunkUnits, FastChunkCompression, IterChunkKeys,
-            PointDownsampler, SdfMeanDownsampler, UserChunk,
+            LodChunkUpdate2, LodChunkUpdate3, PointDownsampler, SdfMeanDownsampler, UserChunk,
         },
         compression::{
             BincodeCompression, BytesCompression, Compressed, Compression, FromBytesCompression,
         },
         func::Func,
         octree::{
-            ChunkedOctreeSet, ClipMapConfig3, ClipMapUpdate3, LodChunkUpdate3, OctreeChunkIndex,
-            OctreeNode, OctreeSet, OctreeVisitor, VisitStatus,
+            ChunkedOctreeSet, ClipMapConfig3, ClipMapUpdate3, OctreeChunkIndex, OctreeNode,
+            OctreeSet, OctreeVisitor, VisitStatus,
         },
         signed_distance::{Sd16, Sd8, SignedDistance},
         transform_map::TransformMap,

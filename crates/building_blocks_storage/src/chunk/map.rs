@@ -131,10 +131,12 @@
 //! ```
 
 pub mod builder;
+pub mod clipmap;
 pub mod lod_view;
 pub mod sampling;
 
 pub use builder::*;
+pub use clipmap::*;
 pub use lod_view::*;
 pub use sampling::*;
 

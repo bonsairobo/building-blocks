@@ -10,6 +10,7 @@ use auto_impl::auto_impl;
 use serde::{Deserialize, Serialize};
 
 /// The key for a chunk at a particular level of detail.
+#[allow(clippy::derive_hash_xor_eq)] // This is fine, the custom PartialEq is the same as what would've been derived.
 #[derive(Debug, Deserialize, Hash, Eq, Serialize)]
 pub struct ChunkKey<N> {
     /// The minimum point of the chunk.
@@ -27,7 +28,7 @@ where
     fn clone(&self) -> Self {
         Self {
             minimum: self.minimum.clone(),
-            lod: self.lod.clone(),
+            lod: self.lod,
         }
     }
 }

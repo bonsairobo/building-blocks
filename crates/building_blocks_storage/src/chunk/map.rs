@@ -155,6 +155,10 @@ use building_blocks_core::{
 
 use either::Either;
 use serde::{Deserialize, Serialize};
+use std::mem::MaybeUninit;
+
+/// Arbitrarily chosen. Certainly can't exceed the number of bits in an i32.
+const MAX_LODS: usize = 20;
 
 /// The user-accessible data stored in each chunk of a `ChunkMap`.
 ///
@@ -422,7 +426,7 @@ where
     Bldr: ChunkMapBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
 {
-    /// Call `visitor` on all occupied chunks that overlap `extent`.
+    /// Call `visitor` on all occupied chunks that overlap `extent` in level `lod`.
     #[inline]
     pub fn visit_occupied_chunks(
         &self,
@@ -432,19 +436,36 @@ where
     ) {
         let root_lod = self.root_lod();
         assert!(lod <= root_lod);
-        let levels_to_root = root_lod - lod;
-        let root_extent = self
+
+        // Get an extent at each level that covers all ancestors we want to visit.
+        let mut covering_extents: [ExtentN<N>; MAX_LODS] =
+            unsafe { MaybeUninit::zeroed().assume_init() };
+        covering_extents[lod as usize] = extent;
+        for l in lod + 1..=root_lod {
+            let levels_up = l - lod;
+            covering_extents[l as usize] = self
+                .indexer
+                .covering_ancestor_extent(extent, levels_up as i32);
+        }
+
+        for root_chunk_min in self
             .indexer
-            .covering_ancestor_extent(extent, levels_to_root as i32);
-        for root_chunk_min in self.indexer.chunk_mins_for_extent(&root_extent) {
-            self.visit_chunks_in_octree(ChunkKey::new(root_lod, root_chunk_min), lod, &mut visitor);
+            .chunk_mins_for_extent(&covering_extents[root_lod as usize])
+        {
+            self.visit_occupied_chunks_recursive(
+                ChunkKey::new(root_lod, root_chunk_min),
+                lod,
+                &covering_extents,
+                &mut visitor,
+            );
         }
     }
 
-    fn visit_chunks_in_octree(
+    fn visit_occupied_chunks_recursive(
         &self,
         node_key: ChunkKey<N>,
         lod: u8,
+        covering_extents: &[ExtentN<N>],
         visitor: &mut impl FnMut(&Usr),
     ) {
         if let Some(node) = self.storage.get(node_key) {
@@ -454,10 +475,22 @@ where
                 }
                 return;
             }
+
+            let next_level_covering_extent = &covering_extents[node_key.lod as usize - 1];
             for child_i in 0..PointN::NUM_CORNERS {
                 if node.has_child(child_i) {
                     let child_key = self.indexer.child_chunk_key(node_key, child_i);
-                    self.visit_chunks_in_octree(child_key, lod, visitor)
+
+                    // Skip if this node is not an ancestor.
+                    let child_extent = self.indexer.extent_for_chunk_with_min(child_key.minimum);
+                    if child_extent
+                        .intersection(next_level_covering_extent)
+                        .is_empty()
+                    {
+                        continue;
+                    }
+
+                    self.visit_occupied_chunks_recursive(child_key, lod, covering_extents, visitor)
                 }
             }
         }
@@ -786,6 +819,7 @@ mod tests {
 
     #[test]
     fn visit_occupied_chunks() {
+        assert!(MAP_CONFIG.root_lod > 0);
         let mut map = ChunkMapBuilder3x1::new(MAP_CONFIG).build_with_hash_map_storage();
 
         let insert_chunk_mins = [PointN([0, 0, 0]), PointN([16, 0, 0]), PointN([32, 0, 0])];
@@ -797,14 +831,15 @@ mod tests {
             );
         }
 
-        let mut visited_lod0_chunk_mins = Vec::new();
-        map.visit_occupied_chunks(
-            0,
-            Extent3i::from_min_and_max(Point3i::fill(0), Point3i::fill(32)),
-            |chunk| visited_lod0_chunk_mins.push(chunk.extent().minimum),
-        );
+        // This intentionally doesn't cover all of the inserted chunks, but it overlaps two roots.
+        let visit_extent = Extent3i::from_min_and_shape(PointN([16, 0, 0]), Point3i::fill(17));
 
-        assert_eq!(&visited_lod0_chunk_mins, &insert_chunk_mins);
+        let mut visited_lod0_chunk_mins = Vec::new();
+        map.visit_occupied_chunks(0, visit_extent, |chunk| {
+            visited_lod0_chunk_mins.push(chunk.extent().minimum)
+        });
+
+        assert_eq!(&visited_lod0_chunk_mins, &insert_chunk_mins[1..=2]);
     }
 
     #[test]

@@ -69,7 +69,7 @@ where
         (chunk_min & (self.chunk_shape_mask << levels)) >> levels
     }
 
-    /// Given an `extent`, returns the minimal extent `levels` up that covers it.
+    /// Given an `extent`, returns an extent `levels` up that overlaps all ancestors of chunks covered by `extent`.
     #[inline]
     pub fn covering_ancestor_extent(&self, extent: ExtentN<N>, levels: i32) -> ExtentN<N> {
         ExtentN::from_min_and_max(
@@ -184,6 +184,8 @@ mod tests {
         assert_eq!(lod1_min, Point3i::fill(4));
         let lod2_min = indexer.parent_chunk_min(lod1_min);
         assert_eq!(lod2_min, Point3i::fill(0));
+
+        assert_eq!(lod2_min, indexer.ancestor_chunk_min(lod0_min, 2))
     }
 
     #[test]

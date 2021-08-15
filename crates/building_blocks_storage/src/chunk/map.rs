@@ -155,10 +155,6 @@ use building_blocks_core::{
 
 use either::Either;
 use serde::{Deserialize, Serialize};
-use std::mem::MaybeUninit;
-
-/// Arbitrarily chosen. Certainly can't exceed the number of bits in an i32.
-const MAX_LODS: usize = 20;
 
 /// The user-accessible data stored in each chunk of a `ChunkMap`.
 ///
@@ -220,8 +216,13 @@ impl<U> ChunkNode<U> {
     }
 
     fn has_child(&self, corner_index: u8) -> bool {
-        self.child_mask & (1 << corner_index) != 0
+        child_mask_has_child(self.child_mask, corner_index)
     }
+}
+
+#[inline]
+pub(crate) fn child_mask_has_child(mask: u8, corner_index: u8) -> bool {
+    mask & (1 << corner_index) != 0
 }
 
 /// A lattice map made up of same-shaped [Array] chunks. For each level of detail, it takes a value at every possible
@@ -438,15 +439,9 @@ where
         assert!(lod <= root_lod);
 
         // Get an extent at each level that covers all ancestors we want to visit.
-        let mut covering_extents: [ExtentN<N>; MAX_LODS] =
-            unsafe { MaybeUninit::zeroed().assume_init() };
-        covering_extents[lod as usize] = extent;
-        for l in lod + 1..=root_lod {
-            let levels_up = l - lod;
-            covering_extents[l as usize] = self
-                .indexer
-                .covering_ancestor_extent(extent, levels_up as i32);
-        }
+        let covering_extents = self
+            .indexer
+            .covering_ancestor_extents_for_lods(root_lod, lod, extent);
 
         for root_chunk_min in self
             .indexer
@@ -535,14 +530,19 @@ where
     /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
     #[inline]
     pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) {
+        self.write_chunk_without_linking(key, chunk);
+        self.link_node(key);
+    }
+
+    /// This leaves the tree in an inconsistent state. Make sure you fix it!
+    #[inline]
+    pub(crate) fn write_chunk_without_linking(&mut self, key: ChunkKey<N>, chunk: Usr) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         let node = self
             .storage
             .get_mut_or_insert_with(key, ChunkNode::new_empty);
         node.user_chunk = Some(chunk);
-
-        self.link_node(key);
     }
 
     /// Replace the `Chunk` at `key` with `chunk`, returning the old value.
@@ -552,14 +552,12 @@ where
     pub fn replace_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
+        self.link_node(key);
+
         let node = self
             .storage
             .get_mut_or_insert_with(key, ChunkNode::new_empty);
-        let old_chunk = node.user_chunk.replace(chunk);
-
-        self.link_node(key);
-
-        old_chunk
+        node.user_chunk.replace(chunk)
     }
 
     /// Mutably borrow the chunk at `key`.
@@ -653,8 +651,14 @@ where
 
     #[inline]
     pub fn pop_chunk(&mut self, key: ChunkKey<N>) -> Option<Usr> {
-        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
         self.unlink_node(key);
+        self.pop_chunk_without_unlinking(key)
+    }
+
+    /// This leaves the tree in an inconsistent state. Make sure you fix it!
+    #[inline]
+    pub(crate) fn pop_chunk_without_unlinking(&mut self, key: ChunkKey<N>) -> Option<Usr> {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
         self.storage.pop(key).and_then(|c| c.user_chunk)
     }
 }

@@ -76,10 +76,11 @@ impl VoxelMap for BlockyVoxelMap {
             true,
         );
 
+        let root_lod = num_lods - 1;
         let builder = ChunkMapBuilder3x1::new(ChunkMapConfig {
             chunk_shape,
             ambient_value: Voxel::EMPTY,
-            root_lod: num_lods - 1,
+            root_lod,
         });
         let mut chunks = builder.build_with_hash_map_storage();
 
@@ -89,7 +90,7 @@ impl VoxelMap for BlockyVoxelMap {
 
         let index = OctreeChunkIndex::index_chunk_map(superchunk_exponent, num_lods, &chunks);
 
-        chunks.downsample_chunks_with_index(&index, &PointDownsampler, &config.world_extent());
+        chunks.downsample_extent(&PointDownsampler, 0, root_lod, config.world_extent());
 
         Self {
             chunks,

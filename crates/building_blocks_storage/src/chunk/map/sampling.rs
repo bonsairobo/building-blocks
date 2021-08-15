@@ -1,12 +1,12 @@
-pub mod point;
-pub mod sdf_mean;
+mod point;
+mod sdf_mean;
 
 pub use point::*;
 pub use sdf_mean::*;
 
 use crate::{
     array::{ArrayIndexer, LockStepArrayForEach},
-    chunk::ChunkNode,
+    chunk::{child_mask_has_child, ChunkNode},
     dev_prelude::*,
 };
 
@@ -24,26 +24,150 @@ where
     PointN<N>: IntegerPoint<N>,
     ChunkKey<N>: Copy,
     T: Clone,
-    Usr: UserChunk + FillExtent<N, Item = T> + IndexedArray<N>,
+    Usr: UserChunk,
+    Usr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
     Bldr: ChunkMapBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
 {
+    /// Downsamples all chunks in level `src_lod` that overlap `src_extent`.
+    ///
+    /// All ancestors from `src_lod + 1` to `max_lod` (inclusive) will be targeted as sample destinations. Levels from `max_lod
+    /// + 1` to the roots will not be touched.
+    pub fn downsample_extent<Samp>(
+        &mut self,
+        sampler: &Samp,
+        src_lod: u8,
+        max_lod: u8,
+        src_extent: ExtentN<N>,
+    ) where
+        Samp: ChunkDownsampler<N, T, Usr, Usr>,
+    {
+        self.downsample_extent_internal(
+            |this, src_chunk_key| this.downsample_chunk(sampler, src_chunk_key),
+            src_lod,
+            max_lod,
+            src_extent,
+        );
+    }
+
+    /// Same as `downsample_extent`, but allows passing in a closure that fetches LOD0 chunks. This is mostly a workaround so we
+    /// can downsample multichannel chunks from LOD0.
+    pub fn downsample_extent_with_lod0<Samp, Lod0Ch, Lod0ChBorrow>(
+        &mut self,
+        get_lod0_chunk: impl Fn(PointN<N>) -> Option<Lod0Ch>,
+        sampler: &Samp,
+        src_lod: u8,
+        max_lod: u8,
+        src_extent: ExtentN<N>,
+    ) where
+        Lod0Ch: Borrow<Lod0ChBorrow>,
+        Samp: ChunkDownsampler<N, T, Usr, Usr> + ChunkDownsampler<N, T, Lod0ChBorrow, Usr>,
+    {
+        self.downsample_extent_internal(
+            |this, src_chunk_key| {
+                if src_chunk_key.lod == 0 {
+                    if let Some(src_chunk) = get_lod0_chunk(src_chunk_key.minimum) {
+                        this.downsample_external_chunk(sampler, src_chunk_key, src_chunk.borrow());
+                    } else {
+                        this.downsample_ambient_chunk(src_chunk_key);
+                    }
+                } else {
+                    this.downsample_chunk(sampler, src_chunk_key);
+                }
+            },
+            src_lod,
+            max_lod,
+            src_extent,
+        );
+    }
+
+    fn downsample_extent_internal(
+        &mut self,
+        mut downsample_fn: impl FnMut(&mut Self, ChunkKey<N>),
+        src_lod: u8,
+        max_lod: u8,
+        src_extent: ExtentN<N>,
+    ) {
+        let root_lod = self.root_lod();
+        assert!(src_lod < root_lod);
+        assert!(max_lod <= root_lod);
+        // Get an extent at each level that covers all ancestors we want to visit.
+        let covering_extents = self
+            .indexer
+            .covering_ancestor_extents_for_lods(root_lod, src_lod, src_extent);
+        for root_lod_chunk_min in self
+            .indexer
+            .chunk_mins_for_extent(&covering_extents[root_lod as usize])
+        {
+            self.downsample_extent_internal_recursive(
+                &mut downsample_fn,
+                ChunkKey::new(root_lod, root_lod_chunk_min),
+                src_lod,
+                max_lod,
+                &covering_extents,
+            );
+        }
+    }
+
+    fn downsample_extent_internal_recursive(
+        &mut self,
+        downsample_fn: &mut impl FnMut(&mut Self, ChunkKey<N>),
+        node_key: ChunkKey<N>,
+        src_lod: u8,
+        max_lod: u8,
+        covering_extents: &[ExtentN<N>],
+    ) {
+        if node_key.lod > src_lod {
+            if let Some(node) = self.storage.get(node_key) {
+                let child_mask = node.child_mask;
+                for child_i in 0..PointN::NUM_CORNERS {
+                    if child_mask_has_child(child_mask, child_i) {
+                        let child_key = self.indexer.child_chunk_key(node_key, child_i);
+
+                        // Only visit chunks overlapping src_extent and ancestors.
+                        if self
+                            .indexer
+                            .extent_for_chunk_with_min(child_key.minimum)
+                            .intersection(&covering_extents[child_key.lod as usize])
+                            .is_empty()
+                        {
+                            continue;
+                        }
+
+                        self.downsample_extent_internal_recursive(
+                            downsample_fn,
+                            child_key,
+                            src_lod,
+                            max_lod,
+                            covering_extents,
+                        );
+                    }
+                }
+            }
+        }
+
+        // Do a post-order traversal so we can start sampling from the bottom of the tree and work our way up.
+        if max_lod > node_key.lod && node_key.lod >= src_lod {
+            downsample_fn(self, node_key);
+        }
+    }
+
     /// Downsamples the chunk at `src_chunk_key` into `lod + 1`.
-    pub fn downsample_chunk<Samp>(&mut self, sampler: &Samp, src_chunk_key: ChunkKey<N>)
+    fn downsample_chunk<Samp>(&mut self, sampler: &Samp, src_chunk_key: ChunkKey<N>)
     where
         Samp: ChunkDownsampler<N, T, Usr, Usr>,
     {
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
-        if let Some(src_chunk) = self.pop_chunk(src_chunk_key) {
+        if let Some(src_chunk) = self.pop_chunk_without_unlinking(src_chunk_key) {
             self.downsample_external_chunk(sampler, src_chunk_key, &src_chunk);
-            self.write_chunk(src_chunk_key, src_chunk);
+            self.write_chunk_without_linking(src_chunk_key, src_chunk);
         } else {
             self.downsample_ambient_chunk(src_chunk_key)
         }
     }
 
-    /// Downsamples `src_chunk` into `lod + 1`.
-    pub fn downsample_external_chunk<Samp, Src>(
+    /// Downsamples `src_chunk` into `src_chunk_key.lod + 1`.
+    fn downsample_external_chunk<Samp, Src>(
         &mut self,
         sampler: &Samp,
         src_chunk_key: ChunkKey<N>,
@@ -56,111 +180,18 @@ where
         sampler.downsample(src_chunk, dst_chunk, dst.offset);
     }
 
-    /// Fill the destination samples with the ambient value.
-    pub fn downsample_ambient_chunk(&mut self, src_chunk_key: ChunkKey<N>) {
+    /// Downsamples an ambient chunk into `lod + 1`. This simply fills the destination extent with the ambient value.
+    fn downsample_ambient_chunk(&mut self, src_chunk_key: ChunkKey<N>) {
         let chunk_shape = self.chunk_shape();
         let ambient_value = self.ambient_value.clone();
         let dst = self.indexer.downsample_destination(src_chunk_key);
         let dst_chunk = self.get_mut_chunk_or_insert_ambient(dst.chunk_key);
+        let dst_array = dst_chunk.array_mut();
         let dst_extent = ExtentN::from_min_and_shape(
-            dst_chunk.extent().minimum + dst.offset.0,
+            dst_array.extent().minimum + dst.offset.0,
             chunk_shape >> 1,
         );
-        dst_chunk.fill_extent(&dst_extent, ambient_value);
-    }
-}
-
-impl<T, Usr, Bldr, Store> ChunkMap3<T, Bldr, Store>
-where
-    T: Clone,
-    Usr: UserChunk + FillExtent<[i32; 3], Item = T> + IndexedArray<[i32; 3]>,
-    Bldr: ChunkMapBuilder<[i32; 3], T, Chunk = Usr>,
-    Store: ChunkStorage<[i32; 3], Chunk = ChunkNode<Usr>>,
-{
-    /// Downsamples all chunks that both:
-    ///   1. overlap `extent`
-    ///   2. are present in `index`
-    ///
-    /// Destination chunks up to `num_lods` will be considered.
-    pub fn downsample_chunks_with_index<Samp>(
-        &mut self,
-        index: &OctreeChunkIndex,
-        sampler: &Samp,
-        extent: &Extent3i,
-    ) where
-        Samp: ChunkDownsampler<[i32; 3], T, Usr, Usr>,
-    {
-        let chunk_shape = self.chunk_shape();
-        let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
-
-        let chunk_space_extent = *extent >> chunk_log2;
-
-        index.visit_octrees(extent, &mut |octree| {
-            // Post-order is important to make sure we start downsampling at LOD 0.
-            octree.visit_all_octants_for_extent_in_postorder(
-                &chunk_space_extent,
-                &mut |node: &OctreeNode| {
-                    let src_lod = node.octant().exponent();
-                    let dst_lod = src_lod + 1;
-                    if dst_lod < index.num_lods() {
-                        let src_chunk_min = (node.octant().minimum() << chunk_log2) >> src_lod;
-                        self.downsample_chunk(sampler, ChunkKey::new(src_lod, src_chunk_min));
-                    }
-
-                    VisitStatus::Continue
-                },
-            );
-        });
-    }
-
-    /// Same as `downsample_chunks_with_index`, but allows passing in a closure that fetches LOD0 chunks. This is mostly a
-    /// workaround so we can downsample multichannel chunks from LOD0.
-    pub fn downsample_chunks_with_lod0_and_index<Samp, Lod0Ch, Lod0ChBorrow>(
-        &mut self,
-        get_lod0_chunk: impl Fn(Point3i) -> Option<Lod0Ch>,
-        index: &OctreeChunkIndex,
-        sampler: &Samp,
-        extent: &Extent3i,
-    ) where
-        Lod0Ch: Borrow<Lod0ChBorrow>,
-        Samp: ChunkDownsampler<[i32; 3], T, Usr, Usr>
-            + ChunkDownsampler<[i32; 3], T, Lod0ChBorrow, Usr>,
-    {
-        let chunk_shape = self.chunk_shape();
-        let chunk_log2 = chunk_shape.map_components_unary(|c| c.trailing_zeros() as i32);
-
-        let chunk_space_extent = *extent >> chunk_log2;
-
-        index.visit_octrees(extent, &mut |octree| {
-            // Post-order is important to make sure we start downsampling at LOD 0.
-            octree.visit_all_octants_for_extent_in_postorder(
-                &chunk_space_extent,
-                &mut |node: &OctreeNode| {
-                    let src_lod = node.octant().exponent();
-                    let dst_lod = src_lod + 1;
-                    if dst_lod < index.num_lods() {
-                        let src_chunk_min = (node.octant().minimum() << chunk_log2) >> src_lod;
-                        let src_chunk_key = ChunkKey::new(src_lod, src_chunk_min);
-
-                        if src_lod == 0 {
-                            if let Some(src_chunk) = get_lod0_chunk(src_chunk_min) {
-                                self.downsample_external_chunk(
-                                    sampler,
-                                    src_chunk_key,
-                                    src_chunk.borrow(),
-                                );
-                            } else {
-                                self.downsample_ambient_chunk(src_chunk_key);
-                            }
-                        } else {
-                            self.downsample_chunk(sampler, src_chunk_key);
-                        }
-                    }
-
-                    VisitStatus::Continue
-                },
-            );
-        });
+        dst_array.fill_extent(&dst_extent, ambient_value);
     }
 }
 
@@ -196,7 +227,6 @@ mod tests {
 
     #[test]
     fn downsample_multichannel_chunks_with_index() {
-        let num_lods = 6;
         let chunk_shape = Point3i::fill(16);
         let ambient = (Sd8::ONE, 'a');
 
@@ -207,19 +237,18 @@ mod tests {
         let lod0_builder = ChunkMapBuilder3x2::new(ChunkMapConfig {
             chunk_shape,
             ambient_value: ambient,
-            root_lod: num_lods - 1,
+            root_lod: 0,
         });
         let mut lod0 = lod0_builder.build_with_hash_map_storage();
         lod0.fill_extent(0, &lod0_extent, ambient);
 
+        // Build a single-channel chunk map for LOD > 0.
         let lodn_builder = ChunkMapBuilder3x1::new(ChunkMapConfig {
             chunk_shape,
             ambient_value: Sd8::ONE,
-            root_lod: num_lods - 1,
+            root_lod: 5,
         });
         let mut lodn = lodn_builder.build_with_hash_map_storage();
-
-        let index = OctreeChunkIndex::index_chunk_map(9, num_lods, &lod0);
 
         // Since we're downsampling multichannel chunks, we need to project them onto the one channel that we're downsampling.
         let get_lod0_chunk = |p| {
@@ -227,11 +256,7 @@ mod tests {
                 .map(|chunk| chunk.borrow_channels(|(sd, _letter)| sd))
         };
 
-        lodn.downsample_chunks_with_lod0_and_index(
-            get_lod0_chunk,
-            &index,
-            &SdfMeanDownsampler,
-            &lod0_extent,
-        );
+        // Only keep samples at 4 levels.
+        lodn.downsample_extent_with_lod0(get_lod0_chunk, &SdfMeanDownsampler, 0, 3, lod0_extent);
     }
 }

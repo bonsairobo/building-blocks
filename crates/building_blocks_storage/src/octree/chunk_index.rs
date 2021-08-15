@@ -6,7 +6,7 @@
 //! regions of the map. Without one, the best you could do is hash every single `ChunkKey` that overlaps your query extent to
 //! see if it exists in the `ChunkMap`. It is also a natural structure for implementing a clipmap.
 //!
-//! ## Indexing and Downsampling a `ChunkMap`
+//! ## Indexing a `ChunkMap`
 //!
 //! ```
 //! # use building_blocks_core::prelude::*;
@@ -44,11 +44,6 @@
 //!     }
 //! );
 //! assert_eq!(chunk_keys, map.storage().chunk_keys().cloned().collect());
-//!
-//! // Now let's downsample those chunks into every LOD of the map. This goes bottom-up in post-order. The
-//! // `PointDownsampler` simply takes one point for each 2x2x2 region being sampled. There is also an `SdfMeanDownsampler` that
-//! // works on any voxels types that implement `SignedDistance`. Or you can define your own downsampler!
-//! map.downsample_chunks_with_index(&index, &PointDownsampler, &extent);
 //! ```
 
 use crate::{

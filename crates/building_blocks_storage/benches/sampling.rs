@@ -1,7 +1,7 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::prelude::{
     Array3x1, ChunkDownsampler, ChunkMapBuilder, ChunkMapBuilder3x1, ChunkMapConfig, Local,
-    OctreeChunkIndex, PointDownsampler, Sd8, SdfMeanDownsampler,
+    PointDownsampler, Sd8, SdfMeanDownsampler,
 };
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
@@ -55,7 +55,6 @@ fn sdf_mean_downsample3(c: &mut Criterion) {
 fn sdf_mean_downsample_chunk_map(c: &mut Criterion) {
     let mut group = c.benchmark_group("sdf_mean_downsample_chunk_map_with_index");
 
-    let num_lods = 6;
     for map_chunks in [1, 2, 4, 8].iter() {
         group.bench_with_input(
             BenchmarkId::from_parameter(map_chunks),
@@ -64,13 +63,12 @@ fn sdf_mean_downsample_chunk_map(c: &mut Criterion) {
                 b.iter_with_setup(
                     || {
                         let chunk_exponent = 4;
-                        let superchunk_exponent = chunk_exponent + num_lods - 1;
                         let chunk_shape = Point3i::fill(1 << chunk_exponent);
 
                         let builder = ChunkMapBuilder3x1::new(ChunkMapConfig {
                             chunk_shape,
                             ambient_value: Sd8::ONE,
-                            root_lod: 0,
+                            root_lod: 5,
                         });
                         let mut map = builder.build_with_hash_map_storage();
 
@@ -79,13 +77,10 @@ fn sdf_mean_downsample_chunk_map(c: &mut Criterion) {
                                 * chunk_shape;
                         map.fill_extent(0, &map_extent, Sd8::NEG_ONE);
 
-                        let index =
-                            OctreeChunkIndex::index_chunk_map(superchunk_exponent, num_lods, &map);
-
-                        (map, index, map_extent)
+                        (map, map_extent)
                     },
-                    |(mut map, index, map_extent)| {
-                        map.downsample_chunks_with_index(&index, &SdfMeanDownsampler, &map_extent)
+                    |(mut map, map_extent)| {
+                        map.downsample_extent(&SdfMeanDownsampler, 0, 5, map_extent)
                     },
                 );
             },

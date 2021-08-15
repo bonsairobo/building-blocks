@@ -3,6 +3,10 @@ use crate::dev_prelude::{ChunkKey, Local};
 use building_blocks_core::prelude::*;
 
 use serde::{Deserialize, Serialize};
+use std::mem::MaybeUninit;
+
+/// Arbitrarily chosen. Certainly can't exceed the number of bits in an i32.
+const MAX_LODS: usize = 20;
 
 /// Calculates chunk locations, e.g. minimums and downsampling destinations.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -76,6 +80,32 @@ where
             self.ancestor_chunk_min(extent.minimum, levels),
             self.ancestor_chunk_min(extent.max(), levels),
         )
+    }
+
+    /// Returns an array, indexed by LOD, of covering ancestor extents.
+    ///
+    /// It is common to want to visit all chunks at level `min_lod` that overlap `min_lod_extent`. The "covering ancestor
+    /// extents" say, at each level, the extent that overlaps all and only the ancestors that must be visited to reach the
+    /// desired chunks.
+    ///
+    /// Without using these extents to filter out nodes in the octree, we would visit many ancestors unnecessarily.
+    #[inline]
+    pub fn covering_ancestor_extents_for_lods(
+        &self,
+        root_lod: u8,
+        min_lod: u8,
+        min_lod_extent: ExtentN<N>,
+    ) -> [ExtentN<N>; MAX_LODS] {
+        // Get an extent at each level that covers all ancestors we want to visit.
+        let mut covering_extents: [ExtentN<N>; MAX_LODS] =
+            unsafe { MaybeUninit::zeroed().assume_init() };
+        covering_extents[min_lod as usize] = min_lod_extent;
+        for l in min_lod + 1..=root_lod {
+            let levels_up = l - min_lod;
+            covering_extents[l as usize] =
+                self.covering_ancestor_extent(min_lod_extent, levels_up as i32);
+        }
+        covering_extents
     }
 
     /// Given a chunk at `chunk_min`, returns the minimum of the parent chunk.

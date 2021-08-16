@@ -291,25 +291,14 @@ where
 
     #[inline]
     fn write_raw(&mut self, key: PointN<N>, chunk: ChunkNode<Self::ChunkRepr>) {
-        // TODO: yuck! can we simplify this somehow?
         if let Some(user_chunk) = chunk.user_chunk {
             match user_chunk {
                 MaybeCompressed::Compressed(c) => {
-                    self.insert_compressed(
-                        key,
-                        ChunkNode {
-                            user_chunk: Some(c),
-                            child_mask: chunk.child_mask,
-                        },
-                    );
+                    self.insert_compressed(key, ChunkNode::new(Some(c), chunk.child_mask));
                 }
-                MaybeCompressed::Decompressed(d) => self.write(
-                    key,
-                    ChunkNode {
-                        user_chunk: Some(d),
-                        child_mask: chunk.child_mask,
-                    },
-                ),
+                MaybeCompressed::Decompressed(d) => {
+                    self.write(key, ChunkNode::new(Some(d), chunk.child_mask))
+                }
             }
         } else {
             self.write(key, ChunkNode::new_without_data(chunk.child_mask))
@@ -325,8 +314,8 @@ where
     #[inline]
     fn pop_raw(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::ChunkRepr>> {
         self.remove(key).map(|c| match c {
-            MaybeCompressed::Compressed(n) => n.map(|u| MaybeCompressed::Compressed(u)),
-            MaybeCompressed::Decompressed(n) => n.map(|u| MaybeCompressed::Decompressed(u)),
+            MaybeCompressed::Compressed(n) => n.map(MaybeCompressed::Compressed),
+            MaybeCompressed::Decompressed(n) => n.map(MaybeCompressed::Decompressed),
         })
     }
 }

@@ -242,39 +242,35 @@ pub struct ChunkNode<U> {
 
 impl<U> ChunkNode<U> {
     #[inline]
-    pub(crate) fn new_empty() -> Self {
+    pub(crate) fn new(user_chunk: Option<U>, child_mask: u8) -> Self {
         Self {
-            user_chunk: None,
-            child_mask: 0,
-        }
-    }
-
-    #[inline]
-    pub(crate) fn new_without_data(child_mask: u8) -> Self {
-        Self {
-            user_chunk: None,
+            user_chunk,
             child_mask,
         }
     }
 
-    fn has_child(&self, corner_index: u8) -> bool {
-        child_mask_has_child(self.child_mask, corner_index)
+    #[inline]
+    pub(crate) fn new_empty() -> Self {
+        Self::new(None, 0)
+    }
+
+    #[inline]
+    pub(crate) fn new_without_data(child_mask: u8) -> Self {
+        Self::new(None, child_mask)
     }
 
     #[inline]
     pub(crate) fn as_ref(&self) -> ChunkNode<&U> {
-        ChunkNode {
-            user_chunk: self.user_chunk.as_ref(),
-            child_mask: self.child_mask,
-        }
+        ChunkNode::new(self.user_chunk.as_ref(), self.child_mask)
     }
 
     #[inline]
     pub(crate) fn map<T>(self, f: impl Fn(U) -> T) -> ChunkNode<T> {
-        ChunkNode {
-            user_chunk: self.user_chunk.map(f),
-            child_mask: self.child_mask,
-        }
+        ChunkNode::new(self.user_chunk.map(f), self.child_mask)
+    }
+
+    fn has_child(&self, corner_index: u8) -> bool {
+        child_mask_has_child(self.child_mask, corner_index)
     }
 }
 

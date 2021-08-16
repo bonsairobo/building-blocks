@@ -159,7 +159,7 @@ where
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
         if let Some(src_node) = self.pop_chunk_node(src_chunk_key) {
             if let Some(src_chunk) = &src_node.user_chunk {
-                self.downsample_external_chunk(sampler, src_chunk_key, &src_chunk);
+                self.downsample_external_chunk(sampler, src_chunk_key, src_chunk);
             } else {
                 self.downsample_ambient_chunk(src_chunk_key);
             }

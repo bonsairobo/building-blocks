@@ -153,10 +153,8 @@ where
                     new_chunks,
                 }));
             }
-            (false, false) => {
-                // Old and new agree this node is active. No update.
-                return;
-            }
+            // Old and new agree this node is active. No update.
+            (false, false) => (),
         }
     }
 

@@ -300,11 +300,11 @@ pub type ChunkTree2<T, Bldr, Store> = ChunkTree<[i32; 2], T, Bldr, Store>;
 pub type ChunkTree3<T, Bldr, Store> = ChunkTree<[i32; 3], T, Bldr, Store>;
 
 /// An N-dimensional, single-channel `ChunkTree`.
-pub type ChunkMapNx1<N, T, Store> = ChunkTree<N, T, ChunkTreeBuilderNx1<N, T>, Store>;
+pub type ChunkTreeNx1<N, T, Store> = ChunkTree<N, T, ChunkTreeBuilderNx1<N, T>, Store>;
 /// A 2-dimensional, single-channel `ChunkTree`.
-pub type ChunkTree2x1<T, Store> = ChunkMapNx1<[i32; 2], T, Store>;
+pub type ChunkTree2x1<T, Store> = ChunkTreeNx1<[i32; 2], T, Store>;
 /// A 3-dimensional, single-channel `ChunkTree`.
-pub type ChunkTree3x1<T, Store> = ChunkMapNx1<[i32; 3], T, Store>;
+pub type ChunkTree3x1<T, Store> = ChunkTreeNx1<[i32; 3], T, Store>;
 
 impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where

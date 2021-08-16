@@ -287,7 +287,6 @@ pub(crate) fn child_mask_has_child(mask: u8, corner_index: u8) -> bool {
 /// - [`WriteExtent`](crate::access_traits::WriteExtent)
 #[derive(Deserialize, Serialize)]
 pub struct ChunkTree<N, T, Bldr, Store> {
-    /// Translates from lattice coordinates to chunk key space.
     pub indexer: ChunkIndexer<N>,
     storages: Vec<Store>,
     builder: Bldr,

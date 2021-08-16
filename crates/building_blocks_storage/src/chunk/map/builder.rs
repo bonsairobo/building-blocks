@@ -1,9 +1,7 @@
 use crate::{
     array::FillChannels,
     chunk::ChunkNode,
-    dev_prelude::{
-        Array, Channel, ChunkHashMap, ChunkKey, ChunkMap, ChunkStorage, SmallKeyHashMap,
-    },
+    dev_prelude::{Array, Channel, ChunkHashMap, ChunkMap, ChunkStorage, SmallKeyHashMap},
 };
 
 use building_blocks_core::{point_traits::IntegerPoint, ExtentN, PointN};
@@ -53,24 +51,32 @@ pub trait ChunkMapBuilder<N, T>: Sized {
         self.config().root_lod
     }
 
+    #[inline]
+    fn num_lods(&self) -> u8 {
+        self.root_lod() + 1
+    }
+
     /// Create a new `ChunkMap` with the given `storage` which must implement both `ChunkReadStorage` and `ChunkWriteStorage`.
-    fn build_with_storage<Store>(self, storage: Store) -> ChunkMap<N, T, Self, Store>
+    fn build_with_storage<Store>(
+        self,
+        storage_factory: impl Fn() -> Store,
+    ) -> ChunkMap<N, T, Self, Store>
     where
         PointN<N>: IntegerPoint<N>,
         T: Clone,
         Store: ChunkStorage<N, Chunk = ChunkNode<Self::Chunk>>,
     {
-        ChunkMap::new(self, storage)
+        let storages = (0..self.num_lods()).map(|_| storage_factory()).collect();
+        ChunkMap::new(self, storages)
     }
 
     /// Create a new `ChunkMap` using a `SmallKeyHashMap` as the chunk storage.
     fn build_with_hash_map_storage(self) -> ChunkHashMap<N, T, Self>
     where
-        PointN<N>: IntegerPoint<N>,
+        PointN<N>: Hash + IntegerPoint<N>,
         T: Clone,
-        ChunkKey<N>: Eq + Hash,
     {
-        Self::build_with_storage(self, SmallKeyHashMap::default())
+        Self::build_with_storage(self, SmallKeyHashMap::default)
     }
 }
 

@@ -63,7 +63,7 @@ fn chunk_hash_map_for_each_point(c: &mut Criterion) {
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
-                || set_up_chunk_map(SmallKeyHashMap::default(), size),
+                || set_up_chunk_map(SmallKeyHashMap::default, size),
                 |(chunk_map, iter_extent)| {
                     chunk_map
                         .lod_view(0)
@@ -82,7 +82,7 @@ fn chunk_hash_map_for_each_point_mut(c: &mut Criterion) {
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
-                || set_up_chunk_map(SmallKeyHashMap::default(), size),
+                || set_up_chunk_map(SmallKeyHashMap::default, size),
                 |(mut chunk_map, filled_extent)| {
                     // About 42% of points are overwritten.
                     let write_extent = filled_extent + filled_extent.shape / 4;
@@ -121,7 +121,7 @@ fn chunk_hash_map_point_indexing(c: &mut Criterion) {
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
-                || set_up_chunk_map(SmallKeyHashMap::default(), size),
+                || set_up_chunk_map(SmallKeyHashMap::default, size),
                 |(chunk_map, iter_extent)| {
                     let lod0 = chunk_map.lod_view(0);
                     for p in iter_extent.iter_points() {
@@ -139,7 +139,7 @@ fn chunk_hash_map_visit_chunks_sparse(c: &mut Criterion) {
     for size in [128, 256, 512].iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
-                || set_up_sparse_chunk_map(SmallKeyHashMap::default(), size, 3),
+                || set_up_sparse_chunk_map(SmallKeyHashMap::default, size, 3),
                 |(chunk_map, iter_extent)| {
                     chunk_map.visit_occupied_chunks(0, iter_extent, |chunk| {
                         black_box(chunk);
@@ -157,10 +157,14 @@ fn compressible_chunk_map_point_indexing(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
                 || {
-                    let storage =
-                        FastCompressibleChunkStorageNx1::with_bytes_compression(Lz4 { level: 10 });
-
-                    set_up_chunk_map(storage, size)
+                    set_up_chunk_map(
+                        || {
+                            FastCompressibleChunkStorageNx1::with_bytes_compression(Lz4 {
+                                level: 10,
+                            })
+                        },
+                        size,
+                    )
                 },
                 |(chunk_map, iter_extent)| {
                     let lod0 = chunk_map.lod_view(0);
@@ -205,10 +209,10 @@ fn chunk_hash_map_copy(c: &mut Criterion) {
             b.iter_with_setup(
                 || {
                     let cp_extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
-                    let mut src = BUILDER.build_with_storage(SmallKeyHashMap::default());
+                    let mut src = BUILDER.build_with_hash_map_storage();
                     src.fill_extent(0, &cp_extent, 1);
 
-                    let dst = BUILDER.build_with_storage(SmallKeyHashMap::default());
+                    let dst = BUILDER.build_with_hash_map_storage();
 
                     (src, dst, cp_extent)
                 },
@@ -248,11 +252,14 @@ fn set_up_array(size: i32) -> (Array3x1<i32>, Extent3i) {
     (array, iter_extent)
 }
 
-fn set_up_chunk_map<Store>(storage: Store, size: i32) -> (ChunkMap3x1<i32, Store>, Extent3i)
+fn set_up_chunk_map<Store>(
+    storage_factory: impl Fn() -> Store,
+    size: i32,
+) -> (ChunkMap3x1<i32, Store>, Extent3i)
 where
     Store: ChunkStorage<[i32; 3], Chunk = ChunkNode<Array3x1<i32>>>,
 {
-    let mut map = BUILDER.build_with_storage(storage);
+    let mut map = BUILDER.build_with_storage(storage_factory);
     let iter_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
     map.fill_extent(0, &iter_extent, 1);
 
@@ -260,14 +267,14 @@ where
 }
 
 fn set_up_sparse_chunk_map<Store>(
-    storage: Store,
+    storage_factory: impl Fn() -> Store,
     size: i32,
     sparsity: i32,
 ) -> (ChunkMap3x1<i32, Store>, Extent3i)
 where
     Store: ChunkStorage<[i32; 3], Chunk = ChunkNode<Array3x1<i32>>>,
 {
-    let mut map = BUILDER.build_with_storage(storage);
+    let mut map = BUILDER.build_with_storage(storage_factory);
     let chunk_key_extent =
         Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(size) / CHUNK_SHAPE);
     for chunk_p in chunk_key_extent.iter_points() {

@@ -103,7 +103,7 @@
 //! let ambient_value = 0;
 //! let builder = ChunkMapBuilder3x1::new(ChunkMapConfig { chunk_shape, ambient_value, root_lod: 0 });
 //! let mut map = builder.build_with_storage(
-//!     FastCompressibleChunkStorageNx1::with_bytes_compression(Lz4 { level: 10 })
+//!     || FastCompressibleChunkStorageNx1::with_bytes_compression(Lz4 { level: 10 })
 //! );
 //! let mut lod0 = map.lod_view_mut(0);
 //!
@@ -115,7 +115,7 @@
 //!
 //! // Save some space by compressing the least recently used chunks. On further access to the compressed chunks, they will get
 //! // decompressed and cached.
-//! map.storage_mut().compress_lru();
+//! map.lod_storage_mut(0).compress_lru();
 //!
 //! let bounding_extent = map.bounding_extent(0);
 //! map.lod_view(0).for_each(&bounding_extent, |p, value| {
@@ -127,7 +127,7 @@
 //! });
 //!
 //! // For efficient caching, you should occasionally flush your local caches back into the global cache.
-//! map.storage_mut().flush_thread_local_caches();
+//! map.lod_storage_mut(0).flush_thread_local_caches();
 //! ```
 
 pub mod builder;
@@ -141,8 +141,8 @@ pub use sampling::*;
 use crate::{
     chunk::ChunkIndexer,
     dev_prelude::{
-        Array, ChunkKey, ChunkStorage, FillExtent, ForEach, GetMutUnchecked, GetRefUnchecked,
-        GetUnchecked, IterChunkKeys,
+        Array, ChunkStorage, FillExtent, ForEach, GetMutUnchecked, GetRefUnchecked, GetUnchecked,
+        IterChunkKeys,
     },
     multi_ptr::MultiRef,
 };
@@ -155,6 +155,55 @@ use building_blocks_core::{
 
 use either::Either;
 use serde::{Deserialize, Serialize};
+
+/// The key for a chunk at a particular level of detail.
+#[allow(clippy::derive_hash_xor_eq)] // This is fine, the custom PartialEq is the same as what would've been derived.
+#[derive(Debug, Deserialize, Hash, Eq, Serialize)]
+pub struct ChunkKey<N> {
+    /// The minimum point of the chunk.
+    pub minimum: PointN<N>,
+    /// The level of detail. From highest resolution at 0 to lowest resolution at MAX_LOD.
+    pub lod: u8,
+}
+
+// A few of these traits could be derived. But it seems that derive will not help the compiler infer trait bounds as well.
+
+impl<N> Clone for ChunkKey<N>
+where
+    PointN<N>: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            minimum: self.minimum.clone(),
+            lod: self.lod,
+        }
+    }
+}
+impl<N> Copy for ChunkKey<N> where PointN<N>: Copy {}
+
+impl<N> PartialEq for ChunkKey<N>
+where
+    PointN<N>: PartialEq,
+{
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.minimum == other.minimum && self.lod == other.lod
+    }
+}
+
+/// A 2-dimensional `ChunkKey`.
+pub type ChunkKey2 = ChunkKey<[i32; 2]>;
+/// A 3-dimensional `ChunkKey`.
+pub type ChunkKey3 = ChunkKey<[i32; 3]>;
+
+impl<N> ChunkKey<N> {
+    pub fn new(lod: u8, chunk_minimum: PointN<N>) -> Self {
+        Self {
+            lod,
+            minimum: chunk_minimum,
+        }
+    }
+}
 
 /// The user-accessible data stored in each chunk of a `ChunkMap`.
 ///
@@ -245,7 +294,7 @@ pub(crate) fn child_mask_has_child(mask: u8, corner_index: u8) -> bool {
 pub struct ChunkMap<N, T, Bldr, Store> {
     /// Translates from lattice coordinates to chunk key space.
     pub indexer: ChunkIndexer<N>,
-    storage: Store,
+    storages: Vec<Store>,
     builder: Bldr,
     ambient_value: T, // Needed for GetRef to return a reference to non-temporary value
 }
@@ -268,16 +317,16 @@ where
     T: Clone,
     Bldr: ChunkMapBuilder<N, T>,
 {
-    /// Creates a map using the given `storage`.
+    /// Creates a map using the given `storages`.
     ///
     /// All dimensions of `chunk_shape` must be powers of 2.
-    fn new(builder: Bldr, storage: Store) -> Self {
+    fn new(builder: Bldr, storages: Vec<Store>) -> Self {
         let indexer = ChunkIndexer::new(builder.chunk_shape());
         let ambient_value = builder.ambient_value();
 
         Self {
             indexer,
-            storage,
+            storages,
             builder,
             ambient_value,
         }
@@ -307,20 +356,32 @@ where
 impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store> {
     /// Consumes `self` and returns the backing chunk storage.
     #[inline]
-    pub fn take_storage(self) -> Store {
-        self.storage
+    pub fn take_storages(self) -> Vec<Store> {
+        self.storages
     }
 
-    /// Borrows the internal chunk storage.
+    /// Borrows the internal chunk storages for all LODs.
     #[inline]
-    pub fn storage(&self) -> &Store {
-        &self.storage
+    pub fn storages(&self) -> &[Store] {
+        &self.storages
     }
 
-    /// Borrows the internal chunk storage.
+    /// Mutably borrows the internal chunk storages for all LODs.
     #[inline]
-    pub fn storage_mut(&mut self) -> &mut Store {
-        &mut self.storage
+    pub fn storages_mut(&mut self) -> &mut [Store] {
+        &mut self.storages
+    }
+
+    /// Borrows the internal chunk storage for `lod`.
+    #[inline]
+    pub fn lod_storage(&self, lod: u8) -> &Store {
+        &self.storages[lod as usize]
+    }
+
+    /// Mutably borrows the internal chunk storage for `lod`.
+    #[inline]
+    pub fn lod_storage_mut(&mut self, lod: u8) -> &mut Store {
+        &mut self.storages[lod as usize]
     }
 
     #[inline]
@@ -349,6 +410,31 @@ impl<N, T, Bldr, Store> ChunkMap<N, T, Bldr, Store> {
 
 impl<N, T, Usr, Bldr, Store> ChunkMap<N, T, Bldr, Store>
 where
+    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
+{
+    fn get_chunk_node(&self, key: ChunkKey<N>) -> Option<&ChunkNode<Usr>> {
+        self.lod_storage(key.lod).get(key.minimum)
+    }
+
+    fn get_mut_chunk_node(&mut self, key: ChunkKey<N>) -> Option<&mut ChunkNode<Usr>> {
+        self.lod_storage_mut(key.lod).get_mut(key.minimum)
+    }
+
+    fn write_chunk_node(&mut self, key: ChunkKey<N>, node: ChunkNode<Usr>) {
+        self.lod_storage_mut(key.lod).write(key.minimum, node)
+    }
+
+    fn delete_chunk_node(&mut self, key: ChunkKey<N>) {
+        self.lod_storage_mut(key.lod).delete(key.minimum)
+    }
+
+    fn pop_chunk_node(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Usr>> {
+        self.lod_storage_mut(key.lod).pop(key.minimum)
+    }
+}
+
+impl<N, T, Usr, Bldr, Store> ChunkMap<N, T, Bldr, Store>
+where
     PointN<N>: IntegerPoint<N>,
     Usr: UserChunk,
     Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
@@ -360,8 +446,7 @@ where
     pub fn get_chunk(&self, key: ChunkKey<N>) -> Option<&Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.storage
-            .get(key)
+        self.get_chunk_node(key)
             .map(|ch| ch.user_chunk.as_ref())
             .flatten()
     }
@@ -463,7 +548,7 @@ where
         covering_extents: &[ExtentN<N>],
         visitor: &mut impl FnMut(&Usr),
     ) {
-        if let Some(node) = self.storage.get(node_key) {
+        if let Some(node) = self.get_chunk_node(node_key) {
             if node_key.lod == lod {
                 if let Some(chunk) = &node.user_chunk {
                     visitor(chunk);
@@ -497,10 +582,11 @@ where
         while key.lod < self.root_lod() {
             let parent = self.indexer.parent_chunk_key(key);
             let mut parent_already_exists = true;
-            let parent_node = self.storage.get_mut_or_insert_with(parent, || {
-                parent_already_exists = false;
-                ChunkNode::new_empty()
-            });
+            let parent_node =
+                self.storages[parent.lod as usize].get_mut_or_insert_with(parent.minimum, || {
+                    parent_already_exists = false;
+                    ChunkNode::new_empty()
+                });
             let child_corner_index = self.indexer.corner_index(key.minimum);
             parent_node.child_mask |= 1 << child_corner_index;
             if parent_already_exists {
@@ -515,7 +601,9 @@ where
         // might do better by removing them in a batch and sorting the chunks in morton order before unlinking from the tree.
         while key.lod < self.root_lod() {
             let parent = self.indexer.parent_chunk_key(key);
-            let parent_node = self.storage.get_mut(parent).unwrap();
+            let parent_node = self.storages[parent.lod as usize]
+                .get_mut(parent.minimum)
+                .unwrap();
             let child_corner_index = self.indexer.corner_index(key.minimum);
             parent_node.child_mask &= !(1 << child_corner_index);
             if parent_node.child_mask != 0 || parent_node.user_chunk.is_some() {
@@ -533,8 +621,8 @@ where
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         let node = self
-            .storage
-            .get_mut_or_insert_with(key, ChunkNode::new_empty);
+            .lod_storage_mut(key.lod)
+            .get_mut_or_insert_with(key.minimum, ChunkNode::new_empty);
         node.user_chunk = Some(chunk);
         self.link_node(key);
     }
@@ -549,8 +637,8 @@ where
         self.link_node(key);
 
         let node = self
-            .storage
-            .get_mut_or_insert_with(key, ChunkNode::new_empty);
+            .lod_storage_mut(key.lod)
+            .get_mut_or_insert_with(key.minimum, ChunkNode::new_empty);
         node.user_chunk.replace(chunk)
     }
 
@@ -561,8 +649,7 @@ where
     pub fn get_mut_chunk(&mut self, key: ChunkKey<N>) -> Option<&mut Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.storage
-            .get_mut(key)
+        self.get_mut_chunk_node(key)
             .and_then(|c| c.user_chunk.as_mut())
     }
 
@@ -579,8 +666,8 @@ where
 
         self.link_node(key);
 
-        self.storage
-            .get_mut_or_insert_with(key, ChunkNode::new_empty)
+        self.lod_storage_mut(key.lod)
+            .get_mut_or_insert_with(key.minimum, ChunkNode::new_empty)
             .user_chunk
             .get_or_insert_with(|| create_chunk())
     }
@@ -596,14 +683,14 @@ where
 
         let Self {
             indexer,
-            storage,
+            storages,
             builder,
             ..
         } = self;
         let chunk_min = key.minimum;
 
-        storage
-            .get_mut_or_insert_with(key, ChunkNode::new_empty)
+        storages[key.lod as usize]
+            .get_mut_or_insert_with(key.minimum, ChunkNode::new_empty)
             .user_chunk
             .get_or_insert_with(|| {
                 builder.new_ambient(indexer.extent_for_chunk_with_min(chunk_min))
@@ -640,14 +727,14 @@ where
     pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
         self.unlink_node(key);
-        self.storage.delete(key);
+        self.delete_chunk_node(key);
     }
 
     #[inline]
     pub fn pop_chunk(&mut self, key: ChunkKey<N>) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
         self.unlink_node(key);
-        self.storage.pop(key).and_then(|c| c.user_chunk)
+        self.pop_chunk_node(key).and_then(|c| c.user_chunk)
     }
 }
 
@@ -669,16 +756,11 @@ where
 {
     /// The smallest extent that bounds all chunks in level of detail `lod`.
     pub fn bounding_extent(&'a self, lod: u8) -> ExtentN<N> {
-        bounding_extent(
-            self.storage
-                .chunk_keys()
-                .filter(|key| key.lod == lod)
-                .flat_map(|key| {
-                    let chunk_extent = self.indexer.extent_for_chunk_with_min(key.minimum);
+        bounding_extent(self.lod_storage(lod).chunk_keys().flat_map(|&chunk_min| {
+            let chunk_extent = self.indexer.extent_for_chunk_with_min(chunk_min);
 
-                    vec![chunk_extent.minimum, chunk_extent.max()].into_iter()
-                }),
-        )
+            vec![chunk_extent.minimum, chunk_extent.max()].into_iter()
+        }))
     }
 }
 
@@ -866,9 +948,9 @@ mod tests {
         use crate::prelude::{FastCompressibleChunkStorageNx2, Lz4};
 
         let builder = ChunkMapBuilder3x2::new(MULTICHAN_MAP_CONFIG);
-        let mut map = builder.build_with_storage(
-            FastCompressibleChunkStorageNx2::with_bytes_compression(Lz4 { level: 10 }),
-        );
+        let mut map = builder.build_with_storage(|| {
+            FastCompressibleChunkStorageNx2::with_bytes_compression(Lz4 { level: 10 })
+        });
 
         let mut lod0 = map.lod_view_mut(0);
 

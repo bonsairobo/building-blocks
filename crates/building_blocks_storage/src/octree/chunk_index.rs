@@ -43,7 +43,7 @@
 //!         });
 //!     }
 //! );
-//! assert_eq!(chunk_keys, map.storage().chunk_keys().cloned().collect());
+//! assert_eq!(chunk_keys, map.lod_storage(0).chunk_keys().map(|&chunk_min| ChunkKey::new(0, chunk_min)).collect());
 //! ```
 
 use crate::{
@@ -126,7 +126,7 @@ impl OctreeChunkIndex {
             superchunk_exponent,
             chunk_exponent,
             num_lods,
-            chunk_map.storage().chunk_keys().filter(|k| k.lod == 0),
+            chunk_map.lod_storage(0).chunk_keys(),
         )
     }
 
@@ -140,7 +140,7 @@ impl OctreeChunkIndex {
         superchunk_exponent: u8,
         chunk_exponent: u8,
         num_lods: u8,
-        chunk_keys: impl Iterator<Item = &'a ChunkKey3>,
+        chunk_mins: impl Iterator<Item = &'a Point3i>,
     ) -> Self {
         validate_params(superchunk_exponent, chunk_exponent, num_lods);
 
@@ -150,9 +150,8 @@ impl OctreeChunkIndex {
         let superchunk_mask = Point3i::fill(!((1i32 << superchunk_exponent) - 1));
 
         let mut superchunk_bitsets = SmallKeyHashMap::default();
-        for chunk_key in chunk_keys {
-            assert_eq!(chunk_key.lod, 0);
-            let superchunk_min = chunk_key.minimum & superchunk_mask;
+        for &chunk_min in chunk_mins {
+            let superchunk_min = chunk_min & superchunk_mask;
             let bitset = superchunk_bitsets.entry(superchunk_min).or_insert_with(|| {
                 Array3x1::fill(
                     Extent3i::from_min_and_shape(
@@ -163,7 +162,7 @@ impl OctreeChunkIndex {
                 )
             });
             unsafe {
-                *bitset.get_mut_unchecked(chunk_key.minimum >> chunk_exponent) = true;
+                *bitset.get_mut_unchecked(chunk_min >> chunk_exponent) = true;
             }
         }
 

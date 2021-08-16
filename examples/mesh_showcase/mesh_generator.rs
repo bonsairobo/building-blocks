@@ -262,10 +262,10 @@ fn generate_surface_nets_meshes<T: 'static + Clone + Send + Sync + SignedDistanc
     flat_shaded: bool,
 ) -> Vec<Option<PosNormMesh>> {
     pool.scope(|s| {
-        for chunk_key in map.storage().keys() {
+        for &chunk_min in map.lod_storage(0).keys() {
             s.spawn(async move {
                 let padded_chunk_extent = padded_surface_nets_chunk_extent(
-                    &map.indexer.extent_for_chunk_with_min(chunk_key.minimum),
+                    &map.indexer.extent_for_chunk_with_min(chunk_min),
                 );
                 let mut padded_chunk = Array3x1::fill(padded_chunk_extent, map.ambient_value());
                 copy_extent(&padded_chunk_extent, &map.lod_view(0), &mut padded_chunk);
@@ -312,10 +312,10 @@ fn generate_chunk_meshes_from_height_map(
     let map_ref = &map;
 
     pool.scope(|s| {
-        for chunk_key in map_ref.storage().keys() {
+        for &chunk_min in map_ref.lod_storage(0).keys() {
             s.spawn(async move {
                 let padded_chunk_extent = padded_height_map_chunk_extent(
-                    &map_ref.indexer.extent_for_chunk_with_min(chunk_key.minimum),
+                    &map_ref.indexer.extent_for_chunk_with_min(chunk_min),
                 )
                 // Ignore the ambient values outside the sample extent.
                 .intersection(&sample_extent);
@@ -367,10 +367,10 @@ fn generate_chunk_meshes_from_blocky(blocky: Blocky, pool: &TaskPool) -> Vec<Opt
     let map_ref = &map;
 
     pool.scope(|s| {
-        for chunk_key in map_ref.storage().keys() {
+        for &chunk_min in map_ref.lod_storage(0).keys() {
             s.spawn(async move {
                 let padded_chunk_extent = padded_greedy_quads_chunk_extent(
-                    &map_ref.indexer.extent_for_chunk_with_min(chunk_key.minimum),
+                    &map_ref.indexer.extent_for_chunk_with_min(chunk_min),
                 );
 
                 let mut padded_chunk = Array3x1::fill(padded_chunk_extent, CubeVoxel(false));

@@ -3,7 +3,7 @@ use building_blocks_storage::{
     access_traits::*,
     database::{ChunkDb3, Delta},
     prelude::{
-        ChunkMapBuilder, ChunkMapBuilder3x1, ChunkMapConfig, FastArrayCompressionNx1,
+        ChunkKey, ChunkMapBuilder, ChunkMapBuilder3x1, ChunkMapConfig, FastArrayCompressionNx1,
         FastChunkCompression, FromBytesCompression, Lz4,
     },
 };
@@ -50,9 +50,11 @@ fn db_write_chunks(c: &mut Criterion) {
                         let mut batch = chunk_db.start_delta_batch();
                         futures::executor::block_on(
                             batch.add_and_compress_deltas(
-                                map.take_storage()
+                                map.take_storages()
+                                    .pop()
+                                    .unwrap()
                                     .into_iter()
-                                    .map(|(k, v)| Delta::Insert(k, v)),
+                                    .map(|(k, v)| Delta::Insert(ChunkKey::new(0, k), v)),
                             ),
                         );
 

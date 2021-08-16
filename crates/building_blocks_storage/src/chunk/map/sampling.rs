@@ -117,7 +117,7 @@ where
         covering_extents: &[ExtentN<N>],
     ) {
         if node_key.lod > src_lod {
-            if let Some(node) = self.storage.get(node_key) {
+            if let Some(node) = self.get_chunk_node(node_key) {
                 let child_mask = node.child_mask;
                 for child_i in 0..PointN::NUM_CORNERS {
                     if child_mask_has_child(child_mask, child_i) {
@@ -157,13 +157,13 @@ where
         Samp: ChunkDownsampler<N, T, Usr, Usr>,
     {
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
-        if let Some(src_node) = self.storage_mut().pop(src_chunk_key) {
+        if let Some(src_node) = self.pop_chunk_node(src_chunk_key) {
             if let Some(src_chunk) = &src_node.user_chunk {
                 self.downsample_external_chunk(sampler, src_chunk_key, &src_chunk);
             } else {
                 self.downsample_ambient_chunk(src_chunk_key);
             }
-            self.storage_mut().write(src_chunk_key, src_node);
+            self.write_chunk_node(src_chunk_key, src_node);
         } else {
             self.downsample_ambient_chunk(src_chunk_key)
         }

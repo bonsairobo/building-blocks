@@ -12,8 +12,8 @@ The core storage types are:
   dense array
 - [`ChunkTree`](self::chunk::ChunkTree): N-dimensional, multiple resolution,
   unbounded, sparse array
-  - Backed by generic chunk storage, with `HashMap` or
-    `CompressibleChunkStorage` implementations
+  - Backed by generic chunk storage, with [`SmallKeyHashMap`] or
+    [`CompressibleChunkStorage`](self::chunk::CompressibleChunkStorage) implementations
 
 Then there are "meta" lattice maps that provide some extra utility:
 

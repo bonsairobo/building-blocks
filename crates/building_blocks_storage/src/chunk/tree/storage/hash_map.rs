@@ -82,7 +82,7 @@ pub type HashMapChunkTree3<T, Bldr> = HashMapChunkTree<[i32; 3], T, Bldr>;
 
 pub mod multichannel_aliases {
     use super::*;
-    use crate::chunk::tree::multichannel_aliases::*;
+    use crate::chunk::tree::builder::multichannel_aliases::*;
 
     /// An N-dimensional, 1-channel `HashMapChunkTree`.
     pub type HashMapChunkTreeNx1<N, A> = HashMapChunkTree<N, A, ChunkTreeBuilderNx1<N, A>>;

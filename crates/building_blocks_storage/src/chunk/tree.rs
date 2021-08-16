@@ -127,18 +127,17 @@ pub mod builder;
 pub mod clipmap;
 pub mod lod_view;
 pub mod sampling;
+pub mod storage;
 
 pub use builder::*;
 pub use clipmap::*;
 pub use lod_view::*;
 pub use sampling::*;
+pub use storage::*;
 
 use crate::{
     chunk::ChunkIndexer,
-    dev_prelude::{
-        Array, ChunkStorage, FillExtent, ForEach, GetMutUnchecked, GetRefUnchecked, GetUnchecked,
-        IterChunkKeys,
-    },
+    dev_prelude::{Array, FillExtent, ForEach, GetMutUnchecked, GetRefUnchecked, GetUnchecked},
     multi_ptr::MultiRef,
 };
 

@@ -66,9 +66,9 @@ pub mod prelude {
     pub use super::access_traits::*;
     pub use super::array::compression::multichannel_aliases::*;
     pub use super::array::multichannel_aliases::*;
-    pub use super::chunk::storage::compressible::multichannel_aliases::*;
-    pub use super::chunk::storage::hash_map::multichannel_aliases::*;
-    pub use super::chunk::tree::multichannel_aliases::*;
+    pub use super::chunk::tree::builder::multichannel_aliases::*;
+    pub use super::chunk::tree::storage::compressible::multichannel_aliases::*;
+    pub use super::chunk::tree::storage::hash_map::multichannel_aliases::*;
 
     #[cfg(feature = "lz4")]
     pub use super::compression::Lz4;

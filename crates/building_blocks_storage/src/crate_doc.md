@@ -2,9 +2,9 @@ Various types of storage and indexing for voxels in 2 or 3 dimensions.
 
 The core storage types are:
 
-- [`Array`](self::array::Array): N-dimensional, single resolution, bounded,
+- [`Array`](self::array::array): N-dimensional, single resolution, bounded,
   dense array
-- [`ChunkTree`](self::chunk::ChunkTree): N-dimensional, multiple resolution,
+- [`ChunkTree`](self::chunk::tree): N-dimensional, multiple resolution,
   unbounded, sparse array
   - Backed by generic chunk storage, with [`SmallKeyHashMap`] or
     [`CompressibleChunkStorage`](self::chunk::CompressibleChunkStorage) implementations

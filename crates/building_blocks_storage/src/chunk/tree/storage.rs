@@ -14,6 +14,9 @@ use auto_impl::auto_impl;
 pub trait ChunkStorage<N> {
     type Chunk;
 
+    /// The raw representation of a chunk while in storage.
+    type ChunkRepr;
+
     /// Borrow the chunk at `key`.
     fn get(&self, key: PointN<N>) -> Option<&ChunkNode<Self::Chunk>>;
 
@@ -37,11 +40,14 @@ pub trait ChunkStorage<N> {
     /// Overwrite the chunk at `key` with `chunk`. Drops the previous value.
     fn write(&mut self, key: PointN<N>, chunk: ChunkNode<Self::Chunk>);
 
-    /// Removes and drops the chunk at `key`.
-    fn delete(&mut self, key: PointN<N>);
+    /// Overwrite the raw chunk at `key` with `chunk`. Drops the previous value.
+    fn write_raw(&mut self, key: PointN<N>, chunk: ChunkNode<Self::ChunkRepr>);
 
     /// Removes and returns the chunk at `key`.
     fn pop(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::Chunk>>;
+
+    /// Removes and returns the raw chunk at `key`. This can avoid downsampling when it's not necessary.
+    fn pop_raw(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::ChunkRepr>>;
 }
 
 #[auto_impl(&, &mut)]

@@ -249,14 +249,31 @@ impl<U> ChunkNode<U> {
         }
     }
 
+    #[inline]
+    pub(crate) fn new_without_data(child_mask: u8) -> Self {
+        Self {
+            user_chunk: None,
+            child_mask,
+        }
+    }
+
     fn has_child(&self, corner_index: u8) -> bool {
         child_mask_has_child(self.child_mask, corner_index)
     }
 
-    pub(crate) fn map<T>(&self, f: impl Fn(&U) -> T) -> ChunkNode<T> {
+    #[inline]
+    pub(crate) fn as_ref(&self) -> ChunkNode<&U> {
         ChunkNode {
+            user_chunk: self.user_chunk.as_ref(),
             child_mask: self.child_mask,
-            user_chunk: self.user_chunk.as_ref().map(f),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn map<T>(self, f: impl Fn(U) -> T) -> ChunkNode<T> {
+        ChunkNode {
+            user_chunk: self.user_chunk.map(f),
+            child_mask: self.child_mask,
         }
     }
 }
@@ -413,8 +430,16 @@ where
         self.lod_storage_mut(key.lod).write(key.minimum, node)
     }
 
+    fn write_raw_chunk_node(&mut self, key: ChunkKey<N>, node: ChunkNode<Store::ChunkRepr>) {
+        self.lod_storage_mut(key.lod).write_raw(key.minimum, node)
+    }
+
     fn pop_chunk_node(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Usr>> {
         self.lod_storage_mut(key.lod).pop(key.minimum)
+    }
+
+    fn pop_raw_chunk_node(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Store::ChunkRepr>> {
+        self.lod_storage_mut(key.lod).pop_raw(key.minimum)
     }
 }
 
@@ -729,7 +754,19 @@ where
     #[inline]
     pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
-        self.pop_chunk(key);
+        // PERF: we wouldn't always have to pop the node if we had a ChunkStorage::entry API
+        // We pop a raw chunk so that compressible storage doesn't have to decompress the value for us. We only care to check
+        // the child mask.
+        if let Some(mut node) = self.pop_raw_chunk_node(key) {
+            if node.child_mask == 0 {
+                // No children, so this node is useless.
+                self.unlink_node(key);
+            } else {
+                // Still has children, so only delete the user data and leave the node.
+                node.user_chunk = None;
+                self.write_raw_chunk_node(key, node);
+            }
+        }
     }
 }
 

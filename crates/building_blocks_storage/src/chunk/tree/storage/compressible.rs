@@ -138,7 +138,7 @@ where
         } = self;
         let compressed_entry = compressed.vacant_entry();
         if let Some((_, node)) = main_cache.evict_lru(CompressedLocation(compressed_entry.key())) {
-            compressed_entry.insert(node.map(|c| compression.compress(c)));
+            compressed_entry.insert(node.as_ref().map(|c| compression.compress(c)));
         }
     }
 
@@ -206,6 +206,7 @@ where
     Compr::Data: Send,
 {
     type Chunk = Compr::Data;
+    type ChunkRepr = MaybeCompressed<Compr::Data, Compressed<Compr>>;
 
     /// Borrow the chunk at `key`.
     fn get(&self, key: PointN<N>) -> Option<&ChunkNode<Self::Chunk>> {
@@ -223,6 +224,7 @@ where
                     compressed
                         .get(location.0)
                         .unwrap()
+                        .as_ref()
                         .map(Compressed::decompress)
                 }),
         })
@@ -237,7 +239,10 @@ where
         } = self;
 
         main_cache.get_mut_or_repopulate_with(key, |location| {
-            compressed.remove(location.0).map(Compressed::decompress)
+            compressed
+                .remove(location.0)
+                .as_ref()
+                .map(Compressed::decompress)
         })
     }
 
@@ -254,7 +259,12 @@ where
         } = self;
         main_cache.get_mut_or_insert_with(
             key,
-            |location| compressed.remove(location.0).map(Compressed::decompress),
+            |location| {
+                compressed
+                    .remove(location.0)
+                    .as_ref()
+                    .map(Compressed::decompress)
+            },
             create_chunk,
         )
     }
@@ -268,7 +278,9 @@ where
         self.insert_chunk(key, chunk)
             .map(|old_chunk| match old_chunk {
                 MaybeCompressed::Decompressed(old_chunk) => old_chunk,
-                MaybeCompressed::Compressed(old_chunk) => old_chunk.map(Compressed::decompress),
+                MaybeCompressed::Compressed(old_chunk) => {
+                    old_chunk.as_ref().map(Compressed::decompress)
+                }
             })
     }
 
@@ -278,14 +290,44 @@ where
     }
 
     #[inline]
-    fn delete(&mut self, key: PointN<N>) {
-        self.remove(key);
+    fn write_raw(&mut self, key: PointN<N>, chunk: ChunkNode<Self::ChunkRepr>) {
+        // TODO: yuck! can we simplify this somehow?
+        if let Some(user_chunk) = chunk.user_chunk {
+            match user_chunk {
+                MaybeCompressed::Compressed(c) => {
+                    self.insert_compressed(
+                        key,
+                        ChunkNode {
+                            user_chunk: Some(c),
+                            child_mask: chunk.child_mask,
+                        },
+                    );
+                }
+                MaybeCompressed::Decompressed(d) => self.write(
+                    key,
+                    ChunkNode {
+                        user_chunk: Some(d),
+                        child_mask: chunk.child_mask,
+                    },
+                ),
+            }
+        } else {
+            self.write(key, ChunkNode::new_without_data(chunk.child_mask))
+        }
     }
 
     #[inline]
     fn pop(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::Chunk>> {
         self.remove(key)
-            .map(|ch| ch.into_decompressed_with(|c| c.map(Compressed::decompress)))
+            .map(|ch| ch.into_decompressed_with(|c| c.as_ref().map(Compressed::decompress)))
+    }
+
+    #[inline]
+    fn pop_raw(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::ChunkRepr>> {
+        self.remove(key).map(|c| match c {
+            MaybeCompressed::Compressed(n) => n.map(|u| MaybeCompressed::Compressed(u)),
+            MaybeCompressed::Decompressed(n) => n.map(|u| MaybeCompressed::Decompressed(u)),
+        })
     }
 }
 
@@ -328,6 +370,7 @@ where
                     compressed
                         .get(location.0)
                         .unwrap()
+                        .as_ref()
                         .map(Compressed::decompress)
                 });
                 (key, chunk)
@@ -351,12 +394,17 @@ where
             mut compressed,
             ..
         } = self;
-        Box::new(main_cache.into_iter().map(move |(key, entry)| match entry {
-            CacheEntry::Cached(chunk) => (key, chunk),
-            CacheEntry::Evicted(location) => (
-                key,
-                compressed.remove(location.0).map(Compressed::decompress),
-            ),
+        Box::new(main_cache.into_iter().map(move |(key, entry)| {
+            match entry {
+                CacheEntry::Cached(chunk) => (key, chunk),
+                CacheEntry::Evicted(location) => (
+                    key,
+                    compressed
+                        .remove(location.0)
+                        .as_ref()
+                        .map(Compressed::decompress),
+                ),
+            }
         }))
     }
 }

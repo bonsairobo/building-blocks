@@ -12,14 +12,15 @@ where
     PointN<N>: Hash + Eq,
 {
     type Chunk = Ch;
+    type ChunkRepr = Ch;
 
     #[inline]
-    fn get(&self, key: PointN<N>) -> Option<&ChunkNode<Ch>> {
+    fn get(&self, key: PointN<N>) -> Option<&ChunkNode<Self::Chunk>> {
         self.get(&key)
     }
 
     #[inline]
-    fn get_mut(&mut self, key: PointN<N>) -> Option<&mut ChunkNode<Ch>> {
+    fn get_mut(&mut self, key: PointN<N>) -> Option<&mut ChunkNode<Self::Chunk>> {
         self.get_mut(&key)
     }
 
@@ -27,29 +28,38 @@ where
     fn get_mut_or_insert_with(
         &mut self,
         key: PointN<N>,
-        create_chunk: impl FnOnce() -> ChunkNode<Ch>,
-    ) -> &mut ChunkNode<Ch> {
+        create_chunk: impl FnOnce() -> ChunkNode<Self::Chunk>,
+    ) -> &mut ChunkNode<Self::Chunk> {
         self.entry(key).or_insert_with(create_chunk)
     }
 
     #[inline]
-    fn replace(&mut self, key: PointN<N>, chunk: ChunkNode<Ch>) -> Option<ChunkNode<Ch>> {
+    fn replace(
+        &mut self,
+        key: PointN<N>,
+        chunk: ChunkNode<Self::Chunk>,
+    ) -> Option<ChunkNode<Self::Chunk>> {
         self.insert(key, chunk)
     }
 
     #[inline]
-    fn write(&mut self, key: PointN<N>, chunk: ChunkNode<Ch>) {
+    fn write(&mut self, key: PointN<N>, chunk: ChunkNode<Self::Chunk>) {
         self.insert(key, chunk);
     }
 
     #[inline]
-    fn delete(&mut self, key: PointN<N>) {
-        self.remove(&key);
+    fn write_raw(&mut self, key: PointN<N>, chunk: ChunkNode<Self::Chunk>) {
+        self.write(key, chunk);
     }
 
     #[inline]
-    fn pop(&mut self, key: PointN<N>) -> Option<ChunkNode<Ch>> {
+    fn pop(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::Chunk>> {
         self.remove(&key)
+    }
+
+    #[inline]
+    fn pop_raw(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::ChunkRepr>> {
+        self.pop(key)
     }
 }
 

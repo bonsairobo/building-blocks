@@ -8,6 +8,7 @@ The core storage types are:
   unbounded, sparse array
   - Backed by generic chunk storage, with [`SmallKeyHashMap`] or
     [`CompressibleChunkStorage`](self::chunk::CompressibleChunkStorage) implementations
+- [`ChunkDb`](self::database::ChunkDb): A persistent database for chunks backed by `sled`.
 
 Then there are "meta" lattice maps that provide some extra utility:
 

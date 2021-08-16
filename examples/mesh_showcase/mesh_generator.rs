@@ -187,7 +187,9 @@ pub fn mesh_generator_system(
         let chunk_meshes = match choose_shape(state.current_shape_index) {
             Shape::Sdf(sdf) => generate_chunk_meshes_from_sdf(sdf, &pool.0, state.flat_shaded),
             Shape::SdfNoise => generate_chunk_meshes_from_sdf_noise(&pool.0, state.flat_shaded),
-            Shape::HeightMap(hm) => generate_chunk_meshes_from_height_map(hm, &pool.0, state.flat_shaded),
+            Shape::HeightMap(hm) => {
+                generate_chunk_meshes_from_height_map(hm, &pool.0, state.flat_shaded)
+            }
             Shape::Blocky(blocky) => generate_chunk_meshes_from_blocky(blocky, &pool.0),
         };
 
@@ -247,7 +249,11 @@ fn generate_chunk_meshes_from_sdf_noise(
 
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
     // Array3x1 here instead of a ChunkTree3, but we use chunks for educational purposes.
-    let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig { chunk_shape: PointN([16; 3]), ambient_value: 99999.0, root_lod: 0 });
+    let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
+        chunk_shape: PointN([16; 3]),
+        ambient_value: 99999.0,
+        root_lod: 0,
+    });
     let mut map = builder.build_with_hash_map_storage();
     for (chunk_min, chunk) in noise_chunks.into_iter() {
         map.write_chunk(ChunkKey::new(0, chunk_min), chunk);
@@ -296,7 +302,7 @@ fn generate_surface_nets_meshes<T: 'static + Clone + Send + Sync + SignedDistanc
 fn generate_chunk_meshes_from_height_map(
     hm: HeightMap,
     pool: &TaskPool,
-    flat_shaded: bool
+    flat_shaded: bool,
 ) -> Vec<Option<PosNormMesh>> {
     let height_map = hm.get_height_map();
     let sample_extent =
@@ -304,7 +310,11 @@ fn generate_chunk_meshes_from_height_map(
 
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
     // Array3x1 here instead of a ChunkTree3, but we use chunks for educational purposes.
-    let builder = ChunkTreeBuilder2x1::new(ChunkTreeConfig { chunk_shape: PointN([16; 2]), ambient_value: 0.0, root_lod: 0 });
+    let builder = ChunkTreeBuilder2x1::new(ChunkTreeConfig {
+        chunk_shape: PointN([16; 2]),
+        ambient_value: 0.0,
+        root_lod: 0,
+    });
     let mut map = builder.build_with_hash_map_storage();
     copy_extent(&sample_extent, &Func(height_map), &mut map.lod_view_mut(0));
 

@@ -7,7 +7,10 @@ use bevy_utilities::{
 };
 use building_blocks::{
     mesh::*,
-    storage::{SmallKeyHashMap, prelude::{ChunkKey3, ClipEvent3}},
+    storage::{
+        prelude::{ChunkKey3, ClipEvent3},
+        SmallKeyHashMap,
+    },
 };
 
 use std::{cell::RefCell, collections::VecDeque};

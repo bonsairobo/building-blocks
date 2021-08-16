@@ -50,7 +50,7 @@ pub mod prelude {
         array::{IndexedArray, Local, Stride},
         chunk::{
             AmbientExtent, ChunkDownsampler, ChunkKey, ChunkKey2, ChunkKey3, ChunkStorage,
-            ChunkTreeBuilder, ChunkTreeConfig, FastChunkCompression, IterChunkKeys,
+            ChunkTreeBuilder, ChunkTreeConfig, ChunkUnits, FastChunkCompression, IterChunkKeys,
             LodChunkUpdate2, LodChunkUpdate3, PointDownsampler, SdfMeanDownsampler, UserChunk,
         },
         compression::{

@@ -15,12 +15,12 @@ use either::Either;
 use std::ops::{Deref, DerefMut};
 
 /// A view of a single level of detail in a `ChunkTree` for the unambiguous implementation of access traits.
-pub struct ChunkMapLodView<Delegate> {
+pub struct ChunkTreeLodView<Delegate> {
     pub delegate: Delegate,
     pub lod: u8,
 }
 
-impl<Delegate> ChunkMapLodView<Delegate> {
+impl<Delegate> ChunkTreeLodView<Delegate> {
     #[inline]
     pub fn lod(&self) -> u8 {
         self.lod
@@ -34,7 +34,7 @@ impl<Delegate> ChunkMapLodView<Delegate> {
 // ╚██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║███████║
 //  ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 
-impl<'a, Delegate, N, T, Usr, Bldr, Store> Get<PointN<N>> for ChunkMapLodView<Delegate>
+impl<'a, Delegate, N, T, Usr, Bldr, Store> Get<PointN<N>> for ChunkTreeLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
@@ -52,7 +52,7 @@ where
 }
 
 impl<'a, Delegate, N, T: 'a, Usr: 'a, Bldr: 'a, Store: 'a, Ref> GetRef<'a, PointN<N>>
-    for ChunkMapLodView<Delegate>
+    for ChunkTreeLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
@@ -71,7 +71,7 @@ where
 }
 
 impl<'a, Delegate, N, T: 'a, Usr: 'a, Bldr: 'a, Store: 'a, Mut> GetMut<'a, PointN<N>>
-    for ChunkMapLodView<Delegate>
+    for ChunkTreeLodView<Delegate>
 where
     Delegate: DerefMut<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
@@ -95,7 +95,7 @@ where
 // ██║     ╚██████╔╝██║  ██║    ███████╗██║  ██║╚██████╗██║  ██║
 // ╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
-impl<Delegate, N, T, Usr, Bldr, Store> ForEach<N, PointN<N>> for ChunkMapLodView<Delegate>
+impl<Delegate, N, T, Usr, Bldr, Store> ForEach<N, PointN<N>> for ChunkTreeLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
@@ -121,7 +121,7 @@ where
 }
 
 impl<Delegate, N, T, Usr, Bldr, Store, MutPtr> ForEachMutPtr<N, PointN<N>>
-    for ChunkMapLodView<Delegate>
+    for ChunkTreeLodView<Delegate>
 where
     Delegate: DerefMut<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
@@ -146,7 +146,7 @@ where
     }
 }
 
-impl<'a, Delegate, N, Mut, MutPtr> ForEachMut<'a, N, PointN<N>> for ChunkMapLodView<Delegate>
+impl<'a, Delegate, N, Mut, MutPtr> ForEachMut<'a, N, PointN<N>> for ChunkTreeLodView<Delegate>
 where
     Self: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
     MutPtr: IntoMultiMut<'a, MultiMut = Mut>,
@@ -159,7 +159,7 @@ where
     }
 }
 
-impl<Delegate, N, T, MutPtr> FillExtent<N> for ChunkMapLodView<Delegate>
+impl<Delegate, N, T, MutPtr> FillExtent<N> for ChunkTreeLodView<Delegate>
 where
     Self: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
     MutPtr: MultiMutPtr<Data = T>,
@@ -185,7 +185,7 @@ where
 //  ╚═════╝ ╚═════╝ ╚═╝        ╚═╝
 
 impl<'a, Delegate, N, T: 'a, Usr: 'a, Bldr: 'a, Store: 'a> ReadExtent<'a, N>
-    for ChunkMapLodView<Delegate>
+    for ChunkTreeLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
@@ -222,7 +222,7 @@ where
 }
 
 // If `Array` supports writing from type Src, then so does ChunkTree.
-impl<Delegate, N, T, Usr, Bldr, Store, Src> WriteExtent<N, Src> for ChunkMapLodView<Delegate>
+impl<Delegate, N, T, Usr, Bldr, Store, Src> WriteExtent<N, Src> for ChunkTreeLodView<Delegate>
 where
     Delegate: DerefMut<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,

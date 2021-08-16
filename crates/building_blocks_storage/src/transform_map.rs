@@ -40,7 +40,7 @@
 
 use crate::{
     array::ArrayCopySrc,
-    chunk::{ChunkCopySrc, ChunkCopySrcIter, ChunkMapLodView, ChunkNode, UserChunk},
+    chunk::{ChunkCopySrc, ChunkCopySrcIter, ChunkNode, ChunkTreeLodView, UserChunk},
     dev_prelude::{
         AmbientExtent, Array, ChunkStorage, ChunkTree, ForEach, Get, GetUnchecked, IndexedArray,
         ReadExtent,
@@ -152,7 +152,7 @@ where
 }
 
 impl<'a, Delegate, N, F, In: 'a, Out, Usr: 'a, Bldr: 'a, Store: 'a> ReadExtent<'a, N>
-    for TransformMap<'a, ChunkMapLodView<Delegate>, F>
+    for TransformMap<'a, ChunkTreeLodView<Delegate>, F>
 where
     Delegate: Deref<Target = ChunkTree<N, In, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,

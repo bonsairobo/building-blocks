@@ -19,13 +19,13 @@ pub trait ChunkDownsampler<N, T, Src, Dst> {
     fn downsample(&self, src_chunk: &Src, dst_chunk: &mut Dst, dst_min: Local<N>);
 }
 
-impl<N, T, Usr, Bldr, Store> ChunkMap<N, T, Bldr, Store>
+impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
     T: Clone,
     Usr: UserChunk,
     Usr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
-    Bldr: ChunkMapBuilder<N, T, Chunk = Usr>,
+    Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
 {
     /// Downsamples all chunks in level `src_lod` that overlap `src_extent`.
@@ -237,7 +237,7 @@ mod tests {
             Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(2)) * chunk_shape;
 
         // Build a multichannel chunk map for LOD0.
-        let lod0_builder = ChunkMapBuilder3x2::new(ChunkMapConfig {
+        let lod0_builder = ChunkTreeBuilder3x2::new(ChunkTreeConfig {
             chunk_shape,
             ambient_value: ambient,
             root_lod: 0,
@@ -246,7 +246,7 @@ mod tests {
         lod0.fill_extent(0, &lod0_extent, ambient);
 
         // Build a single-channel chunk map for LOD > 0.
-        let lodn_builder = ChunkMapBuilder3x1::new(ChunkMapConfig {
+        let lodn_builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
             chunk_shape,
             ambient_value: Sd8::ONE,
             root_lod: 5,

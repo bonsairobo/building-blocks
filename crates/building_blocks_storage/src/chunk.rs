@@ -1,12 +1,12 @@
 pub mod compression;
 pub mod indexer;
-pub mod map;
 pub mod storage;
+pub mod tree;
 
 pub use compression::*;
 pub use indexer::*;
-pub use map::*;
 pub use storage::*;
+pub use tree::*;
 
 use building_blocks_core::prelude::{IntegerPoint, PointN};
 use serde::{Deserialize, Serialize};

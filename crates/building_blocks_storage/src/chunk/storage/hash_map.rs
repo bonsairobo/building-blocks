@@ -1,6 +1,6 @@
 use crate::{
     chunk::ChunkNode,
-    dev_prelude::{ChunkMap, ChunkMapBuilder, SmallKeyHashMap},
+    dev_prelude::{ChunkTree, ChunkTreeBuilder, SmallKeyHashMap},
 };
 
 use super::{ChunkStorage, IterChunkKeys};
@@ -68,56 +68,58 @@ where
     }
 }
 
-/// A `ChunkMap` using `HashMap` as chunk storage.
-pub type ChunkHashMap<N, T, Bldr> = ChunkMap<
+/// A `ChunkTree` using `HashMap` as chunk storage.
+pub type HashMapChunkTree<N, T, Bldr> = ChunkTree<
     N,
     T,
     Bldr,
-    SmallKeyHashMap<PointN<N>, ChunkNode<<Bldr as ChunkMapBuilder<N, T>>::Chunk>>,
+    SmallKeyHashMap<PointN<N>, ChunkNode<<Bldr as ChunkTreeBuilder<N, T>>::Chunk>>,
 >;
-/// A 2-dimensional `ChunkHashMap`.
-pub type ChunkHashMap2<T, Bldr> = ChunkHashMap<[i32; 2], T, Bldr>;
-/// A 3-dimensional `ChunkHashMap`.
-pub type ChunkHashMap3<T, Bldr> = ChunkHashMap<[i32; 3], T, Bldr>;
+/// A 2-dimensional `HashMapChunkTree`.
+pub type HashMapChunkTree2<T, Bldr> = HashMapChunkTree<[i32; 2], T, Bldr>;
+/// A 3-dimensional `HashMapChunkTree`.
+pub type HashMapChunkTree3<T, Bldr> = HashMapChunkTree<[i32; 3], T, Bldr>;
 
 pub mod multichannel_aliases {
     use super::*;
-    use crate::chunk::map::multichannel_aliases::*;
+    use crate::chunk::tree::multichannel_aliases::*;
 
-    /// An N-dimensional, 1-channel `ChunkHashMap`.
-    pub type ChunkHashMapNx1<N, A> = ChunkHashMap<N, A, ChunkMapBuilderNx1<N, A>>;
+    /// An N-dimensional, 1-channel `HashMapChunkTree`.
+    pub type HashMapChunkTreeNx1<N, A> = HashMapChunkTree<N, A, ChunkTreeBuilderNx1<N, A>>;
 
-    /// A 2-dimensional, 1-channel `ChunkHashMap`.
-    pub type ChunkHashMap2x1<A> = ChunkHashMap2<A, ChunkMapBuilder2x1<A>>;
-    /// A 2-dimensional, 2-channel `ChunkHashMap`.
-    pub type ChunkHashMap2x2<A, B> = ChunkHashMap2<(A, B), ChunkMapBuilder2x2<A, B>>;
-    /// A 2-dimensional, 3-channel `ChunkHashMap`.
-    pub type ChunkHashMap2x3<A, B, C> = ChunkHashMap2<(A, B, C), ChunkMapBuilder2x3<A, B, C>>;
-    /// A 2-dimensional, 4-channel `ChunkHashMap`.
-    pub type ChunkHashMap2x4<A, B, C, D> =
-        ChunkHashMap2<(A, B, C, D), ChunkMapBuilder2x4<A, B, C, D>>;
-    /// A 2-dimensional, 5-channel `ChunkHashMap`.
-    pub type ChunkHashMap2x5<A, B, C, D, E> =
-        ChunkHashMap2<(A, B, C, D, E), ChunkMapBuilder2x5<A, B, C, D, E>>;
-    /// A 2-dimensional, 6-channel `ChunkHashMap`.
-    pub type ChunkHashMap2x6<A, B, C, D, E, F> =
-        ChunkHashMap2<(A, B, C, D, E, F), ChunkMapBuilder2x6<A, B, C, D, E, F>>;
+    /// A 2-dimensional, 1-channel `HashMapChunkTree`.
+    pub type HashMapChunkTree2x1<A> = HashMapChunkTree2<A, ChunkTreeBuilder2x1<A>>;
+    /// A 2-dimensional, 2-channel `HashMapChunkTree`.
+    pub type HashMapChunkTree2x2<A, B> = HashMapChunkTree2<(A, B), ChunkTreeBuilder2x2<A, B>>;
+    /// A 2-dimensional, 3-channel `HashMapChunkTree`.
+    pub type HashMapChunkTree2x3<A, B, C> =
+        HashMapChunkTree2<(A, B, C), ChunkTreeBuilder2x3<A, B, C>>;
+    /// A 2-dimensional, 4-channel `HashMapChunkTree`.
+    pub type HashMapChunkTree2x4<A, B, C, D> =
+        HashMapChunkTree2<(A, B, C, D), ChunkTreeBuilder2x4<A, B, C, D>>;
+    /// A 2-dimensional, 5-channel `HashMapChunkTree`.
+    pub type HashMapChunkTree2x5<A, B, C, D, E> =
+        HashMapChunkTree2<(A, B, C, D, E), ChunkTreeBuilder2x5<A, B, C, D, E>>;
+    /// A 2-dimensional, 6-channel `HashMapChunkTree`.
+    pub type HashMapChunkTree2x6<A, B, C, D, E, F> =
+        HashMapChunkTree2<(A, B, C, D, E, F), ChunkTreeBuilder2x6<A, B, C, D, E, F>>;
 
-    /// A 3-dimensional, 1-channel `ChunkHashMap`.
-    pub type ChunkHashMap3x1<A> = ChunkHashMap3<A, ChunkMapBuilder3x1<A>>;
-    /// A 3-dimensional, 2-channel `ChunkHashMap`.
-    pub type ChunkHashMap3x2<A, B> = ChunkHashMap3<(A, B), ChunkMapBuilder3x2<A, B>>;
-    /// A 3-dimensional, 3-channel `ChunkHashMap`.
-    pub type ChunkHashMap3x3<A, B, C> = ChunkHashMap3<(A, B, C), ChunkMapBuilder3x3<A, B, C>>;
-    /// A 3-dimensional, 4-channel `ChunkHashMap`.
-    pub type ChunkHashMap3x4<A, B, C, D> =
-        ChunkHashMap3<(A, B, C, D), ChunkMapBuilder3x4<A, B, C, D>>;
-    /// A 3-dimensional, 5-channel `ChunkHashMap`.
-    pub type ChunkHashMap3x5<A, B, C, D, E> =
-        ChunkHashMap3<(A, B, C, D, E), ChunkMapBuilder3x5<A, B, C, D, E>>;
-    /// A 3-dimensional, 6-channel `ChunkHashMap`.
-    pub type ChunkHashMap3x6<A, B, C, D, E, F> =
-        ChunkHashMap3<(A, B, C, D, E, F), ChunkMapBuilder3x6<A, B, C, D, E, F>>;
+    /// A 3-dimensional, 1-channel `HashMapChunkTree`.
+    pub type HashMapChunkTree3x1<A> = HashMapChunkTree3<A, ChunkTreeBuilder3x1<A>>;
+    /// A 3-dimensional, 2-channel `HashMapChunkTree`.
+    pub type HashMapChunkTree3x2<A, B> = HashMapChunkTree3<(A, B), ChunkTreeBuilder3x2<A, B>>;
+    /// A 3-dimensional, 3-channel `HashMapChunkTree`.
+    pub type HashMapChunkTree3x3<A, B, C> =
+        HashMapChunkTree3<(A, B, C), ChunkTreeBuilder3x3<A, B, C>>;
+    /// A 3-dimensional, 4-channel `HashMapChunkTree`.
+    pub type HashMapChunkTree3x4<A, B, C, D> =
+        HashMapChunkTree3<(A, B, C, D), ChunkTreeBuilder3x4<A, B, C, D>>;
+    /// A 3-dimensional, 5-channel `HashMapChunkTree`.
+    pub type HashMapChunkTree3x5<A, B, C, D, E> =
+        HashMapChunkTree3<(A, B, C, D, E), ChunkTreeBuilder3x5<A, B, C, D, E>>;
+    /// A 3-dimensional, 6-channel `HashMapChunkTree`.
+    pub type HashMapChunkTree3x6<A, B, C, D, E, F> =
+        HashMapChunkTree3<(A, B, C, D, E, F), ChunkTreeBuilder3x6<A, B, C, D, E, F>>;
 }
 
 pub use multichannel_aliases::*;

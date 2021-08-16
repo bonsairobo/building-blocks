@@ -1,6 +1,6 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{
-    chunk::{ChunkMap3x1, ChunkNode},
+    chunk::{ChunkNode, ChunkTree3x1},
     prelude::*,
     SmallKeyHashMap,
 };
@@ -255,7 +255,7 @@ fn set_up_array(size: i32) -> (Array3x1<i32>, Extent3i) {
 fn set_up_chunk_map<Store>(
     storage_factory: impl Fn() -> Store,
     size: i32,
-) -> (ChunkMap3x1<i32, Store>, Extent3i)
+) -> (ChunkTree3x1<i32, Store>, Extent3i)
 where
     Store: ChunkStorage<[i32; 3], Chunk = ChunkNode<Array3x1<i32>>>,
 {
@@ -270,7 +270,7 @@ fn set_up_sparse_chunk_map<Store>(
     storage_factory: impl Fn() -> Store,
     size: i32,
     sparsity: i32,
-) -> (ChunkMap3x1<i32, Store>, Extent3i)
+) -> (ChunkTree3x1<i32, Store>, Extent3i)
 where
     Store: ChunkStorage<[i32; 3], Chunk = ChunkNode<Array3x1<i32>>>,
 {
@@ -295,7 +295,7 @@ where
 }
 
 const CHUNK_SHAPE: Point3i = PointN([16; 3]);
-const BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1::new(ChunkMapConfig {
+const BUILDER: ChunkTreeBuilder3x1<i32> = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
     chunk_shape: CHUNK_SHAPE,
     ambient_value: 0,
     root_lod: 7, // 8 levels total

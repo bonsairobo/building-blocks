@@ -17,7 +17,7 @@ cargo run --example sdf_mesh
 
 ## Mesh Showcase
 
-A showcase of all the meshing algorithms, fetching samples from a `ChunkMap`.
+A showcase of all the meshing algorithms, fetching samples from a `ChunkTree`.
 
 ```sh
 cargo run --example mesh_showcase

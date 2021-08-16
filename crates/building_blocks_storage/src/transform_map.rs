@@ -32,7 +32,7 @@
 //! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
 //! let src = Array3x1::fill(extent, 0);
 //! let chunk_shape = Point3i::fill(4);
-//! let builder = ChunkMapBuilder3x1::new(ChunkMapConfig { chunk_shape, ambient_value: 0, root_lod: 0 });
+//! let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig { chunk_shape, ambient_value: 0, root_lod: 0 });
 //! let mut dst = builder.build_with_hash_map_storage();
 //! let tfm = TransformMap::new(&src, |value: i32| value + 1);
 //! copy_extent(&extent, &tfm, &mut dst.lod_view_mut(0));
@@ -42,7 +42,7 @@ use crate::{
     array::ArrayCopySrc,
     chunk::{ChunkCopySrc, ChunkCopySrcIter, ChunkMapLodView, ChunkNode, UserChunk},
     dev_prelude::{
-        AmbientExtent, Array, ChunkMap, ChunkStorage, ForEach, Get, GetUnchecked, IndexedArray,
+        AmbientExtent, Array, ChunkStorage, ChunkTree, ForEach, Get, GetUnchecked, IndexedArray,
         ReadExtent,
     },
 };
@@ -154,7 +154,7 @@ where
 impl<'a, Delegate, N, F, In: 'a, Out, Usr: 'a, Bldr: 'a, Store: 'a> ReadExtent<'a, N>
     for TransformMap<'a, ChunkMapLodView<Delegate>, F>
 where
-    Delegate: Deref<Target = ChunkMap<N, In, Bldr, Store>>,
+    Delegate: Deref<Target = ChunkTree<N, In, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     F: Copy + Fn(In) -> Out,
     In: Copy,
@@ -217,18 +217,18 @@ mod tests {
     use crate::prelude::*;
 
     const CHUNK_SHAPE: Point3i = PointN([4; 3]);
-    const INT_MAP_CONFIG: ChunkMapConfig<[i32; 3], i32> = ChunkMapConfig {
+    const INT_MAP_CONFIG: ChunkTreeConfig<[i32; 3], i32> = ChunkTreeConfig {
         chunk_shape: CHUNK_SHAPE,
         ambient_value: 0,
         root_lod: 0,
     };
-    const FLOAT_MAP_CONFIG: ChunkMapConfig<[i32; 3], f32> = ChunkMapConfig {
+    const FLOAT_MAP_CONFIG: ChunkTreeConfig<[i32; 3], f32> = ChunkTreeConfig {
         chunk_shape: CHUNK_SHAPE,
         ambient_value: 0.0,
         root_lod: 0,
     };
-    const INT_BUILDER: ChunkMapBuilder3x1<i32> = ChunkMapBuilder3x1::new(INT_MAP_CONFIG);
-    const FLOAT_BUILDER: ChunkMapBuilder3x1<f32> = ChunkMapBuilder3x1::new(FLOAT_MAP_CONFIG);
+    const INT_BUILDER: ChunkTreeBuilder3x1<i32> = ChunkTreeBuilder3x1::new(INT_MAP_CONFIG);
+    const FLOAT_BUILDER: ChunkTreeBuilder3x1<f32> = ChunkTreeBuilder3x1::new(FLOAT_MAP_CONFIG);
 
     #[test]
     fn transform_accessors() {
@@ -259,7 +259,7 @@ mod tests {
     fn copy_from_transformed_array() {
         let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(16));
         let src = Array3x1::fill(extent, 0);
-        let mut dst: ChunkHashMap3x1<f32> = FLOAT_BUILDER.build_with_hash_map_storage();
+        let mut dst: HashMapChunkTree3x1<f32> = FLOAT_BUILDER.build_with_hash_map_storage();
         let tfm = TransformMap::new(&src, |value: i32| value as f32 + 1.0);
         copy_extent(&extent, &tfm, &mut dst.lod_view_mut(0));
     }

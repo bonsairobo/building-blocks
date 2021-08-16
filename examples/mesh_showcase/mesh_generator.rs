@@ -212,8 +212,8 @@ fn generate_chunk_meshes_from_sdf(
         Extent3i::from_min_and_shape(Point3i::fill(-20), Point3i::fill(40)).padded(1);
 
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
-    // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
-    let builder = ChunkMapBuilder3x1::new(ChunkMapConfig {
+    // Array3x1 here instead of a ChunkTree3, but we use chunks for educational purposes.
+    let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
         chunk_shape: Point3i::fill(16),
         ambient_value: Sd16::ONE,
         root_lod: 0,
@@ -246,8 +246,8 @@ fn generate_chunk_meshes_from_sdf_noise(
     );
 
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
-    // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
-    let builder = ChunkMapBuilder3x1::new(ChunkMapConfig { chunk_shape: PointN([16; 3]), ambient_value: 99999.0, root_lod: 0 });
+    // Array3x1 here instead of a ChunkTree3, but we use chunks for educational purposes.
+    let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig { chunk_shape: PointN([16; 3]), ambient_value: 99999.0, root_lod: 0 });
     let mut map = builder.build_with_hash_map_storage();
     for (chunk_min, chunk) in noise_chunks.into_iter() {
         map.write_chunk(ChunkKey::new(0, chunk_min), chunk);
@@ -258,7 +258,7 @@ fn generate_chunk_meshes_from_sdf_noise(
 
 fn generate_surface_nets_meshes<T: 'static + Clone + Send + Sync + SignedDistance>(
     pool: &TaskPool,
-    map: &ChunkHashMap3x1<T>,
+    map: &HashMapChunkTree3x1<T>,
     flat_shaded: bool,
 ) -> Vec<Option<PosNormMesh>> {
     pool.scope(|s| {
@@ -303,8 +303,8 @@ fn generate_chunk_meshes_from_height_map(
         Extent2i::from_min_and_shape(Point2i::fill(-20), Point2i::fill(40)).padded(1);
 
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
-    // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
-    let builder = ChunkMapBuilder2x1::new(ChunkMapConfig { chunk_shape: PointN([16; 2]), ambient_value: 0.0, root_lod: 0 });
+    // Array3x1 here instead of a ChunkTree3, but we use chunks for educational purposes.
+    let builder = ChunkTreeBuilder2x1::new(ChunkTreeConfig { chunk_shape: PointN([16; 2]), ambient_value: 0.0, root_lod: 0 });
     let mut map = builder.build_with_hash_map_storage();
     copy_extent(&sample_extent, &Func(height_map), &mut map.lod_view_mut(0));
 
@@ -354,8 +354,8 @@ fn generate_chunk_meshes_from_blocky(blocky: Blocky, pool: &TaskPool) -> Vec<Opt
 
     // Chunk up the voxels just to show that meshing across chunks is consistent.
     // Normally we'd keep this map around in a resource, but we don't need to for this specific example. We could also use an
-    // Array3x1 here instead of a ChunkMap3, but we use chunks for educational purposes.
-    let builder = ChunkMapBuilder3x1::new(ChunkMapConfig {
+    // Array3x1 here instead of a ChunkTree3, but we use chunks for educational purposes.
+    let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
         chunk_shape: Point3i::fill(16),
         ambient_value: CubeVoxel::default(),
         root_lod: 0,

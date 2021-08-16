@@ -94,11 +94,11 @@ which brought about the current feature set:
     `ChunkMap`s can work with any kind of backing storage, be it a simple hash
     map or something more complex.
   - Due to the requirement for level of detail, hierarchical structures were
-    added. The `ChunkMap` and chunk storages were extended to support storing
-    chunks at multiple levels of detail as well as downsampling chunk data.
-    While a tree structure was added, it remains useful for random access
-    workloads, since all of the nodes ultimately live in storages that act like
-    hash maps.
+    added, resulting in a name change from `ChunkMap` to `ChunkTree`. The
+    `ChunkTree` and chunk storages were extended to support storing chunks at
+    multiple levels of detail as well as downsampling chunk data. While a tree
+    structure was added, it remains useful for random access workloads, since
+    all of the nodes ultimately live in storages that act like hash maps.
 - **Meshing**
   - There are many ways of generating meshes from voxel data. You can make each
     occupied voxel into a cube, which gives the classis Minecraft aesthetic. Or

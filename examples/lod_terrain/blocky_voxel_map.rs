@@ -7,7 +7,7 @@ use building_blocks::{
         PosNormMesh, RIGHT_HANDED_Y_UP_CONFIG,
     },
     prelude::*,
-    storage::prelude::{ChunkHashMap3x1, ChunkKey3},
+    storage::prelude::{ChunkKey3, HashMapChunkTree3x1},
 };
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -39,7 +39,7 @@ impl MergeVoxel for Voxel {
 }
 
 pub struct BlockyVoxelMap {
-    chunks: ChunkHashMap3x1<Voxel>,
+    chunks: HashMapChunkTree3x1<Voxel>,
     config: MapConfig,
 }
 
@@ -75,7 +75,7 @@ impl VoxelMap for BlockyVoxelMap {
         );
 
         let root_lod = num_lods - 1;
-        let builder = ChunkMapBuilder3x1::new(ChunkMapConfig {
+        let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
             chunk_shape,
             ambient_value: Voxel::EMPTY,
             root_lod,

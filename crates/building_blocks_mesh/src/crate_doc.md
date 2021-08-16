@@ -4,7 +4,7 @@ Algorithms for generating triangle meshes.
 - signed distance fields
 - voxel occupancy grids
 
-All of the algorithms are designed to be used with a `ChunkMap`, such that each chunk will have its own mesh. In order to
+All of the algorithms are designed to be used with a `ChunkTree`, such that each chunk will have its own mesh. In order to
 update the mesh for a chunk, you must copy not only the chunk, but also some adjacent points, into an array before running
 the meshing algorithm.
 
@@ -24,7 +24,7 @@ use building_blocks_mesh::*;
 use std::collections::HashSet;
 
 let chunk_shape = PointN([16; 2]);
-let builder = ChunkMapBuilder2x1::new(ChunkMapConfig { chunk_shape, ambient_value: 0.0, root_lod: 0 });
+let builder = ChunkTreeBuilder2x1::new(ChunkTreeConfig { chunk_shape, ambient_value: 0.0, root_lod: 0 });
 let mut map = builder.build_with_hash_map_storage();
 
 // ...mutate one or more of the chunks...

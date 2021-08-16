@@ -10,7 +10,7 @@ The core storage types are:
 
 - [`Array`](self::array::Array): N-dimensional, single resolution, bounded,
   dense array
-- [`ChunkMap`](self::chunk::ChunkMap): N-dimensional, multiple resolution,
+- [`ChunkTree`](self::chunk::ChunkTree): N-dimensional, multiple resolution,
   unbounded, sparse array
   - Backed by generic chunk storage, with `HashMap` or
     `CompressibleChunkStorage` implementations

@@ -2,7 +2,7 @@ use crate::{
     array::ArrayCopySrc,
     chunk::ChunkNode,
     dev_prelude::{
-        AmbientExtent, ChunkKey, ChunkMap, ChunkMapBuilder, ChunkStorage, FillExtent, ForEach,
+        AmbientExtent, ChunkKey, ChunkStorage, ChunkTree, ChunkTreeBuilder, FillExtent, ForEach,
         ForEachMut, ForEachMutPtr, Get, GetMut, GetMutUnchecked, GetRef, GetRefUnchecked,
         GetUnchecked, ReadExtent, UserChunk, WriteExtent,
     },
@@ -14,7 +14,7 @@ use building_blocks_core::{point_traits::IntegerPoint, ExtentN, PointN};
 use either::Either;
 use std::ops::{Deref, DerefMut};
 
-/// A view of a single level of detail in a `ChunkMap` for the unambiguous implementation of access traits.
+/// A view of a single level of detail in a `ChunkTree` for the unambiguous implementation of access traits.
 pub struct ChunkMapLodView<Delegate> {
     pub delegate: Delegate,
     pub lod: u8,
@@ -36,7 +36,7 @@ impl<Delegate> ChunkMapLodView<Delegate> {
 
 impl<'a, Delegate, N, T, Usr, Bldr, Store> Get<PointN<N>> for ChunkMapLodView<Delegate>
 where
-    Delegate: Deref<Target = ChunkMap<N, T, Bldr, Store>>,
+    Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     T: Clone,
     Usr: UserChunk,
@@ -54,7 +54,7 @@ where
 impl<'a, Delegate, N, T: 'a, Usr: 'a, Bldr: 'a, Store: 'a, Ref> GetRef<'a, PointN<N>>
     for ChunkMapLodView<Delegate>
 where
-    Delegate: Deref<Target = ChunkMap<N, T, Bldr, Store>>,
+    Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     T: Clone,
     Usr: UserChunk,
@@ -73,11 +73,11 @@ where
 impl<'a, Delegate, N, T: 'a, Usr: 'a, Bldr: 'a, Store: 'a, Mut> GetMut<'a, PointN<N>>
     for ChunkMapLodView<Delegate>
 where
-    Delegate: DerefMut<Target = ChunkMap<N, T, Bldr, Store>>,
+    Delegate: DerefMut<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     Usr: UserChunk,
     Usr::Array: GetMutUnchecked<'a, PointN<N>, Item = Mut>,
-    Bldr: ChunkMapBuilder<N, T, Chunk = Usr>,
+    Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
 {
     type Item = Mut;
@@ -97,7 +97,7 @@ where
 
 impl<Delegate, N, T, Usr, Bldr, Store> ForEach<N, PointN<N>> for ChunkMapLodView<Delegate>
 where
-    Delegate: Deref<Target = ChunkMap<N, T, Bldr, Store>>,
+    Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     T: Clone,
     Usr: UserChunk,
@@ -123,11 +123,11 @@ where
 impl<Delegate, N, T, Usr, Bldr, Store, MutPtr> ForEachMutPtr<N, PointN<N>>
     for ChunkMapLodView<Delegate>
 where
-    Delegate: DerefMut<Target = ChunkMap<N, T, Bldr, Store>>,
+    Delegate: DerefMut<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     Usr: UserChunk,
     Usr::Array: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
-    Bldr: ChunkMapBuilder<N, T, Chunk = Usr>,
+    Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
 {
     type Item = MutPtr;
@@ -187,7 +187,7 @@ where
 impl<'a, Delegate, N, T: 'a, Usr: 'a, Bldr: 'a, Store: 'a> ReadExtent<'a, N>
     for ChunkMapLodView<Delegate>
 where
-    Delegate: Deref<Target = ChunkMap<N, T, Bldr, Store>>,
+    Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     T: Clone,
     Usr: UserChunk,
@@ -221,14 +221,14 @@ where
     }
 }
 
-// If `Array` supports writing from type Src, then so does ChunkMap.
+// If `Array` supports writing from type Src, then so does ChunkTree.
 impl<Delegate, N, T, Usr, Bldr, Store, Src> WriteExtent<N, Src> for ChunkMapLodView<Delegate>
 where
-    Delegate: DerefMut<Target = ChunkMap<N, T, Bldr, Store>>,
+    Delegate: DerefMut<Target = ChunkTree<N, T, Bldr, Store>>,
     PointN<N>: IntegerPoint<N>,
     Usr: UserChunk,
     Usr::Array: WriteExtent<N, Src>,
-    Bldr: ChunkMapBuilder<N, T, Chunk = Usr>,
+    Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
     Src: Clone,
 {

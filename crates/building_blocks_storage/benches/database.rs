@@ -3,7 +3,7 @@ use building_blocks_storage::{
     access_traits::*,
     database::{ChunkDb3, Delta},
     prelude::{
-        ChunkKey, ChunkMapBuilder, ChunkMapBuilder3x1, ChunkMapConfig, FastArrayCompressionNx1,
+        ChunkKey, ChunkTreeBuilder, ChunkTreeBuilder3x1, ChunkTreeConfig, FastArrayCompressionNx1,
         FastChunkCompression, FromBytesCompression, Lz4,
     },
 };
@@ -23,7 +23,7 @@ fn db_write_chunks(c: &mut Criterion) {
                         let chunk_exponent = 4;
                         let chunk_shape = Point3i::fill(1 << chunk_exponent);
 
-                        let builder = ChunkMapBuilder3x1::new(ChunkMapConfig {
+                        let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
                             chunk_shape,
                             ambient_value: 1,
                             root_lod: 0,

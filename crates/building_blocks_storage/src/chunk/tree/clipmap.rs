@@ -2,11 +2,11 @@ use crate::{chunk::ChunkNode, dev_prelude::*};
 
 use building_blocks_core::prelude::*;
 
-impl<Ni, Nf, T, Usr, Bldr, Store> ChunkMap<Ni, T, Bldr, Store>
+impl<Ni, Nf, T, Usr, Bldr, Store> ChunkTree<Ni, T, Bldr, Store>
 where
     PointN<Ni>: IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
     PointN<Nf>: Distance + From<PointN<Ni>> + Point<Scalar = f32>,
-    Bldr: ChunkMapBuilder<Ni, T, Chunk = Usr>,
+    Bldr: ChunkTreeBuilder<Ni, T, Chunk = Usr>,
     Store: ChunkStorage<Ni, Chunk = ChunkNode<Usr>> + for<'r> IterChunkKeys<'r, Ni>,
 {
     /// Traverses from all roots to find the currently "active" chunks. Active chunks are passed to the `active_rx` callback.

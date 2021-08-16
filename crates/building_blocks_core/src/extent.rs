@@ -52,7 +52,7 @@ impl<N> PartialEq for ExtentN<N>
 where
     PointN<N>: PartialEq,
 {
-    // XXX: For some inconceivable reason, inlining this method hurts the performance of ChunkMap::get
+    // XXX: For some inconceivable reason, inlining this method hurts the performance of ChunkTree::get
     #[allow(clippy::missing_inline_in_public_items)]
     fn eq(&self, other: &Self) -> bool {
         self.minimum.eq(&other.minimum) && self.shape.eq(&other.shape)

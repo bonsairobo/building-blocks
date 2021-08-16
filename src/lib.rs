@@ -13,13 +13,12 @@
 //!
 //! - 2D and 3D data storage
 //!   - [`Array`](crate::storage::array) with structure-of-arrays (`SoA`) storage of multiple data channels per spatial dimension
-//!   - [`ChunkMap`](crate::storage::chunk::map) with generic chunk storage
+//!   - [`ChunkTree`](crate::storage::chunk::tree) with generic chunk storage
 //!   - [`ChunkDb`](crate::storage::database) for compressed, persistent voxel worlds, backed by the
 //!     [`sled`](https://docs.rs/sled) embedded database
-//!   - [`OctreeSet`](crate::storage::octree_set) hierarchical bitset of voxel points
 //! - level of detail
-//!   - `ChunkMap` can downsample chunks into lower resolutions within the same storage
-//!   - dynamic 3D clipmap for keeping high detail close to a focal point
+//!   - `ChunkTree` can downsample chunks into lower resolutions within the same storage
+//!   - `ChunkTree` can act as a dynamic clipmap for keeping high detail close to a focal point
 //! - mesh generation
 //!   - Surface Nets isosurface extraction (TODO: multiresolution)
 //!   - Minecraft-style greedy meshing

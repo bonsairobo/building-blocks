@@ -30,7 +30,7 @@
 //! // Use the `ForEachMut<[i32; 3], Stride>` trait.
 //! map.for_each_mut(&subextent, |_s: Stride, value| { *value = 2 });
 //! ```
-//! Arrays also implement `ForEach*<PointN<N>>` and `ForEach*<(PointN<N>, Stride)>`. `ChunkMap` only implements
+//! Arrays also implement `ForEach*<PointN<N>>` and `ForEach*<(PointN<N>, Stride)>`. `ChunkTree` only implements
 //! `ForEach*<PointN<N>>`, because it's ambiguous which chunk a `Stride` would apply to.
 //!
 //! # Copy an Extent
@@ -44,11 +44,11 @@
 //! # let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(100));
 //! # let mut map = Array3x1::fill(extent, 0);
 //! # let subextent = Extent3i::from_min_and_shape(Point3i::fill(1), Point3i::fill(98));
-//! // Create another map to copy to/from. We use a `ChunkHashMap`, but any map that implements
+//! // Create another map to copy to/from. We use a `HashMapChunkTree`, but any map that implements
 //! // `WriteExtent` can be a copy destination, and any map that implements `ReadExtent` can be a
 //! // copy source.
 //! let chunk_shape = Point3i::fill(16);
-//! let builder = ChunkMapBuilder3x1::new(ChunkMapConfig { chunk_shape, ambient_value: 0, root_lod: 0 });
+//! let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig { chunk_shape, ambient_value: 0, root_lod: 0 });
 //! let mut other_map = builder.build_with_hash_map_storage();
 //! copy_extent(&subextent, &map, &mut other_map.lod_view_mut(0));
 //! copy_extent(&subextent, &other_map.lod_view(0), &mut map);
@@ -330,7 +330,7 @@ pub trait FillExtent<N> {
 
 /// A trait to facilitate the generic implementation of `copy_extent`.
 ///
-/// Some lattice maps, like `ChunkMap`, have nonlinear layouts. This means that, in order for a writer to receive data
+/// Some lattice maps, like `ChunkTree`, have nonlinear layouts. This means that, in order for a writer to receive data
 /// efficiently, it must come as an iterator over multiple extents.
 #[auto_impl(&, &mut)]
 pub trait ReadExtent<'a, N> {

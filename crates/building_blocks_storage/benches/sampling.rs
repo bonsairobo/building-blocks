@@ -1,6 +1,6 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::prelude::{
-    Array3x1, ChunkDownsampler, ChunkMapBuilder, ChunkMapBuilder3x1, ChunkMapConfig, Local,
+    Array3x1, ChunkDownsampler, ChunkTreeBuilder, ChunkTreeBuilder3x1, ChunkTreeConfig, Local,
     PointDownsampler, Sd8, SdfMeanDownsampler,
 };
 
@@ -65,7 +65,7 @@ fn sdf_mean_downsample_chunk_map(c: &mut Criterion) {
                         let chunk_exponent = 4;
                         let chunk_shape = Point3i::fill(1 << chunk_exponent);
 
-                        let builder = ChunkMapBuilder3x1::new(ChunkMapConfig {
+                        let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
                             chunk_shape,
                             ambient_value: Sd8::ONE,
                             root_lod: 5,

@@ -4,14 +4,14 @@ use bevy_utilities::{bevy::tasks::ComputeTaskPool, noise::generate_noise_chunks3
 use building_blocks::{
     mesh::{padded_surface_nets_chunk_extent, surface_nets, PosNormMesh, SurfaceNetsBuffer},
     prelude::*,
-    storage::prelude::{ChunkHashMap3x1, ChunkKey3},
+    storage::prelude::{ChunkKey3, HashMapChunkTree3x1},
 };
 
 const AMBIENT_VALUE: f32 = 1.0;
 
 pub struct SmoothVoxelMap {
     config: MapConfig,
-    chunks: ChunkHashMap3x1<f32>,
+    chunks: HashMapChunkTree3x1<f32>,
 }
 
 impl VoxelMap for SmoothVoxelMap {
@@ -46,7 +46,7 @@ impl VoxelMap for SmoothVoxelMap {
         );
 
         let root_lod = num_lods - 1;
-        let builder = ChunkMapBuilder3x1::new(ChunkMapConfig {
+        let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
             chunk_shape,
             ambient_value: AMBIENT_VALUE,
             root_lod,

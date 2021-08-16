@@ -2,7 +2,7 @@ use crate::{
     caching::*,
     compression::MaybeCompressed,
     dev_prelude::{
-        ChunkMap, ChunkStorage, Compressed, Compression, FastArrayCompression,
+        ChunkStorage, ChunkTree, Compressed, Compression, FastArrayCompression,
         FastChannelsCompression, FastChunkCompression, FromBytesCompression, IterChunkKeys,
     },
     SmallKeyBuildHasher,
@@ -350,14 +350,14 @@ pub type LruChunkCacheKeys<'a, N, Ch> = LruCacheKeys<'a, PointN<N>, Ch, Compress
 pub type LruChunkCacheEntries<'a, N, Ch> = LruCacheEntries<'a, PointN<N>, Ch, CompressedLocation>;
 pub type LruChunkCacheIntoIter<N, Ch> = LruCacheIntoIter<PointN<N>, Ch, CompressedLocation>;
 
-/// A `ChunkMap` using `CompressibleChunkStorage` as chunk storage.
-pub type CompressibleChunkMap<N, T, Bldr, Compr> =
-    ChunkMap<N, T, Bldr, CompressibleChunkStorage<N, Compr>>;
+/// A `ChunkTree` using `CompressibleChunkStorage` as chunk storage.
+pub type CompressibleChunkTree<N, T, Bldr, Compr> =
+    ChunkTree<N, T, Bldr, CompressibleChunkStorage<N, Compr>>;
 
 pub mod multichannel_aliases {
     use super::*;
     use crate::array::compression::multichannel_aliases::*;
-    use crate::dev_prelude::{Channel, ChunkMapBuilderNxM};
+    use crate::dev_prelude::{Channel, ChunkTreeBuilderNxM};
 
     pub type FastCompressibleChunkStorageNx1<N, By, A> =
         CompressibleChunkStorage<N, FastChunkCompression<FastArrayCompressionNx1<N, By, A>>>;
@@ -380,35 +380,35 @@ pub mod multichannel_aliases {
 
     macro_rules! compressible_map_type_alias {
         ($name:ident, $dim:ty, $( $chan:ident ),+ ) => {
-            pub type $name<By, $( $chan ),+> = CompressibleChunkMap<
+            pub type $name<By, $( $chan ),+> = CompressibleChunkTree<
                 $dim,
                 ($($chan,)+),
-                ChunkMapBuilderNxM<$dim, ($($chan,)+), ($(Channel<$chan>,)+)>,
+                ChunkTreeBuilderNxM<$dim, ($($chan,)+), ($(Channel<$chan>,)+)>,
                 FastChunkCompression<FastArrayCompression<$dim, FastChannelsCompression<By, ($(Channel<$chan>,)+)>>>,
             >;
         };
     }
 
-    pub type CompressibleChunkMapNx1<N, By, A> = CompressibleChunkMap<
+    pub type CompressibleChunkTreeNx1<N, By, A> = CompressibleChunkTree<
         N,
         A,
-        ChunkMapBuilderNxM<N, A, Channel<A>>,
+        ChunkTreeBuilderNxM<N, A, Channel<A>>,
         FastChunkCompression<FastArrayCompression<N, FastChannelsCompression<By, Channel<A>>>>,
     >;
 
-    pub type CompressibleChunkMap2x1<By, A> = CompressibleChunkMapNx1<[i32; 2], By, A>;
-    compressible_map_type_alias!(CompressibleChunkMap2x2, [i32; 2], A, B);
-    compressible_map_type_alias!(CompressibleChunkMap2x3, [i32; 2], A, B, C);
-    compressible_map_type_alias!(CompressibleChunkMap2x4, [i32; 2], A, B, C, D);
-    compressible_map_type_alias!(CompressibleChunkMap2x5, [i32; 2], A, B, C, D, E);
-    compressible_map_type_alias!(CompressibleChunkMap2x6, [i32; 2], A, B, C, D, E, F);
+    pub type CompressibleChunkTree2x1<By, A> = CompressibleChunkTreeNx1<[i32; 2], By, A>;
+    compressible_map_type_alias!(CompressibleChunkTree2x2, [i32; 2], A, B);
+    compressible_map_type_alias!(CompressibleChunkTree2x3, [i32; 2], A, B, C);
+    compressible_map_type_alias!(CompressibleChunkTree2x4, [i32; 2], A, B, C, D);
+    compressible_map_type_alias!(CompressibleChunkTree2x5, [i32; 2], A, B, C, D, E);
+    compressible_map_type_alias!(CompressibleChunkTree2x6, [i32; 2], A, B, C, D, E, F);
 
-    pub type CompressibleChunkMap3x1<By, A> = CompressibleChunkMapNx1<[i32; 3], By, A>;
-    compressible_map_type_alias!(CompressibleChunkMap3x2, [i32; 3], A, B);
-    compressible_map_type_alias!(CompressibleChunkMap3x3, [i32; 3], A, B, C);
-    compressible_map_type_alias!(CompressibleChunkMap3x4, [i32; 3], A, B, C, D);
-    compressible_map_type_alias!(CompressibleChunkMap3x5, [i32; 3], A, B, C, D, E);
-    compressible_map_type_alias!(CompressibleChunkMap3x6, [i32; 3], A, B, C, D, E, F);
+    pub type CompressibleChunkTree3x1<By, A> = CompressibleChunkTreeNx1<[i32; 3], By, A>;
+    compressible_map_type_alias!(CompressibleChunkTree3x2, [i32; 3], A, B);
+    compressible_map_type_alias!(CompressibleChunkTree3x3, [i32; 3], A, B, C);
+    compressible_map_type_alias!(CompressibleChunkTree3x4, [i32; 3], A, B, C, D);
+    compressible_map_type_alias!(CompressibleChunkTree3x5, [i32; 3], A, B, C, D, E);
+    compressible_map_type_alias!(CompressibleChunkTree3x6, [i32; 3], A, B, C, D, E, F);
 }
 
 pub use multichannel_aliases::*;

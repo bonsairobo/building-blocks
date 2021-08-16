@@ -151,6 +151,9 @@ use building_blocks_core::{
 use either::Either;
 use serde::{Deserialize, Serialize};
 
+/// Arbitrarily chosen. Certainly can't exceed the number of bits in an i32.
+pub const MAX_LODS: usize = 20;
+
 /// The key for a chunk at a particular level of detail.
 #[allow(clippy::derive_hash_xor_eq)] // This is fine, the custom PartialEq is the same as what would've been derived.
 #[derive(Debug, Deserialize, Hash, Eq, Serialize)]
@@ -313,6 +316,8 @@ where
     ///
     /// All dimensions of `chunk_shape` must be powers of 2.
     fn new(builder: Bldr, storages: Vec<Store>) -> Self {
+        assert!((builder.root_lod() as usize) < MAX_LODS);
+
         let indexer = ChunkIndexer::new(builder.chunk_shape());
         let ambient_value = builder.ambient_value();
 

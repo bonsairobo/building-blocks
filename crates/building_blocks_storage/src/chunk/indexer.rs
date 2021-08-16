@@ -1,12 +1,12 @@
-use crate::dev_prelude::{ChunkKey, Local};
+use crate::{
+    chunk::tree::MAX_LODS,
+    dev_prelude::{ChunkKey, Local},
+};
 
 use building_blocks_core::prelude::*;
 
 use serde::{Deserialize, Serialize};
 use std::mem::MaybeUninit;
-
-/// Arbitrarily chosen. Certainly can't exceed the number of bits in an i32.
-const MAX_LODS: usize = 20;
 
 /// Calculates chunk locations, e.g. minimums and downsampling destinations.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]

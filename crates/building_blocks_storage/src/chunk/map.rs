@@ -530,19 +530,13 @@ where
     /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
     #[inline]
     pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) {
-        self.write_chunk_without_linking(key, chunk);
-        self.link_node(key);
-    }
-
-    /// This leaves the tree in an inconsistent state. Make sure you fix it!
-    #[inline]
-    pub(crate) fn write_chunk_without_linking(&mut self, key: ChunkKey<N>, chunk: Usr) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         let node = self
             .storage
             .get_mut_or_insert_with(key, ChunkNode::new_empty);
         node.user_chunk = Some(chunk);
+        self.link_node(key);
     }
 
     /// Replace the `Chunk` at `key` with `chunk`, returning the old value.
@@ -651,14 +645,8 @@ where
 
     #[inline]
     pub fn pop_chunk(&mut self, key: ChunkKey<N>) -> Option<Usr> {
-        self.unlink_node(key);
-        self.pop_chunk_without_unlinking(key)
-    }
-
-    /// This leaves the tree in an inconsistent state. Make sure you fix it!
-    #[inline]
-    pub(crate) fn pop_chunk_without_unlinking(&mut self, key: ChunkKey<N>) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+        self.unlink_node(key);
         self.storage.pop(key).and_then(|c| c.user_chunk)
     }
 }

@@ -157,9 +157,13 @@ where
         Samp: ChunkDownsampler<N, T, Usr, Usr>,
     {
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
-        if let Some(src_chunk) = self.pop_chunk_without_unlinking(src_chunk_key) {
-            self.downsample_external_chunk(sampler, src_chunk_key, &src_chunk);
-            self.write_chunk_without_linking(src_chunk_key, src_chunk);
+        if let Some(src_node) = self.storage_mut().pop(src_chunk_key) {
+            if let Some(src_chunk) = &src_node.user_chunk {
+                self.downsample_external_chunk(sampler, src_chunk_key, &src_chunk);
+            } else {
+                self.downsample_ambient_chunk(src_chunk_key);
+            }
+            self.storage_mut().write(src_chunk_key, src_node);
         } else {
             self.downsample_ambient_chunk(src_chunk_key)
         }

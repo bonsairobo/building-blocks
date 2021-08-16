@@ -420,10 +420,6 @@ where
         self.lod_storage_mut(key.lod).write(key.minimum, node)
     }
 
-    fn delete_chunk_node(&mut self, key: ChunkKey<N>) {
-        self.lod_storage_mut(key.lod).delete(key.minimum)
-    }
-
     fn pop_chunk_node(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Usr>> {
         self.lod_storage_mut(key.lod).pop(key.minimum)
     }
@@ -720,17 +716,27 @@ where
     }
 
     #[inline]
-    pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
+    pub fn pop_chunk(&mut self, key: ChunkKey<N>) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
-        self.unlink_node(key);
-        self.delete_chunk_node(key);
+        // PERF: we wouldn't always have to pop the node if we had a ChunkStorage::entry API
+        self.pop_chunk_node(key).and_then(|mut node| {
+            if node.child_mask == 0 {
+                // No children, so this node is useless.
+                self.unlink_node(key);
+                node.user_chunk
+            } else {
+                // Still has children, so only delete the user data and leave the node.
+                let user_chunk = node.user_chunk.take();
+                self.write_chunk_node(key, node);
+                user_chunk
+            }
+        })
     }
 
     #[inline]
-    pub fn pop_chunk(&mut self, key: ChunkKey<N>) -> Option<Usr> {
+    pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
-        self.unlink_node(key);
-        self.pop_chunk_node(key).and_then(|c| c.user_chunk)
+        self.pop_chunk(key);
     }
 }
 

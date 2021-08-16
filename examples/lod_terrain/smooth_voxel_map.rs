@@ -66,11 +66,7 @@ impl VoxelMap for SmoothVoxelMap {
         &self.config
     }
 
-    fn clipmap_active_chunks(
-        &self,
-        lod0_center: Point3f,
-        active_rx: impl FnMut(ChunkKey3, Point3f),
-    ) {
+    fn clipmap_active_chunks(&self, lod0_center: Point3f, active_rx: impl FnMut(ChunkKey3)) {
         self.chunks.clipmap_active_chunks(
             self.config().clip_box_radius,
             lod0_center,
@@ -83,7 +79,7 @@ impl VoxelMap for SmoothVoxelMap {
         &self,
         old_lod0_center: Point3f,
         new_lod0_center: Point3f,
-        update_rx: impl FnMut(LodChunkUpdate3, Point3f),
+        update_rx: impl FnMut(LodChunkUpdate3),
     ) {
         self.chunks.clipmap_updates(
             self.config().clip_box_radius,

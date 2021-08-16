@@ -15,7 +15,7 @@ where
     /// for rendering. More specifically, let `D` be the Euclidean distance from `lod0_center` to the center of the chunk (in
     /// LOD0 space), and let `S` be the shape of the chunk (in LOD0 space). The chunk cannot be active (must be "split") if `(S
     /// / D) > clip_radius`. Along a given path from a root chunk to a leaf, the least detailed chunk that *can* be active is
-    /// used. `active_rx` will also receive the value `S / D` as it may be useful for continuous LOD blending.
+    /// used.
     ///
     /// `predicate` is used to terminate traversal of a subtree early so that the rejected chunk and any of its descendants
     /// cannot be considered active. This could be useful for e.g. culling chunks outside of a view frustum.
@@ -24,7 +24,7 @@ where
         clip_radius: f32,
         lod0_center: PointN<Nf>,
         mut predicate: impl FnMut(ChunkKey<Ni>) -> bool,
-        mut active_rx: impl FnMut(ChunkKey<Ni>, PointN<Nf>),
+        mut active_rx: impl FnMut(ChunkKey<Ni>),
     ) {
         let root_lod = self.root_lod();
         let root_storage = self.lod_storage(root_lod);
@@ -45,15 +45,19 @@ where
         clip_radius: f32,
         lod0_center: PointN<Nf>,
         predicate: &mut impl FnMut(ChunkKey<Ni>) -> bool,
-        active_rx: &mut impl FnMut(ChunkKey<Ni>, PointN<Nf>),
+        active_rx: &mut impl FnMut(ChunkKey<Ni>),
     ) {
         if !predicate(node_key) {
             return;
         }
 
-        let node = self.get_chunk_node(node_key).unwrap();
-        let apparent_shape = self.apparent_shape(lod0_center, node_key);
-        if node_key.lod > 0 && apparent_shape >= PointN::fill(clip_radius) {
+        if node_key.lod == 0 {
+            // This node is active!
+            active_rx(node_key);
+        }
+
+        if self.apparent_shape(lod0_center, node_key) >= PointN::fill(clip_radius) {
+            let node = self.get_chunk_node(node_key).unwrap();
             // Need to split, continue by recursing on the children.
             for child_i in 0..PointN::NUM_CORNERS {
                 if node.has_child(child_i) {
@@ -68,22 +72,19 @@ where
             }
         } else {
             // This node is active!
-            active_rx(node_key, apparent_shape);
+            active_rx(node_key);
         }
     }
 
     /// Like `active_clipmap_chunks`, but it only detects changes in the set of active chunks after the focal point moves from
     /// `old_lod0_center` to `new_lod0_center`.
-    ///
-    /// `update_rx` will receive both the split/merge update as well as the `S / D` value of the newly active chunk (children of
-    /// the split or parent of the merge).
     pub fn clipmap_updates(
         &self,
         clip_radius: f32,
         old_lod0_center: PointN<Nf>,
         new_lod0_center: PointN<Nf>,
         mut predicate: impl FnMut(ChunkKey<Ni>) -> bool,
-        mut update_rx: impl FnMut(LodChunkUpdate<Ni>, PointN<Nf>),
+        mut update_rx: impl FnMut(LodChunkUpdate<Ni>),
     ) {
         let root_lod = self.root_lod();
         let root_storage = self.lod_storage(root_lod);
@@ -106,7 +107,7 @@ where
         old_lod0_center: PointN<Nf>,
         new_lod0_center: PointN<Nf>,
         predicate: &mut impl FnMut(ChunkKey<Ni>) -> bool,
-        update_rx: &mut impl FnMut(LodChunkUpdate<Ni>, PointN<Nf>),
+        update_rx: &mut impl FnMut(LodChunkUpdate<Ni>),
     ) {
         if !predicate(node_key) || node_key.lod == 0 {
             return;
@@ -139,24 +140,18 @@ where
             (true, false) => {
                 // Merge the children into this node.
                 let old_chunks = self.collect_children(node_key, node);
-                update_rx(
-                    LodChunkUpdate::Merge(MergeChunks {
-                        old_chunks,
-                        new_chunk: node_key,
-                    }),
-                    new_apparent_shape,
-                );
+                update_rx(LodChunkUpdate::Merge(MergeChunks {
+                    old_chunks,
+                    new_chunk: node_key,
+                }));
             }
             (false, true) => {
                 // Split this node into the children.
                 let new_chunks = self.collect_children(node_key, node);
-                update_rx(
-                    LodChunkUpdate::Split(SplitChunk {
-                        old_chunk: node_key,
-                        new_chunks,
-                    }),
-                    new_apparent_shape,
-                );
+                update_rx(LodChunkUpdate::Split(SplitChunk {
+                    old_chunk: node_key,
+                    new_chunks,
+                }));
             }
             (false, false) => {
                 // Old and new agree this node is active. No update.

@@ -11,16 +11,6 @@
 //! fat leaf octants is equal to the whole set. We also say that fat leaf nodes can have children for the sake of iteration, and
 //! we call them "thin" leaf nodes.
 //!
-//! # Use Cases
-//!
-//! The `OctreeSet` has many uses.
-//!
-//! One possible use case is to construct one using `OctreeSet::from_array3`, then insert it into an `OctreeDbvt` in order to
-//! perform spatial queries like raycasting.
-//!
-//! The `OctreeSet` is also used in the `OctreeChunkIndex`, where each point represents a single chunk. This representation is
-//! useful for level of detail algorithms like clipmap traversal because inner nodes may correspond to downsampled chunks.
-//!
 //! # Traversal
 //!
 //! `OctreeSet` supports two modes of traversal. One is using the visitor pattern via `OctreeVisitor`. You can either visit just
@@ -31,7 +21,7 @@
 //! ```
 //! # let some_condition = |_: &OctreeNode| true;
 //! use building_blocks_core::prelude::*;
-//! use building_blocks_storage::{octree::set::*, prelude::*};
+//! use building_blocks_storage::{octree_set::*, prelude::*};
 //!
 //! let extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(32));
 //! let voxels = Array3x1::fill(extent, true); // boring example

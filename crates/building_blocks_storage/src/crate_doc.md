@@ -21,11 +21,3 @@ Then there are "meta" lattice maps that provide some extra utility:
   lattice map that performs an arbitrary transformation
 - [`Func`](self::func::Func): some lattice map traits are implemented for
   closures (like SDFs)
-
-For hierarchical indexing and level of detail:
-
-- [`OctreeSet`](self::octree::OctreeSet): bounded bitset of points
-- [`ChunkedOctreeSet`](self::octree::ChunkedOctreeSet): unbounded bitset of
-  points
-- [`OctreeChunkIndex`](self::octree::OctreeChunkIndex): just a
-  `ChunkedOctreeSet` that tracks chunks and provides clipmap functionality

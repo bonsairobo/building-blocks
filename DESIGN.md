@@ -89,18 +89,16 @@ which brought about the current feature set:
     decompressing the same chunks many times, LRU caching is used so that the working
     set can stay decompressed. This functionality is encapsulated in the
     `CompressibleChunkStorage`.
-  - To make chunk compression optional, we made `ChunkMap` take a new chunk storage type
-    parameter that can implement `ChunkReadStorage` or `ChunkWriteStorage`. This
-    makes it so `ChunkMap`s can work with any kind of backing storage, be it a
-    simple hash map or something more complex.
-  - Due to the requirement for level of detail, some hierarchical storage types
-    were introduced. The `ChunkMap` and chunk storages were extended to support
-    storing chunks at multiple levels of detail. There is also an `OctreeSet` which
-    is a sparse, hierarchical set of `Point3i`s. This supports many kinds of traversal,
-    so it can be used to efficiently visit large regions of chunk keys. Because the
-    `OctreeSet` has a maximum size, the `OctreeChunkIndex` is a hash map of `OctreeSet`s
-    where each set manages an extent that we call a "superchunk" (a multitude of chunks).
-    Some algorithms, like clipmap traversal, have been implemented using these octrees.
+  - To make chunk compression optional, we made `ChunkMap` take a new chunk
+    storage type parameter that can implement `ChunkStorage`. This makes it so
+    `ChunkMap`s can work with any kind of backing storage, be it a simple hash
+    map or something more complex.
+  - Due to the requirement for level of detail, hierarchical structures were
+    added. The `ChunkMap` and chunk storages were extended to support storing
+    chunks at multiple levels of detail as well as downsampling chunk data.
+    While a tree structure was added, it remains useful for random access
+    workloads, since all of the nodes ultimately live in storages that act like
+    hash maps.
 - **Meshing**
   - There are many ways of generating meshes from voxel data. You can make each
     occupied voxel into a cube, which gives the classis Minecraft aesthetic. Or

@@ -18,13 +18,6 @@
 //! chunk, which is always a multiple of the chunk shape. Chunk shape dimensions must be powers of 2, which allows for
 //! efficiently calculating a chunk minimum from any point in the chunk.
 //!
-//! If you require iteration over large, but very sparse regions, you might want an additional `OctreeChunkIndex` to track the
-//! set of occupied chunks. Traversing that index can be faster than doing hash map lookups on all of the possible chunks in a
-//! region.
-//!
-//! When using multiple levels of detail, it's generally useful to have an `OctreeChunkIndex` that tracks the chunk occupancy.
-//! This helps with specific types of traversal, like for downsampling or detecting clipmap updates.
-//!
 //! # Chunk Storage
 //!
 //! `ChunkMap<N, T, Bldr, Store>` depends on a backing chunk storage `Store`, which can implement some of `ChunkReadStorage` or

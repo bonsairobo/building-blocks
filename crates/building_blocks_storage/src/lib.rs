@@ -21,7 +21,7 @@ pub mod compression;
 pub mod func;
 #[doc(hidden)]
 pub mod multi_ptr;
-pub mod octree;
+pub mod octree_set;
 pub mod signed_distance;
 pub mod transform_map;
 
@@ -57,10 +57,7 @@ pub mod prelude {
             BincodeCompression, BytesCompression, Compressed, Compression, FromBytesCompression,
         },
         func::Func,
-        octree::{
-            ChunkedOctreeSet, ClipMapConfig3, ClipMapUpdate3, OctreeChunkIndex, OctreeNode,
-            OctreeSet, OctreeVisitor, VisitStatus,
-        },
+        octree_set::{OctreeNode, OctreeSet, OctreeVisitor, VisitStatus},
         signed_distance::{Sd16, Sd8, SignedDistance},
         transform_map::TransformMap,
         IsEmpty,

@@ -1,6 +1,6 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{
-    octree::set::{OctreeNode, OctreeSet, VisitStatus},
+    octree_set::{OctreeNode, OctreeSet, VisitStatus},
     prelude::*,
     IsEmpty,
 };

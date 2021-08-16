@@ -128,6 +128,8 @@ pub trait IntegerPoint<N>:
     /// The Morton code (Z order) for this point.
     type Morton;
 
+    type FloatPoint;
+
     /// Returns `true` iff all dimensions are powers of 2.
     fn dimensions_are_powers_of_2(self) -> bool;
 
@@ -157,7 +159,7 @@ pub trait LatticeOrder {
     fn meet(self, other: Self) -> Self;
 }
 
-pub trait FloatPoint<N>: IntoIntegerPoint + Point<Scalar = f32> {
+pub trait FloatPoint: IntoIntegerPoint + Point<Scalar = f32> {
     fn round(self) -> Self;
 
     fn floor(self) -> Self;
@@ -179,7 +181,7 @@ pub trait IntoIntegerPoint {
     fn into_int(self) -> Self::IntPoint;
 }
 
-impl<N> FloatPoint<N> for PointN<N>
+impl<N> FloatPoint for PointN<N>
 where
     Self: IntoIntegerPoint + Point<Scalar = f32>,
 {

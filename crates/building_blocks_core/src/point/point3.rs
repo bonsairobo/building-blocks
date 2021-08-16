@@ -364,6 +364,7 @@ where
 
 impl IntegerPoint<[i32; 3]> for Point3i {
     type Morton = Morton3;
+    type FloatPoint = Point3f;
 
     #[inline]
     fn dimensions_are_powers_of_2(self) -> bool {

@@ -272,6 +272,10 @@ impl<U> ChunkNode<U> {
     fn has_child(&self, corner_index: u8) -> bool {
         child_mask_has_child(self.child_mask, corner_index)
     }
+
+    fn has_any_children(&self) -> bool {
+        self.child_mask != 0
+    }
 }
 
 #[inline]
@@ -612,7 +616,7 @@ where
                 .unwrap();
             let child_corner_index = self.indexer.corner_index(key.minimum);
             parent_node.child_mask &= !(1 << child_corner_index);
-            if parent_node.child_mask != 0 || parent_node.user_chunk.is_some() {
+            if parent_node.has_any_children() || parent_node.user_chunk.is_some() {
                 return;
             }
             key = parent;
@@ -734,7 +738,7 @@ where
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
         // PERF: we wouldn't always have to pop the node if we had a ChunkStorage::entry API
         self.pop_chunk_node(key).and_then(|mut node| {
-            if node.child_mask == 0 {
+            if !node.has_any_children() {
                 // No children, so this node is useless.
                 self.unlink_node(key);
                 node.user_chunk
@@ -748,19 +752,53 @@ where
     }
 
     #[inline]
-    pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
+    pub fn pop_raw_chunk(&mut self, key: ChunkKey<N>) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
         // PERF: we wouldn't always have to pop the node if we had a ChunkStorage::entry API
         // We pop a raw chunk so that compressible storage doesn't have to decompress the value for us. We only care to check
         // the child mask.
         if let Some(mut node) = self.pop_raw_chunk_node(key) {
-            if node.child_mask == 0 {
+            if !node.has_any_children() {
                 // No children, so this node is useless.
                 self.unlink_node(key);
             } else {
                 // Still has children, so only delete the user data and leave the node.
                 node.user_chunk = None;
                 self.write_raw_chunk_node(key, node);
+            }
+        }
+    }
+
+    /// Remove the chunk at `key` and all descendants. All chunks will be given to the `chunk_rx` callback.
+    ///
+    /// Raw chunks are given to `chunk_rx` to avoid any decompression that would happen otherwise.
+    #[inline]
+    pub fn drain_tree(
+        &mut self,
+        key: ChunkKey<N>,
+        chunk_rx: impl FnMut(ChunkKey<N>, Store::ChunkRepr),
+    ) {
+        if let Some(node) = self.pop_raw_chunk_node(key) {
+            self.unlink_node(key);
+            self.drain_tree_recursive(key, node, chunk_rx);
+        }
+    }
+
+    fn drain_tree_recursive(
+        &mut self,
+        key: ChunkKey<N>,
+        mut node: ChunkNode<Store::ChunkRepr>,
+        mut chunk_rx: impl FnMut(ChunkKey<N>, Store::ChunkRepr),
+    ) {
+        for child_i in 0..PointN::NUM_CORNERS {
+            if node.has_child(child_i) {
+                let child_key = self.indexer.child_chunk_key(key, child_i);
+                if let Some(child_node) = self.pop_raw_chunk_node(child_key) {
+                    self.drain_tree_recursive(child_key, child_node, &mut chunk_rx);
+                }
+            }
+            if let Some(user_chunk) = node.user_chunk.take() {
+                chunk_rx(key, user_chunk);
             }
         }
     }

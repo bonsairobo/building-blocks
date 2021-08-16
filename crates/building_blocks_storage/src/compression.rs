@@ -87,17 +87,26 @@ pub enum MaybeCompressed<D, C> {
     Compressed(C),
 }
 
-impl<A: Compression> MaybeCompressed<A::Data, Compressed<A>> {
-    pub fn into_decompressed(self) -> A::Data {
+impl<D, C> MaybeCompressed<D, C> {
+    pub fn unwrap_decompressed(self) -> D {
         match self {
-            MaybeCompressed::Compressed(c) => c.decompress(),
+            MaybeCompressed::Compressed(_) => panic!("Must be decompressed"),
             MaybeCompressed::Decompressed(d) => d,
         }
     }
 
-    pub fn unwrap_decompressed(self) -> A::Data {
+    pub fn into_decompressed_with(self, f: impl FnOnce(C) -> D) -> D {
         match self {
-            MaybeCompressed::Compressed(_) => panic!("Must be decompressed"),
+            MaybeCompressed::Compressed(c) => f(c),
+            MaybeCompressed::Decompressed(d) => d,
+        }
+    }
+}
+
+impl<A: Compression> MaybeCompressed<A::Data, Compressed<A>> {
+    pub fn into_decompressed(self) -> A::Data {
+        match self {
+            MaybeCompressed::Compressed(c) => c.decompress(),
             MaybeCompressed::Decompressed(d) => d,
         }
     }

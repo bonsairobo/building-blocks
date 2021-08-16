@@ -1,6 +1,5 @@
 use crate::{
     array::ArrayCopySrc,
-    chunk::ChunkNode,
     dev_prelude::{
         AmbientExtent, ChunkKey, ChunkStorage, ChunkTree, ChunkTreeBuilder, FillExtent, ForEach,
         ForEachMut, ForEachMutPtr, Get, GetMut, GetMutUnchecked, GetRef, GetRefUnchecked,
@@ -41,7 +40,7 @@ where
     T: Clone,
     Usr: UserChunk,
     Usr::Array: GetUnchecked<PointN<N>, Item = T>,
-    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
+    Store: ChunkStorage<N, Chunk = Usr>,
 {
     type Item = T;
 
@@ -59,7 +58,7 @@ where
     T: Clone,
     Usr: UserChunk,
     Usr::Array: GetRefUnchecked<'a, PointN<N>, Item = Ref>,
-    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
+    Store: ChunkStorage<N, Chunk = Usr>,
     Ref: MultiRef<'a, Data = T>,
 {
     type Item = Ref;
@@ -78,7 +77,7 @@ where
     Usr: UserChunk,
     Usr::Array: GetMutUnchecked<'a, PointN<N>, Item = Mut>,
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
-    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
+    Store: ChunkStorage<N, Chunk = Usr>,
 {
     type Item = Mut;
 
@@ -102,7 +101,7 @@ where
     T: Clone,
     Usr: UserChunk,
     Usr::Array: ForEach<N, PointN<N>, Item = T>,
-    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
+    Store: ChunkStorage<N, Chunk = Usr>,
 {
     type Item = T;
 
@@ -128,7 +127,7 @@ where
     Usr: UserChunk,
     Usr::Array: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
-    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
+    Store: ChunkStorage<N, Chunk = Usr>,
 {
     type Item = MutPtr;
 
@@ -191,7 +190,7 @@ where
     PointN<N>: IntegerPoint<N>,
     T: Clone,
     Usr: UserChunk,
-    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
+    Store: ChunkStorage<N, Chunk = Usr>,
 {
     type Src = ChunkCopySrc<N, T, &'a Usr>;
     type SrcIter = ChunkCopySrcIter<N, T, &'a Usr>;
@@ -229,7 +228,7 @@ where
     Usr: UserChunk,
     Usr::Array: WriteExtent<N, Src>,
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
-    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
+    Store: ChunkStorage<N, Chunk = Usr>,
     Src: Clone,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src) {

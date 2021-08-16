@@ -232,7 +232,7 @@ impl<N, Chan> UserChunk for Array<N, Chan> {
 }
 
 /// The container of a `U: UserChunk` that's actually stored in a chunk storage.
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct ChunkNode<U> {
     /// Parent chunks are `None` until written or downsampled into. This means that users can opt-in to storing downsampled
     /// chunks, which requires more memory.
@@ -249,21 +249,15 @@ impl<U> ChunkNode<U> {
         }
     }
 
-    #[inline]
-    pub(crate) fn new(user_chunk: Option<U>, child_mask: u8) -> Self {
-        Self {
-            user_chunk,
-            child_mask,
-        }
-    }
-
-    #[inline]
-    pub(crate) fn child_mask(&self) -> u8 {
-        self.child_mask
-    }
-
     fn has_child(&self, corner_index: u8) -> bool {
         child_mask_has_child(self.child_mask, corner_index)
+    }
+
+    pub(crate) fn map<T>(&self, f: impl Fn(&U) -> T) -> ChunkNode<T> {
+        ChunkNode {
+            child_mask: self.child_mask,
+            user_chunk: self.user_chunk.as_ref().map(f),
+        }
     }
 }
 
@@ -405,7 +399,7 @@ impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store> {
 
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
-    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
+    Store: ChunkStorage<N, Chunk = Usr>,
 {
     fn get_chunk_node(&self, key: ChunkKey<N>) -> Option<&ChunkNode<Usr>> {
         self.lod_storage(key.lod).get(key.minimum)
@@ -428,7 +422,7 @@ impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
     Usr: UserChunk,
-    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
+    Store: ChunkStorage<N, Chunk = Usr>,
 {
     /// Borrow the chunk at `key`.
     ///
@@ -501,7 +495,7 @@ where
     PointN<N>: IntegerPoint<N>,
     Usr: UserChunk,
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
-    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
+    Store: ChunkStorage<N, Chunk = Usr>,
 {
     /// Call `visitor` on all occupied chunks that overlap `extent` in level `lod`.
     #[inline]

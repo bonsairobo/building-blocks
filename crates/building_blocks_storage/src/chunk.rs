@@ -1,8 +1,6 @@
-pub mod compression;
 pub mod indexer;
 pub mod tree;
 
-pub use compression::*;
 pub use indexer::*;
 pub use tree::*;
 

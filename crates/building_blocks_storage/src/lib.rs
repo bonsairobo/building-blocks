@@ -50,8 +50,8 @@ pub mod prelude {
         array::{IndexedArray, Local, Stride},
         chunk::{
             AmbientExtent, ChunkDownsampler, ChunkKey, ChunkKey2, ChunkKey3, ChunkStorage,
-            ChunkTreeBuilder, ChunkTreeConfig, ChunkUnits, FastChunkCompression, IterChunkKeys,
-            LodChunkUpdate2, LodChunkUpdate3, PointDownsampler, SdfMeanDownsampler, UserChunk,
+            ChunkTreeBuilder, ChunkTreeConfig, ChunkUnits, IterChunkKeys, LodChunkUpdate2,
+            LodChunkUpdate3, PointDownsampler, SdfMeanDownsampler, UserChunk,
         },
         compression::{
             BincodeCompression, BytesCompression, Compressed, Compression, FromBytesCompression,
@@ -96,7 +96,7 @@ pub mod dev_prelude {
         },
         chunk::{
             ChunkTree, ChunkTree2, ChunkTree3, ChunkTreeBuilderNxM, CompressibleChunkStorage,
-            FastChunkCompression, HashMapChunkTree,
+            HashMapChunkTree,
         },
         SmallKeyHashMap, SmallKeyHashSet,
     };

@@ -1,6 +1,5 @@
 use crate::{
     array::FillChannels,
-    chunk::ChunkNode,
     dev_prelude::{Array, Channel, ChunkStorage, ChunkTree, HashMapChunkTree, SmallKeyHashMap},
 };
 
@@ -64,7 +63,7 @@ pub trait ChunkTreeBuilder<N, T>: Sized {
     where
         PointN<N>: IntegerPoint<N>,
         T: Clone,
-        Store: ChunkStorage<N, Chunk = ChunkNode<Self::Chunk>>,
+        Store: ChunkStorage<N, Chunk = Self::Chunk>,
     {
         let storages = (0..self.num_lods()).map(|_| storage_factory()).collect();
         ChunkTree::new(self, storages)

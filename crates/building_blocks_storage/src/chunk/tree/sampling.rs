@@ -6,7 +6,7 @@ pub use sdf_mean::*;
 
 use crate::{
     array::{ArrayIndexer, LockStepArrayForEach},
-    chunk::{child_mask_has_child, ChunkNode},
+    chunk::child_mask_has_child,
     dev_prelude::*,
 };
 
@@ -26,7 +26,7 @@ where
     Usr: UserChunk,
     Usr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
-    Store: ChunkStorage<N, Chunk = ChunkNode<Usr>>,
+    Store: ChunkStorage<N, Chunk = Usr>,
 {
     /// Downsamples all chunks in level `src_lod` that overlap `src_extent`.
     ///

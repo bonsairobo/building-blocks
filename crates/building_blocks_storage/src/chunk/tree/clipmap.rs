@@ -7,7 +7,7 @@ where
     PointN<Ni>: IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
     PointN<Nf>: Distance + From<PointN<Ni>> + Point<Scalar = f32>,
     Bldr: ChunkTreeBuilder<Ni, T, Chunk = Usr>,
-    Store: ChunkStorage<Ni, Chunk = ChunkNode<Usr>> + for<'r> IterChunkKeys<'r, Ni>,
+    Store: ChunkStorage<Ni, Chunk = Usr> + for<'r> IterChunkKeys<'r, Ni>,
 {
     /// Traverses from all roots to find the currently "active" chunks. Active chunks are passed to the `active_rx` callback.
     ///

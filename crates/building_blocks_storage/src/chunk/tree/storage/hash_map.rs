@@ -1,28 +1,25 @@
-use crate::{
-    chunk::ChunkNode,
-    dev_prelude::{ChunkTree, ChunkTreeBuilder, SmallKeyHashMap},
-};
+use crate::dev_prelude::{ChunkTree, ChunkTreeBuilder, SmallKeyHashMap};
 
-use super::{ChunkStorage, IterChunkKeys};
+use super::{ChunkNode, ChunkStorage, IterChunkKeys};
 
 use building_blocks_core::PointN;
 
 use core::hash::Hash;
 use std::collections::hash_map;
 
-impl<N, Ch> ChunkStorage<N> for SmallKeyHashMap<PointN<N>, Ch>
+impl<N, Ch> ChunkStorage<N> for SmallKeyHashMap<PointN<N>, ChunkNode<Ch>>
 where
     PointN<N>: Hash + Eq,
 {
     type Chunk = Ch;
 
     #[inline]
-    fn get(&self, key: PointN<N>) -> Option<&Ch> {
+    fn get(&self, key: PointN<N>) -> Option<&ChunkNode<Ch>> {
         self.get(&key)
     }
 
     #[inline]
-    fn get_mut(&mut self, key: PointN<N>) -> Option<&mut Ch> {
+    fn get_mut(&mut self, key: PointN<N>) -> Option<&mut ChunkNode<Ch>> {
         self.get_mut(&key)
     }
 
@@ -30,18 +27,18 @@ where
     fn get_mut_or_insert_with(
         &mut self,
         key: PointN<N>,
-        create_chunk: impl FnOnce() -> Ch,
-    ) -> &mut Ch {
+        create_chunk: impl FnOnce() -> ChunkNode<Ch>,
+    ) -> &mut ChunkNode<Ch> {
         self.entry(key).or_insert_with(create_chunk)
     }
 
     #[inline]
-    fn replace(&mut self, key: PointN<N>, chunk: Ch) -> Option<Ch> {
+    fn replace(&mut self, key: PointN<N>, chunk: ChunkNode<Ch>) -> Option<ChunkNode<Ch>> {
         self.insert(key, chunk)
     }
 
     #[inline]
-    fn write(&mut self, key: PointN<N>, chunk: Ch) {
+    fn write(&mut self, key: PointN<N>, chunk: ChunkNode<Ch>) {
         self.insert(key, chunk);
     }
 
@@ -51,17 +48,17 @@ where
     }
 
     #[inline]
-    fn pop(&mut self, key: PointN<N>) -> Option<Ch> {
+    fn pop(&mut self, key: PointN<N>) -> Option<ChunkNode<Ch>> {
         self.remove(&key)
     }
 }
 
-impl<'a, N, Ch> IterChunkKeys<'a, N> for SmallKeyHashMap<PointN<N>, Ch>
+impl<'a, N, Ch> IterChunkKeys<'a, N> for SmallKeyHashMap<PointN<N>, ChunkNode<Ch>>
 where
     PointN<N>: 'a,
     Ch: 'a,
 {
-    type Iter = hash_map::Keys<'a, PointN<N>, Ch>;
+    type Iter = hash_map::Keys<'a, PointN<N>, ChunkNode<Ch>>;
 
     fn chunk_keys(&'a self) -> Self::Iter {
         self.keys()

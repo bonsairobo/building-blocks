@@ -99,7 +99,6 @@ To learn the basics about lattice maps, start with these doc pages:
 - [chunk map](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/chunk/map/index.html)
 - [transform map](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/transform_map/index.html)
 - [fn map](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/func/index.html)
-- [octrees](https://docs.rs/building_blocks_storage/latest/building_blocks_storage/octree/index.html)
 
 ### Benchmarks
 

@@ -20,6 +20,17 @@ bevy_utilities = { path = "bevy_utilities" }
 building-blocks = { path = "..", features = ["glam", "mesh", "sdfu"] }
 utilities = { path = "../crates/utilities", features = ["simdnoise"]}
 
+[dependencies.bevy]
+version = "0.5"
+# git = "https://github.com/bevyengine/bevy"
+# rev = "94c41840"
+# path = "../../../bevy"
+default-features = false
+features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]
+
+[dependencies]
+bevy-inspector-egui = "0.6"
+
 [[example]]
 name = "mesh_showcase"
 path = "mesh_showcase/mesh_showcase.rs"

@@ -15,14 +15,16 @@ We focus on generally useful data structures and algorithms. Features include:
 
 - 2D and 3D data storage
   - [`Array`](crate::storage::array) with structure-of-arrays (`SoA`) storage of multiple data channels per spatial dimension
-  - [`ChunkTree`](crate::storage::chunk::tree) with generic chunk storage
+  - [`ChunkTree`](crate::storage::chunk::tree) is a quadtree (2D) or octree (3D) with generic chunks and chunk storage
   - [`ChunkDb`](crate::storage::database) for compressed, persistent voxel worlds, backed by the
     [`sled`](https://docs.rs/sled) embedded database
 - level of detail
-  - `ChunkTree` can downsample chunks into lower resolutions within the same storage
-  - `ChunkTree` can act as a dynamic clipmap for keeping high detail close to a focal point
+  - `ChunkTree` can act as a clipmap for keeping high detail close to a focal point, generating events to trigger:
+    - chunk generation / loading
+    - chunk split / merge when desired sample rate changes
+    - chunk eviction
 - mesh generation
-  - Surface Nets isosurface extraction (TODO: multiresolution)
+  - Surface Nets isosurface extraction
   - Minecraft-style greedy meshing
   - height maps
 - spatial queries

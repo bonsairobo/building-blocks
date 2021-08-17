@@ -12,8 +12,10 @@ use voxel_map::{MapConfig, VoxelMap};
 
 use building_blocks::core::prelude::*;
 
+use bevy_inspector_egui::{Inspectable, InspectorPlugin};
 use bevy_utilities::{
     bevy::{
+        diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
         pbr::AmbientLight,
         prelude::*,
         render::camera::PerspectiveProjection,
@@ -69,11 +71,30 @@ fn run_example<Map: VoxelMap>() {
         .add_plugin(WireframePlugin)
         .add_plugin(LookTransformPlugin)
         .add_plugin(FpsCameraPlugin)
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(InspectorPlugin::<DiagnosticsInspectable>::new())
         .add_startup_system(setup::<Map>.system())
         .add_system(level_of_detail_system::<Map>.system())
         .add_system(mesh_generator_system::<Map>.system())
         .add_system(movement_sensitivity.system())
+        .add_system(diagnostics.system())
         .run();
+}
+
+#[derive(Inspectable, Default)]
+pub struct DiagnosticsInspectable {
+    fps: f64,
+}
+
+fn diagnostics(
+    diagnostics: Res<Diagnostics>,
+    mut diagnostics_inspectable: ResMut<DiagnosticsInspectable>,
+) {
+    if let Some(diagnostic) = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS) {
+        if let Some(value) = diagnostic.value() {
+            diagnostics_inspectable.fps = value;
+        }
+    }
 }
 
 fn movement_sensitivity(
@@ -88,6 +109,7 @@ fn movement_sensitivity(
         }
     }
 }
+
 fn setup<Map: VoxelMap>(
     map_config: Res<MapConfig>,
     mut commands: Commands,

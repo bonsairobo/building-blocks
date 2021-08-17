@@ -72,9 +72,22 @@ fn run_example<Map: VoxelMap>() {
         .add_startup_system(setup::<Map>.system())
         .add_system(level_of_detail_system::<Map>.system())
         .add_system(mesh_generator_system::<Map>.system())
+        .add_system(movement_sensitivity.system())
         .run();
 }
 
+fn movement_sensitivity(
+    keyboard: Res<Input<KeyCode>>,
+    mut controllers: Query<&mut FpsCameraController>,
+) {
+    if let Ok(mut controller) = controllers.single_mut() {
+        if keyboard.pressed(KeyCode::LControl) {
+            controller.translate_sensitivity = 5.;
+        } else {
+            controller.translate_sensitivity = 0.5;
+        }
+    }
+}
 fn setup<Map: VoxelMap>(
     map_config: Res<MapConfig>,
     mut commands: Commands,

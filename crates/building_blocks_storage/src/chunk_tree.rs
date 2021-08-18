@@ -481,21 +481,19 @@ where
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
-    /// Call `visitor` on all occupied chunks that overlap `extent` in level `lod`.
+    /// Call `visitor` on all occupied chunks in a pre-order, depth-first traversal.
+    ///
+    /// If `visitor` returns `false`, then no descendants of that chunk will be visited.
     #[inline]
-    pub fn visit_occupied_chunks(&self, lod: u8, extent: ExtentN<N>, mut visitor: impl FnMut(&Usr))
+    pub fn visit_occupied_chunks(&self, mut visitor: impl FnMut(ChunkKey<N>, &Usr) -> bool)
     where
         Store: for<'r> IterChunkKeys<'r, N>,
     {
         let root_lod = self.root_lod();
-        assert!(lod <= root_lod);
         let root_storage = self.lod_storage(root_lod);
-
         for &root_chunk_min in root_storage.chunk_keys() {
             self.visit_occupied_chunks_recursive(
                 ChunkKey::new(root_lod, root_chunk_min),
-                lod,
-                &extent,
                 &mut visitor,
             );
         }
@@ -504,29 +502,21 @@ where
     fn visit_occupied_chunks_recursive(
         &self,
         node_key: ChunkKey<N>,
-        lod: u8,
-        extent: &ExtentN<N>,
-        visitor: &mut impl FnMut(&Usr),
+        visitor: &mut impl FnMut(ChunkKey<N>, &Usr) -> bool,
     ) {
         if let Some(node) = self.get_node(node_key) {
-            if node_key.lod == lod {
-                if let Some(chunk) = &node.user_chunk {
-                    visitor(chunk);
+            if let Some(chunk) = &node.user_chunk {
+                if !visitor(node_key, chunk) {
+                    return;
                 }
-                return;
             }
 
             for child_i in 0..PointN::NUM_CORNERS {
                 if node.has_child(child_i) {
-                    let child_key = self.indexer.child_chunk_key(node_key, child_i);
-
-                    // Skip if this node is not an ancestor.
-                    let child_extent = self.indexer.chunk_extent_at_lower_lod(child_key, lod);
-                    if child_extent.intersection(extent).is_empty() {
-                        continue;
-                    }
-
-                    self.visit_occupied_chunks_recursive(child_key, lod, extent, visitor)
+                    self.visit_occupied_chunks_recursive(
+                        self.indexer.child_chunk_key(node_key, child_i),
+                        visitor,
+                    );
                 }
             }
         }
@@ -900,8 +890,14 @@ mod tests {
         let visit_extent = Extent3i::from_min_and_shape(PointN([16, 0, 0]), Point3i::fill(17));
 
         let mut visited_lod0_chunk_mins = Vec::new();
-        map.visit_occupied_chunks(0, visit_extent, |chunk| {
-            visited_lod0_chunk_mins.push(chunk.extent().minimum)
+        map.visit_occupied_chunks(|key, chunk| {
+            if chunk.extent().intersection(&visit_extent).is_empty() {
+                return false;
+            }
+            if key.lod == 0 {
+                visited_lod0_chunk_mins.push(chunk.extent().minimum);
+            }
+            true
         });
 
         assert_eq!(&visited_lod0_chunk_mins, &insert_chunk_mins[1..=2]);

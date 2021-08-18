@@ -54,17 +54,23 @@ fn run_example<Map: VoxelMap>() {
         ..Default::default()
     };
 
-    App::build()
+    let mut builder = App::build();
+    builder
         .insert_resource(map_config)
         .insert_resource(window_desc)
-        .insert_resource(Msaa { samples: 4 })
         .insert_resource(WgpuOptions {
             features: WgpuFeatures {
                 // The Wireframe requires NonFillPolygonMode feature
                 features: vec![WgpuFeature::NonFillPolygonMode],
             },
             ..Default::default()
-        })
+        });
+
+    if let Some(samples) = map_config.msaa {
+        builder.insert_resource(Msaa { samples });
+    }
+
+    builder
         .add_plugins(DefaultPlugins)
         .add_plugin(WireframePlugin)
         .add_plugin(LookTransformPlugin)

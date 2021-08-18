@@ -1,6 +1,6 @@
 use crate::{
     caching::*,
-    chunk::ChunkNode,
+    chunk_tree::ChunkNode,
     compression::MaybeCompressed,
     dev_prelude::{
         ChunkStorage, ChunkTree, Compressed, Compression, FastArrayCompression,
@@ -117,7 +117,7 @@ where
             CacheEntry::Evicted(location) => thread_local_caches
                 .get_or(LocalChunkCache::default)
                 .get(key)
-                .map(|v| MaybeCompressed::Decompressed(v))
+                .map(MaybeCompressed::Decompressed)
                 .unwrap_or_else(|| {
                     MaybeCompressed::Compressed(compressed.get(location.0).unwrap())
                 }),

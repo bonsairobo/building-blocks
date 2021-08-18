@@ -16,7 +16,7 @@
 pub mod access_traits;
 pub mod array;
 pub mod caching;
-pub mod chunk;
+pub mod chunk_tree;
 pub mod compression;
 pub mod func;
 #[doc(hidden)]
@@ -48,7 +48,7 @@ pub type SmallKeyBuildHasher = ahash::RandomState;
 pub mod prelude {
     pub use super::{
         array::{IndexedArray, Local, Stride},
-        chunk::{
+        chunk_tree::{
             AmbientExtent, ChunkDownsampler, ChunkKey, ChunkKey2, ChunkKey3, ChunkStorage,
             ChunkTreeBuilder, ChunkTreeConfig, ChunkUnits, ClipEvent2, ClipEvent3, IterChunkKeys,
             PointDownsampler, SdfMeanDownsampler, UserChunk,
@@ -66,9 +66,9 @@ pub mod prelude {
     pub use super::access_traits::*;
     pub use super::array::compression::multichannel_aliases::*;
     pub use super::array::multichannel_aliases::*;
-    pub use super::chunk::tree::builder::multichannel_aliases::*;
-    pub use super::chunk::tree::storage::compressible::multichannel_aliases::*;
-    pub use super::chunk::tree::storage::hash_map::multichannel_aliases::*;
+    pub use super::chunk_tree::builder::multichannel_aliases::*;
+    pub use super::chunk_tree::storage::compressible::multichannel_aliases::*;
+    pub use super::chunk_tree::storage::hash_map::multichannel_aliases::*;
 
     #[cfg(feature = "lz4")]
     pub use super::compression::Lz4;
@@ -94,7 +94,7 @@ pub mod dev_prelude {
             compression::FastArrayCompression,
             Array, IndexedArray,
         },
-        chunk::{
+        chunk_tree::{
             ChunkTree, ChunkTree2, ChunkTree3, ChunkTreeBuilderNxM, CompressibleChunkStorage,
             HashMapChunkTree,
         },

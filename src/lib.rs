@@ -13,7 +13,7 @@
 //!
 //! - 2D and 3D data storage
 //!   - [`Array`](crate::storage::array) with structure-of-arrays (`SoA`) storage of multiple data channels per spatial dimension
-//!   - [`ChunkTree`](crate::storage::chunk::tree) is a quadtree (2D) or octree (3D) with generic chunks and chunk storage
+//!   - [`ChunkTree`](crate::storage::chunk_tree) is a quadtree (2D) or octree (3D) with generic chunks and chunk storage
 //!   - [`ChunkDb`](crate::storage::database) for compressed, persistent voxel worlds, backed by the
 //!     [`sled`](https://docs.rs/sled) embedded database
 //! - level of detail

@@ -223,7 +223,7 @@ mod tests {
     use crate::prelude::{Sd8, SdfMeanDownsampler};
 
     #[test]
-    fn downsample_multichannel_chunks_with_index() {
+    fn downsample_multichannel_chunks() {
         let chunk_shape = Point3i::fill(16);
         let ambient = (Sd8::ONE, 'a');
 

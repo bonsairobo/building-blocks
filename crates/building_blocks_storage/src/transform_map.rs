@@ -40,7 +40,7 @@
 
 use crate::{
     array::ArrayCopySrc,
-    chunk::{ChunkCopySrc, ChunkCopySrcIter, ChunkTreeLodView, UserChunk},
+    chunk_tree::{ChunkCopySrc, ChunkCopySrcIter, ChunkTreeLodView, UserChunk},
     dev_prelude::{
         AmbientExtent, Array, ChunkStorage, ChunkTree, ForEach, Get, GetUnchecked, IndexedArray,
         ReadExtent,

@@ -22,7 +22,7 @@
 //!
 //! `ChunkTree<N, T, Bldr, Store>` depends on a backing chunk storage `Store`, which must implement the [`ChunkStorage`] trait.
 //! A storage can be as simple as a [`SmallKeyHashMap`](crate::SmallKeyHashMap). It could also be something more memory
-//! efficient like [`CompressibleChunkStorage`](crate::chunk::CompressibleChunkStorage) which performs nearly as well but
+//! efficient like [`CompressibleChunkStorage`](self::CompressibleChunkStorage) which performs nearly as well but
 //! involves some overhead for caching and compression.
 //!
 //! # Serialization
@@ -125,18 +125,19 @@
 
 pub mod builder;
 pub mod clipmap;
+pub mod indexer;
 pub mod lod_view;
 pub mod sampling;
 pub mod storage;
 
 pub use builder::*;
 pub use clipmap::*;
+pub use indexer::*;
 pub use lod_view::*;
 pub use sampling::*;
 pub use storage::*;
 
 use crate::{
-    chunk::ChunkIndexer,
     dev_prelude::{Array, FillExtent, ForEach, GetMutUnchecked, GetRefUnchecked, GetUnchecked},
     multi_ptr::MultiRef,
 };
@@ -149,58 +150,6 @@ use building_blocks_core::{
 
 use either::Either;
 use serde::{Deserialize, Serialize};
-
-/// Arbitrarily chosen. Certainly can't exceed the number of bits in an i32.
-pub const MAX_LODS: usize = 20;
-
-/// The key for a chunk at a particular level of detail.
-#[allow(clippy::derive_hash_xor_eq)] // This is fine, the custom PartialEq is the same as what would've been derived.
-#[derive(Debug, Deserialize, Hash, Eq, Serialize)]
-pub struct ChunkKey<N> {
-    /// The minimum point of the chunk.
-    pub minimum: PointN<N>,
-    /// The level of detail. From highest resolution at 0 to lowest resolution at MAX_LOD.
-    pub lod: u8,
-}
-
-// A few of these traits could be derived. But it seems that derive will not help the compiler infer trait bounds as well.
-
-impl<N> Clone for ChunkKey<N>
-where
-    PointN<N>: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            minimum: self.minimum.clone(),
-            lod: self.lod,
-        }
-    }
-}
-impl<N> Copy for ChunkKey<N> where PointN<N>: Copy {}
-
-impl<N> PartialEq for ChunkKey<N>
-where
-    PointN<N>: PartialEq,
-{
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        self.minimum == other.minimum && self.lod == other.lod
-    }
-}
-
-/// A 2-dimensional `ChunkKey`.
-pub type ChunkKey2 = ChunkKey<[i32; 2]>;
-/// A 3-dimensional `ChunkKey`.
-pub type ChunkKey3 = ChunkKey<[i32; 3]>;
-
-impl<N> ChunkKey<N> {
-    pub fn new(lod: u8, chunk_minimum: PointN<N>) -> Self {
-        Self {
-            lod,
-            minimum: chunk_minimum,
-        }
-    }
-}
 
 /// The user-accessible data stored in each chunk of a `ChunkTree`.
 ///

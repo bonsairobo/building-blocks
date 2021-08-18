@@ -16,7 +16,9 @@ where
     /// rendering. More specifically, let `D` be the Euclidean distance from `lod0_focus` to the center of the chunk (in LOD0
     /// space), and let `S` be the shape of the chunk (in LOD0 space). The chunk can be active if
     ///
+    /// ```text
     ///     (D / S) > detail
+    /// ```
     ///
     /// where `detail` is a nonnegative constant parameter supplied by you. Along a given path from a root chunk to a leaf, the
     /// least detailed chunk that *can* be active is used.

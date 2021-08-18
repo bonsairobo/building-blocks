@@ -1,8 +1,11 @@
-use crate::dev_prelude::{ChunkKey, Local};
+use crate::dev_prelude::Local;
 
 use building_blocks_core::prelude::*;
 
 use serde::{Deserialize, Serialize};
+
+/// Arbitrarily chosen. Certainly can't exceed the number of bits in an i32.
+pub const MAX_LODS: usize = 20;
 
 /// Calculates chunk locations, e.g. minimums and downsampling destinations.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -131,10 +134,72 @@ where
     }
 }
 
+/// The key for a chunk at a particular level of detail.
+#[allow(clippy::derive_hash_xor_eq)] // This is fine, the custom PartialEq is the same as what would've been derived.
+#[derive(Debug, Deserialize, Hash, Eq, Serialize)]
+pub struct ChunkKey<N> {
+    /// The minimum point of the chunk.
+    pub minimum: PointN<N>,
+    /// The level of detail. From highest resolution at 0 to lowest resolution at MAX_LOD.
+    pub lod: u8,
+}
+
+// A few of these traits could be derived. But it seems that derive will not help the compiler infer trait bounds as well.
+
+impl<N> Clone for ChunkKey<N>
+where
+    PointN<N>: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            minimum: self.minimum.clone(),
+            lod: self.lod,
+        }
+    }
+}
+impl<N> Copy for ChunkKey<N> where PointN<N>: Copy {}
+
+impl<N> PartialEq for ChunkKey<N>
+where
+    PointN<N>: PartialEq,
+{
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.minimum == other.minimum && self.lod == other.lod
+    }
+}
+
+/// A 2-dimensional `ChunkKey`.
+pub type ChunkKey2 = ChunkKey<[i32; 2]>;
+/// A 3-dimensional `ChunkKey`.
+pub type ChunkKey3 = ChunkKey<[i32; 3]>;
+
+impl<N> ChunkKey<N> {
+    pub fn new(lod: u8, chunk_minimum: PointN<N>) -> Self {
+        Self {
+            lod,
+            minimum: chunk_minimum,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct DownsampleDestination<N> {
     pub chunk_key: ChunkKey<N>,
     pub offset: Local<N>,
+}
+
+/// A newtype wrapper for `PointN` or `ExtentN` where each point represents exactly one chunk.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct ChunkUnits<T>(pub T);
+
+impl<N> ChunkUnits<PointN<N>>
+where
+    PointN<N>: IntegerPoint<N>,
+{
+    pub fn chunk_min(&self, chunk_shape: PointN<N>) -> PointN<N> {
+        chunk_shape * self.0
+    }
 }
 
 // ████████╗███████╗███████╗████████╗

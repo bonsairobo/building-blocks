@@ -161,7 +161,7 @@ pub(crate) use for_each::*;
 pub(crate) use indexer::*;
 
 use crate::{
-    chunk::ChunkCopySrc,
+    chunk_tree::ChunkCopySrc,
     dev_prelude::{
         FillExtent, ForEach, ForEachMut, ForEachMutPtr, Get, GetMut, GetMutPtr, GetRef, ReadExtent,
         TransformMap, WriteExtent,

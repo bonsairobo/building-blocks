@@ -32,7 +32,7 @@ where
     ///
     /// All ancestors from `src_lod + 1` to `max_lod` (inclusive) will be targeted as sample destinations. Levels from `max_lod
     /// + 1` to the roots will not be touched.
-    pub fn downsample_extent<Samp>(
+    pub fn downsample_extent_into_self<Samp>(
         &mut self,
         sampler: &Samp,
         src_lod: u8,
@@ -41,8 +41,8 @@ where
     ) where
         Samp: ChunkDownsampler<N, T, Usr::Array, Usr::Array>,
     {
-        self.downsample_extent_internal(
-            |this, src_chunk_key| this.downsample_chunk(sampler, src_chunk_key),
+        self.downsample_extent_into_self_internal(
+            |this, src_chunk_key| this.downsample_into_self(sampler, src_chunk_key),
             src_lod,
             max_lod,
             src_extent,
@@ -64,16 +64,20 @@ where
         Samp: ChunkDownsampler<N, T, Usr::Array, Usr::Array>
             + ChunkDownsampler<N, T, Lod0ChBorrow::Array, Usr::Array>,
     {
-        self.downsample_extent_internal(
+        self.downsample_extent_into_self_internal(
             |this, src_chunk_key| {
                 if src_chunk_key.lod == 0 {
                     if let Some(src_chunk) = get_lod0_chunk(src_chunk_key.minimum) {
-                        this.downsample_external_chunk(sampler, src_chunk_key, src_chunk.borrow());
+                        this.downsample_external_into_self(
+                            sampler,
+                            src_chunk_key,
+                            src_chunk.borrow(),
+                        );
                     } else {
-                        this.downsample_ambient_chunk(src_chunk_key);
+                        this.downsample_ambient_into_self(src_chunk_key);
                     }
                 } else {
-                    this.downsample_chunk(sampler, src_chunk_key);
+                    this.downsample_into_self(sampler, src_chunk_key);
                 }
             },
             src_lod,
@@ -82,7 +86,7 @@ where
         );
     }
 
-    fn downsample_extent_internal(
+    fn downsample_extent_into_self_internal(
         &mut self,
         mut downsample_fn: impl FnMut(&mut Self, ChunkKey<N>),
         src_lod: u8,
@@ -94,7 +98,7 @@ where
         assert!(max_lod <= root_lod);
         let root_keys: Vec<_> = self.lod_storage(root_lod).chunk_keys().cloned().collect();
         for root_chunk_min in root_keys.into_iter() {
-            self.downsample_extent_internal_recursive(
+            self.downsample_extent_into_self_internal_recursive(
                 &mut downsample_fn,
                 ChunkKey::new(root_lod, root_chunk_min),
                 src_lod,
@@ -104,7 +108,7 @@ where
         }
     }
 
-    fn downsample_extent_internal_recursive(
+    fn downsample_extent_into_self_internal_recursive(
         &mut self,
         downsample_fn: &mut impl FnMut(&mut Self, ChunkKey<N>),
         node_key: ChunkKey<N>,
@@ -129,7 +133,7 @@ where
                             continue;
                         }
 
-                        self.downsample_extent_internal_recursive(
+                        self.downsample_extent_into_self_internal_recursive(
                             downsample_fn,
                             child_key,
                             src_lod,
@@ -148,25 +152,112 @@ where
     }
 
     /// Downsamples the chunk at `src_chunk_key` into `lod + 1`.
-    fn downsample_chunk<Samp>(&mut self, sampler: &Samp, src_chunk_key: ChunkKey<N>)
+    pub fn downsample_into_self<Samp>(&mut self, sampler: &Samp, src_chunk_key: ChunkKey<N>)
     where
         Samp: ChunkDownsampler<N, T, Usr::Array, Usr::Array>,
     {
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
         if let Some(src_node) = self.pop_node(src_chunk_key) {
             if let Some(src_chunk) = &src_node.user_chunk {
-                self.downsample_external_chunk(sampler, src_chunk_key, src_chunk);
+                self.downsample_external_into_self(sampler, src_chunk_key, src_chunk);
             } else {
-                self.downsample_ambient_chunk(src_chunk_key);
+                self.downsample_ambient_into_self(src_chunk_key);
             }
             self.write_node(src_chunk_key, src_node);
         } else {
-            self.downsample_ambient_chunk(src_chunk_key)
+            self.downsample_ambient_into_self(src_chunk_key)
+        }
+    }
+
+    /// Downsamples all descendants of `dst_chunk`, down to `min_src_lod`. This enables parallel downsampling via
+    /// write-out-of-place.
+    ///
+    /// **WARNING**: Only occupied chunk slots will be downsampled. You will most likely want to initialize `dst_chunk` to all
+    /// ambient values.
+    pub fn downsample_descendants_into_external<Samp, Dst>(
+        &self,
+        sampler: &Samp,
+        min_src_lod: u8,
+        dst_chunk_key: ChunkKey<N>,
+        dst_chunk: &mut Dst,
+    ) where
+        Samp: ChunkDownsampler<N, T, Usr::Array, Dst>,
+        Dst: FillExtent<N, Item = T> + IndexedArray<N>,
+    {
+        assert!(min_src_lod < dst_chunk_key.lod);
+        self.downsample_descendants_into_external_recursive(
+            sampler,
+            min_src_lod,
+            dst_chunk_key,
+            dst_chunk,
+        );
+    }
+
+    fn downsample_descendants_into_external_recursive<Samp, Dst>(
+        &self,
+        sampler: &Samp,
+        min_src_lod: u8,
+        node_key: ChunkKey<N>,
+        dst_chunk: &mut Dst,
+    ) where
+        Samp: ChunkDownsampler<N, T, Usr::Array, Dst>,
+        Dst: FillExtent<N, Item = T> + IndexedArray<N>,
+    {
+        if node_key.lod > min_src_lod {
+            if let Some(node) = self.get_node(node_key) {
+                let child_mask = node.child_mask;
+                for child_i in 0..PointN::NUM_CORNERS {
+                    if child_mask_has_child(child_mask, child_i) {
+                        let child_key = self.indexer.child_chunk_key(node_key, child_i);
+                        self.downsample_descendants_into_external_recursive(
+                            sampler,
+                            min_src_lod,
+                            child_key,
+                            dst_chunk,
+                        );
+                    }
+                }
+            }
+        }
+
+        // Do a post-order traversal so we can start sampling from the bottom of the tree and work our way up.
+        self.downsample_into_external(sampler, node_key, dst_chunk);
+    }
+
+    /// Downsamples the chunk at `src_chunk_key` into `dst_chunk`, assuming that `dst_chunk` will be stored in the parent node.
+    pub fn downsample_into_external<Samp, Dst>(
+        &self,
+        sampler: &Samp,
+        src_chunk_key: ChunkKey<N>,
+        dst_chunk: &mut Dst,
+    ) where
+        Samp: ChunkDownsampler<N, T, Usr::Array, Dst>,
+        Dst: FillExtent<N, Item = T> + IndexedArray<N>,
+    {
+        let dst = self.indexer.downsample_destination(src_chunk_key);
+        if let Some(src_node) = self.get_node(src_chunk_key) {
+            if let Some(src_chunk) = &src_node.user_chunk {
+                sampler.downsample(src_chunk.array(), dst_chunk, dst.offset);
+            } else {
+                Self::downsample_ambient_into_external(
+                    self.chunk_shape(),
+                    self.ambient_value.clone(),
+                    dst.offset,
+                    dst_chunk,
+                );
+            }
+        } else {
+            Self::downsample_ambient_into_external(
+                self.chunk_shape(),
+                self.ambient_value.clone(),
+                dst.offset,
+                dst_chunk,
+            );
         }
     }
 
     /// Downsamples `src_chunk` into `src_chunk_key.lod + 1`.
-    fn downsample_external_chunk<Samp, Src>(
+    fn downsample_external_into_self<Samp, Src>(
         &mut self,
         sampler: &Samp,
         src_chunk_key: ChunkKey<N>,
@@ -181,17 +272,29 @@ where
     }
 
     /// Downsamples an ambient chunk into `lod + 1`. This simply fills the destination extent with the ambient value.
-    fn downsample_ambient_chunk(&mut self, src_chunk_key: ChunkKey<N>) {
+    fn downsample_ambient_into_self(&mut self, src_chunk_key: ChunkKey<N>) {
+        let ambient = self.ambient_value.clone();
         let chunk_shape = self.chunk_shape();
-        let ambient_value = self.ambient_value.clone();
         let dst = self.indexer.downsample_destination(src_chunk_key);
         let dst_chunk = self.get_mut_chunk_or_insert_ambient(dst.chunk_key);
         let dst_array = dst_chunk.array_mut();
+        Self::downsample_ambient_into_external(chunk_shape, ambient, dst.offset, dst_array);
+    }
+
+    /// Downsamples an ambient chunk into `lod + 1`. This simply fills the destination extent with the ambient value.
+    fn downsample_ambient_into_external<Dst>(
+        chunk_shape: PointN<N>,
+        ambient: T,
+        dst_offset: Local<N>,
+        dst_chunk: &mut Dst,
+    ) where
+        Dst: FillExtent<N, Item = T> + IndexedArray<N>,
+    {
         let dst_extent = ExtentN::from_min_and_shape(
-            dst_array.extent().minimum + dst.offset.0,
+            dst_chunk.extent().minimum + dst_offset.0,
             chunk_shape >> 1,
         );
-        dst_array.fill_extent(&dst_extent, ambient_value);
+        dst_chunk.fill_extent(&dst_extent, ambient);
     }
 }
 

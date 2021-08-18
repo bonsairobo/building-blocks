@@ -86,7 +86,7 @@ impl VoxelMap for BlockyVoxelMap {
             chunks.write_chunk(ChunkKey::new(0, chunk_min), blocky_voxels_from_sdf(&noise));
         }
 
-        chunks.downsample_extent(&PointDownsampler, 0, root_lod, config.world_extent());
+        chunks.downsample_extent_into_self(&PointDownsampler, 0, root_lod, config.world_extent());
 
         Self { chunks, config }
     }

@@ -57,7 +57,7 @@ impl VoxelMap for SmoothVoxelMap {
             chunks.write_chunk(ChunkKey::new(0, chunk_min), noise);
         }
 
-        chunks.downsample_extent(&SdfMeanDownsampler, 0, root_lod, config.world_extent());
+        chunks.downsample_extent_into_self(&SdfMeanDownsampler, 0, root_lod, config.world_extent());
 
         Self { chunks, config }
     }

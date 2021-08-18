@@ -1,5 +1,5 @@
 use building_blocks_core::prelude::*;
-use building_blocks_storage::{chunk::ChunkTree3x1, prelude::*, SmallKeyHashMap};
+use building_blocks_storage::{chunk_tree::ChunkTree3x1, prelude::*, SmallKeyHashMap};
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
@@ -136,9 +136,10 @@ fn chunk_hash_map_visit_chunks_sparse(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
                 || set_up_sparse_chunk_map(SmallKeyHashMap::default, size, 3),
-                |(chunk_map, iter_extent)| {
-                    chunk_map.visit_occupied_chunks(0, iter_extent, |chunk| {
-                        black_box(chunk);
+                |(chunk_map, _)| {
+                    chunk_map.visit_occupied_chunks(|key, chunk| {
+                        black_box((key, chunk));
+                        true
                     });
                 },
             );

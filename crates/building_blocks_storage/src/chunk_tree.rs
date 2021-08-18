@@ -666,6 +666,7 @@ where
         }
     }
 
+    /// Remove the chunk at `key`. This does not affect descendant or ancestor chunks.
     #[inline]
     pub fn pop_chunk(&mut self, key: ChunkKey<N>) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));

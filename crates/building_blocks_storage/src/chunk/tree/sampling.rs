@@ -4,9 +4,9 @@ mod sdf_mean;
 pub use point::*;
 pub use sdf_mean::*;
 
+use super::child_mask_has_child;
 use crate::{
     array::{ArrayIndexer, LockStepArrayForEach},
-    chunk::child_mask_has_child,
     dev_prelude::*,
 };
 
@@ -26,7 +26,7 @@ where
     Usr: UserChunk,
     Usr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
-    Store: ChunkStorage<N, Chunk = Usr>,
+    Store: ChunkStorage<N, Chunk = Usr> + for<'r> IterChunkKeys<'r, N>,
 {
     /// Downsamples all chunks in level `src_lod` that overlap `src_extent`.
     ///
@@ -90,20 +90,14 @@ where
         let root_lod = self.root_lod();
         assert!(src_lod < root_lod);
         assert!(max_lod <= root_lod);
-        // Get an extent at each level that covers all ancestors we want to visit.
-        let covering_extents = self
-            .indexer
-            .covering_ancestor_extents_for_lods(root_lod, src_lod, src_extent);
-        for root_lod_chunk_min in self
-            .indexer
-            .chunk_mins_for_extent(&covering_extents[root_lod as usize])
-        {
+        let root_keys: Vec<_> = self.lod_storage(root_lod).chunk_keys().cloned().collect();
+        for root_chunk_min in root_keys.into_iter() {
             self.downsample_extent_internal_recursive(
                 &mut downsample_fn,
-                ChunkKey::new(root_lod, root_lod_chunk_min),
+                ChunkKey::new(root_lod, root_chunk_min),
                 src_lod,
                 max_lod,
-                &covering_extents,
+                &src_extent,
             );
         }
     }
@@ -114,10 +108,10 @@ where
         node_key: ChunkKey<N>,
         src_lod: u8,
         max_lod: u8,
-        covering_extents: &[ExtentN<N>],
+        src_extent: &ExtentN<N>,
     ) {
         if node_key.lod > src_lod {
-            if let Some(node) = self.get_chunk_node(node_key) {
+            if let Some(node) = self.get_node(node_key) {
                 let child_mask = node.child_mask;
                 for child_i in 0..PointN::NUM_CORNERS {
                     if child_mask_has_child(child_mask, child_i) {
@@ -126,8 +120,8 @@ where
                         // Only visit chunks overlapping src_extent and ancestors.
                         if self
                             .indexer
-                            .extent_for_chunk_with_min(child_key.minimum)
-                            .intersection(&covering_extents[child_key.lod as usize])
+                            .chunk_extent_at_lower_lod(child_key, src_lod)
+                            .intersection(src_extent)
                             .is_empty()
                         {
                             continue;
@@ -138,7 +132,7 @@ where
                             child_key,
                             src_lod,
                             max_lod,
-                            covering_extents,
+                            src_extent,
                         );
                     }
                 }
@@ -157,13 +151,13 @@ where
         Samp: ChunkDownsampler<N, T, Usr, Usr>,
     {
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
-        if let Some(src_node) = self.pop_chunk_node(src_chunk_key) {
+        if let Some(src_node) = self.pop_node(src_chunk_key) {
             if let Some(src_chunk) = &src_node.user_chunk {
                 self.downsample_external_chunk(sampler, src_chunk_key, src_chunk);
             } else {
                 self.downsample_ambient_chunk(src_chunk_key);
             }
-            self.write_chunk_node(src_chunk_key, src_node);
+            self.write_node(src_chunk_key, src_node);
         } else {
             self.downsample_ambient_chunk(src_chunk_key)
         }

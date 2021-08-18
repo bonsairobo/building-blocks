@@ -15,8 +15,10 @@ use core::hash::Hash;
 use slab::Slab;
 use thread_local::ThreadLocal;
 
-/// A two-tier chunk storage. The first tier is an LRU cache of uncompressed chunks. The second tier is a `Slab` of compressed
-/// chunks.
+/// A three-tier chunk storage optimized for memory usage.
+///
+/// The first tier is an LRU cache of uncompressed chunks. The second tier is a thread-local cache of uncompressed chunks that
+/// only gets written to when immutable access requires decompression. The third tier is a `Slab` of compressed chunks.
 pub struct CompressibleChunkStorage<N, Compr>
 where
     N: Send,
@@ -29,7 +31,8 @@ where
     compressed: CompressedChunks<Compr>,
 }
 
-/// A `LocalCache` of chunks.
+type CompressedChunks<Compr> = Slab<ChunkNode<Compressed<Compr>>>;
+
 type LocalChunkCache<N, Ch> = LocalCache<PointN<N>, Ch, SmallKeyBuildHasher>;
 
 pub type FastCompressibleChunkStorage<N, By, Chan> =
@@ -48,8 +51,6 @@ where
         ))
     }
 }
-
-pub type CompressedChunks<Compr> = Slab<ChunkNode<Compressed<Compr>>>;
 
 impl<N, Compr> CompressibleChunkStorage<N, Compr>
 where
@@ -94,11 +95,104 @@ where
         self.len_total() == 0
     }
 
-    /// Returns a copy of the `Chunk` at `key`.
+    /// Tries to fetch the value from three different tiers in order:
+    ///
+    /// 1. main cache
+    /// 2. thread local cache
+    /// 3. compressed storage
+    ///
+    /// WARNING: the cache will not be updated.
+    pub fn get_without_caching(
+        &self,
+        key: PointN<N>,
+    ) -> Option<MaybeCompressed<&ChunkNode<Compr::Data>, &ChunkNode<Compressed<Compr>>>> {
+        let Self {
+            thread_local_caches,
+            main_cache,
+            compressed,
+            ..
+        } = self;
+        main_cache.get(&key).map(|entry| match entry {
+            CacheEntry::Cached(value) => MaybeCompressed::Decompressed(value),
+            CacheEntry::Evicted(location) => thread_local_caches
+                .get_or(LocalChunkCache::default)
+                .get(key)
+                .map(|v| MaybeCompressed::Decompressed(v))
+                .unwrap_or_else(|| {
+                    MaybeCompressed::Compressed(compressed.get(location.0).unwrap())
+                }),
+        })
+    }
+
+    /// Same as `get_without_caching`, but it skips over the thread-local cache. This only has the effect of eliding one hash
+    /// map lookup if we don't need to prioritize finding a decompressed chunk.
+    ///
+    /// WARNING: the cache will not be updated.
+    pub fn get_without_caching_and_skip_thread_local(
+        &self,
+        key: PointN<N>,
+    ) -> Option<MaybeCompressed<&ChunkNode<Compr::Data>, &ChunkNode<Compressed<Compr>>>> {
+        let Self {
+            main_cache,
+            compressed,
+            ..
+        } = self;
+        main_cache.get(&key).map(|entry| match entry {
+            CacheEntry::Cached(value) => MaybeCompressed::Decompressed(value),
+            CacheEntry::Evicted(location) => {
+                MaybeCompressed::Compressed(compressed.get(location.0).unwrap())
+            }
+        })
+    }
+
+    /// Same as `get_without_caching`, but it skips over the thread-local cache. This only has the effect of eliding one hash
+    /// map lookup if we don't need to prioritize finding a decompressed chunk.
+    ///
+    /// WARNING: the cache will not be updated.
+    pub fn get_mut_without_caching_and_skip_thread_local(
+        &mut self,
+        key: PointN<N>,
+    ) -> Option<MaybeCompressed<&mut ChunkNode<Compr::Data>, &mut ChunkNode<Compressed<Compr>>>>
+    {
+        let Self {
+            main_cache,
+            compressed,
+            ..
+        } = self;
+        main_cache.get_mut(&key).map(move |entry| match entry {
+            CacheEntry::Cached(value) => MaybeCompressed::Decompressed(value),
+            CacheEntry::Evicted(location) => {
+                MaybeCompressed::Compressed(compressed.get_mut(location.0).unwrap())
+            }
+        })
+    }
+
+    /// Same as `get_mut_without_caching_and_skip_thread_local`, but it will fill the entry with `create_node`.
+    ///
+    /// WARNING: the cache will not be updated.
+    pub fn get_mut_or_insert_without_caching_and_skip_thread_local(
+        &mut self,
+        key: PointN<N>,
+        create_node: impl FnOnce() -> ChunkNode<Compr::Data>,
+    ) -> MaybeCompressed<&mut ChunkNode<Compr::Data>, &mut ChunkNode<Compressed<Compr>>> {
+        let Self {
+            main_cache,
+            compressed,
+            ..
+        } = self;
+        match main_cache.get_mut_or_insert_without_repopulate(key, create_node) {
+            CacheEntry::Cached(value) => MaybeCompressed::Decompressed(value),
+            CacheEntry::Evicted(location) => {
+                MaybeCompressed::Compressed(compressed.get_mut(location.0).unwrap())
+            }
+        }
+    }
+
+    /// Returns a clone of the entry at `key`.
     ///
     /// WARNING: the cache will not be updated. This method should be used for a read-modify-write workflow where it would be
     /// inefficient to cache the chunk only for it to be overwritten by the modified version.
-    pub fn copy_without_caching(
+    pub fn clone_without_caching(
         &self,
         key: PointN<N>,
     ) -> Option<MaybeCompressed<ChunkNode<Compr::Data>, ChunkNode<Compressed<Compr>>>>
@@ -106,15 +200,13 @@ where
         Compr::Data: Clone,
         Compressed<Compr>: Clone,
     {
-        self.main_cache.get(&key).map(|entry| match entry {
-            CacheEntry::Cached(chunk) => MaybeCompressed::Decompressed(chunk.clone()),
-            CacheEntry::Evicted(location) => {
-                MaybeCompressed::Compressed(self.compressed.get(location.0).unwrap().clone())
-            }
+        self.get_without_caching(key).map(|e| match e {
+            MaybeCompressed::Compressed(c) => MaybeCompressed::Compressed(c.clone()),
+            MaybeCompressed::Decompressed(d) => MaybeCompressed::Decompressed(d.clone()),
         })
     }
 
-    /// Remove the `Chunk` at `key`.
+    /// Remove the entry at `key`.
     pub fn remove(
         &mut self,
         key: PointN<N>,
@@ -127,8 +219,7 @@ where
         })
     }
 
-    /// Compress the least-recently-used, cached chunk. On access, compressed chunks will be
-    /// decompressed and cached.
+    /// Compress the least-recently-used, cached entry.
     pub fn compress_lru(&mut self) {
         let CompressibleChunkStorage {
             main_cache,
@@ -143,14 +234,11 @@ where
     }
 
     /// Remove the least-recently-used, cached chunk.
-    ///
-    /// This is useful for removing a batch of chunks at a time before compressing them in parallel. Then call
-    /// `insert_compressed`.
     pub fn remove_lru(&mut self) -> Option<(PointN<N>, ChunkNode<Compr::Data>)> {
         self.main_cache.remove_lru()
     }
 
-    /// Insert a compressed chunk. Returns the old chunk if one exists.
+    /// Insert a node with a compressed chunk. Returns the old node if one exists.
     pub fn insert_compressed(
         &mut self,
         key: PointN<N>,
@@ -181,14 +269,14 @@ where
         }
     }
 
-    /// Inserts `chunk` at `key` and returns the old chunk.
-    pub fn insert_chunk(
+    /// Inserts `node` at `key` and returns the old node.
+    pub fn insert(
         &mut self,
         key: PointN<N>,
-        chunk: ChunkNode<Compr::Data>,
+        node: ChunkNode<Compr::Data>,
     ) -> Option<MaybeCompressed<ChunkNode<Compr::Data>, ChunkNode<Compressed<Compr>>>> {
         self.main_cache
-            .insert(key, chunk)
+            .insert(key, node)
             .map(|old_entry| match old_entry {
                 CacheEntry::Cached(old_chunk) => MaybeCompressed::Decompressed(old_chunk),
                 CacheEntry::Evicted(location) => {
@@ -208,8 +296,8 @@ where
     type Chunk = Compr::Data;
     type ChunkRepr = MaybeCompressed<Compr::Data, Compressed<Compr>>;
 
-    /// Borrow the chunk at `key`.
-    fn get(&self, key: PointN<N>) -> Option<&ChunkNode<Self::Chunk>> {
+    /// Borrow the node at `key`.
+    fn get_node(&self, key: PointN<N>) -> Option<&ChunkNode<Self::Chunk>> {
         let Self {
             thread_local_caches,
             main_cache,
@@ -231,7 +319,7 @@ where
     }
 
     #[inline]
-    fn get_mut(&mut self, key: PointN<N>) -> Option<&mut ChunkNode<Self::Chunk>> {
+    fn get_mut_node(&mut self, key: PointN<N>) -> Option<&mut ChunkNode<Self::Chunk>> {
         let Self {
             main_cache,
             compressed,
@@ -247,10 +335,10 @@ where
     }
 
     #[inline]
-    fn get_mut_or_insert_with(
+    fn get_mut_node_or_insert_with(
         &mut self,
         key: PointN<N>,
-        create_chunk: impl FnOnce() -> ChunkNode<Self::Chunk>,
+        create_node: impl FnOnce() -> ChunkNode<Self::Chunk>,
     ) -> &mut ChunkNode<Self::Chunk> {
         let Self {
             main_cache,
@@ -265,58 +353,105 @@ where
                     .as_ref()
                     .map(Compressed::decompress)
             },
-            create_chunk,
+            create_node,
         )
     }
 
     #[inline]
-    fn replace(
+    fn replace_node(
         &mut self,
         key: PointN<N>,
-        chunk: ChunkNode<Self::Chunk>,
+        node: ChunkNode<Self::Chunk>,
     ) -> Option<ChunkNode<Self::Chunk>> {
-        self.insert_chunk(key, chunk)
-            .map(|old_chunk| match old_chunk {
-                MaybeCompressed::Decompressed(old_chunk) => old_chunk,
-                MaybeCompressed::Compressed(old_chunk) => {
-                    old_chunk.as_ref().map(Compressed::decompress)
-                }
-            })
+        self.insert(key, node).map(|old_chunk| match old_chunk {
+            MaybeCompressed::Decompressed(old_chunk) => old_chunk,
+            MaybeCompressed::Compressed(old_chunk) => {
+                old_chunk.as_ref().map(Compressed::decompress)
+            }
+        })
     }
 
     #[inline]
-    fn write(&mut self, key: PointN<N>, chunk: ChunkNode<Self::Chunk>) {
-        self.insert_chunk(key, chunk);
+    fn write_node(&mut self, key: PointN<N>, chunk: ChunkNode<Self::Chunk>) {
+        self.insert(key, chunk);
     }
 
     #[inline]
-    fn write_raw(&mut self, key: PointN<N>, chunk: ChunkNode<Self::ChunkRepr>) {
-        if let Some(user_chunk) = chunk.user_chunk {
+    fn write_raw_node(&mut self, key: PointN<N>, node: ChunkNode<Self::ChunkRepr>) {
+        if let Some(user_chunk) = node.user_chunk {
             match user_chunk {
                 MaybeCompressed::Compressed(c) => {
-                    self.insert_compressed(key, ChunkNode::new(Some(c), chunk.child_mask));
+                    self.insert_compressed(key, ChunkNode::new(Some(c), node.child_mask));
                 }
                 MaybeCompressed::Decompressed(d) => {
-                    self.write(key, ChunkNode::new(Some(d), chunk.child_mask))
+                    self.write_node(key, ChunkNode::new(Some(d), node.child_mask))
                 }
             }
         } else {
-            self.write(key, ChunkNode::new_without_data(chunk.child_mask))
+            self.write_node(key, ChunkNode::new_without_data(node.child_mask))
         }
     }
 
     #[inline]
-    fn pop(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::Chunk>> {
+    fn pop_node(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::Chunk>> {
         self.remove(key)
             .map(|ch| ch.into_decompressed_with(|c| c.as_ref().map(Compressed::decompress)))
     }
 
     #[inline]
-    fn pop_raw(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::ChunkRepr>> {
+    fn pop_raw_node(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::ChunkRepr>> {
         self.remove(key).map(|c| match c {
             MaybeCompressed::Compressed(n) => n.map(MaybeCompressed::Compressed),
             MaybeCompressed::Decompressed(n) => n.map(MaybeCompressed::Decompressed),
         })
+    }
+
+    #[inline]
+    fn write_chunk(&mut self, key: PointN<N>, chunk: Self::Chunk) {
+        let Self {
+            main_cache,
+            compressed,
+            ..
+        } = self;
+        let node = main_cache.get_mut_or_insert_with(
+            key,
+            |location| {
+                let node = compressed.remove(location.0);
+                ChunkNode::new_without_data(node.child_mask)
+            },
+            ChunkNode::new_empty,
+        );
+        node.user_chunk = Some(chunk);
+    }
+
+    #[inline]
+    fn get_child_mask(&self, key: PointN<N>) -> Option<u8> {
+        self.get_without_caching_and_skip_thread_local(key)
+            .map(|e| match e {
+                MaybeCompressed::Compressed(n) => n.child_mask,
+                MaybeCompressed::Decompressed(n) => n.child_mask,
+            })
+    }
+
+    #[inline]
+    fn get_mut_child_mask(&mut self, key: PointN<N>) -> Option<(&mut u8, bool)> {
+        self.get_mut_without_caching_and_skip_thread_local(key)
+            .map(|e| match e {
+                MaybeCompressed::Compressed(n) => (&mut n.child_mask, n.user_chunk.is_some()),
+                MaybeCompressed::Decompressed(n) => (&mut n.child_mask, n.user_chunk.is_some()),
+            })
+    }
+
+    #[inline]
+    fn get_mut_child_mask_or_insert_with(
+        &mut self,
+        key: PointN<N>,
+        create_chunk: impl FnOnce() -> ChunkNode<Self::Chunk>,
+    ) -> &mut u8 {
+        match self.get_mut_or_insert_without_caching_and_skip_thread_local(key, create_chunk) {
+            MaybeCompressed::Compressed(n) => &mut n.child_mask,
+            MaybeCompressed::Decompressed(n) => &mut n.child_mask,
+        }
     }
 }
 

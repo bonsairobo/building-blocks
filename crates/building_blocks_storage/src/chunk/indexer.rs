@@ -1,12 +1,8 @@
-use crate::{
-    chunk::tree::MAX_LODS,
-    dev_prelude::{ChunkKey, Local},
-};
+use crate::dev_prelude::{ChunkKey, Local};
 
 use building_blocks_core::prelude::*;
 
 use serde::{Deserialize, Serialize};
-use std::mem::MaybeUninit;
 
 /// Calculates chunk locations, e.g. minimums and downsampling destinations.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -49,7 +45,8 @@ where
         self.chunk_shape_mask & point
     }
 
-    /// Returns an iterator over all chunk minimums for chunks that overlap the given extent.
+    /// Returns an iterator over all chunk minimums for chunks that overlap the given extent. Only applies to the LOD in which
+    /// `extent` resides.
     #[inline]
     pub fn chunk_mins_for_extent(&self, extent: &ExtentN<N>) -> impl Iterator<Item = PointN<N>> {
         let range_min = extent.minimum >> self.chunk_shape_log2;
@@ -61,16 +58,36 @@ where
             .map(move |p| p << shape_log2)
     }
 
-    /// The extent spanned by the chunk at `min`.
+    /// The extent spanned by the chunk at `min`. Only applies to the LOD in which the chunk resides.
     #[inline]
     pub fn extent_for_chunk_with_min(&self, min: PointN<N>) -> ExtentN<N> {
         ExtentN::from_min_and_shape(min, self.chunk_shape)
     }
 
-    /// Given a chunk at `chunk_min`, returns the minimum of the ancestor chunk `levels` above.
+    /// The LOD0 extent covered by the chunk at `key` in a lower `lod`.
+    #[inline]
+    pub fn chunk_extent_at_lower_lod(&self, key: ChunkKey<N>, lod: u8) -> ExtentN<N> {
+        debug_assert!(key.lod >= lod);
+        self.extent_for_chunk_with_min(key.minimum) << (key.lod - lod) as i32
+    }
+
     #[inline]
     pub fn ancestor_chunk_min(&self, chunk_min: PointN<N>, levels: i32) -> PointN<N> {
+        debug_assert!(levels >= 0);
         (chunk_min & (self.chunk_shape_mask << levels)) >> levels
+    }
+
+    /// Given a chunk at `key`, returns the `ChunkKey` of the ancestor chunk at `ancestor_lod`.
+    #[inline]
+    pub fn ancestor_chunk_key(&self, key: ChunkKey<N>, ancestor_lod: u8) -> ChunkKey<N> {
+        let levels = ancestor_lod as i32 - key.lod as i32;
+        ChunkKey::new(ancestor_lod, self.ancestor_chunk_min(key.minimum, levels))
+    }
+
+    /// Given a chunk at `key`, returns the `ChunkKey` of the parent chunk.
+    #[inline]
+    pub fn parent_chunk_key(&self, key: ChunkKey<N>) -> ChunkKey<N> {
+        self.ancestor_chunk_key(key, key.lod + 1)
     }
 
     /// Given an `extent`, returns an extent `levels` up that overlaps all ancestors of chunks covered by `extent`.
@@ -82,58 +99,16 @@ where
         )
     }
 
-    /// Returns an array, indexed by LOD, of covering ancestor extents.
-    ///
-    /// It is common to want to visit all chunks at level `min_lod` that overlap `min_lod_extent`. The "covering ancestor
-    /// extents" say, at each level, the extent that overlaps all and only the ancestors that must be visited to reach the
-    /// desired chunks.
-    ///
-    /// Without using these extents to filter out nodes in the octree, we would visit many ancestors unnecessarily.
-    #[inline]
-    pub fn covering_ancestor_extents_for_lods(
-        &self,
-        root_lod: u8,
-        min_lod: u8,
-        min_lod_extent: ExtentN<N>,
-    ) -> [ExtentN<N>; MAX_LODS] {
-        // Get an extent at each level that covers all ancestors we want to visit.
-        let mut covering_extents: [ExtentN<N>; MAX_LODS] =
-            unsafe { MaybeUninit::zeroed().assume_init() };
-        covering_extents[min_lod as usize] = min_lod_extent;
-        for l in min_lod + 1..=root_lod {
-            let levels_up = l - min_lod;
-            covering_extents[l as usize] =
-                self.covering_ancestor_extent(min_lod_extent, levels_up as i32);
-        }
-        covering_extents
-    }
-
-    /// Given a chunk at `chunk_min`, returns the minimum of the parent chunk.
-    #[inline]
-    pub fn parent_chunk_min(&self, chunk_min: PointN<N>) -> PointN<N> {
-        self.ancestor_chunk_min(chunk_min, 1)
-    }
-
-    /// Given a chunk key, returns the key of the parent chunk.
-    #[inline]
-    pub fn parent_chunk_key(&self, key: ChunkKey<N>) -> ChunkKey<N> {
-        ChunkKey::new(key.lod + 1, self.parent_chunk_min(key.minimum))
-    }
-
-    /// Given a chunk at `chunk_min`, returns the minimum of the child chunk with `corner_index`.
-    #[inline]
-    pub fn child_chunk_min(&self, chunk_min: PointN<N>, corner_index: u8) -> PointN<N> {
-        (chunk_min << 1) + (PointN::corner_offset(corner_index) << self.chunk_shape_log2)
-    }
-
-    /// Given a chunk key, returns the key of the child chunk with `corner_index`.
+    /// Given the chunk at `key`, returns the `ChunkKey` of the child chunk with `corner_index`.
     #[inline]
     pub fn child_chunk_key(&self, key: ChunkKey<N>, corner_index: u8) -> ChunkKey<N> {
         debug_assert!(key.lod > 0);
-        ChunkKey::new(key.lod - 1, self.child_chunk_min(key.minimum, corner_index))
+        let child_min =
+            (key.minimum << 1) + (PointN::corner_offset(corner_index) << self.chunk_shape_log2);
+        ChunkKey::new(key.lod - 1, child_min)
     }
 
-    /// Given a child location `chunk_min`, returns the corner index relative to its parent.
+    /// Given a chunk at `chunk_min`, returns the corner index relative to its parent.
     #[inline]
     pub fn corner_index(&self, chunk_min: PointN<N>) -> u8 {
         let double_mask = self.chunk_shape_mask << 1;
@@ -205,27 +180,28 @@ mod tests {
     }
 
     #[test]
-    fn parent_chunk_min() {
+    fn parent_chunk_key() {
         let indexer = ChunkIndexer::new(Point3i::fill(4));
         let lod0_p = Point3i::fill(15);
         let lod0_min = indexer.min_of_chunk_containing_point(lod0_p);
-        assert_eq!(lod0_min, Point3i::fill(12));
-        let lod1_min = indexer.parent_chunk_min(lod0_min);
-        assert_eq!(lod1_min, Point3i::fill(4));
-        let lod2_min = indexer.parent_chunk_min(lod1_min);
-        assert_eq!(lod2_min, Point3i::fill(0));
+        let lod0_key = ChunkKey::new(0, lod0_min);
+        assert_eq!(lod0_key.minimum, Point3i::fill(12));
+        let lod1_key = indexer.parent_chunk_key(lod0_key);
+        assert_eq!(lod1_key.minimum, Point3i::fill(4));
+        let lod2_key = indexer.parent_chunk_key(lod1_key);
+        assert_eq!(lod2_key.minimum, Point3i::fill(0));
 
-        assert_eq!(lod2_min, indexer.ancestor_chunk_min(lod0_min, 2))
+        assert_eq!(lod2_key, indexer.ancestor_chunk_key(lod0_key, 2))
     }
 
     #[test]
-    fn child_chunk_min() {
+    fn child_chunk_key() {
         let indexer = ChunkIndexer::new(Point3i::fill(4));
-        let lod2_min = Point3i::fill(0);
-        let lod1_min = indexer.child_chunk_min(lod2_min, 0b111);
-        assert_eq!(lod1_min, Point3i::fill(4));
-        let lod0_min = indexer.child_chunk_min(lod1_min, 0b111);
-        assert_eq!(lod0_min, Point3i::fill(12));
+        let lod2_key = ChunkKey::new(2, Point3i::fill(0));
+        let lod1_key = indexer.child_chunk_key(lod2_key, 0b111);
+        assert_eq!(lod1_key.minimum, Point3i::fill(4));
+        let lod0_key = indexer.child_chunk_key(lod1_key, 0b111);
+        assert_eq!(lod0_key.minimum, Point3i::fill(12));
     }
 
     #[test]
@@ -259,10 +235,14 @@ mod tests {
         let chunk_shape = PointN([4, 8, 16]);
         let indexer = ChunkIndexer::new(chunk_shape);
 
-        let parent_chunk_min = PointN([-4, 0, 16]);
+        let parent_chunk_key = ChunkKey::new(1, PointN([-4, 0, 16]));
         for corner_index in 0..Point3i::NUM_CORNERS {
             assert_eq!(
-                indexer.corner_index(indexer.child_chunk_min(parent_chunk_min, corner_index)),
+                indexer.corner_index(
+                    indexer
+                        .child_chunk_key(parent_chunk_key, corner_index)
+                        .minimum
+                ),
                 corner_index
             );
         }

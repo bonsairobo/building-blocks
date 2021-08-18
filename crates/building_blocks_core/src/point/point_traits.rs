@@ -159,7 +159,9 @@ pub trait LatticeOrder {
     fn meet(self, other: Self) -> Self;
 }
 
-pub trait FloatPoint: IntoIntegerPoint + Point<Scalar = f32> {
+pub trait FloatPoint:
+    Distance + From<Self::IntPoint> + IntoIntegerPoint + Point<Scalar = f32>
+{
     fn round(self) -> Self;
 
     fn floor(self) -> Self;
@@ -183,7 +185,7 @@ pub trait IntoIntegerPoint {
 
 impl<N> FloatPoint for PointN<N>
 where
-    Self: IntoIntegerPoint + Point<Scalar = f32>,
+    Self: Distance + From<Self::IntPoint> + IntoIntegerPoint + Point<Scalar = f32>,
 {
     #[inline]
     fn round(self) -> Self {

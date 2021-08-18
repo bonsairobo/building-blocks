@@ -179,6 +179,31 @@ where
         }
     }
 
+    /// Tries to get the value for `key`, returning it if it exists. If the entry state is evicted, a `CacheEntry::Evicted` is
+    /// returned. If there is no entry, calls `on_missing` to populate the entry. If a new entry is created, it is marked as
+    /// most recently used.
+    #[inline]
+    pub fn get_mut_or_insert_without_repopulate(
+        &mut self,
+        key: K,
+        on_missing: impl FnOnce() -> V,
+    ) -> CacheEntry<&mut V, E> {
+        let Self { store, order, .. } = self;
+        match store.entry(key.clone()) {
+            hash_map::Entry::Occupied(occupied) => {
+                occupied.into_mut().as_mut().map_cached(|(val, _)| val)
+            }
+            hash_map::Entry::Vacant(vacant) => {
+                let new_val = on_missing();
+                let new_i = order.push_front(Some(key));
+                vacant
+                    .insert(CacheEntry::Cached((new_val, new_i)))
+                    .as_mut()
+                    .map_cached(|(val, _)| val)
+            }
+        }
+    }
+
     /// Removes any trace of `key`, such that further accesses will return `None` until a new value is inserted.
     #[inline]
     pub fn remove(&mut self, key: &K) -> Option<CacheEntry<V, E>> {

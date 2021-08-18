@@ -150,6 +150,17 @@ where
         Self::from_min_and_lub(minimum, lub)
     }
 
+    /// Returns the smallest extent containing all the points in `self` or `other`.
+    ///
+    /// This is not strictly a union of sets of points, but it is the closest we can get while still using an `ExtentN`.
+    #[inline]
+    pub fn quasi_union(&self, other: &Self) -> Self {
+        let minimum = self.minimum.meet(other.minimum);
+        let lub = self.least_upper_bound().join(other.least_upper_bound());
+
+        Self::from_min_and_lub(minimum, lub)
+    }
+
     /// Returns `true` iff the intersection of `self` and `other` is equal to `self`.
     #[inline]
     pub fn is_subset_of(&self, other: &Self) -> bool {
@@ -193,6 +204,21 @@ where
     #[inline]
     pub fn iter_points(&self) -> <PointN<N> as IterExtent<N>>::PointIter {
         PointN::iter_extent(self.minimum, self.least_upper_bound())
+    }
+}
+
+impl<Nf, Ni> ExtentN<Nf>
+where
+    PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
+    PointN<Ni>: IntegerPoint<Ni>,
+{
+    /// Returns the integer `ExtentN` that contains `self`.
+    #[inline]
+    pub fn containing_integer_extent(&self) -> ExtentN<Ni> {
+        ExtentN::from_min_and_max(
+            self.minimum.floor_int(),
+            self.least_upper_bound().floor_int(),
+        )
     }
 }
 

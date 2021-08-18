@@ -231,7 +231,7 @@ impl<N, Chan> UserChunk for Array<N, Chan> {
     }
 }
 
-/// The container of a `U: UserChunk` that's actually stored in a chunk storage.
+/// A node in the `ChunkTree`.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct ChunkNode<U> {
     /// Parent chunks are `None` until written or downsampled into. This means that users can opt-in to storing downsampled
@@ -274,13 +274,24 @@ impl<U> ChunkNode<U> {
     }
 
     fn has_any_children(&self) -> bool {
-        self.child_mask != 0
+        child_mask_has_any_children(self.child_mask)
     }
 }
 
-#[inline]
-pub(crate) fn child_mask_has_child(mask: u8, corner_index: u8) -> bool {
+fn child_mask_has_child(mask: u8, corner_index: u8) -> bool {
     mask & (1 << corner_index) != 0
+}
+
+fn child_mask_has_any_children(mask: u8) -> bool {
+    mask != 0
+}
+
+fn child_mask_add_child(mask: &mut u8, corner_index: u8) {
+    *mask |= 1 << corner_index;
+}
+
+fn child_mask_remove_child(mask: &mut u8, corner_index: u8) {
+    *mask &= !(1 << corner_index);
 }
 
 /// A lattice map made up of same-shaped [Array] chunks. For each level of detail, it takes a value at every possible
@@ -414,32 +425,33 @@ impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store> {
     }
 }
 
+// Convenience adapters over the chunk storage.
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
     Store: ChunkStorage<N, Chunk = Usr>,
 {
-    fn get_chunk_node(&self, key: ChunkKey<N>) -> Option<&ChunkNode<Usr>> {
-        self.lod_storage(key.lod).get(key.minimum)
+    fn get_node(&self, key: ChunkKey<N>) -> Option<&ChunkNode<Usr>> {
+        self.lod_storage(key.lod).get_node(key.minimum)
     }
 
-    fn get_mut_chunk_node(&mut self, key: ChunkKey<N>) -> Option<&mut ChunkNode<Usr>> {
-        self.lod_storage_mut(key.lod).get_mut(key.minimum)
+    fn get_mut_node(&mut self, key: ChunkKey<N>) -> Option<&mut ChunkNode<Usr>> {
+        self.lod_storage_mut(key.lod).get_mut_node(key.minimum)
     }
 
-    fn write_chunk_node(&mut self, key: ChunkKey<N>, node: ChunkNode<Usr>) {
-        self.lod_storage_mut(key.lod).write(key.minimum, node)
+    fn write_node(&mut self, key: ChunkKey<N>, node: ChunkNode<Usr>) {
+        self.lod_storage_mut(key.lod).write_node(key.minimum, node)
     }
 
-    fn write_raw_chunk_node(&mut self, key: ChunkKey<N>, node: ChunkNode<Store::ChunkRepr>) {
-        self.lod_storage_mut(key.lod).write_raw(key.minimum, node)
+    fn pop_node(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Usr>> {
+        self.lod_storage_mut(key.lod).pop_node(key.minimum)
     }
 
-    fn pop_chunk_node(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Usr>> {
-        self.lod_storage_mut(key.lod).pop(key.minimum)
+    fn pop_raw_node(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Store::ChunkRepr>> {
+        self.lod_storage_mut(key.lod).pop_raw_node(key.minimum)
     }
 
-    fn pop_raw_chunk_node(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Store::ChunkRepr>> {
-        self.lod_storage_mut(key.lod).pop_raw(key.minimum)
+    fn get_child_mask(&self, key: ChunkKey<N>) -> Option<u8> {
+        self.lod_storage(key.lod).get_child_mask(key.minimum)
     }
 }
 
@@ -456,9 +468,7 @@ where
     pub fn get_chunk(&self, key: ChunkKey<N>) -> Option<&Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.get_chunk_node(key)
-            .map(|ch| ch.user_chunk.as_ref())
-            .flatten()
+        self.get_node(key).and_then(|ch| ch.user_chunk.as_ref())
     }
 
     /// Get the values at point `p` in level of detail `lod`.
@@ -524,28 +534,19 @@ where
 {
     /// Call `visitor` on all occupied chunks that overlap `extent` in level `lod`.
     #[inline]
-    pub fn visit_occupied_chunks(
-        &self,
-        lod: u8,
-        extent: ExtentN<N>,
-        mut visitor: impl FnMut(&Usr),
-    ) {
+    pub fn visit_occupied_chunks(&self, lod: u8, extent: ExtentN<N>, mut visitor: impl FnMut(&Usr))
+    where
+        Store: for<'r> IterChunkKeys<'r, N>,
+    {
         let root_lod = self.root_lod();
         assert!(lod <= root_lod);
+        let root_storage = self.lod_storage(root_lod);
 
-        // Get an extent at each level that covers all ancestors we want to visit.
-        let covering_extents = self
-            .indexer
-            .covering_ancestor_extents_for_lods(root_lod, lod, extent);
-
-        for root_chunk_min in self
-            .indexer
-            .chunk_mins_for_extent(&covering_extents[root_lod as usize])
-        {
+        for &root_chunk_min in root_storage.chunk_keys() {
             self.visit_occupied_chunks_recursive(
                 ChunkKey::new(root_lod, root_chunk_min),
                 lod,
-                &covering_extents,
+                &extent,
                 &mut visitor,
             );
         }
@@ -555,10 +556,10 @@ where
         &self,
         node_key: ChunkKey<N>,
         lod: u8,
-        covering_extents: &[ExtentN<N>],
+        extent: &ExtentN<N>,
         visitor: &mut impl FnMut(&Usr),
     ) {
-        if let Some(node) = self.get_chunk_node(node_key) {
+        if let Some(node) = self.get_node(node_key) {
             if node_key.lod == lod {
                 if let Some(chunk) = &node.user_chunk {
                     visitor(chunk);
@@ -566,21 +567,17 @@ where
                 return;
             }
 
-            let next_level_covering_extent = &covering_extents[node_key.lod as usize - 1];
             for child_i in 0..PointN::NUM_CORNERS {
                 if node.has_child(child_i) {
                     let child_key = self.indexer.child_chunk_key(node_key, child_i);
 
                     // Skip if this node is not an ancestor.
-                    let child_extent = self.indexer.extent_for_chunk_with_min(child_key.minimum);
-                    if child_extent
-                        .intersection(next_level_covering_extent)
-                        .is_empty()
-                    {
+                    let child_extent = self.indexer.chunk_extent_at_lower_lod(child_key, lod);
+                    if child_extent.intersection(extent).is_empty() {
                         continue;
                     }
 
-                    self.visit_occupied_chunks_recursive(child_key, lod, covering_extents, visitor)
+                    self.visit_occupied_chunks_recursive(child_key, lod, extent, visitor)
                 }
             }
         }
@@ -592,13 +589,14 @@ where
         while key.lod < self.root_lod() {
             let parent = self.indexer.parent_chunk_key(key);
             let mut parent_already_exists = true;
-            let parent_node =
-                self.storages[parent.lod as usize].get_mut_or_insert_with(parent.minimum, || {
+            let child_mask = self.storages[parent.lod as usize].get_mut_child_mask_or_insert_with(
+                parent.minimum,
+                || {
                     parent_already_exists = false;
                     ChunkNode::new_empty()
-                });
-            let child_corner_index = self.indexer.corner_index(key.minimum);
-            parent_node.child_mask |= 1 << child_corner_index;
+                },
+            );
+            child_mask_add_child(child_mask, self.indexer.corner_index(key.minimum));
             if parent_already_exists {
                 return;
             }
@@ -611,12 +609,12 @@ where
         // might do better by removing them in a batch and sorting the chunks in morton order before unlinking from the tree.
         while key.lod < self.root_lod() {
             let parent = self.indexer.parent_chunk_key(key);
-            let parent_node = self.storages[parent.lod as usize]
-                .get_mut(parent.minimum)
+            let (child_mask, parent_has_data) = self.storages[parent.lod as usize]
+                .get_mut_child_mask(parent.minimum)
                 .unwrap();
             let child_corner_index = self.indexer.corner_index(key.minimum);
-            parent_node.child_mask &= !(1 << child_corner_index);
-            if parent_node.has_any_children() || parent_node.user_chunk.is_some() {
+            child_mask_remove_child(child_mask, child_corner_index);
+            if child_mask_has_any_children(*child_mask) || parent_has_data {
                 return;
             }
             key = parent;
@@ -630,11 +628,9 @@ where
     pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        let node = self
-            .lod_storage_mut(key.lod)
-            .get_mut_or_insert_with(key.minimum, ChunkNode::new_empty);
-        node.user_chunk = Some(chunk);
         self.link_node(key);
+        self.lod_storage_mut(key.lod)
+            .write_chunk(key.minimum, chunk);
     }
 
     /// Replace the `Chunk` at `key` with `chunk`, returning the old value.
@@ -645,10 +641,9 @@ where
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.link_node(key);
-
         let node = self
             .lod_storage_mut(key.lod)
-            .get_mut_or_insert_with(key.minimum, ChunkNode::new_empty);
+            .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty);
         node.user_chunk.replace(chunk)
     }
 
@@ -659,8 +654,7 @@ where
     pub fn get_mut_chunk(&mut self, key: ChunkKey<N>) -> Option<&mut Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.get_mut_chunk_node(key)
-            .and_then(|c| c.user_chunk.as_mut())
+        self.get_mut_node(key).and_then(|c| c.user_chunk.as_mut())
     }
 
     /// Mutably borrow the chunk at `key`. If the chunk doesn't exist, `create_chunk` is called to insert one.
@@ -677,7 +671,7 @@ where
         self.link_node(key);
 
         self.lod_storage_mut(key.lod)
-            .get_mut_or_insert_with(key.minimum, ChunkNode::new_empty)
+            .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty)
             .user_chunk
             .get_or_insert_with(|| create_chunk())
     }
@@ -700,7 +694,7 @@ where
         let chunk_min = key.minimum;
 
         storages[key.lod as usize]
-            .get_mut_or_insert_with(key.minimum, ChunkNode::new_empty)
+            .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty)
             .user_chunk
             .get_or_insert_with(|| {
                 builder.new_ambient(indexer.extent_for_chunk_with_min(chunk_min))
@@ -737,7 +731,7 @@ where
     pub fn pop_chunk(&mut self, key: ChunkKey<N>) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
         // PERF: we wouldn't always have to pop the node if we had a ChunkStorage::entry API
-        self.pop_chunk_node(key).and_then(|mut node| {
+        self.pop_node(key).and_then(|mut node| {
             if !node.has_any_children() {
                 // No children, so this node is useless.
                 self.unlink_node(key);
@@ -745,28 +739,10 @@ where
             } else {
                 // Still has children, so only delete the user data and leave the node.
                 let user_chunk = node.user_chunk.take();
-                self.write_chunk_node(key, node);
+                self.write_node(key, node);
                 user_chunk
             }
         })
-    }
-
-    #[inline]
-    pub fn pop_raw_chunk(&mut self, key: ChunkKey<N>) {
-        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
-        // PERF: we wouldn't always have to pop the node if we had a ChunkStorage::entry API
-        // We pop a raw chunk so that compressible storage doesn't have to decompress the value for us. We only care to check
-        // the child mask.
-        if let Some(mut node) = self.pop_raw_chunk_node(key) {
-            if !node.has_any_children() {
-                // No children, so this node is useless.
-                self.unlink_node(key);
-            } else {
-                // Still has children, so only delete the user data and leave the node.
-                node.user_chunk = None;
-                self.write_raw_chunk_node(key, node);
-            }
-        }
     }
 
     /// Remove the chunk at `key` and all descendants. All chunks will be given to the `chunk_rx` callback.
@@ -778,7 +754,7 @@ where
         key: ChunkKey<N>,
         chunk_rx: impl FnMut(ChunkKey<N>, Store::ChunkRepr),
     ) {
-        if let Some(node) = self.pop_raw_chunk_node(key) {
+        if let Some(node) = self.pop_raw_node(key) {
             self.unlink_node(key);
             self.drain_tree_recursive(key, node, chunk_rx);
         }
@@ -793,7 +769,7 @@ where
         for child_i in 0..PointN::NUM_CORNERS {
             if node.has_child(child_i) {
                 let child_key = self.indexer.child_chunk_key(key, child_i);
-                if let Some(child_node) = self.pop_raw_chunk_node(child_key) {
+                if let Some(child_node) = self.pop_raw_node(child_key) {
                     self.drain_tree_recursive(child_key, child_node, &mut chunk_rx);
                 }
             }

@@ -43,6 +43,12 @@ where
     K: Eq + Hash,
     H: Default + BuildHasher,
 {
+    /// Fetch the value for `key`.
+    pub fn get(&self, key: K) -> Option<&V> {
+        let store = unsafe { &*self.store.get() };
+        store.get(&key).map(|v| &**v)
+    }
+
     /// Fetch the value for `key`. If it's not here, call `f` to fetch it.
     pub fn get_or_insert_with(&self, key: K, f: impl FnOnce() -> V) -> &V {
         let mut_store = unsafe { &mut *self.store.get() };

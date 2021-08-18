@@ -7,7 +7,7 @@ use bevy_utilities::{
 };
 use building_blocks::{
     mesh::*,
-    storage::{SmallKeyHashMap, prelude::{ChunkKey3, LodChunkUpdate3}},
+    storage::{SmallKeyHashMap, prelude::{ChunkKey3, ClipEvent3}},
 };
 
 use std::{cell::RefCell, collections::VecDeque};
@@ -39,7 +39,7 @@ impl MeshCommandQueue {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MeshCommand {
     Create(ChunkKey3),
-    Update(LodChunkUpdate3),
+    Update(ClipEvent3),
 }
 
 #[derive(Default)]
@@ -114,7 +114,7 @@ fn apply_mesh_commands<Map: VoxelMap>(
                 MeshCommand::Update(update) => {
                     num_commands_processed += 1;
                     match update {
-                        LodChunkUpdate3::Split(split) => {
+                        ClipEvent3::Split(split) => {
                             if let Some(entity) = chunk_meshes.entities.remove(&split.old_chunk) {
                                 commands.entity(entity).despawn();
                             }
@@ -123,7 +123,7 @@ fn apply_mesh_commands<Map: VoxelMap>(
                                 make_mesh(key)
                             }
                         }
-                        LodChunkUpdate3::Merge(merge) => {
+                        ClipEvent3::Merge(merge) => {
                             for key in merge.old_chunks.iter() {
                                 if let Some(entity) = chunk_meshes.entities.remove(&key) {
                                     commands.entity(entity).despawn();
@@ -132,6 +132,8 @@ fn apply_mesh_commands<Map: VoxelMap>(
                             num_meshes_created += 1;
                             make_mesh(merge.new_chunk)
                         }
+                        ClipEvent3::Enter(_) => (),
+                        ClipEvent3::Exit(_) => (),
                     }
                 }
             }

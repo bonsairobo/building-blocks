@@ -122,7 +122,10 @@ where
 
     /// When downsampling a chunk at level `L`, the samples are used at the returned destination within level `L + 1`.
     #[inline]
-    pub fn downsample_destination(&self, src_chunk_key: ChunkKey<N>) -> DownsampleDestination<N> {
+    pub(crate) fn downsample_destination(
+        &self,
+        src_chunk_key: ChunkKey<N>,
+    ) -> DownsampleDestination<N> {
         let double_mask = self.chunk_shape_mask << 1;
         let double_parent_min = src_chunk_key.minimum & double_mask;
         let dst_chunk_min = double_parent_min >> 1;
@@ -184,7 +187,7 @@ impl<N> ChunkKey<N> {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct DownsampleDestination<N> {
+pub(crate) struct DownsampleDestination<N> {
     pub chunk_key: ChunkKey<N>,
     pub offset: Local<N>,
 }

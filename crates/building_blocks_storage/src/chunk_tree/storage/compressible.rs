@@ -534,6 +534,7 @@ where
 }
 
 /// An index into a compressed chunk slab.
+#[doc(hidden)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CompressedLocation(pub usize);
 

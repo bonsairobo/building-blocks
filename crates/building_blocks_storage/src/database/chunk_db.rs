@@ -14,7 +14,8 @@ use sled::Tree;
 /// does not yet provide transactional iteration.
 ///
 /// The DB values are only portable if the `compression` used respects endianness of the current machine. Use
-/// `BincodeCompression` if you absolutely need portability across machines with different endianness.
+/// [`BincodeCompression`](crate::compression::BincodeCompression) if you absolutely need portability across machines with
+/// different endianness.
 pub struct ChunkDb<N, Compr = ()> {
     tree: Tree,
     compression: Compr,

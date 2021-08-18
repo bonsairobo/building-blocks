@@ -178,6 +178,8 @@ use either::Either;
 use serde::{Deserialize, Serialize};
 
 /// A map from lattice location `PointN<N>` to data `T`, stored as a flat array.
+///
+/// See the [module-level docs](self) for more details.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Array<N, Chan> {
     channels: Chan,

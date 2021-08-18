@@ -6,7 +6,7 @@ use crate::{
 
 use building_blocks_core::prelude::*;
 
-/// A `ChunkDownsampler` that just selects a single point from each `2x2x2` (assuming `lod_delta=1`) region, ignoring the rest.
+/// A `ChunkDownsampler` that just selects a single point from each `2x2x2` region, ignoring the rest.
 pub struct PointDownsampler;
 
 impl<N, Src, Dst, T> ChunkDownsampler<N, T, Src, Dst> for PointDownsampler

@@ -1,57 +1,116 @@
-//! A linear hashed octree of array chunks. Designed for both random access and sparse iteration. Supports multiple levels of
-//! detail and downsampling.
+//! A hashed quadtree ([`ChunkTree2`]) or octree ([`ChunkTree3`]) of array chunks. Designed for both sparse iteration and random
+//! access. Supports multiple levels of detail, downsampling, and clipmap algorithms.
 //!
-//! # Level of Detail
+//! # Coordinates and Level of Detail
 //!
-//! All chunks have the same shape, but the voxel size doubles at every level. Most of the time, you will just manipulate the
-//! data at LOD0, but if you need to downsample this to save resources where coarser resolution is acceptable, then you can use
-//! a `ChunkDownsampler` and the `ChunkTree::downsample_*` methods to populate higher levels.
+//! A [`ChunkTree`] can have up to [`MAX_LODS`] levels of detail. Each level (LOD) can be thought of as a lattice map, i.e. a
+//! map from [`PointN`] to arbitrary data `T`. Starting at LOD0, voxels have edge length 1. At LOD1, edge length 2. And at each
+//! next level, the voxel edge length doubles. Equivalently, each next level halves the sample rate.
 //!
-//! *NOTE*: If you want your downsampled data to have different number of channels than LOD0, then you will need to store the
-//! downsampled chunks in a different `ChunkTree`. You will need to use the specialized `ChunkTree::downsample_extent_with_lod0`
-//! method for this use case.
+//! Each level is also partitioned into "chunk slots," all slots having the same shape (in voxels). Although all chunks have the
+//! same "data shape," chunks at higher levels take up more "perceptual space." E.g. a chunk at LOD2 is 2^2 = 4 times as wide
+//! when it is rendered as a chunk at LOD0.
 //!
-//! # Indexing and Iteration
+//! A chunk slot can either be occupied or vacant. Occupied slots store some type `U: UserChunk`, where users are free to
+//! implement [`UserChunk`]. These chunks are densely populated via an [`Array`]. Vacant chunk slots do not take up any space,
+//! and we assume that all points in such a slot take the same "ambient value."
 //!
-//! The data can either be addressed by `ChunkKey` with the `get_chunk*` methods or by individual points using the `Get*` and
-//! `ForEach*` trait impls on a `ChunkTreeLodView`. At a given level of detail, the key for a chunk is the minimum point in that
-//! chunk, which is always a multiple of the chunk shape. Chunk shape dimensions must be powers of 2, which allows for
-//! efficiently calculating a chunk minimum from any point in the chunk.
+//! # Iteration
+//!
+//! While the [`ChunkTree`] strikes a good balance between random access and iteration speed, you should always prefer iteration
+//! when it is convenient; iteration amortizes the cost of hashing to find chunks, and the tree structure allows us to
+//! efficiently skip over empty space.
+//!
+//! Most commonly you will want to iterate over an [`ExtentN`] in a single level of detail. For this, you can construct a
+//! [`ChunkTreeLodView`] and use the familiar access traits to iterate or copy data:
+//!
+//! - [`ForEach`](crate::access_traits::ForEach)
+//! - [`ForEachMut`](crate::access_traits::ForEachMut)
+//! - [`ReadExtent`](crate::access_traits::ReadExtent)
+//! - [`WriteExtent`](crate::access_traits::WriteExtent)
+//!
+//! You may also want to utilize the tree structure more directly via some kind of traversal. **TODO**: better traversal APIs
+//!
+//! # Random Access
+//!
+//! ## Chunks
+//!
+//! While in a tree you normally expect `O(log N)` time for random access, the [`ChunkTree`] only requires `O(1)`, since every
+//! chunk ultimately lives in a hash map. And luckily, the hash map keys are very small and the
+//! [`SmallKeyHashMap`](crate::SmallKeyHashMap) is very fast.
+//!
+//! Chunks can be accessed directly by [`ChunkKey`] with the `get*_chunk*` methods. The key for a chunk is comprised of:
+//!
+//!   - the `u8` level of detail
+//!   - the minimum [`PointN`] in the chunk, which is always a multiple of the chunk shape
+//!
+//! Chunk shape dimensions must be powers of 2, which allows for efficiently calculating a chunk minimum from any point in the
+//! chunk.
+//!
+//! ## Points
+//!
+//! Being a lattice map, [`ChunkTreeLodView`] also implements these traits for random access of individual points:
+//!
+//! - [`Get`](crate::access_traits::Get)
+//! - [`GetMut`](crate::access_traits::GetMut)
+//!
+//! But you should try to avoid using these if possible, since each call requires hashing to find a chunk that contains the
+//! point you're looking for.
+//!
+//! # Downsampling
+//!
+//! Most of the time, you will just manipulate the data at LOD0, but if you need to downsample to save resources where coarser
+//! resolution is acceptable, then you can use a [`ChunkDownsampler`] and the `ChunkTree::downsample_*` methods to populate
+//! higher levels. Currently, two downsamplers are provided for you:
+//!
+//!   - [`PointDownsampler`]
+//!   - [`SdfMeanDownsampler`]
+//!
+//! **NOTE**: If you want your downsampled data to have different number of channels than LOD0, then you will need to store the
+//! downsampled chunks in a different [`ChunkTree`]. You will need to use the specialized
+//! `ChunkTree::downsample_extent_with_lod0` method for this use case.
 //!
 //! # Chunk Storage
 //!
-//! `ChunkTree<N, T, Bldr, Store>` depends on a backing chunk storage `Store`, which must implement the [`ChunkStorage`] trait.
-//! A storage can be as simple as a [`SmallKeyHashMap`](crate::SmallKeyHashMap). It could also be something more memory
-//! efficient like [`CompressibleChunkStorage`](self::CompressibleChunkStorage) which performs nearly as well but
-//! involves some overhead for caching and compression.
+//! The fully generic `ChunkTree<N, T, Bldr, Store>` depends on a backing chunk storage `Store`, which must implement the
+//! [`ChunkStorage`] trait. A storage can be as simple as a [`SmallKeyHashMap`](crate::SmallKeyHashMap). It could also be
+//! something more memory efficient like [`CompressibleChunkStorage`](self::CompressibleChunkStorage) which performs nearly as
+//! well but involves some overhead for caching and compression.
 //!
 //! # Serialization
 //!
-//! While `ChunkTree` derives `Deserialize` and `Serialize`, it will only be serializable if its constituent types are
-//! serializable. You should expect a `HashMapChunkTree` with simple `Array` chunks to be serializable, but a
-//! `CompressibleChunkTree` is *not*.
+//! While [`ChunkTree`] derives `Deserialize` and `Serialize`, it will only be serializable if its constituent types are
+//! serializable. You should expect a [`HashMapChunkTree`] with simple [`Array`] chunks to be serializable, but a
+//! [`CompressibleChunkTree`] is *not*. So you will not benefit from chunk compression when serializing with `serde`.
 //!
-//! However using `serde` for serializing large dynamic chunk maps is discouraged. Instead there is a `ChunkDb` backed by the
-//! `sled` embedded database which supports transactions and compression. Use that instead.
+//! While sometimes convenient, using `serde` for serializing large dynamic chunk maps is discouraged. Instead there is a
+//! [`ChunkDb`](crate::database::ChunkDb) backed by the `sled` embedded database which supports transactions and compression.
+//! You likely want to use that instead.
 //!
-//! # Example `HashMapChunkTree` Usage
+//! # Example [`CompressibleChunkTree`] Usage
 //! ```
 //! use building_blocks_core::prelude::*;
 //! use building_blocks_storage::prelude::*;
 //!
-//! let chunk_shape = Point3i::fill(16);
+//! // Make a tree with 8 levels of detail.
 //! let ambient_value = 0;
-//! let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig { chunk_shape, ambient_value, root_lod: 0 });
-//! let mut tree = builder.build_with_hash_map_storage();
+//! let config = ChunkTreeConfig { chunk_shape: Point3i::fill(16), ambient_value, root_lod: 7 };
+//! // Each LOD gets a separate storage (all of the same type), so we provide a factory closure for
+//! // our storage. This storage supports compressing our least-recently-used chunks.
+//! let storage_factory = || FastCompressibleChunkStorageNx1::with_bytes_compression(Lz4 { level: 10 });
+//! // This particular builder knows how to construct our `Array3x1` chunks.
+//! let mut tree = ChunkTreeBuilder3x1::new(config).build_with_storage(storage_factory);
 //!
 //! // We need to focus on a specific level of detail to use the access traits.
 //! let mut lod0 = tree.lod_view_mut(0);
 //!
-//! // Although we only write 3 points, 3 whole dense chunks will be inserted.
+//! // Although we only write 3 points, 3 whole dense chunks will be inserted,
+//! // since each point lands in a different chunk slot.
 //! let write_points = [Point3i::fill(-100), Point3i::ZERO, Point3i::fill(100)];
 //! for &p in write_points.iter() {
 //!     *lod0.get_mut(p) = 1;
 //! }
+//! assert_eq!(tree.lod_storage(0).len_cached(), 3);
 //!
 //! // Even though the tree is sparse, we can get the smallest extent that bounds all of the occupied
 //! // chunks in LOD0.
@@ -77,49 +136,19 @@
 //! }
 //! assert_eq!(lod0.get(Point3i::fill(1)), 0);
 //!
-//! // Sometimes you need to implement very fast algorithms (like kernel-based methods) that do a
-//! // lot of random access. In this case it's most efficient to use `Stride`s, but `ChunkTree`
-//! // doesn't support random indexing by `Stride`. Instead, assuming that your query spans multiple
-//! // chunks, you should copy the extent into a dense map first. (The copy is fast).
-//! let query_extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(32));
-//! let mut dense_map = Array3x1::fill(query_extent, ambient_value);
-//! copy_extent(&query_extent, &lod0, &mut dense_map);
-//! ```
-//!
-//! # Example `CompressibleChunkTree` Usage
-//!
-//! ```
-//! # use building_blocks_core::prelude::*;
-//! # use building_blocks_storage::prelude::*;
-//! #
-//! let chunk_shape = Point3i::fill(16);
-//! let ambient_value = 0;
-//! let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig { chunk_shape, ambient_value, root_lod: 0 });
-//! let mut tree = builder.build_with_storage(
-//!     || FastCompressibleChunkStorageNx1::with_bytes_compression(Lz4 { level: 10 })
-//! );
-//! let mut lod0 = tree.lod_view_mut(0);
-//!
-//! // You can write voxels the same as any other `ChunkTree`. As chunks are created, they will be placed in an LRU cache.
-//! let write_points = [Point3i::fill(-100), Point3i::ZERO, Point3i::fill(100)];
-//! for &p in write_points.iter() {
-//!     *lod0.get_mut(p) = 1;
-//! }
-//!
-//! // Save some space by compressing the least recently used chunks. On further access to the compressed chunks, they will get
-//! // decompressed and cached.
+//! // Save some space by compressing the least recently used chunks. On further access to the
+//! // compressed chunks, they will get decompressed and cached.
 //! tree.lod_storage_mut(0).compress_lru();
 //!
-//! let bounding_extent = tree.bounding_extent(0);
-//! tree.lod_view(0).for_each(&bounding_extent, |p, value| {
-//!     if write_points.iter().position(|pw| p == *pw) != None {
-//!         assert_eq!(value, 1);
-//!     } else {
-//!         assert_eq!(value, 0);
-//!     }
-//! });
+//! // Sometimes you need to implement very fast algorithms (like kernel-based methods) that do a
+//! // lot of random access inside some bounding extent. In this case it's most efficient to use
+//! // an `Array`. If you only need access to one chunk, then you can just get it and use its `Array`
+//! // directly. But if your query spans multiple chunks, you should copy the extent into a new `Array`.
+//! let query_extent = Extent3i::from_min_and_shape(Point3i::fill(10), Point3i::fill(32));
+//! let mut dense_map = Array3x1::fill(query_extent, ambient_value);
+//! copy_extent(&query_extent, &tree.lod_view(0), &mut dense_map);
 //!
-//! // For efficient caching, you should occasionally flush your local caches back into the global cache.
+//! // For efficient caching, you should occasionally flush your thread-local caches back into the main cache.
 //! tree.lod_storage_mut(0).flush_thread_local_caches();
 //! ```
 
@@ -151,9 +180,10 @@ use building_blocks_core::{
 use either::Either;
 use serde::{Deserialize, Serialize};
 
-/// The user-accessible data stored in each chunk of a `ChunkTree`.
+/// The user-accessible data stored in each chunk of a [`ChunkTree`].
 ///
 /// This crate provides a blanket impl for any `Array`, but users can also provide an impl that affords further customization.
+/// If you implement your own `UserChunk`, you will also need to implement a corresponding [`ChunkTreeBuilder`].
 pub trait UserChunk {
     /// The inner array type. This makes it easier for `UserChunk` implementations to satisfy access trait bounds by inheriting
     /// them from existing `Array` types.
@@ -180,81 +210,9 @@ impl<N, Chan> UserChunk for Array<N, Chan> {
     }
 }
 
-/// A node in the `ChunkTree`.
-#[derive(Clone, Deserialize, Serialize)]
-pub struct ChunkNode<U> {
-    /// Parent chunks are `None` until written or downsampled into. This means that users can opt-in to storing downsampled
-    /// chunks, which requires more memory.
-    pub user_chunk: Option<U>,
-    child_mask: u8,
-}
-
-impl<U> ChunkNode<U> {
-    #[inline]
-    pub(crate) fn new(user_chunk: Option<U>, child_mask: u8) -> Self {
-        Self {
-            user_chunk,
-            child_mask,
-        }
-    }
-
-    #[inline]
-    pub(crate) fn new_empty() -> Self {
-        Self::new(None, 0)
-    }
-
-    #[inline]
-    pub(crate) fn new_without_data(child_mask: u8) -> Self {
-        Self::new(None, child_mask)
-    }
-
-    #[inline]
-    pub(crate) fn as_ref(&self) -> ChunkNode<&U> {
-        ChunkNode::new(self.user_chunk.as_ref(), self.child_mask)
-    }
-
-    #[inline]
-    pub(crate) fn map<T>(self, f: impl Fn(U) -> T) -> ChunkNode<T> {
-        ChunkNode::new(self.user_chunk.map(f), self.child_mask)
-    }
-
-    fn has_child(&self, corner_index: u8) -> bool {
-        child_mask_has_child(self.child_mask, corner_index)
-    }
-
-    fn has_any_children(&self) -> bool {
-        child_mask_has_any_children(self.child_mask)
-    }
-}
-
-fn child_mask_has_child(mask: u8, corner_index: u8) -> bool {
-    mask & (1 << corner_index) != 0
-}
-
-fn child_mask_has_any_children(mask: u8) -> bool {
-    mask != 0
-}
-
-fn child_mask_add_child(mask: &mut u8, corner_index: u8) {
-    *mask |= 1 << corner_index;
-}
-
-fn child_mask_remove_child(mask: &mut u8, corner_index: u8) {
-    *mask &= !(1 << corner_index);
-}
-
-/// A lattice map made up of same-shaped [Array] chunks. For each level of detail, it takes a value at every possible
-/// [`PointN`], because accesses made outside of the stored chunks will return some ambient value specified on creation.
+/// A multiresolution lattice map made up of same-shaped [`Array`] chunks.
 ///
-/// [`ChunkTree`] is generic over the type used to actually store the [`UserChunk`]s. You can use any storage that implements
-/// [`ChunkStorage`]. Being a lattice map, [`ChunkTreeLodView`] will implement various access traits:
-///
-/// - [`Get`](crate::access_traits::Get)
-/// - [`GetMut`](crate::access_traits::GetMut)
-/// - [`ForEach`](crate::access_traits::ForEach)
-/// - [`ForEachMut`](crate::access_traits::ForEachMut)
-/// - [`ReadExtent`](crate::access_traits::ReadExtent)
-/// - [`WriteExtent`](crate::access_traits::WriteExtent)
+/// See the [module-level docs](self) for more info.
 #[derive(Deserialize, Serialize)]
 pub struct ChunkTree<N, T, Bldr, Store> {
     pub indexer: ChunkIndexer<N>,
@@ -738,12 +696,76 @@ where
 {
     /// The smallest extent that bounds all chunks in level of detail `lod`.
     pub fn bounding_extent(&'a self, lod: u8) -> ExtentN<N> {
+        // PERF: this is theoretically faster using a tree search
         bounding_extent(self.lod_storage(lod).chunk_keys().flat_map(|&chunk_min| {
             let chunk_extent = self.indexer.extent_for_chunk_with_min(chunk_min);
 
             vec![chunk_extent.minimum, chunk_extent.max()].into_iter()
         }))
     }
+}
+
+/// A node in the `ChunkTree`.
+#[derive(Clone, Deserialize, Serialize)]
+pub struct ChunkNode<U> {
+    /// Parent chunks are `None` until written or downsampled into. This means that users can opt-in to storing downsampled
+    /// chunks, which requires more memory.
+    pub user_chunk: Option<U>,
+    child_mask: u8,
+}
+
+impl<U> ChunkNode<U> {
+    #[inline]
+    pub(crate) fn new(user_chunk: Option<U>, child_mask: u8) -> Self {
+        Self {
+            user_chunk,
+            child_mask,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn new_empty() -> Self {
+        Self::new(None, 0)
+    }
+
+    #[inline]
+    pub(crate) fn new_without_data(child_mask: u8) -> Self {
+        Self::new(None, child_mask)
+    }
+
+    #[inline]
+    pub(crate) fn as_ref(&self) -> ChunkNode<&U> {
+        ChunkNode::new(self.user_chunk.as_ref(), self.child_mask)
+    }
+
+    #[inline]
+    pub(crate) fn map<T>(self, f: impl Fn(U) -> T) -> ChunkNode<T> {
+        ChunkNode::new(self.user_chunk.map(f), self.child_mask)
+    }
+
+    fn has_child(&self, corner_index: u8) -> bool {
+        child_mask_has_child(self.child_mask, corner_index)
+    }
+
+    fn has_any_children(&self) -> bool {
+        child_mask_has_any_children(self.child_mask)
+    }
+}
+
+fn child_mask_has_child(mask: u8, corner_index: u8) -> bool {
+    mask & (1 << corner_index) != 0
+}
+
+fn child_mask_has_any_children(mask: u8) -> bool {
+    mask != 0
+}
+
+fn child_mask_add_child(mask: &mut u8, corner_index: u8) {
+    *mask |= 1 << corner_index;
+}
+
+fn child_mask_remove_child(mask: &mut u8, corner_index: u8) {
+    *mask &= !(1 << corner_index);
 }
 
 /// An extent that takes the same value everywhere.

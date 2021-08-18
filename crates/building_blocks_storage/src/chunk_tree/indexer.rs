@@ -143,7 +143,7 @@ where
 pub struct ChunkKey<N> {
     /// The minimum point of the chunk.
     pub minimum: PointN<N>,
-    /// The level of detail. From highest resolution at 0 to lowest resolution at MAX_LOD.
+    /// The level of detail. From highest resolution at `0` to lowest resolution at `root_lod`.
     pub lod: u8,
 }
 

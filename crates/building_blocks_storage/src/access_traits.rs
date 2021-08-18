@@ -328,7 +328,7 @@ pub trait FillExtent<N> {
 // ╚██████╗╚██████╔╝██║        ██║
 //  ╚═════╝ ╚═════╝ ╚═╝        ╚═╝
 
-/// A trait to facilitate the generic implementation of `copy_extent`.
+/// A trait to facilitate the generic implementation of [`copy_extent`].
 ///
 /// Some lattice maps, like `ChunkTree`, have nonlinear layouts. This means that, in order for a writer to receive data
 /// efficiently, it must come as an iterator over multiple extents.
@@ -341,7 +341,7 @@ pub trait ReadExtent<'a, N> {
     fn read_extent(&'a self, extent: &ExtentN<N>) -> Self::SrcIter;
 }
 
-/// A trait to facilitate the generic implementation of `copy_extent`.
+/// A trait to facilitate the generic implementation of [`copy_extent`].
 #[auto_impl(&mut)]
 pub trait WriteExtent<N, Src> {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src);

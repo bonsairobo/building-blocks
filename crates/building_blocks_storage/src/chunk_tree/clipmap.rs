@@ -12,12 +12,16 @@ where
 {
     /// Traverses from all roots to find the currently "active" chunks. Active chunks are passed to the `active_rx` callback.
     ///
-    /// By "active," we mean that, given the current location of `lod0_focus` (e.g. a camera), the chunk has the desired LOD for
-    /// rendering. More specifically, let `D` be the Euclidean distance from `lod0_focus` to the center of the chunk (in LOD0
-    /// space), and let `S` be the shape of the chunk (in LOD0 space). The chunk can be active if
+    /// By "active," we mean that, given the current location of `lod0_focus` (e.g. a camera):
+    ///
+    ///   - the chunk center is inside of the clip sphere determined by `lod0_clip_radius`
+    ///   - the chunk has the desired LOD for rendering
+    ///
+    /// More specifically, let `D` be the Euclidean distance from `lod0_focus` to the center of the chunk (in LOD0 space), and
+    /// let `S` be the shape of the chunk (in LOD0 space). The chunk can be active if
     ///
     /// ```text
-    ///     (D / S) > detail
+    ///     D < lod0_clip_radius && (D / S) > detail
     /// ```
     ///
     /// where `detail` is a nonnegative constant parameter supplied by you. Along a given path from a root chunk to a leaf, the

@@ -95,7 +95,9 @@ fn setup<Map: VoxelMap>(
     pool: Res<ComputeTaskPool>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    wireframe_config.global = true;
+    if map_config.wireframes {
+        wireframe_config.global = true;
+    }
 
     // Generate a voxel map from noise.
     let map = Map::generate(&*pool, *map_config);

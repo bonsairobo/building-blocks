@@ -36,6 +36,7 @@ pub struct MapConfig {
     pub detail: f32,
     pub world_chunks_extent: ChunkUnits<Extent3i>,
     pub noise: NoiseConfig,
+    pub wireframes: bool,
 }
 
 impl MapConfig {

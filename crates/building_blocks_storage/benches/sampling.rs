@@ -1,7 +1,7 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::prelude::{
-    Array3x1, ChunkDownsampler, ChunkTreeBuilder, ChunkTreeBuilder3x1, ChunkTreeConfig, Local,
-    PointDownsampler, Sd8, SdfMeanDownsampler,
+    Array3x1, ChunkDownsampler, ChunkTreeBuilder, ChunkTreeBuilder3x1, ChunkTreeConfig, FillExtent,
+    Local, PointDownsampler, Sd8, SdfMeanDownsampler,
 };
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
@@ -75,7 +75,7 @@ fn sdf_mean_downsample_chunk_map(c: &mut Criterion) {
                         let map_extent =
                             Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(map_chunks))
                                 * chunk_shape;
-                        map.fill_extent(0, &map_extent, Sd8::NEG_ONE);
+                        map.lod_view_mut(0).fill_extent(&map_extent, Sd8::NEG_ONE);
 
                         (map, map_extent)
                     },

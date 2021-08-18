@@ -167,7 +167,7 @@ pub use sampling::*;
 pub use storage::*;
 
 use crate::{
-    dev_prelude::{Array, FillExtent, ForEach, GetMutUnchecked, GetRefUnchecked, GetUnchecked},
+    dev_prelude::{Array, ForEach, GetMutUnchecked, GetRefUnchecked, GetUnchecked},
     multi_ptr::MultiRef,
 };
 
@@ -406,23 +406,8 @@ impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
     Usr: UserChunk,
-    Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
-    /// Get the values at point `p` in level of detail `lod`.
-    #[inline]
-    pub fn clone_point(&self, lod: u8, p: PointN<N>) -> T
-    where
-        T: Clone,
-        Usr::Array: GetUnchecked<PointN<N>, Item = T>,
-    {
-        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
-
-        self.get_chunk(ChunkKey::new(lod, chunk_min))
-            .map(|chunk| unsafe { chunk.array().get_unchecked(p) })
-            .unwrap_or_else(|| self.ambient_value.clone())
-    }
-
     /// Get a reference to the values at point `p` in level of detail `lod`.
     #[inline]
     pub fn get_point<'a, Ref>(&'a self, lod: u8, p: PointN<N>) -> Ref
@@ -438,6 +423,28 @@ where
             .unwrap_or_else(|| Ref::from_data_ref(&self.ambient_value))
     }
 
+    /// Get the values at point `p` in level of detail `lod`.
+    #[inline]
+    pub fn clone_point(&self, lod: u8, p: PointN<N>) -> T
+    where
+        T: Clone,
+        Usr::Array: GetUnchecked<PointN<N>, Item = T>,
+    {
+        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
+
+        self.get_chunk(ChunkKey::new(lod, chunk_min))
+            .map(|chunk| unsafe { chunk.array().get_unchecked(p) })
+            .unwrap_or_else(|| self.ambient_value.clone())
+    }
+}
+
+impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
+where
+    PointN<N>: IntegerPoint<N>,
+    Usr: UserChunk,
+    Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
+    Store: ChunkStorage<N, Chunk = Usr>,
+{
     /// Get a mutable reference to the values at point `p` in level of detail `lod`.
     #[inline]
     pub fn get_mut_point<'a, Mut>(&'a mut self, lod: u8, p: PointN<N>) -> Mut
@@ -681,17 +688,6 @@ where
                 chunk_rx(key, user_chunk);
             }
         }
-    }
-}
-
-impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>
-where
-    for<'r> ChunkTreeLodView<&'r mut Self>: FillExtent<N, Item = T>,
-{
-    /// Fill all of `extent` with the same `value`.
-    #[inline]
-    pub fn fill_extent(&mut self, lod: u8, extent: &ExtentN<N>, value: T) {
-        self.lod_view_mut(lod).fill_extent(extent, value)
     }
 }
 
@@ -955,7 +951,7 @@ mod tests {
             assert_eq!(letter, b'b');
         });
 
-        map.fill_extent(0, &extent, (1, b'b'));
+        map.lod_view_mut(0).fill_extent(&extent, (1, b'b'));
     }
 
     #[cfg(feature = "lz4")]

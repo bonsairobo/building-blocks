@@ -207,7 +207,7 @@ fn chunk_hash_map_copy(c: &mut Criterion) {
                 || {
                     let cp_extent = Extent3::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
                     let mut src = BUILDER.build_with_hash_map_storage();
-                    src.fill_extent(0, &cp_extent, 1);
+                    src.lod_view_mut(0).fill_extent(&cp_extent, 1);
 
                     let dst = BUILDER.build_with_hash_map_storage();
 
@@ -258,7 +258,7 @@ where
 {
     let mut map = BUILDER.build_with_storage(storage_factory);
     let iter_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(size));
-    map.fill_extent(0, &iter_extent, 1);
+    map.lod_view_mut(0).fill_extent(&iter_extent, 1);
 
     (map, iter_extent)
 }

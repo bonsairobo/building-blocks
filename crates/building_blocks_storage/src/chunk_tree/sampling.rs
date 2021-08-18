@@ -237,7 +237,7 @@ mod tests {
             root_lod: 0,
         });
         let mut lod0 = lod0_builder.build_with_hash_map_storage();
-        lod0.fill_extent(0, &lod0_extent, ambient);
+        lod0.lod_view_mut(0).fill_extent(&lod0_extent, ambient);
 
         // Build a single-channel chunk map for LOD > 0.
         let lodn_builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig {

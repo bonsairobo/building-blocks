@@ -32,8 +32,8 @@ pub fn level_of_detail_system<Map: VoxelMap>(
 
     let lod0_center = Point3f::from(camera_position);
 
-    voxel_map.clipmap_events(lod_state.old_lod0_center, lod0_center, |update| {
-        mesh_commands.enqueue(MeshCommand::Update(update))
+    voxel_map.clipmap_events(lod_state.old_lod0_center, lod0_center, |event| {
+        mesh_commands.enqueue(MeshCommand::Update(event))
     });
 
     lod_state.old_lod0_center = lod0_center;

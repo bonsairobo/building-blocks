@@ -28,6 +28,7 @@ where
     pub fn clipmap_active_chunks(
         &self,
         detail: f32,
+        lod0_clip_radius: f32,
         lod0_focus: PointN<Nf>,
         mut predicate: impl FnMut(ChunkKey<Ni>) -> bool,
         mut active_rx: impl FnMut(ChunkKey<Ni>),
@@ -38,6 +39,7 @@ where
             self.clipmap_active_chunks_recursive(
                 ChunkKey::new(root_lod, chunk_min),
                 detail,
+                lod0_clip_radius,
                 lod0_focus,
                 &mut predicate,
                 &mut active_rx,
@@ -49,6 +51,7 @@ where
         &self,
         node_key: ChunkKey<Ni>,
         detail: f32,
+        lod0_clip_radius: f32,
         lod0_focus: PointN<Nf>,
         predicate: &mut impl FnMut(ChunkKey<Ni>) -> bool,
         active_rx: &mut impl FnMut(ChunkKey<Ni>),
@@ -62,7 +65,26 @@ where
             active_rx(node_key);
         }
 
-        let is_active = self.normalized_dist(lod0_focus, node_key) > PointN::fill(detail);
+        let node_lod0_extent = self.indexer.chunk_extent_at_lower_lod(node_key, 0);
+
+        let lod0_chunk_center = node_lod0_extent.minimum + (node_lod0_extent.shape >> 1);
+
+        // Calculate the Euclidean distance from each focus the center of the chunk.
+        let dist = lod0_focus
+            .l2_distance_squared(PointN::<Nf>::from(lod0_chunk_center))
+            .sqrt();
+
+        // Don't consider any chunk whose center falls outside the clip radius. This is how we ensure that chunks are always at
+        // the same LOD when they enter and exit the clip sphere (BUG: assuming the camera does not move too fast and tunnel
+        // through and entire LOD sphere).
+        if dist >= lod0_clip_radius {
+            return;
+        }
+
+        // Normalize by chunk shape.
+        let norm_dist = PointN::fill(dist) / PointN::from(node_lod0_extent.shape);
+
+        let is_active = norm_dist > PointN::fill(detail);
         if is_active {
             // This node is active!
             active_rx(node_key);
@@ -74,6 +96,7 @@ where
                     self.clipmap_active_chunks_recursive(
                         self.indexer.child_chunk_key(node_key, child_i),
                         detail,
+                        lod0_clip_radius,
                         lod0_focus,
                         predicate,
                         active_rx,
@@ -87,8 +110,8 @@ where
     /// `old_lod0_focus` to `new_lod0_focus`.
     ///
     /// In order to detect new chunk slots to be loaded and old chunk slots to evict, the user must provide a
-    /// `lod0_clip_radius`. You can think of this as representing a cube around the focus where chunk slots can enter and exit
-    /// the cube as the focus moves.
+    /// `lod0_clip_radius`. You can think of this as representing a sphere around the focus where chunk centers can enter and
+    /// exit the sphere as the focus moves.
     pub fn clipmap_events(
         &self,
         detail: f32,
@@ -105,21 +128,20 @@ where
         );
         let old_lod0_clip_extent = (lod0_clip_extent + old_lod0_focus).containing_integer_extent();
         let new_lod0_clip_extent = (lod0_clip_extent + new_lod0_focus).containing_integer_extent();
-        // This extent covers both the old and new extents, ensuring we don't miss any relevant events.
+        // This extent covers both the old clip sphere and new clip sphere, ensuring we don't miss any relevant events.
         let union_lod0_clip_extent = old_lod0_clip_extent.quasi_union(&new_lod0_clip_extent);
-
         let root_lod = self.root_lod();
         let root_clip_extent = self
             .indexer
             .covering_ancestor_extent(union_lod0_clip_extent, root_lod as i32);
+
         for chunk_min in self.indexer.chunk_mins_for_extent(&root_clip_extent) {
             self.clipmap_events_recursive(
                 ChunkKey::new(root_lod, chunk_min),
                 detail,
+                lod0_clip_radius,
                 old_lod0_focus,
                 new_lod0_focus,
-                &old_lod0_clip_extent,
-                &new_lod0_clip_extent,
                 &mut predicate,
                 &mut event_rx,
             );
@@ -130,10 +152,9 @@ where
         &self,
         node_key: ChunkKey<Ni>, // May not exist in the ChunkTree!
         detail: f32,
+        lod0_clip_radius: f32,
         old_lod0_focus: PointN<Nf>,
         new_lod0_focus: PointN<Nf>,
-        old_lod0_clip_extent: &ExtentN<Ni>,
-        new_lod0_clip_extent: &ExtentN<Ni>,
         predicate: &mut impl FnMut(ChunkKey<Ni>) -> bool,
         event_rx: &mut impl FnMut(ClipEvent<Ni>),
     ) {
@@ -142,31 +163,40 @@ where
         }
 
         let node_lod0_extent = self.indexer.chunk_extent_at_lower_lod(node_key, 0);
-        let old_node_overlap = node_lod0_extent.intersection(old_lod0_clip_extent);
-        let new_node_overlap = node_lod0_extent.intersection(new_lod0_clip_extent);
-        let chunk_in_old_extent = !old_node_overlap.is_empty();
-        let chunk_in_new_extent = !new_node_overlap.is_empty();
 
-        if !chunk_in_old_extent && !chunk_in_new_extent {
+        // Calculate the Euclidean distance from each focus the center of the chunk.
+        let lod0_chunk_center = node_lod0_extent.minimum + (node_lod0_extent.shape >> 1);
+        let fcenter = PointN::<Nf>::from(lod0_chunk_center);
+        let old_dist = old_lod0_focus.l2_distance_squared(fcenter).sqrt();
+        let new_dist = new_lod0_focus.l2_distance_squared(fcenter).sqrt();
+
+        let chunk_center_in_old_sphere = old_dist < lod0_clip_radius;
+        let chunk_center_in_new_sphere = new_dist < lod0_clip_radius;
+
+        if !chunk_center_in_old_sphere && !chunk_center_in_new_sphere {
             // There are no events for chunks that have not recently touched the clip extent.
             return;
         }
 
         if node_key.lod == 0 {
             // This node is active, and it can't be split or merged. But it might have just entered or exited.
-            let entered = !chunk_in_old_extent && chunk_in_new_extent;
+            let entered = !chunk_center_in_old_sphere && chunk_center_in_new_sphere;
             if entered {
                 event_rx(ClipEvent::Enter(node_key));
                 return;
             }
-            let exited = chunk_in_old_extent && !chunk_in_new_extent;
+            let exited = chunk_center_in_old_sphere && !chunk_center_in_new_sphere;
             if exited {
                 event_rx(ClipEvent::Exit(node_key));
             }
             return;
         }
 
-        if old_node_overlap == node_lod0_extent && new_node_overlap == node_lod0_extent {
+        let node_radius = (node_lod0_extent.shape.max_component() >> 1) as f32 * 3f32.sqrt();
+        let chunk_is_subset_of_old_sphere = old_dist + node_radius < lod0_clip_radius;
+        let chunk_is_subset_of_new_sphere = new_dist + node_radius < lod0_clip_radius;
+
+        if chunk_is_subset_of_old_sphere && chunk_is_subset_of_new_sphere {
             // This node was and is still a subset of the clip extent. In this case, enter and exit events are not possible.
             // We can now restrict ourselves to looking at occupied nodes.
             if let Some(child_mask) = self.get_child_mask(node_key) {
@@ -183,12 +213,14 @@ where
             return;
         }
 
-        // At this point we know the chunk only partially intersects the clip extent. All events are still possible.
+        // At this point we know the chunk only partially intersects the clip sphere. All events are still possible.
 
-        let old_normalized_dist = self.normalized_dist(old_lod0_focus, node_key);
-        let new_normalized_dist = self.normalized_dist(new_lod0_focus, node_key);
-        let was_active = old_normalized_dist > PointN::fill(detail);
-        let is_active = new_normalized_dist > PointN::fill(detail);
+        let fshape = PointN::from(node_lod0_extent.shape);
+        let old_norm_dist = PointN::fill(old_dist) / fshape;
+        let new_norm_dist = PointN::fill(new_dist) / fshape;
+
+        let was_active = old_norm_dist > PointN::fill(detail);
+        let is_active = new_norm_dist > PointN::fill(detail);
 
         match (was_active, is_active) {
             // Old and new agree this chunk is not active.
@@ -199,10 +231,9 @@ where
                     self.clipmap_events_recursive(
                         self.indexer.child_chunk_key(node_key, child_i),
                         detail,
+                        lod0_clip_radius,
                         old_lod0_focus,
                         new_lod0_focus,
-                        old_lod0_clip_extent,
-                        new_lod0_clip_extent,
                         predicate,
                         event_rx,
                     );
@@ -238,12 +269,12 @@ where
         }
 
         // This node is active (based on early returns above). Check for enters and exits.
-        let entered = !chunk_in_old_extent && chunk_in_new_extent;
+        let entered = !chunk_center_in_old_sphere && chunk_center_in_new_sphere;
         if entered {
             event_rx(ClipEvent::Enter(node_key));
             return;
         }
-        let exited = chunk_in_old_extent && !chunk_in_new_extent;
+        let exited = chunk_center_in_old_sphere && !chunk_center_in_new_sphere;
         if exited {
             event_rx(ClipEvent::Exit(node_key));
         }
@@ -259,10 +290,19 @@ where
         predicate: &mut impl FnMut(ChunkKey<Ni>) -> bool,
         event_rx: &mut impl FnMut(ClipEvent<Ni>),
     ) {
-        let old_normalized_dist = self.normalized_dist(old_lod0_focus, node_key);
-        let new_normalized_dist = self.normalized_dist(new_lod0_focus, node_key);
-        let was_active = old_normalized_dist > PointN::fill(detail);
-        let is_active = new_normalized_dist > PointN::fill(detail);
+        let node_lod0_extent = self.indexer.chunk_extent_at_lower_lod(node_key, 0);
+
+        // Calculate the Euclidean distance from each focus the center of the chunk.
+        let lod0_chunk_center = node_lod0_extent.minimum + (node_lod0_extent.shape >> 1);
+        let fcenter = PointN::<Nf>::from(lod0_chunk_center);
+        let old_dist = old_lod0_focus.l2_distance_squared(fcenter).sqrt();
+        let new_dist = new_lod0_focus.l2_distance_squared(fcenter).sqrt();
+        let fshape = PointN::from(node_lod0_extent.shape);
+        let old_norm_dist = PointN::fill(old_dist) / fshape;
+        let new_norm_dist = PointN::fill(new_dist) / fshape;
+
+        let was_active = old_norm_dist > PointN::fill(detail);
+        let is_active = new_norm_dist > PointN::fill(detail);
 
         match (was_active, is_active) {
             // Old and new agree this chunk is not active.
@@ -318,17 +358,6 @@ where
                 }
             })
             .collect()
-    }
-
-    /// Calculates the non-negative `D / S` metric used to determine our node-splitting condition.
-    fn normalized_dist(&self, lod0_focus: PointN<Nf>, node_key: ChunkKey<Ni>) -> PointN<Nf> {
-        let scale = (1 << node_key.lod) as f32;
-        let chunk_shape = self.indexer.chunk_shape();
-        let lod0_chunk_center = PointN::<Nf>::from(node_key.minimum + (chunk_shape >> 1)) * scale;
-        let lod0_chunk_shape = PointN::<Nf>::from(chunk_shape) * scale;
-        let dist_from_center = lod0_focus.l2_distance_squared(lod0_chunk_center).sqrt();
-        // TODO: check for divide by zero
-        PointN::fill(dist_from_center) / lod0_chunk_shape
     }
 }
 

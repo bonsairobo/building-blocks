@@ -96,8 +96,13 @@ impl VoxelMap for BlockyVoxelMap {
     }
 
     fn clipmap_active_chunks(&self, lod0_center: Point3f, active_rx: impl FnMut(ChunkKey3)) {
-        self.chunks
-            .clipmap_active_chunks(self.config().detail, lod0_center, |_| true, active_rx);
+        self.chunks.clipmap_active_chunks(
+            self.config().detail,
+            self.config().clip_radius,
+            lod0_center,
+            |_| true,
+            active_rx,
+        );
     }
 
     fn clipmap_events(
@@ -108,7 +113,7 @@ impl VoxelMap for BlockyVoxelMap {
     ) {
         self.chunks.clipmap_events(
             self.config().detail,
-            1000.0,
+            self.config().clip_radius,
             old_lod0_center,
             new_lod0_center,
             |_| true,

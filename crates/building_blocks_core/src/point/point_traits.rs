@@ -19,6 +19,7 @@ pub trait Point:
     + Div<Self, Output = Self>
     + GetComponent<Scalar = <Self as Point>::Scalar>
     + MapComponents<Scalar = <Self as Point>::Scalar>
+    + MinMaxComponent<Scalar = <Self as Point>::Scalar>
     + Mul<<Self as Point>::Scalar, Output = Self>
     + Mul<Self, Output = Self>
     + Ones

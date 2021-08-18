@@ -2,7 +2,7 @@
     chunk_exponent: 4,
     num_lods: 6,
     detail: 6.0,
-    clip_radius: 1000.0,
+    clip_radius: 2000.0,
     world_chunks_extent: ((
         minimum: ((-50, -2, -50)),
         shape: ((100, 4, 100)),

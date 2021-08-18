@@ -365,7 +365,6 @@ where
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    Usr: UserChunk,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
     /// Borrow the chunk at `key`.
@@ -376,35 +375,6 @@ where
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.get_node(key).and_then(|ch| ch.user_chunk.as_ref())
-    }
-
-    /// Get the values at point `p` in level of detail `lod`.
-    #[inline]
-    pub fn clone_point(&self, lod: u8, p: PointN<N>) -> T
-    where
-        T: Clone,
-        Usr::Array: GetUnchecked<PointN<N>, Item = T>,
-    {
-        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
-
-        self.get_chunk(ChunkKey::new(lod, chunk_min))
-            .map(|chunk| unsafe { chunk.array().get_unchecked(p) })
-            .unwrap_or_else(|| self.ambient_value.clone())
-    }
-
-    /// Get a reference to the values at point `p` in level of detail `lod`.
-    #[inline]
-    pub fn get_point<'a, Ref>(&'a self, lod: u8, p: PointN<N>) -> Ref
-    where
-        Usr: 'a,
-        Usr::Array: GetRefUnchecked<'a, PointN<N>, Item = Ref>,
-        Ref: MultiRef<'a, Data = T>,
-    {
-        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
-
-        self.get_chunk(ChunkKey::new(lod, chunk_min))
-            .map(|chunk| unsafe { chunk.array().get_ref_unchecked(p) })
-            .unwrap_or_else(|| Ref::from_data_ref(&self.ambient_value))
     }
 
     /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be represented by an `AmbientExtent`.
@@ -436,6 +406,55 @@ impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
     Usr: UserChunk,
+    Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
+    Store: ChunkStorage<N, Chunk = Usr>,
+{
+    /// Get the values at point `p` in level of detail `lod`.
+    #[inline]
+    pub fn clone_point(&self, lod: u8, p: PointN<N>) -> T
+    where
+        T: Clone,
+        Usr::Array: GetUnchecked<PointN<N>, Item = T>,
+    {
+        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
+
+        self.get_chunk(ChunkKey::new(lod, chunk_min))
+            .map(|chunk| unsafe { chunk.array().get_unchecked(p) })
+            .unwrap_or_else(|| self.ambient_value.clone())
+    }
+
+    /// Get a reference to the values at point `p` in level of detail `lod`.
+    #[inline]
+    pub fn get_point<'a, Ref>(&'a self, lod: u8, p: PointN<N>) -> Ref
+    where
+        Usr: 'a,
+        Usr::Array: GetRefUnchecked<'a, PointN<N>, Item = Ref>,
+        Ref: MultiRef<'a, Data = T>,
+    {
+        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
+
+        self.get_chunk(ChunkKey::new(lod, chunk_min))
+            .map(|chunk| unsafe { chunk.array().get_ref_unchecked(p) })
+            .unwrap_or_else(|| Ref::from_data_ref(&self.ambient_value))
+    }
+
+    /// Get a mutable reference to the values at point `p` in level of detail `lod`.
+    #[inline]
+    pub fn get_mut_point<'a, Mut>(&'a mut self, lod: u8, p: PointN<N>) -> Mut
+    where
+        Usr: 'a,
+        Usr::Array: GetMutUnchecked<'a, PointN<N>, Item = Mut>,
+    {
+        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
+        let chunk = self.get_mut_chunk_or_insert_ambient(ChunkKey::new(lod, chunk_min));
+
+        unsafe { chunk.array_mut().get_mut_unchecked(p) }
+    }
+}
+
+impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
+where
+    PointN<N>: IntegerPoint<N>,
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
@@ -596,19 +615,6 @@ where
             .get_or_insert_with(|| {
                 builder.new_ambient(indexer.extent_for_chunk_with_min(chunk_min))
             })
-    }
-
-    /// Get a mutable reference to the values at point `p` in level of detail `lod`.
-    #[inline]
-    pub fn get_mut_point<'a, Mut>(&'a mut self, lod: u8, p: PointN<N>) -> Mut
-    where
-        Usr: 'a,
-        Usr::Array: GetMutUnchecked<'a, PointN<N>, Item = Mut>,
-    {
-        let chunk_min = self.indexer.min_of_chunk_containing_point(p);
-        let chunk = self.get_mut_chunk_or_insert_ambient(ChunkKey::new(lod, chunk_min));
-
-        unsafe { chunk.array_mut().get_mut_unchecked(p) }
     }
 
     /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be created first with ambient value.

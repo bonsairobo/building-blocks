@@ -39,7 +39,7 @@ where
         max_lod: u8,
         src_extent: ExtentN<N>,
     ) where
-        Samp: ChunkDownsampler<N, T, Usr, Usr>,
+        Samp: ChunkDownsampler<N, T, Usr::Array, Usr::Array>,
     {
         self.downsample_extent_internal(
             |this, src_chunk_key| this.downsample_chunk(sampler, src_chunk_key),
@@ -60,7 +60,9 @@ where
         src_extent: ExtentN<N>,
     ) where
         Lod0Ch: Borrow<Lod0ChBorrow>,
-        Samp: ChunkDownsampler<N, T, Usr, Usr> + ChunkDownsampler<N, T, Lod0ChBorrow, Usr>,
+        Lod0ChBorrow: UserChunk,
+        Samp: ChunkDownsampler<N, T, Usr::Array, Usr::Array>
+            + ChunkDownsampler<N, T, Lod0ChBorrow::Array, Usr::Array>,
     {
         self.downsample_extent_internal(
             |this, src_chunk_key| {
@@ -148,7 +150,7 @@ where
     /// Downsamples the chunk at `src_chunk_key` into `lod + 1`.
     fn downsample_chunk<Samp>(&mut self, sampler: &Samp, src_chunk_key: ChunkKey<N>)
     where
-        Samp: ChunkDownsampler<N, T, Usr, Usr>,
+        Samp: ChunkDownsampler<N, T, Usr::Array, Usr::Array>,
     {
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
         if let Some(src_node) = self.pop_node(src_chunk_key) {
@@ -170,11 +172,12 @@ where
         src_chunk_key: ChunkKey<N>,
         src_chunk: &Src,
     ) where
-        Samp: ChunkDownsampler<N, T, Src, Usr>,
+        Src: UserChunk,
+        Samp: ChunkDownsampler<N, T, Src::Array, Usr::Array>,
     {
         let dst = self.indexer.downsample_destination(src_chunk_key);
         let dst_chunk = self.get_mut_chunk_or_insert_ambient(dst.chunk_key);
-        sampler.downsample(src_chunk, dst_chunk, dst.offset);
+        sampler.downsample(src_chunk.array(), dst_chunk.array_mut(), dst.offset);
     }
 
     /// Downsamples an ambient chunk into `lod + 1`. This simply fills the destination extent with the ambient value.

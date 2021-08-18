@@ -79,8 +79,7 @@ where
             .sqrt();
 
         // Don't consider any chunk whose center falls outside the clip radius. This is how we ensure that chunks are always at
-        // the same LOD when they enter and exit the clip sphere (BUG: assuming the camera does not move too fast and tunnel
-        // through and entire LOD sphere).
+        // the same LOD when they enter and exit the clip sphere.
         if dist >= lod0_clip_radius {
             return;
         }

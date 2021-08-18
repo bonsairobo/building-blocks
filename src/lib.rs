@@ -12,11 +12,14 @@
 //! We focus on generally useful data structures and algorithms. Features include:
 //!
 //! - 2D and 3D data storage
-//!   - [`Array`](crate::storage::array) with structure-of-arrays (`SoA`) storage of multiple data channels per spatial dimension
+//!   - [`Array`](crate::storage::array) with structure-of-arrays (`SoA`) storage of multiple data channels per spatial
+//!     dimension
 //!   - [`ChunkTree`](crate::storage::chunk_tree) is a quadtree (2D) or octree (3D) with generic chunks and chunk storage
 //!   - [`ChunkDb`](crate::storage::database) for compressed, persistent voxel worlds, backed by the
 //!     [`sled`](https://docs.rs/sled) embedded database
 //! - level of detail
+//!   - [`ChunkDownsampler`](crate::storage::chunk_tree::ChunkDownsampler) trait controls how new samples are generated from LOD
+//!     N into LOD N+1
 //!   - `ChunkTree` can act as a clipmap for keeping high detail close to a focal point, generating events to trigger:
 //!     - chunk generation / loading
 //!     - chunk split / merge when desired sample rate changes
@@ -143,8 +146,8 @@
 //!
 //! ### VOX Files
 //!
-//! ".VOX" files are supported via the [`vox-format`](https://docs.rs/vox-format/) crate. Enable the `vox-format` feature to
-//! get the `VoxModelBuffer` trait impl for `Array3x1`, which allows you to read VOX files directly into an array.
+//! ".VOX" files are supported via the [`vox-format`](https://docs.rs/vox-format/) crate. Enable the `vox-format` feature to get
+//! the `VoxModelBuffer` trait impl for `Array3x1`, which allows you to read VOX files directly into an array.
 //!
 //! ### Images
 //!

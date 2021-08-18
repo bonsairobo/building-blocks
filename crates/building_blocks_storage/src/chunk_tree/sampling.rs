@@ -117,8 +117,7 @@ where
         src_extent: &ExtentN<N>,
     ) {
         if node_key.lod > src_lod {
-            if let Some(node) = self.get_node(node_key) {
-                let child_mask = node.child_mask;
+            if let Some(child_mask) = self.get_child_mask(node_key) {
                 for child_i in 0..PointN::NUM_CORNERS {
                     if child_mask_has_child(child_mask, child_i) {
                         let child_key = self.indexer.child_chunk_key(node_key, child_i);
@@ -204,8 +203,7 @@ where
         Dst: FillExtent<N, Item = T> + IndexedArray<N>,
     {
         if node_key.lod > min_src_lod {
-            if let Some(node) = self.get_node(node_key) {
-                let child_mask = node.child_mask;
+            if let Some(child_mask) = self.get_child_mask(node_key) {
                 for child_i in 0..PointN::NUM_CORNERS {
                     if child_mask_has_child(child_mask, child_i) {
                         let child_key = self.indexer.child_chunk_key(node_key, child_i);

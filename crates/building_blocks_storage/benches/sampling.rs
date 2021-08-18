@@ -80,7 +80,7 @@ fn sdf_mean_downsample_chunk_map(c: &mut Criterion) {
                         (map, map_extent)
                     },
                     |(mut map, map_extent)| {
-                        map.downsample_extent(&SdfMeanDownsampler, 0, 5, map_extent)
+                        map.downsample_extent_into_self(&SdfMeanDownsampler, 0, 5, map_extent)
                     },
                 );
             },

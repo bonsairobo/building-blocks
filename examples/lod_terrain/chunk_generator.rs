@@ -66,11 +66,15 @@ fn apply_chunk_commands<Map: VoxelMap>(
                     ChunkCommand::Create(key) => {
                         num_commands_processed += 1;
                         num_chunks_created += 1;
-                        extents_to_downsample.push(voxel_map.chunk_extent_at_lower_lod(key, 0));
+                        let mut needs_downsampling = false;
                         for chunk_min in voxel_map.iter_chunks_for_key(key) {
                             if !voxel_map.chunk_is_generated(chunk_min) {
+                                needs_downsampling = true;
                                 make_chunks(chunk_min)
                             }
+                        }
+                        if needs_downsampling {
+                            extents_to_downsample.push(voxel_map.chunk_extent_at_lower_lod(key, 0));
                         }
                     }
                 }

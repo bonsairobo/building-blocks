@@ -168,61 +168,112 @@ where
         }
     }
 
-    /// Downsamples all descendants of `dst_chunk`, down to `min_src_lod`. This enables parallel downsampling via
-    /// write-out-of-place.
+    /// Downsamples all descendants of `ancestor_chunk`, down to `min_src_lod`.
     ///
-    /// **WARNING**: Only occupied chunk slots will be downsampled. You will most likely want to initialize `dst_chunk` to all
-    /// ambient values.
-    pub fn downsample_descendants_into_external<Samp, Dst>(
+    /// The newly created chunks will be passed to the `chunk_rx` callback.
+    pub fn downsample_descendants_into_new_chunks<Samp>(
         &self,
         sampler: &Samp,
+        ancestor_key: ChunkKey<N>,
         min_src_lod: u8,
-        dst_chunk_key: ChunkKey<N>,
-        dst_chunk: &mut Dst,
+        chunk_rx: impl FnMut(ChunkKey<N>, Usr),
     ) where
-        Samp: ChunkDownsampler<N, T, Usr::Array, Dst>,
-        Dst: FillExtent<N, Item = T> + IndexedArray<N>,
+        Samp: ChunkDownsampler<N, T, Usr::Array, Usr::Array>,
     {
-        assert!(min_src_lod < dst_chunk_key.lod);
-        self.downsample_descendants_into_external_recursive(
+        self.downsample_descendants_into_new_custom_chunks(
             sampler,
+            ancestor_key,
             min_src_lod,
-            dst_chunk_key,
-            dst_chunk,
+            chunk_rx,
+            |extent| self.builder.new_ambient(extent),
         );
     }
 
-    fn downsample_descendants_into_external_recursive<Samp, Dst>(
+    /// Downsamples all descendants of `ancestor_chunk`, down to `min_src_lod`. Supports a custom chunk factory `make_ambient`.
+    ///
+    /// The newly created chunks will be passed to the `chunk_rx` callback.
+    pub fn downsample_descendants_into_new_custom_chunks<Samp, DstUsr>(
         &self,
         sampler: &Samp,
+        ancestor_key: ChunkKey<N>,
         min_src_lod: u8,
+        mut chunk_rx: impl FnMut(ChunkKey<N>, Usr),
+        mut make_ambient: impl FnMut(ExtentN<N>) -> DstUsr,
+    ) where
+        Samp: ChunkDownsampler<N, T, Usr::Array, DstUsr::Array>
+            + ChunkDownsampler<N, T, DstUsr::Array, DstUsr::Array>,
+        DstUsr: UserChunk,
+        DstUsr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
+    {
+        assert!(min_src_lod < ancestor_key.lod);
+        self.downsample_descendants_into_new_chunks_recursive(
+            sampler,
+            ancestor_key,
+            min_src_lod,
+            &mut chunk_rx,
+            &mut make_ambient,
+        );
+    }
+
+    fn downsample_descendants_into_new_chunks_recursive<Samp, DstUsr>(
+        &self,
+        sampler: &Samp,
         node_key: ChunkKey<N>,
-        dst_chunk: &mut Dst,
+        min_src_lod: u8,
+        chunk_rx: &mut impl FnMut(ChunkKey<N>, Usr),
+        make_ambient: &mut impl FnMut(ExtentN<N>) -> DstUsr,
+    ) where
+        Samp: ChunkDownsampler<N, T, Usr::Array, DstUsr::Array>
+            + ChunkDownsampler<N, T, DstUsr::Array, DstUsr::Array>,
+        DstUsr: UserChunk,
+        DstUsr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
+    {
+        if let Some(child_mask) = self.get_child_mask(node_key) {
+            let dst_extent = self.indexer.extent_for_chunk_with_min(node_key.minimum);
+            let mut dst_chunk = make_ambient(dst_extent);
+            for child_i in 0..PointN::NUM_CORNERS {
+                if child_mask_has_child(child_mask, child_i) {
+                    let child_key = self.indexer.child_chunk_key(node_key, child_i);
+                    self.downsample_descendants_into_new_chunks_recursive(
+                        sampler,
+                        child_key,
+                        min_src_lod,
+                        chunk_rx,
+                        make_ambient,
+                    );
+                }
+            }
+            // Do a post-order traversal so we can start sampling from the bottom of the tree and work our way up.
+            self.downsample_children_into_external(sampler, node_key, dst_chunk.array_mut());
+        }
+    }
+
+    /// Downsamples all children of `dst_chunk` into `dst_chunk`.
+    ///
+    /// **WARNING**: Only occupied chunk slots will be downsampled. You will most likely want to initialize `dst_chunk` to all
+    /// ambient values.
+    pub fn downsample_children_into_external<Samp, Dst>(
+        &self,
+        sampler: &Samp,
+        dst_chunk_key: ChunkKey<N>,
+        dst_array: &mut Dst,
     ) where
         Samp: ChunkDownsampler<N, T, Usr::Array, Dst>,
         Dst: FillExtent<N, Item = T> + IndexedArray<N>,
     {
-        if node_key.lod > min_src_lod {
-            if let Some(child_mask) = self.get_child_mask(node_key) {
-                for child_i in 0..PointN::NUM_CORNERS {
-                    if child_mask_has_child(child_mask, child_i) {
-                        let child_key = self.indexer.child_chunk_key(node_key, child_i);
-                        self.downsample_descendants_into_external_recursive(
-                            sampler,
-                            min_src_lod,
-                            child_key,
-                            dst_chunk,
-                        );
-                    }
+        if let Some(child_mask) = self.get_child_mask(dst_chunk_key) {
+            for child_i in 0..PointN::NUM_CORNERS {
+                if child_mask_has_child(child_mask, child_i) {
+                    let child_key = self.indexer.child_chunk_key(dst_chunk_key, child_i);
+                    self.downsample_into_external(sampler, child_key, dst_array);
                 }
             }
         }
-
-        // Do a post-order traversal so we can start sampling from the bottom of the tree and work our way up.
-        self.downsample_into_external(sampler, node_key, dst_chunk);
     }
 
     /// Downsamples the chunk at `src_chunk_key` into `dst_chunk`, assuming that `dst_chunk` will be stored in the parent node.
+    ///
+    /// This enables parallel downsampling via write-out-of-place.
     pub fn downsample_into_external<Samp, Dst>(
         &self,
         sampler: &Samp,

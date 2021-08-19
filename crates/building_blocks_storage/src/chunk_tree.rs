@@ -265,6 +265,12 @@ where
     pub fn ambient_value(&self) -> T {
         self.builder().ambient_value()
     }
+
+    /// Create and return a new chunk with entirely ambient values.
+    pub fn new_ambient_chunk(&self, chunk_key: ChunkKey<N>) -> Bldr::Chunk {
+        self.builder
+            .new_ambient(self.indexer.extent_for_chunk_with_min(chunk_key.minimum))
+    }
 }
 
 impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>

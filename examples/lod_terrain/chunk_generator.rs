@@ -101,6 +101,6 @@ fn write_chunks<Map: VoxelMap>(
         }
     }
     for extent in extents_to_downsample.into_iter() {
-        voxel_map.downsample_extent(extent);
+        voxel_map.downsample_extent_into_self(extent);
     }
 }

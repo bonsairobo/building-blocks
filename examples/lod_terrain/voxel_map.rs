@@ -19,7 +19,7 @@ pub trait VoxelMap: ecs::component::Component {
 
     fn write_chunk(&mut self, key: ChunkKey3, chunk: Array3x1<Self::Voxel>);
 
-    fn downsample_extent(&mut self, extent: Extent3i);
+    fn downsample_extent_into_self(&mut self, extent: Extent3i);
 
     fn config(&self) -> &MapConfig;
 

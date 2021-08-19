@@ -130,9 +130,13 @@ impl VoxelMap for BlockyVoxelMap {
         self.chunks.write_chunk(key, chunk);
     }
 
-    fn downsample_extent(&mut self, extent: Extent3i) {
-        self.chunks
-            .downsample_extent(&PointDownsampler, 0, self.chunks.root_lod(), extent);
+    fn downsample_extent_into_self(&mut self, extent: Extent3i) {
+        self.chunks.downsample_extent_into_self(
+            &PointDownsampler,
+            0,
+            self.chunks.root_lod(),
+            extent,
+        );
     }
 
     fn config(&self) -> &MapConfig {

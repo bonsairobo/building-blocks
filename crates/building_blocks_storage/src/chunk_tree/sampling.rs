@@ -13,7 +13,7 @@ use crate::{
 use building_blocks_core::prelude::*;
 use std::borrow::Borrow;
 
-pub trait ChunkDownsampler<N, T, Src, Dst> {
+pub trait ChunkDownsampler<N, Src, Dst> {
     /// Samples `src_chunk` in order to write out just a portion of `dst_chunk`, starting at `dst_min`, where the destination
     /// has half the resolution (sample rate) of the source.
     fn downsample(&self, src_chunk: &Src, dst_chunk: &mut Dst, dst_min: Local<N>);
@@ -39,7 +39,7 @@ where
         max_lod: u8,
         src_extent: ExtentN<N>,
     ) where
-        Samp: ChunkDownsampler<N, T, Usr::Array, Usr::Array>,
+        Samp: ChunkDownsampler<N, Usr::Array, Usr::Array>,
     {
         self.downsample_extent_into_self_internal(
             |this, src_chunk_key| this.downsample_into_self(sampler, src_chunk_key),
@@ -61,8 +61,8 @@ where
     ) where
         Lod0Ch: Borrow<Lod0ChBorrow>,
         Lod0ChBorrow: UserChunk,
-        Samp: ChunkDownsampler<N, T, Usr::Array, Usr::Array>
-            + ChunkDownsampler<N, T, Lod0ChBorrow::Array, Usr::Array>,
+        Samp: ChunkDownsampler<N, Usr::Array, Usr::Array>
+            + ChunkDownsampler<N, Lod0ChBorrow::Array, Usr::Array>,
     {
         self.downsample_extent_into_self_internal(
             |this, src_chunk_key| {
@@ -153,7 +153,7 @@ where
     /// Downsamples the chunk at `src_chunk_key` into `lod + 1`.
     pub fn downsample_into_self<Samp>(&mut self, sampler: &Samp, src_chunk_key: ChunkKey<N>)
     where
-        Samp: ChunkDownsampler<N, T, Usr::Array, Usr::Array>,
+        Samp: ChunkDownsampler<N, Usr::Array, Usr::Array>,
     {
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
         if let Some(src_node) = self.pop_node(src_chunk_key) {
@@ -178,7 +178,7 @@ where
         min_src_lod: u8,
         chunk_rx: impl FnMut(ChunkKey<N>, Usr),
     ) where
-        Samp: ChunkDownsampler<N, T, Usr::Array, Usr::Array>,
+        Samp: ChunkDownsampler<N, Usr::Array, Usr::Array>,
     {
         self.downsample_descendants_into_new_custom_chunks(
             sampler,
@@ -200,8 +200,8 @@ where
         mut chunk_rx: impl FnMut(ChunkKey<N>, Usr),
         mut make_ambient: impl FnMut(ExtentN<N>) -> DstUsr,
     ) where
-        Samp: ChunkDownsampler<N, T, Usr::Array, DstUsr::Array>
-            + ChunkDownsampler<N, T, DstUsr::Array, DstUsr::Array>,
+        Samp: ChunkDownsampler<N, Usr::Array, DstUsr::Array>
+            + ChunkDownsampler<N, DstUsr::Array, DstUsr::Array>,
         DstUsr: UserChunk,
         DstUsr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
     {
@@ -223,8 +223,8 @@ where
         chunk_rx: &mut impl FnMut(ChunkKey<N>, Usr),
         make_ambient: &mut impl FnMut(ExtentN<N>) -> DstUsr,
     ) where
-        Samp: ChunkDownsampler<N, T, Usr::Array, DstUsr::Array>
-            + ChunkDownsampler<N, T, DstUsr::Array, DstUsr::Array>,
+        Samp: ChunkDownsampler<N, Usr::Array, DstUsr::Array>
+            + ChunkDownsampler<N, DstUsr::Array, DstUsr::Array>,
         DstUsr: UserChunk,
         DstUsr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
     {
@@ -258,7 +258,7 @@ where
         dst_chunk_key: ChunkKey<N>,
         dst_array: &mut Dst,
     ) where
-        Samp: ChunkDownsampler<N, T, Usr::Array, Dst>,
+        Samp: ChunkDownsampler<N, Usr::Array, Dst>,
         Dst: FillExtent<N, Item = T> + IndexedArray<N>,
     {
         if let Some(child_mask) = self.get_child_mask(dst_chunk_key) {
@@ -280,7 +280,7 @@ where
         src_chunk_key: ChunkKey<N>,
         dst_chunk: &mut Dst,
     ) where
-        Samp: ChunkDownsampler<N, T, Usr::Array, Dst>,
+        Samp: ChunkDownsampler<N, Usr::Array, Dst>,
         Dst: FillExtent<N, Item = T> + IndexedArray<N>,
     {
         let dst = self.indexer.downsample_destination(src_chunk_key);
@@ -313,7 +313,7 @@ where
         src_chunk: &Src,
     ) where
         Src: UserChunk,
-        Samp: ChunkDownsampler<N, T, Src::Array, Usr::Array>,
+        Samp: ChunkDownsampler<N, Src::Array, Usr::Array>,
     {
         let dst = self.indexer.downsample_destination(src_chunk_key);
         let dst_chunk = self.get_mut_chunk_or_insert_ambient(dst.chunk_key);

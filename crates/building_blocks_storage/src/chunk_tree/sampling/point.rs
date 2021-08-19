@@ -9,7 +9,7 @@ use building_blocks_core::prelude::*;
 /// A `ChunkDownsampler` that just selects a single point from each `2x2x2` region, ignoring the rest.
 pub struct PointDownsampler;
 
-impl<N, Src, Dst, T> ChunkDownsampler<N, T, Src, Dst> for PointDownsampler
+impl<N, Src, Dst, T> ChunkDownsampler<N, Src, Dst> for PointDownsampler
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,

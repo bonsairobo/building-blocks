@@ -11,7 +11,7 @@ use building_blocks_core::prelude::*;
 /// to lie in the range `[-1.0, 1.0]`.
 pub struct SdfMeanDownsampler;
 
-impl<N, Src, Dst, T> ChunkDownsampler<N, T, Src, Dst> for SdfMeanDownsampler
+impl<N, Src, Dst, T> ChunkDownsampler<N, Src, Dst> for SdfMeanDownsampler
 where
     N: ArrayIndexer<N>,
     PointN<N>: IntegerPoint<N>,

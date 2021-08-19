@@ -68,7 +68,7 @@
 //!
 //! **NOTE**: If you want your downsampled data to have different number of channels than LOD0, then you will need to store the
 //! downsampled chunks in a different [`ChunkTree`]. You will need to use the specialized
-//! `ChunkTree::downsample_extent_with_lod0` method for this use case.
+//! `ChunkTree::downsample_extent_into_self_with_lod0` method for this use case.
 //!
 //! # Chunk Storage
 //!

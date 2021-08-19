@@ -51,7 +51,7 @@ where
 
     /// Same as `downsample_extent`, but allows passing in a closure that fetches LOD0 chunks. This is mostly a workaround so we
     /// can downsample multichannel chunks from LOD0.
-    pub fn downsample_extent_with_lod0<Samp, Lod0Ch, Lod0ChBorrow>(
+    pub fn downsample_extent_into_self_with_lod0<Samp, Lod0Ch, Lod0ChBorrow>(
         &mut self,
         get_lod0_chunk: impl Fn(PointN<N>) -> Option<Lod0Ch>,
         sampler: &Samp,
@@ -409,6 +409,12 @@ mod tests {
         };
 
         // Only keep samples at 4 levels.
-        lodn.downsample_extent_with_lod0(get_lod0_chunk, &SdfMeanDownsampler, 0, 3, lod0_extent);
+        lodn.downsample_extent_into_self_with_lod0(
+            get_lod0_chunk,
+            &SdfMeanDownsampler,
+            0,
+            3,
+            lod0_extent,
+        );
     }
 }

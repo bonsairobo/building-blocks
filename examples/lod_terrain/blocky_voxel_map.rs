@@ -1,6 +1,9 @@
 use crate::voxel_map::{MapConfig, NoiseConfig, VoxelMap};
 
-use bevy_utilities::{bevy::tasks::ComputeTaskPool, noise::generate_noise_chunks3};
+use bevy_utilities::{
+    bevy::tasks::ComputeTaskPool,
+    noise::{generate_noise_chunk3, generate_noise_chunks3},
+};
 use building_blocks::{
     mesh::{
         greedy_quads, padded_greedy_quads_chunk_extent, GreedyQuadsBuffer, IsOpaque, MergeVoxel,
@@ -45,6 +48,7 @@ pub struct BlockyVoxelMap {
 
 impl VoxelMap for BlockyVoxelMap {
     type MeshBuffers = MeshBuffers;
+    type Voxel = Voxel;
 
     fn generate(pool: &ComputeTaskPool, config: MapConfig) -> Self {
         let MapConfig {
@@ -89,6 +93,46 @@ impl VoxelMap for BlockyVoxelMap {
         chunks.downsample_extent_into_self(&PointDownsampler, 0, root_lod, config.world_extent());
 
         Self { chunks, config }
+    }
+
+    fn chunk_extent_at_lower_lod(&self, key: ChunkKey3, lod: u8) -> Extent3i {
+        self.chunks.indexer.chunk_extent_at_lower_lod(key, lod)
+    }
+
+    fn iter_chunks_for_key(&self, key: ChunkKey3) -> Box<dyn Iterator<Item = Point3i>> {
+        let lod0_extent = self.chunks.indexer.chunk_extent_at_lower_lod(key, 0);
+        Box::new(self.chunks.indexer.chunk_mins_for_extent(&lod0_extent))
+    }
+
+    fn chunk_is_generated(&self, minimum: Point3i) -> bool {
+        self.chunks.get_chunk(ChunkKey::new(0, minimum)).is_some()
+    }
+
+    fn generate_chunk(&self, minimum: Point3i) -> Option<Array3x1<Self::Voxel>> {
+        let MapConfig {
+            chunk_exponent,
+            noise:
+                NoiseConfig {
+                    freq,
+                    scale,
+                    seed,
+                    octaves,
+                },
+            ..
+        } = self.config;
+
+        let chunk_shape = Point3i::fill(1 << chunk_exponent);
+        generate_noise_chunk3(minimum, chunk_shape, freq, scale, seed, octaves, true)
+            .map(|noise| blocky_voxels_from_sdf(&noise))
+    }
+
+    fn write_chunk(&mut self, key: ChunkKey3, chunk: Array3x1<Self::Voxel>) {
+        self.chunks.write_chunk(key, chunk);
+    }
+
+    fn downsample_extent(&mut self, extent: Extent3i) {
+        self.chunks
+            .downsample_extent(&PointDownsampler, 0, self.chunks.root_lod(), extent);
     }
 
     fn config(&self) -> &MapConfig {
@@ -166,7 +210,7 @@ impl VoxelMap for BlockyVoxelMap {
                 for quad in group.quads.iter() {
                     group
                         .face
-                        .add_quad_to_pos_norm_mesh(&quad, voxel_size, &mut mesh);
+                        .add_quad_to_pos_norm_mesh(quad, voxel_size, &mut mesh);
                 }
             }
 

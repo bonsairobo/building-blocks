@@ -4,9 +4,22 @@ use building_blocks::{mesh::PosNormMesh, prelude::*};
 use serde::{Deserialize, Serialize};
 
 pub trait VoxelMap: ecs::component::Component {
+    type Voxel: Send;
     type MeshBuffers: Send;
 
     fn generate(pool: &ComputeTaskPool, config: MapConfig) -> Self;
+
+    fn chunk_extent_at_lower_lod(&self, key: ChunkKey3, lod: u8) -> Extent3i;
+
+    fn iter_chunks_for_key(&self, key: ChunkKey3) -> Box<dyn Iterator<Item = Point3i>>;
+
+    fn chunk_is_generated(&self, minimum: Point3i) -> bool;
+
+    fn generate_chunk(&self, minimum: Point3i) -> Option<Array3x1<Self::Voxel>>;
+
+    fn write_chunk(&mut self, key: ChunkKey3, chunk: Array3x1<Self::Voxel>);
+
+    fn downsample_extent(&mut self, extent: Extent3i);
 
     fn config(&self) -> &MapConfig;
 

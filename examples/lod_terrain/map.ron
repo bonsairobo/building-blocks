@@ -4,7 +4,7 @@
     detail: 6.0,
     clip_radius: 2000.0,
     world_chunks_extent: ((
-        minimum: ((-50, -2, -50)),
+        minimum: ((-50, 0, -50)),
         shape: ((100, 4, 100)),
     )),
     noise: (

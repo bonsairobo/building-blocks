@@ -1,10 +1,12 @@
 mod blocky_voxel_map;
+mod chunk_generator;
 mod level_of_detail;
 mod mesh_generator;
 mod smooth_voxel_map;
 mod voxel_map;
 
-use level_of_detail::{level_of_detail_system, LodState};
+use chunk_generator::{chunk_generator_system, ChunkCommandQueue};
+use level_of_detail::{level_of_detail_state_update_system, level_of_detail_system, LodState};
 use mesh_generator::{
     mesh_generator_system, ChunkMeshes, MeshCommand, MeshCommandQueue, MeshMaterials,
 };
@@ -76,8 +78,30 @@ fn run_example<Map: VoxelMap>() {
         .add_plugin(LookTransformPlugin)
         .add_plugin(FpsCameraPlugin)
         .add_startup_system(setup::<Map>.system())
-        .add_system(level_of_detail_system::<Map>.system())
-        .add_system(mesh_generator_system::<Map>.system())
+        // NOTE; The ordering of the following systems is important!
+        .add_system(
+            level_of_detail_state_update_system
+                .system()
+                .label("level_of_detail_state_update_system"),
+        )
+        .add_system(
+            level_of_detail_system::<Map>
+                .system()
+                .label("level_of_detail_system")
+                .after("level_of_detail_state_update_system"),
+        )
+        .add_system(
+            chunk_generator_system::<Map>
+                .system()
+                .label("chunk_generator_system")
+                .after("level_of_detail_system"),
+        )
+        .add_system(
+            mesh_generator_system::<Map>
+                .system()
+                .label("mesh_generator_system")
+                .after("chunk_generator_system"),
+        )
         .add_system(movement_sensitivity.system())
         .run();
 }
@@ -117,6 +141,7 @@ fn setup<Map: VoxelMap>(
         mesh_commands.enqueue(MeshCommand::Create(chunk_key))
     });
     assert!(!mesh_commands.is_empty());
+    commands.insert_resource(ChunkCommandQueue::default());
     commands.insert_resource(mesh_commands);
     commands.insert_resource(LodState::new(init_lod0_center));
     commands.insert_resource(map);

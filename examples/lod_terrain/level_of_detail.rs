@@ -1,28 +1,30 @@
 use crate::{
+    chunk_generator::{ChunkCommand, ChunkCommandQueue},
     mesh_generator::{MeshCommand, MeshCommandQueue},
-    voxel_map::VoxelMap,
+    voxel_map::{MapConfig, VoxelMap},
 };
 
-use building_blocks::core::prelude::*;
+use building_blocks::{core::prelude::*, storage::prelude::ClipEvent3};
 
 use bevy_utilities::bevy::{prelude::*, render::camera::Camera};
 
 pub struct LodState {
     old_lod0_center: Point3f,
+    lod0_center: Point3f,
 }
 
 impl LodState {
-    pub fn new(old_lod0_center: Point3f) -> Self {
-        Self { old_lod0_center }
+    pub fn new(lod0_center: Point3f) -> Self {
+        Self {
+            old_lod0_center: lod0_center,
+            lod0_center,
+        }
     }
 }
 
-/// Adjusts the sample rate of voxels depending on their distance from the camera.
-pub fn level_of_detail_system<Map: VoxelMap>(
+pub fn level_of_detail_state_update_system(
     cameras: Query<(&Camera, &Transform)>,
-    voxel_map: Res<Map>,
     mut lod_state: ResMut<LodState>,
-    mut mesh_commands: ResMut<MeshCommandQueue>,
 ) {
     let camera_position = if let Some((_camera, tfm)) = cameras.iter().next() {
         tfm.translation
@@ -32,9 +34,42 @@ pub fn level_of_detail_system<Map: VoxelMap>(
 
     let lod0_center = Point3f::from(camera_position);
 
-    voxel_map.clipmap_events(lod_state.old_lod0_center, lod0_center, |event| {
-        mesh_commands.enqueue(MeshCommand::Update(event))
-    });
+    lod_state.old_lod0_center = lod_state.lod0_center;
+    lod_state.lod0_center = lod0_center;
+}
 
-    lod_state.old_lod0_center = lod0_center;
+/// Adjusts the sample rate of voxels depending on their distance from the camera.
+pub fn level_of_detail_system<Map: VoxelMap>(
+    voxel_map: Res<Map>,
+    lod_state: Res<LodState>,
+    mut chunk_commands: ResMut<ChunkCommandQueue>,
+    mut mesh_commands: ResMut<MeshCommandQueue>,
+) {
+    voxel_map.clipmap_events(
+        lod_state.old_lod0_center,
+        lod_state.lod0_center,
+        |update| match update {
+            ClipEvent3::Enter(chunk_key) => {
+                let MapConfig {
+                    chunk_exponent,
+                    world_chunks_extent,
+                    ..
+                } = *voxel_map.config();
+                let world_chunks_extent_lod0 = world_chunks_extent.0 << chunk_exponent;
+                let lod0_extent = voxel_map.chunk_extent_at_lower_lod(chunk_key, 0);
+                // Only allow generation and meshing of chunks with their minimum within
+                // the world extent y-height
+                if lod0_extent.minimum.y() >= world_chunks_extent_lod0.minimum.y()
+                    && lod0_extent.minimum.y() < world_chunks_extent_lod0.max().y()
+                {
+                    chunk_commands.enqueue(ChunkCommand::Create(chunk_key));
+                    mesh_commands.enqueue(MeshCommand::Create(chunk_key));
+                }
+            }
+            ClipEvent3::Exit(chunk_key) => mesh_commands.enqueue(MeshCommand::Destroy(chunk_key)),
+            ClipEvent3::Split(_) | ClipEvent3::Merge(_) => {
+                mesh_commands.enqueue(MeshCommand::Update(update))
+            }
+        },
+    );
 }

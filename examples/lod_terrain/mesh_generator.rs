@@ -42,6 +42,7 @@ impl MeshCommandQueue {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MeshCommand {
     Create(ChunkKey3),
+    Destroy(ChunkKey3),
     Update(ClipEvent3),
 }
 
@@ -113,6 +114,12 @@ fn apply_mesh_commands<Map: VoxelMap>(
                     num_commands_processed += 1;
                     num_meshes_created += 1;
                     make_mesh(key)
+                }
+                MeshCommand::Destroy(key) => {
+                    num_commands_processed += 1;
+                    if let Some(entity) = chunk_meshes.entities.remove(&key) {
+                        commands.entity(entity).despawn();
+                    }
                 }
                 MeshCommand::Update(update) => {
                     num_commands_processed += 1;

@@ -140,6 +140,8 @@ where
                 lod0_clip_radius,
                 old_lod0_focus,
                 new_lod0_focus,
+                false,
+                false,
                 &mut event_rx,
             );
         }
@@ -152,6 +154,8 @@ where
         lod0_clip_radius: f32,
         old_lod0_focus: PointN<Nf>,
         new_lod0_focus: PointN<Nf>,
+        ancestor_was_active: bool,
+        ancestor_is_active: bool,
         event_rx: &mut impl FnMut(ClipEvent<Ni>),
     ) {
         let node_lod0_extent = self.indexer.chunk_extent_at_lower_lod(node_key, 0);
@@ -174,25 +178,31 @@ where
         let node_bounded_by_old_clip_sphere = old_dist + node_lod0_radius < lod0_clip_radius;
         let node_bounded_by_new_clip_sphere = new_dist + node_lod0_radius < lod0_clip_radius;
 
+        if node_key.lod > 0 && node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere {
+            // This node was and is still bounded by the clip sphere. In this case, enter and exit events are not possible
+            // in this tree. We can now restrict ourselves to looking for split/merge events on occupied nodes.
+            if let Some(child_mask) = self.get_child_mask(node_key) {
+                self.only_detect_split_or_merge_recursive(
+                    node_key,
+                    child_mask,
+                    detail,
+                    lod0_clip_radius,
+                    old_lod0_focus,
+                    new_lod0_focus,
+                    event_rx,
+                );
+            }
+            return;
+        }
+
+        // We still need to check if the node is active since enter/exit events want to know this.
+        let old_norm_dist = PointN::fill(old_dist) / PointN::from(node_lod0_extent.shape);
+        let new_norm_dist = PointN::fill(new_dist) / PointN::from(node_lod0_extent.shape);
+        let was_active = !ancestor_was_active && old_norm_dist > PointN::fill(detail);
+        let is_active = !ancestor_is_active && new_norm_dist > PointN::fill(detail);
+
         // Recurse.
         if node_key.lod > 0 {
-            if node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere {
-                // This node was and is still bounded by the clip sphere. In this case, enter and exit events are not possible
-                // in this tree. We can now restrict ourselves to looking for split/merge events on occupied nodes.
-                if let Some(child_mask) = self.get_child_mask(node_key) {
-                    self.only_detect_split_or_merge_recursive(
-                        node_key,
-                        child_mask,
-                        detail,
-                        lod0_clip_radius,
-                        old_lod0_focus,
-                        new_lod0_focus,
-                        event_rx,
-                    );
-                }
-                return;
-            }
-
             // Just continue checking for all events. All descendants, occupied or vacant, are contenders.
             for child_i in 0..PointN::NUM_CORNERS {
                 self.clipmap_events_recursive(
@@ -201,6 +211,8 @@ where
                     lod0_clip_radius,
                     old_lod0_focus,
                     new_lod0_focus,
+                    ancestor_was_active || was_active,
+                    ancestor_is_active || is_active,
                     event_rx,
                 );
             }
@@ -209,12 +221,8 @@ where
         // We check for enter/exit events after recursing because we need to guarantee all descendant enter/exit events come
         // first.
         if !node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere {
-            let new_norm_dist = PointN::fill(new_dist) / PointN::from(node_lod0_extent.shape);
-            let is_active = new_norm_dist > PointN::fill(detail);
             event_rx(ClipEvent::Enter(node_key, is_active));
         } else if node_bounded_by_old_clip_sphere && !node_bounded_by_new_clip_sphere {
-            let old_norm_dist = PointN::fill(old_dist) / PointN::from(node_lod0_extent.shape);
-            let was_active = old_norm_dist > PointN::fill(detail);
             event_rx(ClipEvent::Exit(node_key, was_active));
         }
     }

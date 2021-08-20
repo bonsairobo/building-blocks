@@ -132,8 +132,19 @@ fn apply_mesh_commands<Map: VoxelMap>(
                             num_meshes_created += 1;
                             make_mesh(merge.new_chunk)
                         }
-                        ClipEvent3::Enter(_, _) => (),
-                        ClipEvent3::Exit(_, _) => (),
+                        ClipEvent3::Enter(key, is_active) => {
+                            if is_active {
+                                num_meshes_created += 1;
+                                make_mesh(key)
+                            }
+                        },
+                        ClipEvent3::Exit(key, was_active) => {
+                            if was_active {
+                                if let Some(entity) = chunk_meshes.entities.remove(&key) {
+                                    commands.entity(entity).despawn();
+                                }
+                            }
+                        },
                     }
                 }
             }

@@ -100,7 +100,6 @@ impl VoxelMap for BlockyVoxelMap {
             self.config().detail,
             self.config().clip_radius,
             lod0_center,
-            |_| true,
             active_rx,
         );
     }
@@ -116,7 +115,6 @@ impl VoxelMap for BlockyVoxelMap {
             self.config().clip_radius,
             old_lod0_center,
             new_lod0_center,
-            |_| true,
             update_rx,
         );
     }

@@ -71,7 +71,6 @@ impl VoxelMap for SmoothVoxelMap {
             self.config().detail,
             self.config().clip_radius,
             lod0_center,
-            |_| true,
             active_rx,
         );
     }
@@ -87,7 +86,6 @@ impl VoxelMap for SmoothVoxelMap {
             self.config().clip_radius,
             old_lod0_center,
             new_lod0_center,
-            |_| true,
             update_rx,
         );
     }

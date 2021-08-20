@@ -14,27 +14,28 @@ where
     ///
     /// By "active," we mean that, given the current location of `lod0_focus` (e.g. a camera):
     ///
-    ///   - the chunk center is inside of the clip sphere determined by `lod0_clip_radius`
+    ///   - the chunk is bounded by the clip sphere determined by `lod0_clip_radius`
     ///   - the chunk has the desired LOD for rendering
     ///
-    /// More specifically, let `D` be the Euclidean distance from `lod0_focus` to the center of the chunk (in LOD0 space), and
-    /// let `S` be the shape of the chunk (in LOD0 space). The chunk can be active if
+    /// More specifically,
+    ///
+    ///   - let `D` be the Euclidean distance from `lod0_focus` to the center of the chunk (in LOD0 space)
+    ///   - let `B` be the radius of the chunk's bounding sphere (in LOD0 space)
+    ///   - let `S` be the shape of the chunk (in LOD0 space)
+    ///
+    /// The chunk *can* be active iff
     ///
     /// ```text
-    ///     D < lod0_clip_radius && (D / S) > detail
+    ///     D + B < lod0_clip_radius && (D / S) > detail
     /// ```
     ///
     /// where `detail` is a nonnegative constant parameter supplied by you. Along a given path from a root chunk to a leaf, the
     /// least detailed chunk that *can* be active is used.
-    ///
-    /// `predicate` is used to terminate traversal of a subtree early so that the rejected chunk and any of its descendants
-    /// cannot be considered active. This could be useful for e.g. culling chunks outside of a view frustum.
     pub fn clipmap_active_chunks(
         &self,
         detail: f32,
         lod0_clip_radius: f32,
         lod0_focus: PointN<Nf>,
-        mut predicate: impl FnMut(ChunkKey<Ni>) -> bool,
         mut active_rx: impl FnMut(ChunkKey<Ni>),
     ) {
         let root_lod = self.root_lod();
@@ -45,7 +46,6 @@ where
                 detail,
                 lod0_clip_radius,
                 lod0_focus,
-                &mut predicate,
                 &mut active_rx,
             );
         }
@@ -57,43 +57,44 @@ where
         detail: f32,
         lod0_clip_radius: f32,
         lod0_focus: PointN<Nf>,
-        predicate: &mut impl FnMut(ChunkKey<Ni>) -> bool,
         active_rx: &mut impl FnMut(ChunkKey<Ni>),
     ) {
-        if !predicate(node_key) {
-            return;
-        }
-
-        if node_key.lod == 0 {
-            // This node is active!
-            active_rx(node_key);
-        }
-
         let node_lod0_extent = self.indexer.chunk_extent_at_lower_lod(node_key, 0);
+        let node_lod0_center = node_lod0_extent.minimum + (node_lod0_extent.shape >> 1);
+        let node_lod0_radius = (node_lod0_extent.shape.max_component() >> 1) as f32 * 3f32.sqrt();
 
-        let lod0_chunk_center = node_lod0_extent.minimum + (node_lod0_extent.shape >> 1);
-
-        // Calculate the Euclidean distance from each focus the center of the chunk.
+        // Calculate the Euclidean distance from the focus the center of the chunk.
         let dist = lod0_focus
-            .l2_distance_squared(PointN::<Nf>::from(lod0_chunk_center))
+            .l2_distance_squared(PointN::<Nf>::from(node_lod0_center))
             .sqrt();
 
-        // Don't consider any chunk whose center falls outside the clip radius. This is how we ensure that chunks are always at
-        // the same LOD when they enter and exit the clip sphere.
-        if dist >= lod0_clip_radius {
+        let node_intersects_clip_sphere = dist - node_lod0_radius < lod0_clip_radius;
+
+        // Don't consider any chunk that doesn't intersect the clip sphere.
+        if !node_intersects_clip_sphere {
             return;
         }
 
-        // Normalize by chunk shape.
-        let norm_dist = PointN::fill(dist) / PointN::from(node_lod0_extent.shape);
+        let node_bounded_by_clip_sphere = dist + node_lod0_radius < lod0_clip_radius;
 
-        let is_active = norm_dist > PointN::fill(detail);
+        if node_key.lod == 0 {
+            if node_bounded_by_clip_sphere {
+                // This node is active!
+                active_rx(node_key);
+            }
+            return;
+        }
+
+        // Normalize distance by chunk shape.
+        let norm_dist = PointN::fill(dist) / PointN::from(node_lod0_extent.shape);
+        let is_active = node_bounded_by_clip_sphere && norm_dist > PointN::fill(detail);
+
         if is_active {
             // This node is active!
             active_rx(node_key);
         } else {
-            let child_mask = self.get_child_mask(node_key).unwrap();
             // Need to split, continue by recursing on the children.
+            let child_mask = self.get_child_mask(node_key).unwrap();
             for child_i in 0..PointN::NUM_CORNERS {
                 if child_mask_has_child(child_mask, child_i) {
                     self.clipmap_active_chunks_recursive(
@@ -101,7 +102,6 @@ where
                         detail,
                         lod0_clip_radius,
                         lod0_focus,
-                        predicate,
                         active_rx,
                     );
                 }
@@ -109,19 +109,14 @@ where
         }
     }
 
-    /// Like `active_clipmap_chunks`, but it only detects changes in the set of active chunks after the focal point moves from
+    /// Like `active_clipmap_chunks`, but it detects [`ClipEvent`]s triggered by movement of the focal point from
     /// `old_lod0_focus` to `new_lod0_focus`.
-    ///
-    /// In order to detect new chunk slots to be loaded and old chunk slots to evict, the user must provide a
-    /// `lod0_clip_radius`. You can think of this as representing a sphere around the focus where chunk centers can enter and
-    /// exit the sphere as the focus moves.
     pub fn clipmap_events(
         &self,
         detail: f32,
         lod0_clip_radius: f32,
         old_lod0_focus: PointN<Nf>,
         new_lod0_focus: PointN<Nf>,
-        mut predicate: impl FnMut(ChunkKey<Ni>) -> bool,
         mut event_rx: impl FnMut(ClipEvent<Ni>),
     ) {
         assert!(lod0_clip_radius > 0.0);
@@ -145,7 +140,6 @@ where
                 lod0_clip_radius,
                 old_lod0_focus,
                 new_lod0_focus,
-                &mut predicate,
                 &mut event_rx,
             );
         }
@@ -158,148 +152,91 @@ where
         lod0_clip_radius: f32,
         old_lod0_focus: PointN<Nf>,
         new_lod0_focus: PointN<Nf>,
-        predicate: &mut impl FnMut(ChunkKey<Ni>) -> bool,
         event_rx: &mut impl FnMut(ClipEvent<Ni>),
     ) {
-        if !predicate(node_key) {
-            return;
-        }
-
         let node_lod0_extent = self.indexer.chunk_extent_at_lower_lod(node_key, 0);
+        let node_lod0_center =
+            PointN::<Nf>::from(node_lod0_extent.minimum + (node_lod0_extent.shape >> 1));
+        let node_lod0_radius = (node_lod0_extent.shape.max_component() >> 1) as f32 * 3f32.sqrt();
 
         // Calculate the Euclidean distance from each focus the center of the chunk.
-        let lod0_chunk_center = node_lod0_extent.minimum + (node_lod0_extent.shape >> 1);
-        let fcenter = PointN::<Nf>::from(lod0_chunk_center);
-        let old_dist = old_lod0_focus.l2_distance_squared(fcenter).sqrt();
-        let new_dist = new_lod0_focus.l2_distance_squared(fcenter).sqrt();
+        let old_dist = old_lod0_focus.l2_distance_squared(node_lod0_center).sqrt();
+        let new_dist = new_lod0_focus.l2_distance_squared(node_lod0_center).sqrt();
 
-        let chunk_center_in_old_sphere = old_dist < lod0_clip_radius;
-        let chunk_center_in_new_sphere = new_dist < lod0_clip_radius;
+        let node_intersects_old_clip_sphere = old_dist - node_lod0_radius < lod0_clip_radius;
+        let node_intersects_new_clip_sphere = new_dist - node_lod0_radius < lod0_clip_radius;
 
-        if !chunk_center_in_old_sphere && !chunk_center_in_new_sphere {
-            // There are no events for chunks that have not recently touched the clip extent.
+        if !node_intersects_old_clip_sphere && !node_intersects_new_clip_sphere {
+            // There are no events for this node or any of its descendants.
             return;
         }
 
-        if node_key.lod == 0 {
-            // This node is active, and it can't be split or merged. But it might have just entered or exited.
-            let entered = !chunk_center_in_old_sphere && chunk_center_in_new_sphere;
-            if entered {
-                event_rx(ClipEvent::Enter(node_key));
-                return;
-            }
-            let exited = chunk_center_in_old_sphere && !chunk_center_in_new_sphere;
-            if exited {
-                event_rx(ClipEvent::Exit(node_key));
-            }
-            return;
-        }
+        let node_bounded_by_old_clip_sphere = old_dist + node_lod0_radius < lod0_clip_radius;
+        let node_bounded_by_new_clip_sphere = new_dist + node_lod0_radius < lod0_clip_radius;
 
-        let node_radius = (node_lod0_extent.shape.max_component() >> 1) as f32 * 3f32.sqrt();
-        let chunk_is_subset_of_old_sphere = old_dist + node_radius < lod0_clip_radius;
-        let chunk_is_subset_of_new_sphere = new_dist + node_radius < lod0_clip_radius;
-
-        if chunk_is_subset_of_old_sphere && chunk_is_subset_of_new_sphere {
-            // This node was and is still a subset of the clip extent. In this case, enter and exit events are not possible.
-            // We can now restrict ourselves to looking at occupied nodes.
-            if let Some(child_mask) = self.get_child_mask(node_key) {
-                self.occupied_clipmap_events_recursive(
-                    node_key,
-                    child_mask,
-                    detail,
-                    old_lod0_focus,
-                    new_lod0_focus,
-                    predicate,
-                    event_rx,
-                );
-            }
-            return;
-        }
-
-        // At this point we know the chunk only partially intersects the clip sphere. All events are still possible.
-
-        let fshape = PointN::from(node_lod0_extent.shape);
-        let old_norm_dist = PointN::fill(old_dist) / fshape;
-        let new_norm_dist = PointN::fill(new_dist) / fshape;
-
-        let was_active = old_norm_dist > PointN::fill(detail);
-        let is_active = new_norm_dist > PointN::fill(detail);
-
-        match (was_active, is_active) {
-            // Old and new agree this chunk is not active.
-            (false, false) => {
-                // Just continue checking for events. We need to traverse all child orthants in case any descendants need to be
-                // generated.
-                for child_i in 0..PointN::NUM_CORNERS {
-                    self.clipmap_events_recursive(
-                        self.indexer.child_chunk_key(node_key, child_i),
+        // Recurse.
+        if node_key.lod > 0 {
+            if node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere {
+                // This node was and is still bounded by the clip sphere. In this case, enter and exit events are not possible
+                // in this tree. We can now restrict ourselves to looking for split/merge events on occupied nodes.
+                if let Some(child_mask) = self.get_child_mask(node_key) {
+                    self.only_detect_split_or_merge_recursive(
+                        node_key,
+                        child_mask,
                         detail,
                         lod0_clip_radius,
                         old_lod0_focus,
                         new_lod0_focus,
-                        predicate,
                         event_rx,
                     );
                 }
                 return;
             }
-            (false, true) => {
-                // This node just became active. Merge the children into this node.
-                if let Some(child_mask) = self.get_child_mask(node_key) {
-                    let old_chunks = self.collect_children(node_key, child_mask);
-                    event_rx(ClipEvent::Merge(MergeChunks {
-                        old_chunks,
-                        new_chunk: node_key,
-                    }));
 
-                    // Don't generate more than one event per node.
-                    return;
-                }
+            // Just continue checking for all events. All descendants, occupied or vacant, are contenders.
+            for child_i in 0..PointN::NUM_CORNERS {
+                self.clipmap_events_recursive(
+                    self.indexer.child_chunk_key(node_key, child_i),
+                    detail,
+                    lod0_clip_radius,
+                    old_lod0_focus,
+                    new_lod0_focus,
+                    event_rx,
+                );
             }
-            (true, false) => {
-                // This node just became inactive. Split this node into the children.
-                if let Some(child_mask) = self.get_child_mask(node_key) {
-                    let new_chunks = self.collect_children(node_key, child_mask);
-                    event_rx(ClipEvent::Split(SplitChunk {
-                        old_chunk: node_key,
-                        new_chunks,
-                    }));
-                }
-                return;
-            }
-            // Old and new agree this node is active. No need to merge or split.
-            (true, true) => (),
         }
 
-        // This node is active (based on early returns above). Check for enters and exits.
-        let entered = !chunk_center_in_old_sphere && chunk_center_in_new_sphere;
-        if entered {
-            event_rx(ClipEvent::Enter(node_key));
-            return;
-        }
-        let exited = chunk_center_in_old_sphere && !chunk_center_in_new_sphere;
-        if exited {
-            event_rx(ClipEvent::Exit(node_key));
+        // We check for enter/exit events after recursing because we need to guarantee all descendant enter/exit events come
+        // first.
+        if !node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere {
+            let new_norm_dist = PointN::fill(new_dist) / PointN::from(node_lod0_extent.shape);
+            let is_active = new_norm_dist > PointN::fill(detail);
+            event_rx(ClipEvent::Enter(node_key, is_active));
+        } else if node_bounded_by_old_clip_sphere && !node_bounded_by_new_clip_sphere {
+            let old_norm_dist = PointN::fill(old_dist) / PointN::from(node_lod0_extent.shape);
+            let was_active = old_norm_dist > PointN::fill(detail);
+            event_rx(ClipEvent::Exit(node_key, was_active));
         }
     }
 
-    fn occupied_clipmap_events_recursive(
+    fn only_detect_split_or_merge_recursive(
         &self,
         node_key: ChunkKey<Ni>, // Precondition: not LOD0.
         node_child_mask: u8,
         detail: f32,
+        lod0_clip_radius: f32,
         old_lod0_focus: PointN<Nf>,
         new_lod0_focus: PointN<Nf>,
-        predicate: &mut impl FnMut(ChunkKey<Ni>) -> bool,
         event_rx: &mut impl FnMut(ClipEvent<Ni>),
     ) {
         let node_lod0_extent = self.indexer.chunk_extent_at_lower_lod(node_key, 0);
+        let lod0_chunk_center =
+            PointN::<Nf>::from(node_lod0_extent.minimum + (node_lod0_extent.shape >> 1));
 
         // Calculate the Euclidean distance from each focus the center of the chunk.
-        let lod0_chunk_center = node_lod0_extent.minimum + (node_lod0_extent.shape >> 1);
-        let fcenter = PointN::<Nf>::from(lod0_chunk_center);
-        let old_dist = old_lod0_focus.l2_distance_squared(fcenter).sqrt();
-        let new_dist = new_lod0_focus.l2_distance_squared(fcenter).sqrt();
+        let old_dist = old_lod0_focus.l2_distance_squared(lod0_chunk_center).sqrt();
+        let new_dist = new_lod0_focus.l2_distance_squared(lod0_chunk_center).sqrt();
+
         let fshape = PointN::from(node_lod0_extent.shape);
         let old_norm_dist = PointN::fill(old_dist) / fshape;
         let new_norm_dist = PointN::fill(new_dist) / fshape;
@@ -308,63 +245,78 @@ where
         let is_active = new_norm_dist > PointN::fill(detail);
 
         match (was_active, is_active) {
-            // Old and new agree this chunk is not active.
+            // Old and new frames agree this chunk is not active.
             (false, false) => {
-                // Just continue checking for events.
-                for child_i in 0..PointN::NUM_CORNERS {
-                    if child_mask_has_child(node_child_mask, child_i) {
-                        let child_key = self.indexer.child_chunk_key(node_key, child_i);
-                        if !predicate(child_key) || child_key.lod == 0 {
-                            continue;
+                // Keep looking for any active descendants.
+                if node_key.lod > 1 {
+                    for child_i in 0..PointN::NUM_CORNERS {
+                        if child_mask_has_child(node_child_mask, child_i) {
+                            let child_key = self.indexer.child_chunk_key(node_key, child_i);
+                            let child_node_child_mask = self.get_child_mask(child_key).unwrap();
+                            self.only_detect_split_or_merge_recursive(
+                                child_key,
+                                child_node_child_mask,
+                                detail,
+                                lod0_clip_radius,
+                                old_lod0_focus,
+                                new_lod0_focus,
+                                event_rx,
+                            );
                         }
-                        let child_node_child_mask = self.get_child_mask(child_key).unwrap();
-                        self.occupied_clipmap_events_recursive(
-                            child_key,
-                            child_node_child_mask,
-                            detail,
-                            old_lod0_focus,
-                            new_lod0_focus,
-                            predicate,
-                            event_rx,
-                        );
                     }
                 }
             }
             (false, true) => {
-                // This node just became active. Merge the children into this node.
-                let old_chunks = self.collect_children(node_key, node_child_mask);
+                // This node just became active, and none if its ancestors were active, so it must have active descendants.
+                // Merge those active descendants into this node.
+                let mut old_chunks = Vec::with_capacity(8);
+                for child_i in 0..PointN::NUM_CORNERS {
+                    if child_mask_has_child(node_child_mask, child_i) {
+                        let child_key = self.indexer.child_chunk_key(node_key, child_i);
+                        self.clipmap_active_chunks_recursive(
+                            child_key,
+                            detail,
+                            lod0_clip_radius,
+                            old_lod0_focus,
+                            &mut |active_chunk| old_chunks.push(active_chunk),
+                        );
+                    }
+                }
                 event_rx(ClipEvent::Merge(MergeChunks {
                     old_chunks,
                     new_chunk: node_key,
                 }));
             }
             (true, false) => {
-                // This node just became inactive. Split this node into the children.
-                let new_chunks = self.collect_children(node_key, node_child_mask);
+                // This node just became inactive, and none of its ancestors were active, so it must have active descendants.
+                // Split this node into the children.
+                let mut new_chunks = Vec::with_capacity(8);
+                for child_i in 0..PointN::NUM_CORNERS {
+                    if child_mask_has_child(node_child_mask, child_i) {
+                        let child_key = self.indexer.child_chunk_key(node_key, child_i);
+                        self.clipmap_active_chunks_recursive(
+                            child_key,
+                            detail,
+                            lod0_clip_radius,
+                            new_lod0_focus,
+                            &mut |active_chunk| new_chunks.push(active_chunk),
+                        );
+                    }
+                }
                 event_rx(ClipEvent::Split(SplitChunk {
                     old_chunk: node_key,
                     new_chunks,
                 }));
             }
-            // Old and new agree this node is active. No need to merge or split.
+            // Old and new agree this node is active. No need to merge or split. None of the descendants can merge or split
+            // either.
             (true, true) => (),
         }
     }
-
-    fn collect_children(&self, parent_key: ChunkKey<Ni>, child_mask: u8) -> Vec<ChunkKey<Ni>> {
-        (0..PointN::NUM_CORNERS)
-            .filter_map(|child_i| {
-                if child_mask_has_child(child_mask, child_i) {
-                    Some(self.indexer.child_chunk_key(parent_key, child_i))
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
 }
 
-/// An event triggered by movement of the clipmap focus.
+/// An event triggered by movement of the clipmap focus. A given chunk slot is guaranteed to receive at most one event per
+/// frame.
 ///
 /// Note that while the `Split` and `Merge` events only occur for *occupied* chunk slots (those with voxel data), `Enter` and
 /// `Exit` events can occur for occupied *or* vacant chunk slots. This is at least necessary for detecting slots that need to
@@ -372,10 +324,26 @@ where
 /// enough to ignore `Exit` events for vacant chunks.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ClipEvent<N> {
-    /// A new chunk slot entered the clip extent this frame, and it should be rendered at the given LOD.
-    Enter(ChunkKey<N>),
-    /// A chunk slot exited the clip extent this frame. It was previously rendered at the given LOD.
-    Exit(ChunkKey<N>),
+    /// A new chunk slot entered the clip extent this frame, meaning it is now bounded by the clip sphere. The `bool` is `true`
+    /// iff the chunk slot is now active.
+    ///
+    /// This event upholds an essential ordering guarantee; if such an event is received for some chunk, then all descendant
+    /// chunks must already be bounded by the clip sphere, i.e. they've already entered and have not since exited. This means if
+    /// you always generate chunks when they enter the clip sphere (in event order), then it is safe to assume all descendants
+    /// are ready to be used, e.g. for downsampling.
+    Enter(ChunkKey<N>, bool),
+    /// A chunk slot that was bounded by the clip sphere in the previous frame is no longer bounded in this frame. The `bool` is
+    /// `true` iff the chunk slot was active before exiting.
+    ///
+    /// This is the reverse condition of the `Enter` event, meaning that chunks should enter and exit the clip sphere at the
+    /// same distance from the focus.
+    ///
+    /// For a given chunk, its sequence of `Enter` and `Exit` events will always look like
+    /// ```text
+    ///  ..., Enter, Exit, Enter, Exit, ...
+    /// ```
+    /// so you can manage any resources tied to a chunk be creating them on `Enter` and freeing them on `Exit`.
+    Exit(ChunkKey<N>, bool),
     /// The desired sample rate for this chunk increased this frame.
     Split(SplitChunk<N>),
     /// The desired sample rate for this chunk decreased this frame.

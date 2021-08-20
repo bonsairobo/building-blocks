@@ -132,8 +132,8 @@ fn apply_mesh_commands<Map: VoxelMap>(
                             num_meshes_created += 1;
                             make_mesh(merge.new_chunk)
                         }
-                        ClipEvent3::Enter(_) => (),
-                        ClipEvent3::Exit(_) => (),
+                        ClipEvent3::Enter(_, _) => (),
+                        ClipEvent3::Exit(_, _) => (),
                     }
                 }
             }

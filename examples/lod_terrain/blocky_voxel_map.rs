@@ -104,8 +104,8 @@ impl VoxelMap for BlockyVoxelMap {
         Box::new(self.chunks.indexer.chunk_mins_for_extent(&lod0_extent))
     }
 
-    fn chunk_is_generated(&self, minimum: Point3i) -> bool {
-        self.chunks.get_chunk(ChunkKey::new(0, minimum)).is_some()
+    fn chunk_is_generated(&self, minimum: Point3i, lod: u8) -> bool {
+        self.chunks.get_chunk(ChunkKey::new(lod, minimum)).is_some()
     }
 
     fn generate_chunk(&self, minimum: Point3i) -> Option<Array3x1<Self::Voxel>> {
@@ -122,7 +122,8 @@ impl VoxelMap for BlockyVoxelMap {
         } = self.config;
 
         let chunk_shape = Point3i::fill(1 << chunk_exponent);
-        generate_noise_chunk3(minimum, chunk_shape, freq, scale, seed, octaves, true)
+        let chunk_extent = Extent3i::from_min_and_shape(minimum, chunk_shape);
+        generate_noise_chunk3(chunk_extent, freq, scale, seed, octaves, true)
             .map(|noise| blocky_voxels_from_sdf(&noise))
     }
 
@@ -130,13 +131,13 @@ impl VoxelMap for BlockyVoxelMap {
         self.chunks.write_chunk(key, chunk);
     }
 
-    fn downsample_extent_into_self(&mut self, extent: Extent3i) {
-        self.chunks.downsample_extent_into_self(
-            &PointDownsampler,
-            0,
-            self.chunks.root_lod(),
-            extent,
-        );
+    fn remove_chunk(&mut self, key: ChunkKey3) {
+        self.chunks.pop_chunk(key);
+    }
+
+    fn downsample_extent_into_self(&mut self, extent: Extent3i, src_lod: u8, max_lod: u8) {
+        self.chunks
+            .downsample_extent_into_self(&PointDownsampler, src_lod, max_lod, extent);
     }
 
     fn config(&self) -> &MapConfig {

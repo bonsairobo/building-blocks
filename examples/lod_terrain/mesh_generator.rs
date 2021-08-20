@@ -65,6 +65,7 @@ pub fn mesh_generator_system<Map: VoxelMap>(
     mut mesh_commands: ResMut<MeshCommandQueue>,
     mut mesh_assets: ResMut<Assets<Mesh>>,
     mut chunk_meshes: ResMut<ChunkMeshes>,
+    query: Query<&Handle<Mesh>>,
 ) {
     let new_chunk_meshes = apply_mesh_commands(
         &*voxel_map,
@@ -73,6 +74,8 @@ pub fn mesh_generator_system<Map: VoxelMap>(
         &mut *mesh_commands,
         &mut *chunk_meshes,
         &mut commands,
+        &mut *mesh_assets,
+        &query,
     );
     spawn_mesh_entities(
         new_chunk_meshes,
@@ -90,6 +93,8 @@ fn apply_mesh_commands<Map: VoxelMap>(
     mesh_commands: &mut MeshCommandQueue,
     chunk_meshes: &mut ChunkMeshes,
     commands: &mut Commands,
+    mesh_assets: &mut Assets<Mesh>,
+    query: &Query<&Handle<Mesh>>,
 ) -> Vec<(ChunkKey3, Option<PosNormMesh>)> {
     let max_meshes_per_frame = max_mesh_creations_per_frame(pool);
 
@@ -118,6 +123,9 @@ fn apply_mesh_commands<Map: VoxelMap>(
                 MeshCommand::Destroy(key) => {
                     num_commands_processed += 1;
                     if let Some(entity) = chunk_meshes.entities.remove(&key) {
+                        if let Ok(mesh_handle) = query.get(entity) {
+                            mesh_assets.remove(mesh_handle);
+                        }
                         commands.entity(entity).despawn();
                     }
                 }
@@ -147,14 +155,14 @@ fn apply_mesh_commands<Map: VoxelMap>(
                                 num_meshes_created += 1;
                                 make_mesh(key)
                             }
-                        },
+                        }
                         ClipEvent3::Exit(key, was_active) => {
                             if was_active {
                                 if let Some(entity) = chunk_meshes.entities.remove(&key) {
                                     commands.entity(entity).despawn();
                                 }
                             }
-                        },
+                        }
                     }
                 }
             }

@@ -31,6 +31,8 @@ impl ChunkCommandQueue {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ChunkCommand {
     Create(ChunkKey3),
+    Destroy(ChunkKey3),
+    Downsample(ChunkKey3),
 }
 
 /// Generates new chunks
@@ -39,19 +41,29 @@ pub fn chunk_generator_system<Map: VoxelMap>(
     mut voxel_map: ResMut<Map>,
     mut chunk_commands: ResMut<ChunkCommandQueue>,
 ) {
-    let (new_chunks, extents_to_downsample) =
+    let (new_chunks, extents_to_downsample, chunks_to_remove) =
         apply_chunk_commands(&*voxel_map, &*pool, &mut *chunk_commands);
-    write_chunks(&mut *voxel_map, new_chunks, extents_to_downsample);
+    write_chunks(
+        &mut *voxel_map,
+        new_chunks,
+        extents_to_downsample,
+        chunks_to_remove,
+    );
 }
 
 fn apply_chunk_commands<Map: VoxelMap>(
     voxel_map: &Map,
     pool: &ComputeTaskPool,
     chunk_commands: &mut ChunkCommandQueue,
-) -> (Vec<(Point3i, Option<Array3x1<Map::Voxel>>)>, Vec<Extent3i>) {
+) -> (
+    Vec<(Point3i, Option<Array3x1<Map::Voxel>>)>,
+    Vec<(Extent3i, u8)>,
+    Vec<ChunkKey3>,
+) {
     let max_chunks_per_frame = max_chunk_creations_per_frame(pool);
 
     let mut num_commands_processed = 0;
+    let mut chunks_to_remove = Vec::new();
     let mut extents_to_downsample = Vec::new();
 
     (
@@ -66,17 +78,16 @@ fn apply_chunk_commands<Map: VoxelMap>(
                     ChunkCommand::Create(key) => {
                         num_commands_processed += 1;
                         num_chunks_created += 1;
-                        let mut needs_downsampling = false;
-                        for chunk_min in voxel_map.iter_chunks_for_key(key) {
-                            if !voxel_map.chunk_is_generated(chunk_min) {
-                                needs_downsampling = true;
-                                make_chunks(chunk_min)
-                            }
-                        }
-                        if needs_downsampling {
-                            extents_to_downsample.push(voxel_map.chunk_extent_at_lower_lod(key, 0));
+                        let chunk_extent = voxel_map.chunk_extent_at_lower_lod(key, 0);
+                        if !voxel_map.chunk_is_generated(chunk_extent.minimum, 0) {
+                            make_chunks(chunk_extent.minimum)
                         }
                     }
+                    ChunkCommand::Destroy(key) => {
+                        chunks_to_remove.push(key);
+                    }
+                    ChunkCommand::Downsample(key) => extents_to_downsample
+                        .push((voxel_map.chunk_extent_at_lower_lod(key, 0), key.lod)),
                 }
                 if num_chunks_created >= max_chunks_per_frame {
                     break;
@@ -87,20 +98,33 @@ fn apply_chunk_commands<Map: VoxelMap>(
             chunk_commands.commands.truncate(new_length);
         }),
         extents_to_downsample,
+        chunks_to_remove,
     )
 }
 
 fn write_chunks<Map: VoxelMap>(
     voxel_map: &mut Map,
     chunks: Vec<(Point3i, Option<Array3x1<Map::Voxel>>)>,
-    extents_to_downsample: Vec<Extent3i>,
+    extents_to_downsample: Vec<(Extent3i, u8)>,
+    chunks_to_remove: Vec<ChunkKey3>,
 ) {
     for (chunk_min, chunk) in chunks.into_iter() {
         if let Some(chunk) = chunk {
             voxel_map.write_chunk(ChunkKey::new(0, chunk_min), chunk);
         }
     }
-    for extent in extents_to_downsample.into_iter() {
-        voxel_map.downsample_extent_into_self(extent);
+    for (extent, max_lod) in extents_to_downsample.into_iter() {
+        let mut src_lod = 0;
+        for lod in (0..max_lod).rev() {
+            src_lod = lod;
+            // FIXME: must check all dependent chunks are generated or implicit when this downsample command is processed?
+            if voxel_map.chunk_is_generated(extent.minimum, lod) {
+                break;
+            }
+        }
+        voxel_map.downsample_extent_into_self(extent, src_lod, max_lod);
+    }
+    for chunk_key in chunks_to_remove.into_iter() {
+        voxel_map.remove_chunk(chunk_key);
     }
 }

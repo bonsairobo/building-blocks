@@ -13,13 +13,15 @@ pub trait VoxelMap: ecs::component::Component {
 
     fn iter_chunks_for_key(&self, key: ChunkKey3) -> Box<dyn Iterator<Item = Point3i>>;
 
-    fn chunk_is_generated(&self, minimum: Point3i) -> bool;
+    fn chunk_is_generated(&self, minimum: Point3i, lod: u8) -> bool;
 
     fn generate_chunk(&self, minimum: Point3i) -> Option<Array3x1<Self::Voxel>>;
 
     fn write_chunk(&mut self, key: ChunkKey3, chunk: Array3x1<Self::Voxel>);
 
-    fn downsample_extent_into_self(&mut self, extent: Extent3i);
+    fn remove_chunk(&mut self, key: ChunkKey3);
+
+    fn downsample_extent_into_self(&mut self, extent: Extent3i, src_lod: u8, max_lod: u8);
 
     fn config(&self) -> &MapConfig;
 

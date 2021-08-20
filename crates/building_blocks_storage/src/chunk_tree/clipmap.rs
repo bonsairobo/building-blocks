@@ -87,11 +87,13 @@ where
 
         // Normalize distance by chunk shape.
         let norm_dist = PointN::fill(dist) / PointN::from(node_lod0_extent.shape);
-        let is_active = node_bounded_by_clip_sphere && norm_dist > PointN::fill(detail);
+        let is_active = norm_dist > PointN::fill(detail);
 
         if is_active {
-            // This node is active!
-            active_rx(node_key);
+            if node_bounded_by_clip_sphere {
+                // This node is active!
+                active_rx(node_key);
+            }
         } else {
             // Need to split, continue by recursing on the children.
             let child_mask = self.get_child_mask(node_key).unwrap();

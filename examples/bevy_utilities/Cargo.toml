@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Duncan <bonsairobo@gmail.com>"]
 edition = "2018"
 
+[features]
+trace = ["bevy/trace", "bevy/trace_chrome"]
+
 [dependencies]
 bevy_fly_camera = "0.7"
 thread_local = "1.1"

@@ -1,7 +1,7 @@
 use crate::voxel_map::VoxelMap;
 
 use bevy_utilities::{
-    bevy::{asset::prelude::*, ecs, prelude::*, tasks::ComputeTaskPool},
+    bevy::{asset::prelude::*, ecs, prelude::*, tasks::ComputeTaskPool, utils::tracing},
     mesh::create_mesh_bundle,
     thread_local_resource::ThreadLocalResource,
 };
@@ -87,6 +87,9 @@ fn apply_mesh_commands<Map: VoxelMap>(
     chunk_meshes: &mut ChunkMeshes,
     commands: &mut Commands,
 ) -> Vec<(ChunkKey3, Option<PosNormMesh>)> {
+    let make_mesh_span = tracing::info_span!("make_mesh");
+    let make_mesh_span_ref = &make_mesh_span;
+
     let max_meshes_per_frame = max_mesh_creations_per_frame(pool);
 
     let mut num_commands_processed = 0;
@@ -94,6 +97,7 @@ fn apply_mesh_commands<Map: VoxelMap>(
     pool.scope(|s| {
         let mut make_mesh = |key: ChunkKey3| {
             s.spawn(async move {
+                let _trace_guard = make_mesh_span_ref.enter();
                 let mesh_tls = local_mesh_buffers.get();
                 let mut mesh_buffers = mesh_tls
                     .get_or_create_with(|| RefCell::new(voxel_map.init_mesh_buffers()))

@@ -5,7 +5,7 @@ use crate::{
 
 use building_blocks::core::prelude::*;
 
-use bevy_utilities::bevy::{prelude::*, render::camera::Camera};
+use bevy_utilities::bevy::{prelude::*, render::camera::Camera, utils::tracing};
 
 pub struct LodState {
     old_lod0_center: Point3f,
@@ -24,6 +24,9 @@ pub fn level_of_detail_system<Map: VoxelMap>(
     mut lod_state: ResMut<LodState>,
     mut mesh_commands: ResMut<MeshCommandQueue>,
 ) {
+    let lod_system_span = tracing::info_span!("lod_system");
+    let _trace_guard = lod_system_span.enter();
+
     let camera_position = if let Some((_camera, tfm)) = cameras.iter().next() {
         tfm.translation
     } else {

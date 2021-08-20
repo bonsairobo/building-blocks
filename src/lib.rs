@@ -144,6 +144,15 @@
 //! features. "lz4" is the default, but it relies on a C++ library, so it's not compatible with WASM. But Snappy is pure Rust,
 //! so it can! Just use `default-features = false` and add "snappy" to you `features` list.
 //!
+//! ### Chunk Databases
+//!
+//! For persistent voxel worlds that support edits, it's useful to have an embedded database for crash-consistent save state.
+//! We've chosen to use the [`sled`](https://github.com/spacejam/sled) crate. When you enable the `sled` feature, you will get
+//! access to a `ChunkDb` type that supports reading and writing compressed chunk data. And because `sled` does not yet support
+//! incremental backups (AKA snapshots), we've also implemented our own snapshot scheme in a separate
+//! [`sled-snapshots`](https://github.com/bonsairobo/sled-snapshots) crate which backs a `VersionedChunkDb`. This database
+//! schema only stores the changes (deltas) between versions, so you don't have to store an entire map in every save.
+//!
 //! ### VOX Files
 //!
 //! ".VOX" files are supported via the [`vox-format`](https://docs.rs/vox-format/) crate. Enable the `vox-format` feature to get

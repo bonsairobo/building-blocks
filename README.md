@@ -14,12 +14,14 @@ Terrain](https://media.githubusercontent.com/media/bonsairobo/building-blocks/ma
 We focus on generally useful data structures and algorithms. Features include:
 
 - 2D and 3D data storage
-  - [`Array`](crate::storage::array) with structure-of-arrays (`SoA`) storage of multiple data channels per spatial dimension
+  - [`Array`](crate::storage::array) with structure-of-arrays (`SoA`) storage of multiple data channels per spatial
+    dimension
   - [`ChunkTree`](crate::storage::chunk_tree) is a quadtree (2D) or octree (3D) with generic chunks and chunk storage
   - [`ChunkDb`](crate::storage::database) for compressed, persistent voxel worlds, backed by the
     [`sled`](https://docs.rs/sled) embedded database
 - level of detail
-  - `ChunkDownsampler` trait controls how new samples are generated from LOD N into LOD N+1
+  - [`ChunkDownsampler`](crate::storage::chunk_tree::ChunkDownsampler) trait controls how new samples are generated from LOD
+    N into LOD N+1
   - `ChunkTree` can act as a clipmap for keeping high detail close to a focal point, generating events to trigger:
     - chunk generation / loading
     - chunk split / merge when desired sample rate changes
@@ -144,10 +146,19 @@ Chunk compression supports two backends out of the box: `Lz4` and `Snappy`. They
 features. "lz4" is the default, but it relies on a C++ library, so it's not compatible with WASM. But Snappy is pure Rust,
 so it can! Just use `default-features = false` and add "snappy" to you `features` list.
 
+#### Chunk Databases
+
+For persistent voxel worlds that support edits, it's useful to have an embedded database for crash-consistent save state.
+We've chosen to use the [`sled`](https://github.com/spacejam/sled) crate. When you enable the `sled` feature, you will get
+access to a `ChunkDb` type that supports reading and writing compressed chunk data. And because `sled` does not yet support
+incremental backups (AKA snapshots), we've also implemented our own snapshot scheme in a separate
+[`sled-snapshots`](https://github.com/bonsairobo/sled-snapshots) crate which backs a `VersionedChunkDb`. This database
+schema only stores the changes (deltas) between versions, so you don't have to store an entire map in every save.
+
 #### VOX Files
 
-".VOX" files are supported via the [`vox-format`](https://docs.rs/vox-format/) crate. Enable the `vox-format` feature to
-get the `VoxModelBuffer` trait impl for `Array3x1`, which allows you to read VOX files directly into an array.
+".VOX" files are supported via the [`vox-format`](https://docs.rs/vox-format/) crate. Enable the `vox-format` feature to get
+the `VoxModelBuffer` trait impl for `Array3x1`, which allows you to read VOX files directly into an array.
 
 #### Images
 

@@ -257,11 +257,6 @@ where
     }
 
     #[inline]
-    pub fn chunk_shape(&self) -> PointN<N> {
-        self.builder().chunk_shape()
-    }
-
-    #[inline]
     pub fn ambient_value(&self) -> T {
         self.builder().ambient_value()
     }
@@ -280,6 +275,17 @@ where
     #[inline]
     pub fn root_lod(&self) -> u8 {
         self.builder().root_lod()
+    }
+}
+
+impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>
+where
+    PointN<N>: Clone,
+    Bldr: ChunkTreeBuilder<N, T>,
+{
+    #[inline]
+    pub fn chunk_shape(&self) -> PointN<N> {
+        self.builder().chunk_shape()
     }
 }
 

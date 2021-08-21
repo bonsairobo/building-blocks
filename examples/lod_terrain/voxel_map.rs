@@ -33,6 +33,7 @@ pub struct MapConfig {
     pub chunk_exponent: u8,
     pub num_lods: u8,
     pub clip_radius: f32,
+    pub min_enter_exit_lod: u8,
     pub detail: f32,
     pub world_chunks_extent: ChunkUnits<Extent3i>,
     pub noise: NoiseConfig,

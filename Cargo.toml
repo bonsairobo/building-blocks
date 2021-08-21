@@ -30,6 +30,7 @@ image = ["building_blocks_storage/image"]
 sdfu = ["building_blocks_core/sdfu"]
 sled = ["building_blocks_storage/sled"]
 sled-snapshots = ["building_blocks_storage/sled-snapshots"]
+trace = ["building_blocks_storage/tracing"]
 
 # Math type conversions.
 glam = ["building_blocks_core/glam"]

@@ -84,6 +84,7 @@ impl VoxelMap for SmoothVoxelMap {
         self.chunks.clipmap_events(
             self.config().detail,
             self.config().clip_radius,
+            self.config().min_enter_exit_lod,
             old_lod0_center,
             new_lod0_center,
             update_rx,

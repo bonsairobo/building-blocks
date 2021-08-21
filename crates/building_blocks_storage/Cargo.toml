@@ -34,6 +34,7 @@ lz4 = { version = "1.23", optional = true }
 sled = { git = "https://github.com/spacejam/sled", rev = "a0d51f2", optional = true }
 sled-snapshots = { git = "https://github.com/bonsairobo/sled-snapshots", rev = "45445c35", optional = true }
 snap = { version = "1.0", optional = true }
+tracing = { version = "0.1", features = ["release_max_level_info"], optional = true }
 vox-format = { version = "0.1", optional = true }
 
 [dev-dependencies]

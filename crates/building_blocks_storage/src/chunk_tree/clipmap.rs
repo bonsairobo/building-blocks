@@ -113,10 +113,15 @@ where
 
     /// Like `active_clipmap_chunks`, but it detects [`ClipEvent`]s triggered by movement of the focal point from
     /// `old_lod0_focus` to `new_lod0_focus`.
+    ///
+    /// When detecting enter/exit events, `enter_exit_min_lod` will be used to stop the search earlier than LOD0. This
+    /// significantly improves performance for the branching and bounding algorithm. When configured, the user must assume that
+    /// if an enter/exit event is received, it also applies to all descendants of the given chunk key.
     pub fn clipmap_events(
         &self,
         detail: f32,
         lod0_clip_radius: f32,
+        enter_exit_min_lod: u8,
         old_lod0_focus: PointN<Nf>,
         new_lod0_focus: PointN<Nf>,
         mut event_rx: impl FnMut(ClipEvent<Ni>),
@@ -135,13 +140,22 @@ where
             .indexer
             .covering_ancestor_extent(union_lod0_clip_extent, root_lod as i32);
 
+        // Optimization: only calculate bounding sphere radii once. Use squared radius to avoid calling sqrt later.
+        let lod0_chunk_shape_max_comp = self.chunk_shape().max_component();
+        let num_lods = root_lod as usize + 1;
+        let chunk_bounding_radii: Vec<_> = (0..num_lods)
+            .map(|lod| ((lod0_chunk_shape_max_comp >> 1) << lod) as f32 * 3f32.sqrt())
+            .collect();
+
         for chunk_min in self.indexer.chunk_mins_for_extent(&root_clip_extent) {
             self.clipmap_events_recursive(
                 ChunkKey::new(root_lod, chunk_min),
                 detail,
                 lod0_clip_radius,
+                enter_exit_min_lod,
                 old_lod0_focus,
                 new_lod0_focus,
+                &chunk_bounding_radii,
                 false,
                 false,
                 &mut event_rx,
@@ -154,8 +168,10 @@ where
         node_key: ChunkKey<Ni>, // May not exist in the ChunkTree!
         detail: f32,
         lod0_clip_radius: f32,
+        enter_exit_min_lod: u8,
         old_lod0_focus: PointN<Nf>,
         new_lod0_focus: PointN<Nf>,
+        chunk_bounding_radii: &[f32],
         ancestor_was_active: bool,
         ancestor_is_active: bool,
         event_rx: &mut impl FnMut(ClipEvent<Ni>),
@@ -163,7 +179,7 @@ where
         let node_lod0_extent = self.indexer.chunk_extent_at_lower_lod(node_key, 0);
         let node_lod0_center =
             PointN::<Nf>::from(node_lod0_extent.minimum + (node_lod0_extent.shape >> 1));
-        let node_lod0_radius = (node_lod0_extent.shape.max_component() >> 1) as f32 * 3f32.sqrt();
+        let node_lod0_radius = chunk_bounding_radii[node_key.lod as usize];
 
         // Calculate the Euclidean distance from each focus the center of the chunk.
         let old_dist = old_lod0_focus.l2_distance_squared(node_lod0_center).sqrt();
@@ -180,9 +196,17 @@ where
         let node_bounded_by_old_clip_sphere = old_dist + node_lod0_radius < lod0_clip_radius;
         let node_bounded_by_new_clip_sphere = new_dist + node_lod0_radius < lod0_clip_radius;
 
-        if node_key.lod > 0 && node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere {
+        if node_key.lod >= enter_exit_min_lod
+            || (node_key.lod > 0
+                && node_bounded_by_old_clip_sphere
+                && node_bounded_by_new_clip_sphere)
+        {
             // This node was and is still bounded by the clip sphere. In this case, enter and exit events are not possible
             // in this tree. We can now restrict ourselves to looking for split/merge events on occupied nodes.
+            if ancestor_was_active || ancestor_is_active {
+                // Merge/split can't happen here if an ancestor is active.
+                return;
+            }
             if let Some(child_mask) = self.get_child_mask(node_key) {
                 self.only_detect_split_or_merge_recursive(
                     node_key,
@@ -197,11 +221,10 @@ where
             return;
         }
 
-        // We still need to check if the node is active since enter/exit events want to know this.
-        let old_norm_dist = PointN::fill(old_dist) / PointN::from(node_lod0_extent.shape);
-        let new_norm_dist = PointN::fill(new_dist) / PointN::from(node_lod0_extent.shape);
-        let was_active = !ancestor_was_active && old_norm_dist > PointN::fill(detail);
-        let is_active = !ancestor_is_active && new_norm_dist > PointN::fill(detail);
+        let old_norm_dist = old_dist / node_lod0_radius;
+        let new_norm_dist = new_dist / node_lod0_radius;
+        let was_active = !ancestor_was_active && old_norm_dist > detail;
+        let is_active = !ancestor_is_active && new_norm_dist > detail;
 
         // Recurse.
         if node_key.lod > 0 {
@@ -211,8 +234,10 @@ where
                     self.indexer.child_chunk_key(node_key, child_i),
                     detail,
                     lod0_clip_radius,
+                    enter_exit_min_lod,
                     old_lod0_focus,
                     new_lod0_focus,
+                    chunk_bounding_radii,
                     ancestor_was_active || was_active,
                     ancestor_is_active || is_active,
                     event_rx,

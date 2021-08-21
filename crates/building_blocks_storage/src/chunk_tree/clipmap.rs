@@ -196,14 +196,12 @@ where
         let node_bounded_by_old_clip_sphere = old_dist + node_lod0_radius < lod0_clip_radius;
         let node_bounded_by_new_clip_sphere = new_dist + node_lod0_radius < lod0_clip_radius;
 
-        if node_key.lod >= enter_exit_min_lod
-            || (node_key.lod > 0
-                && node_bounded_by_old_clip_sphere
-                && node_bounded_by_new_clip_sphere)
+        if node_key.lod < enter_exit_min_lod
+            || (node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere)
         {
             // This node was and is still bounded by the clip sphere. In this case, enter and exit events are not possible
             // in this tree. We can now restrict ourselves to looking for split/merge events on occupied nodes.
-            if ancestor_was_active || ancestor_is_active {
+            if node_key.lod == 0 || ancestor_was_active || ancestor_is_active {
                 // Merge/split can't happen here if an ancestor is active.
                 return;
             }

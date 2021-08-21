@@ -11,6 +11,9 @@ dev = { opt-level = 2 }
 release = { lto = "thin" }
 bench = { lto = "thin" }
 
+[features]
+trace = ["building-blocks/trace", "bevy_utilities/trace"]
+
 [dev-dependencies]
 ron = "0.6"
 serde = "1.0"

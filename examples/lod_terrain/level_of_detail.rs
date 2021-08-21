@@ -9,11 +9,15 @@ use bevy_utilities::bevy::{prelude::*, render::camera::Camera, utils::tracing};
 
 pub struct LodState {
     old_lod0_center: Point3f,
+    frame_counter: usize,
 }
 
 impl LodState {
     pub fn new(old_lod0_center: Point3f) -> Self {
-        Self { old_lod0_center }
+        Self {
+            old_lod0_center,
+            frame_counter: 0,
+        }
     }
 }
 
@@ -24,6 +28,13 @@ pub fn level_of_detail_system<Map: VoxelMap>(
     mut lod_state: ResMut<LodState>,
     mut mesh_commands: ResMut<MeshCommandQueue>,
 ) {
+    lod_state.frame_counter += 1;
+    if lod_state.frame_counter % 10 != 0 {
+        // We don't need to process events every frame. This makes it a little easier for the async workers to keep up. Ideally
+        // this would adapt to how many frames behind the workers are.
+        return;
+    }
+
     let lod_system_span = tracing::info_span!("lod_system");
     let _trace_guard = lod_system_span.enter();
 

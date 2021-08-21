@@ -69,6 +69,7 @@ Controls:
 
 - WASD to move the camera in XZ plane
 - Shift and spacebar to move the camera on Y axis
+- Ctrl to sprint
 - Mouse to rotate the camera
 
 ![LOD Terrain](/examples/screenshots/lod_terrain.png)

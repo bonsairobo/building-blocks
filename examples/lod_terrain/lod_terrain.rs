@@ -88,7 +88,7 @@ fn movement_sensitivity(
 ) {
     if let Ok(mut controller) = controllers.single_mut() {
         if keyboard.pressed(KeyCode::LControl) {
-            controller.translate_sensitivity = 5.;
+            controller.translate_sensitivity = 7.;
         } else {
             controller.translate_sensitivity = 0.5;
         }

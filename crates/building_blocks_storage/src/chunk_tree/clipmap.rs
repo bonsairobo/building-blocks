@@ -4,7 +4,6 @@ use crate::dev_prelude::*;
 use building_blocks_core::{prelude::*, Sphere};
 
 use std::collections::HashSet;
-use std::iter::FromIterator;
 
 impl<Ni, Nf, T, Usr, Bldr, Store> ChunkTree<Ni, T, Bldr, Store>
 where
@@ -146,11 +145,11 @@ where
             .covering_ancestor_extent(new_lod0_clip_extent, root_lod as i32);
 
         // Union the root nodes covering both clip spheres.
-        let root_nodes: HashSet<PointN<Ni>> = HashSet::from_iter(
-            self.indexer
-                .chunk_mins_for_extent(&old_root_clip_extent)
-                .chain(self.indexer.chunk_mins_for_extent(&new_root_clip_extent)),
-        );
+        let root_nodes: HashSet<PointN<Ni>> = self
+            .indexer
+            .chunk_mins_for_extent(&old_root_clip_extent)
+            .chain(self.indexer.chunk_mins_for_extent(&new_root_clip_extent))
+            .collect();
 
         // Optimization: only calculate bounding sphere radii once. Use squared radius to avoid calling sqrt later.
         let lod0_chunk_shape_max_comp = self.chunk_shape().max_component();

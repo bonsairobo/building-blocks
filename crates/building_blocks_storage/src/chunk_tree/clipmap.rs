@@ -86,8 +86,8 @@ where
         }
 
         // Normalize distance by chunk shape.
-        let norm_dist = PointN::fill(dist) / PointN::from(node_lod0_extent.shape);
-        let is_active = norm_dist > PointN::fill(detail);
+        let norm_dist = dist / node_lod0_radius;
+        let is_active = norm_dist > detail;
 
         if is_active {
             if node_bounded_by_clip_sphere {
@@ -211,7 +211,7 @@ where
         let node_bounded_by_old_clip_sphere = old_dist + node_lod0_radius < old_clip_sphere.radius;
         let node_bounded_by_new_clip_sphere = new_dist + node_lod0_radius < new_clip_sphere.radius;
 
-        if node_key.lod < enter_exit_min_lod
+        if (ancestor_was_active && ancestor_is_active && node_key.lod < enter_exit_min_lod)
             || (node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere)
         {
             // This node was and is still bounded by the clip sphere. In this case, enter and exit events are not possible
@@ -227,6 +227,7 @@ where
                     detail,
                     old_clip_sphere,
                     new_clip_sphere,
+                    chunk_bounding_radii,
                     event_rx,
                 );
             }
@@ -272,11 +273,13 @@ where
         detail: f32,
         old_clip_sphere: Sphere<Nf>,
         new_clip_sphere: Sphere<Nf>,
+        chunk_bounding_radii: &[f32],
         event_rx: &mut impl FnMut(ClipEvent<Ni>),
     ) {
         let node_lod0_extent = self.indexer.chunk_extent_at_lower_lod(node_key, 0);
         let lod0_chunk_center =
             PointN::<Nf>::from(node_lod0_extent.minimum + (node_lod0_extent.shape >> 1));
+        let node_lod0_radius = chunk_bounding_radii[node_key.lod as usize];
 
         // Calculate the Euclidean distance from each focus the center of the chunk.
         let old_dist = old_clip_sphere
@@ -288,12 +291,11 @@ where
             .l2_distance_squared(lod0_chunk_center)
             .sqrt();
 
-        let fshape = PointN::from(node_lod0_extent.shape);
-        let old_norm_dist = PointN::fill(old_dist) / fshape;
-        let new_norm_dist = PointN::fill(new_dist) / fshape;
+        let old_norm_dist = old_dist / node_lod0_radius;
+        let new_norm_dist = new_dist / node_lod0_radius;
 
-        let was_active = old_norm_dist > PointN::fill(detail);
-        let is_active = new_norm_dist > PointN::fill(detail);
+        let was_active = old_norm_dist > detail;
+        let is_active = new_norm_dist > detail;
 
         match (was_active, is_active) {
             // Old and new frames agree this chunk is not active.
@@ -310,6 +312,7 @@ where
                                 detail,
                                 old_clip_sphere,
                                 new_clip_sphere,
+                                chunk_bounding_radii,
                                 event_rx,
                             );
                         }

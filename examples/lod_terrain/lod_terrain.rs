@@ -94,6 +94,7 @@ fn movement_sensitivity(
         }
     }
 }
+
 fn setup<Map: VoxelMap>(
     map_config: Res<MapConfig>,
     mut commands: Commands,

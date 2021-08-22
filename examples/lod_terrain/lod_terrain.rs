@@ -6,7 +6,7 @@ mod voxel_map;
 
 use level_of_detail::{level_of_detail_system, LodState};
 use mesh_generator::{
-    mesh_generator_system, ChunkMeshes, MeshCommand, MeshCommandQueue, MeshMaterials,
+    mesh_generator_system, ChunkMeshes, MeshCommand, MeshCommandQueue, MeshCommands, MeshMaterials,
 };
 use voxel_map::{MapConfig, VoxelMap};
 
@@ -118,6 +118,7 @@ fn setup<Map: VoxelMap>(
     });
     assert!(!mesh_commands.is_empty());
     commands.insert_resource(mesh_commands);
+    commands.insert_resource(MeshCommands::default());
     commands.insert_resource(LodState::new(init_lod0_center));
     commands.insert_resource(map);
     commands.insert_resource(ChunkMeshes::default());

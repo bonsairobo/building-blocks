@@ -1,4 +1,4 @@
-use crate::voxel_map::VoxelMap;
+use crate::voxel_map::{MapConfig, VoxelMap};
 
 use bevy_utilities::{
     bevy::{asset::prelude::*, ecs, prelude::*, tasks::ComputeTaskPool, utils::tracing},
@@ -11,27 +11,60 @@ use building_blocks::{
 };
 
 use std::{cell::RefCell, collections::VecDeque};
+use std::sync::{atomic::{AtomicBool, Ordering}, Mutex};
 
-fn max_mesh_creations_per_frame(pool: &ComputeTaskPool) -> usize {
-    40 * pool.thread_num()
+fn max_mesh_creations_per_frame(config: &MapConfig, pool: &ComputeTaskPool) -> usize {
+    config.chunks_processed_per_frame_per_core * pool.thread_num()
+}
+
+#[derive(Default)]
+pub struct MeshCommands {
+    /// New commands for this frame.
+    new_commands: Mutex<Vec<MeshCommand>>,
+    is_congested: AtomicBool,
+}
+
+impl MeshCommands {
+    pub fn add_commands(&self, commands: impl Iterator<Item = MeshCommand>) {
+        let mut new_commands = self.new_commands.lock().unwrap();
+        new_commands.extend(commands);
+    }
+
+    pub fn is_congested(&self) -> bool {
+        self.is_congested.load(Ordering::Relaxed)
+    }
+
+    pub fn set_congested(&self, is_congested: bool) {
+        self.is_congested.store(is_congested, Ordering::Relaxed)
+    }
 }
 
 #[derive(Default)]
 pub struct MeshCommandQueue {
-    commands: VecDeque<MeshCommand>,
+    command_queue: VecDeque<MeshCommand>,
 }
 
 impl MeshCommandQueue {
+    pub fn merge_new_commands(&mut self, new_commands: &MeshCommands) {
+        let new_commands = {
+            let mut new_commands = new_commands.new_commands.lock().unwrap();
+            std::mem::replace(&mut *new_commands, Vec::new())
+        };
+        for command in new_commands.into_iter() {
+            self.command_queue.push_front(command);
+        }
+    }
+
     pub fn enqueue(&mut self, command: MeshCommand) {
-        self.commands.push_front(command);
+        self.command_queue.push_front(command);
     }
 
     pub fn is_empty(&self) -> bool {
-        self.commands.is_empty()
+        self.command_queue.is_empty()
     }
 
     pub fn len(&self) -> usize {
-        self.commands.len()
+        self.command_queue.len()
     }
 }
 
@@ -55,21 +88,26 @@ pub struct ChunkMeshes {
 pub fn mesh_generator_system<Map: VoxelMap>(
     mut commands: Commands,
     pool: Res<ComputeTaskPool>,
+    config: Res<MapConfig>,
     voxel_map: Res<Map>,
     local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers<Map>>,
     mesh_materials: Res<MeshMaterials>,
-    mut mesh_commands: ResMut<MeshCommandQueue>,
+    new_mesh_commands: Res<MeshCommands>,
+    mut mesh_command_queue: ResMut<MeshCommandQueue>,
     mut mesh_assets: ResMut<Assets<Mesh>>,
     mut chunk_meshes: ResMut<ChunkMeshes>,
 ) {
     let new_chunk_meshes = apply_mesh_commands(
+        &*config,
         &*voxel_map,
         &*local_mesh_buffers,
         &*pool,
-        &mut *mesh_commands,
+        &*new_mesh_commands,
+        &mut *mesh_command_queue,
         &mut *chunk_meshes,
         &mut commands,
     );
+
     spawn_mesh_entities(
         new_chunk_meshes,
         &*mesh_materials,
@@ -80,9 +118,11 @@ pub fn mesh_generator_system<Map: VoxelMap>(
 }
 
 fn apply_mesh_commands<Map: VoxelMap>(
+    config: &MapConfig,
     voxel_map: &Map,
     local_mesh_buffers: &ThreadLocalMeshBuffers<Map>,
     pool: &ComputeTaskPool,
+    new_mesh_commands: &MeshCommands,
     mesh_commands: &mut MeshCommandQueue,
     chunk_meshes: &mut ChunkMeshes,
     commands: &mut Commands,
@@ -90,7 +130,9 @@ fn apply_mesh_commands<Map: VoxelMap>(
     let make_mesh_span = tracing::info_span!("make_mesh");
     let make_mesh_span_ref = &make_mesh_span;
 
-    let max_meshes_per_frame = max_mesh_creations_per_frame(pool);
+    let max_meshes_per_frame = max_mesh_creations_per_frame(config, pool);
+
+    mesh_commands.merge_new_commands(new_mesh_commands);
 
     let mut num_commands_processed = 0;
 
@@ -108,7 +150,7 @@ fn apply_mesh_commands<Map: VoxelMap>(
         };
 
         let mut num_meshes_created = 0;
-        for command in mesh_commands.commands.iter().rev().cloned() {
+        for command in mesh_commands.command_queue.iter().rev().cloned() {
             match command {
                 MeshCommand::Create(key) => {
                     num_commands_processed += 1;
@@ -158,7 +200,9 @@ fn apply_mesh_commands<Map: VoxelMap>(
         }
 
         let new_length = mesh_commands.len() - num_commands_processed;
-        mesh_commands.commands.truncate(new_length);
+        mesh_commands.command_queue.truncate(new_length);
+
+        new_mesh_commands.set_congested(!mesh_commands.command_queue.is_empty());
     })
 }
 

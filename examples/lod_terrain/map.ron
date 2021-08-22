@@ -2,6 +2,7 @@
     chunk_exponent: 4,
     num_lods: 6,
     detail: 6.0,
+    chunks_processed_per_frame_per_core: 40,
     clip_radius: 2000.0,
     min_enter_exit_lod: 2,
     world_chunks_extent: ((

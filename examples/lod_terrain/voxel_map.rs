@@ -35,6 +35,7 @@ pub struct MapConfig {
     pub clip_radius: f32,
     pub min_enter_exit_lod: u8,
     pub detail: f32,
+    pub chunks_processed_per_frame_per_core: usize,
     pub world_chunks_extent: ChunkUnits<Extent3i>,
     pub noise: NoiseConfig,
     pub wireframes: bool,

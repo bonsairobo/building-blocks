@@ -1,5 +1,5 @@
 use crate::{
-    mesh_generator::{MeshCommand, MeshCommandQueue},
+    mesh_generator::{MeshCommand, MeshCommands},
     voxel_map::VoxelMap,
 };
 
@@ -22,9 +22,9 @@ pub fn level_of_detail_system<Map: VoxelMap>(
     cameras: Query<(&Camera, &Transform)>,
     voxel_map: Res<Map>,
     mut lod_state: ResMut<LodState>,
-    mut mesh_commands: ResMut<MeshCommandQueue>,
+    mesh_commands: Res<MeshCommands>,
 ) {
-    if !mesh_commands.is_empty() {
+    if mesh_commands.is_congested() {
         // Don't generate more events until the old ones have finished processing.
         return;
     }
@@ -40,9 +40,11 @@ pub fn level_of_detail_system<Map: VoxelMap>(
 
     let lod0_center = Point3f::from(camera_position);
 
+    let mut new_commands = Vec::new();
     voxel_map.clipmap_events(lod_state.old_lod0_center, lod0_center, |event| {
-        mesh_commands.enqueue(MeshCommand::Update(event))
+        new_commands.push(MeshCommand::Update(event))
     });
+    mesh_commands.add_commands(new_commands.into_iter());
 
     lod_state.old_lod0_center = lod0_center;
 }

@@ -3,9 +3,12 @@ use crate::dev_prelude::*;
 
 use building_blocks_core::{prelude::*, Sphere};
 
+use std::collections::HashSet;
+use std::iter::FromIterator;
+
 impl<Ni, Nf, T, Usr, Bldr, Store> ChunkTree<Ni, T, Bldr, Store>
 where
-    PointN<Ni>: IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
+    PointN<Ni>: std::hash::Hash + IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
     Bldr: ChunkTreeBuilder<Ni, T, Chunk = Usr>,
     Store: ChunkStorage<Ni, Chunk = Usr> + for<'r> IterChunkKeys<'r, Ni>,
@@ -134,12 +137,20 @@ where
         ) + new_clip_sphere.center;
         let old_lod0_clip_extent = old_lod0_clip_aabb.containing_integer_extent();
         let new_lod0_clip_extent = new_lod0_clip_aabb.containing_integer_extent();
-        // This extent covers both the old clip sphere and new clip sphere, ensuring we don't miss any relevant events.
-        let union_lod0_clip_extent = old_lod0_clip_extent.quasi_union(&new_lod0_clip_extent);
         let root_lod = self.root_lod();
-        let root_clip_extent = self
+        let old_root_clip_extent = self
             .indexer
-            .covering_ancestor_extent(union_lod0_clip_extent, root_lod as i32);
+            .covering_ancestor_extent(old_lod0_clip_extent, root_lod as i32);
+        let new_root_clip_extent = self
+            .indexer
+            .covering_ancestor_extent(new_lod0_clip_extent, root_lod as i32);
+
+        // Union the root nodes covering both clip spheres.
+        let root_nodes: HashSet<PointN<Ni>> = HashSet::from_iter(
+            self.indexer
+                .chunk_mins_for_extent(&old_root_clip_extent)
+                .chain(self.indexer.chunk_mins_for_extent(&new_root_clip_extent)),
+        );
 
         // Optimization: only calculate bounding sphere radii once. Use squared radius to avoid calling sqrt later.
         let lod0_chunk_shape_max_comp = self.chunk_shape().max_component();
@@ -148,7 +159,7 @@ where
             .map(|lod| ((lod0_chunk_shape_max_comp >> 1) << lod) as f32 * 3f32.sqrt())
             .collect();
 
-        for chunk_min in self.indexer.chunk_mins_for_extent(&root_clip_extent) {
+        for chunk_min in root_nodes.into_iter() {
             self.clipmap_events_recursive(
                 ChunkKey::new(root_lod, chunk_min),
                 detail,

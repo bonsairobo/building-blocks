@@ -1,7 +1,7 @@
 use super::child_mask_has_child;
 use crate::dev_prelude::*;
 
-use building_blocks_core::prelude::*;
+use building_blocks_core::{prelude::*, Sphere};
 
 impl<Ni, Nf, T, Usr, Bldr, Store> ChunkTree<Ni, T, Bldr, Store>
 where
@@ -12,21 +12,21 @@ where
 {
     /// Traverses from all roots to find the currently "active" chunks. Active chunks are passed to the `active_rx` callback.
     ///
-    /// By "active," we mean that, given the current location of `lod0_focus` (e.g. a camera):
+    /// By "active," we mean that, given the current location of `clip_sphere`:
     ///
-    ///   - the chunk is bounded by the clip sphere determined by `lod0_clip_radius`
+    ///   - the chunk is bounded by the clip sphere determined by `clip_sphere.radius`
     ///   - the chunk has the desired LOD for rendering
     ///
     /// More specifically,
     ///
-    ///   - let `D` be the Euclidean distance from `lod0_focus` to the center of the chunk (in LOD0 space)
+    ///   - let `D` be the Euclidean distance from `clip_sphere.center` to the center of the chunk (in LOD0 space)
     ///   - let `B` be the radius of the chunk's bounding sphere (in LOD0 space)
     ///   - let `S` be the shape of the chunk (in LOD0 space)
     ///
     /// The chunk *can* be active iff
     ///
     /// ```text
-    ///     D + B < lod0_clip_radius && (D / S) > detail
+    ///     D + B < clip_sphere.radius && (D / S) > detail
     /// ```
     ///
     /// where `detail` is a nonnegative constant parameter supplied by you. Along a given path from a root chunk to a leaf, the
@@ -34,8 +34,7 @@ where
     pub fn clipmap_active_chunks(
         &self,
         detail: f32,
-        lod0_clip_radius: f32,
-        lod0_focus: PointN<Nf>,
+        clip_sphere: Sphere<Nf>,
         mut active_rx: impl FnMut(ChunkKey<Ni>),
     ) {
         let root_lod = self.root_lod();
@@ -44,8 +43,7 @@ where
             self.clipmap_active_chunks_recursive(
                 ChunkKey::new(root_lod, chunk_min),
                 detail,
-                lod0_clip_radius,
-                lod0_focus,
+                clip_sphere,
                 &mut active_rx,
             );
         }
@@ -55,8 +53,7 @@ where
         &self,
         node_key: ChunkKey<Ni>,
         detail: f32,
-        lod0_clip_radius: f32,
-        lod0_focus: PointN<Nf>,
+        clip_sphere: Sphere<Nf>,
         active_rx: &mut impl FnMut(ChunkKey<Ni>),
     ) {
         let node_lod0_extent = self.indexer.chunk_extent_at_lower_lod(node_key, 0);
@@ -64,18 +61,19 @@ where
         let node_lod0_radius = (node_lod0_extent.shape.max_component() >> 1) as f32 * 3f32.sqrt();
 
         // Calculate the Euclidean distance from the focus the center of the chunk.
-        let dist = lod0_focus
+        let dist = clip_sphere
+            .center
             .l2_distance_squared(PointN::<Nf>::from(node_lod0_center))
             .sqrt();
 
-        let node_intersects_clip_sphere = dist - node_lod0_radius < lod0_clip_radius;
+        let node_intersects_clip_sphere = dist - node_lod0_radius < clip_sphere.radius;
 
         // Don't consider any chunk that doesn't intersect the clip sphere.
         if !node_intersects_clip_sphere {
             return;
         }
 
-        let node_bounded_by_clip_sphere = dist + node_lod0_radius < lod0_clip_radius;
+        let node_bounded_by_clip_sphere = dist + node_lod0_radius < clip_sphere.radius;
 
         if node_key.lod == 0 {
             if node_bounded_by_clip_sphere {
@@ -102,8 +100,7 @@ where
                     self.clipmap_active_chunks_recursive(
                         self.indexer.child_chunk_key(node_key, child_i),
                         detail,
-                        lod0_clip_radius,
-                        lod0_focus,
+                        clip_sphere,
                         active_rx,
                     );
                 }
@@ -112,7 +109,7 @@ where
     }
 
     /// Like `active_clipmap_chunks`, but it detects [`ClipEvent`]s triggered by movement of the focal point from
-    /// `old_lod0_focus` to `new_lod0_focus`.
+    /// `old_clip_sphere` to `new_clip_sphere`.
     ///
     /// When detecting enter/exit events, `enter_exit_min_lod` will be used to stop the search earlier than LOD0. This
     /// significantly improves performance for the branching and bounding algorithm. When configured, the user must assume that
@@ -120,19 +117,23 @@ where
     pub fn clipmap_events(
         &self,
         detail: f32,
-        lod0_clip_radius: f32,
         enter_exit_min_lod: u8,
-        old_lod0_focus: PointN<Nf>,
-        new_lod0_focus: PointN<Nf>,
+        old_clip_sphere: Sphere<Nf>,
+        new_clip_sphere: Sphere<Nf>,
         mut event_rx: impl FnMut(ClipEvent<Ni>),
     ) {
-        assert!(lod0_clip_radius > 0.0);
-        let lod0_clip_extent = ExtentN::from_min_and_shape(
-            PointN::fill(-lod0_clip_radius),
-            PointN::fill(2.0 * lod0_clip_radius),
-        );
-        let old_lod0_clip_extent = (lod0_clip_extent + old_lod0_focus).containing_integer_extent();
-        let new_lod0_clip_extent = (lod0_clip_extent + new_lod0_focus).containing_integer_extent();
+        assert!(old_clip_sphere.radius > 0.0);
+        assert!(new_clip_sphere.radius > 0.0);
+        let old_lod0_clip_aabb = ExtentN::from_min_and_shape(
+            PointN::fill(-old_clip_sphere.radius),
+            PointN::fill(2.0 * old_clip_sphere.radius),
+        ) + old_clip_sphere.center;
+        let new_lod0_clip_aabb = ExtentN::from_min_and_shape(
+            PointN::fill(-new_clip_sphere.radius),
+            PointN::fill(2.0 * new_clip_sphere.radius),
+        ) + new_clip_sphere.center;
+        let old_lod0_clip_extent = old_lod0_clip_aabb.containing_integer_extent();
+        let new_lod0_clip_extent = new_lod0_clip_aabb.containing_integer_extent();
         // This extent covers both the old clip sphere and new clip sphere, ensuring we don't miss any relevant events.
         let union_lod0_clip_extent = old_lod0_clip_extent.quasi_union(&new_lod0_clip_extent);
         let root_lod = self.root_lod();
@@ -151,10 +152,9 @@ where
             self.clipmap_events_recursive(
                 ChunkKey::new(root_lod, chunk_min),
                 detail,
-                lod0_clip_radius,
                 enter_exit_min_lod,
-                old_lod0_focus,
-                new_lod0_focus,
+                old_clip_sphere,
+                new_clip_sphere,
                 &chunk_bounding_radii,
                 false,
                 false,
@@ -167,10 +167,9 @@ where
         &self,
         node_key: ChunkKey<Ni>, // May not exist in the ChunkTree!
         detail: f32,
-        lod0_clip_radius: f32,
         enter_exit_min_lod: u8,
-        old_lod0_focus: PointN<Nf>,
-        new_lod0_focus: PointN<Nf>,
+        old_clip_sphere: Sphere<Nf>,
+        new_clip_sphere: Sphere<Nf>,
         chunk_bounding_radii: &[f32],
         ancestor_was_active: bool,
         ancestor_is_active: bool,
@@ -182,19 +181,25 @@ where
         let node_lod0_radius = chunk_bounding_radii[node_key.lod as usize];
 
         // Calculate the Euclidean distance from each focus the center of the chunk.
-        let old_dist = old_lod0_focus.l2_distance_squared(node_lod0_center).sqrt();
-        let new_dist = new_lod0_focus.l2_distance_squared(node_lod0_center).sqrt();
+        let old_dist = old_clip_sphere
+            .center
+            .l2_distance_squared(node_lod0_center)
+            .sqrt();
+        let new_dist = new_clip_sphere
+            .center
+            .l2_distance_squared(node_lod0_center)
+            .sqrt();
 
-        let node_intersects_old_clip_sphere = old_dist - node_lod0_radius < lod0_clip_radius;
-        let node_intersects_new_clip_sphere = new_dist - node_lod0_radius < lod0_clip_radius;
+        let node_intersects_old_clip_sphere = old_dist - node_lod0_radius < old_clip_sphere.radius;
+        let node_intersects_new_clip_sphere = new_dist - node_lod0_radius < new_clip_sphere.radius;
 
         if !node_intersects_old_clip_sphere && !node_intersects_new_clip_sphere {
             // There are no events for this node or any of its descendants.
             return;
         }
 
-        let node_bounded_by_old_clip_sphere = old_dist + node_lod0_radius < lod0_clip_radius;
-        let node_bounded_by_new_clip_sphere = new_dist + node_lod0_radius < lod0_clip_radius;
+        let node_bounded_by_old_clip_sphere = old_dist + node_lod0_radius < old_clip_sphere.radius;
+        let node_bounded_by_new_clip_sphere = new_dist + node_lod0_radius < new_clip_sphere.radius;
 
         if node_key.lod < enter_exit_min_lod
             || (node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere)
@@ -210,9 +215,8 @@ where
                     node_key,
                     child_mask,
                     detail,
-                    lod0_clip_radius,
-                    old_lod0_focus,
-                    new_lod0_focus,
+                    old_clip_sphere,
+                    new_clip_sphere,
                     event_rx,
                 );
             }
@@ -231,10 +235,9 @@ where
                 self.clipmap_events_recursive(
                     self.indexer.child_chunk_key(node_key, child_i),
                     detail,
-                    lod0_clip_radius,
                     enter_exit_min_lod,
-                    old_lod0_focus,
-                    new_lod0_focus,
+                    old_clip_sphere,
+                    new_clip_sphere,
                     chunk_bounding_radii,
                     ancestor_was_active || was_active,
                     ancestor_is_active || is_active,
@@ -257,9 +260,8 @@ where
         node_key: ChunkKey<Ni>, // Precondition: not LOD0.
         node_child_mask: u8,
         detail: f32,
-        lod0_clip_radius: f32,
-        old_lod0_focus: PointN<Nf>,
-        new_lod0_focus: PointN<Nf>,
+        old_clip_sphere: Sphere<Nf>,
+        new_clip_sphere: Sphere<Nf>,
         event_rx: &mut impl FnMut(ClipEvent<Ni>),
     ) {
         let node_lod0_extent = self.indexer.chunk_extent_at_lower_lod(node_key, 0);
@@ -267,8 +269,14 @@ where
             PointN::<Nf>::from(node_lod0_extent.minimum + (node_lod0_extent.shape >> 1));
 
         // Calculate the Euclidean distance from each focus the center of the chunk.
-        let old_dist = old_lod0_focus.l2_distance_squared(lod0_chunk_center).sqrt();
-        let new_dist = new_lod0_focus.l2_distance_squared(lod0_chunk_center).sqrt();
+        let old_dist = old_clip_sphere
+            .center
+            .l2_distance_squared(lod0_chunk_center)
+            .sqrt();
+        let new_dist = new_clip_sphere
+            .center
+            .l2_distance_squared(lod0_chunk_center)
+            .sqrt();
 
         let fshape = PointN::from(node_lod0_extent.shape);
         let old_norm_dist = PointN::fill(old_dist) / fshape;
@@ -290,9 +298,8 @@ where
                                 child_key,
                                 child_node_child_mask,
                                 detail,
-                                lod0_clip_radius,
-                                old_lod0_focus,
-                                new_lod0_focus,
+                                old_clip_sphere,
+                                new_clip_sphere,
                                 event_rx,
                             );
                         }
@@ -309,8 +316,7 @@ where
                         self.clipmap_active_chunks_recursive(
                             child_key,
                             detail,
-                            lod0_clip_radius,
-                            old_lod0_focus,
+                            old_clip_sphere,
                             &mut |active_chunk| old_chunks.push(active_chunk),
                         );
                     }
@@ -330,8 +336,7 @@ where
                         self.clipmap_active_chunks_recursive(
                             child_key,
                             detail,
-                            lod0_clip_radius,
-                            new_lod0_focus,
+                            new_clip_sphere,
                             &mut |active_chunk| new_chunks.push(active_chunk),
                         );
                     }

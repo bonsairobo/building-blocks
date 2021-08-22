@@ -67,12 +67,12 @@ impl VoxelMap for SmoothVoxelMap {
     }
 
     fn clipmap_active_chunks(&self, lod0_center: Point3f, active_rx: impl FnMut(ChunkKey3)) {
-        self.chunks.clipmap_active_chunks(
-            self.config().detail,
-            self.config().clip_radius,
-            lod0_center,
-            active_rx,
-        );
+        let clip_sphere = Sphere3 {
+            center: lod0_center,
+            radius: self.config().clip_radius,
+        };
+        self.chunks
+            .clipmap_active_chunks(self.config().detail, clip_sphere, active_rx);
     }
 
     fn clipmap_events(
@@ -81,12 +81,19 @@ impl VoxelMap for SmoothVoxelMap {
         new_lod0_center: Point3f,
         update_rx: impl FnMut(ClipEvent3),
     ) {
+        let old_clip_sphere = Sphere3 {
+            center: old_lod0_center,
+            radius: self.config().clip_radius,
+        };
+        let new_clip_sphere = Sphere3 {
+            center: new_lod0_center,
+            radius: self.config().clip_radius,
+        };
         self.chunks.clipmap_events(
             self.config().detail,
-            self.config().clip_radius,
             self.config().min_enter_exit_lod,
-            old_lod0_center,
-            new_lod0_center,
+            old_clip_sphere,
+            new_clip_sphere,
             update_rx,
         );
     }

@@ -14,12 +14,14 @@ mod extent;
 mod morton;
 mod orthant;
 mod point;
+mod sphere;
 
 pub use axis::*;
 pub use extent::*;
 pub use morton::*;
 pub use orthant::*;
 pub use point::*;
+pub use sphere::*;
 
 pub use bytemuck;
 pub use num;
@@ -29,7 +31,7 @@ pub mod prelude {
     pub use super::{
         point::point_traits::*, Axis2, Axis3, Extent2, Extent2f, Extent2i, Extent3, Extent3f,
         Extent3i, ExtentN, Morton2, Morton3, Octant, Orthant, Point2, Point2f, Point2i, Point3,
-        Point3f, Point3i, PointN, Quadrant,
+        Point3f, Point3i, PointN, Quadrant, Sphere2, Sphere3,
     };
 }
 

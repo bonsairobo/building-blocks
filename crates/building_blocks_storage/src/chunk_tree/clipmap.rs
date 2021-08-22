@@ -235,8 +235,8 @@ where
 
         let old_norm_dist = old_dist / node_lod0_radius;
         let new_norm_dist = new_dist / node_lod0_radius;
-        let was_active = !ancestor_was_active && old_norm_dist > detail;
-        let is_active = !ancestor_is_active && new_norm_dist > detail;
+        let was_active = !ancestor_was_active && (node_key.lod == 0 || old_norm_dist > detail);
+        let is_active = !ancestor_is_active && (node_key.lod == 0 || new_norm_dist > detail);
 
         // Recurse.
         if node_key.lod > 0 {

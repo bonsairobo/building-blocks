@@ -126,17 +126,11 @@ where
     ) {
         assert!(old_clip_sphere.radius > 0.0);
         assert!(new_clip_sphere.radius > 0.0);
-        let old_lod0_clip_aabb = ExtentN::from_min_and_shape(
-            PointN::fill(-old_clip_sphere.radius),
-            PointN::fill(2.0 * old_clip_sphere.radius),
-        ) + old_clip_sphere.center;
-        let new_lod0_clip_aabb = ExtentN::from_min_and_shape(
-            PointN::fill(-new_clip_sphere.radius),
-            PointN::fill(2.0 * new_clip_sphere.radius),
-        ) + new_clip_sphere.center;
-        let old_lod0_clip_extent = old_lod0_clip_aabb.containing_integer_extent();
-        let new_lod0_clip_extent = new_lod0_clip_aabb.containing_integer_extent();
+
         let root_lod = self.root_lod();
+
+        let old_lod0_clip_extent = extent_containing_sphere(old_clip_sphere);
+        let new_lod0_clip_extent = extent_containing_sphere(new_clip_sphere);
         let old_root_clip_extent = self
             .indexer
             .covering_ancestor_extent(old_lod0_clip_extent, root_lod as i32);
@@ -210,26 +204,30 @@ where
 
         let node_bounded_by_old_clip_sphere = old_dist + node_lod0_radius < old_clip_sphere.radius;
         let node_bounded_by_new_clip_sphere = new_dist + node_lod0_radius < new_clip_sphere.radius;
+        let stable_bounded = node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere;
 
-        if (ancestor_was_active && ancestor_is_active && node_key.lod < enter_exit_min_lod)
-            || (node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere)
-        {
+        // We can't have more active enter/exits in this tree, so it might be OK to skip the inactive ones.
+        let no_active_enter_exits = ancestor_was_active && ancestor_is_active;
+
+        if (no_active_enter_exits && node_key.lod < enter_exit_min_lod) || stable_bounded {
             // This node was and is still bounded by the clip sphere. In this case, enter and exit events are not possible
             // in this tree. We can now restrict ourselves to looking for split/merge events on occupied nodes.
             if node_key.lod == 0 || ancestor_was_active || ancestor_is_active {
                 // Merge/split can't happen here if an ancestor is active.
                 return;
             }
-            if let Some(child_mask) = self.get_child_mask(node_key) {
-                self.only_detect_split_or_merge_recursive(
-                    node_key,
-                    child_mask,
-                    detail,
-                    old_clip_sphere,
-                    new_clip_sphere,
-                    chunk_bounding_radii,
-                    event_rx,
-                );
+            if stable_bounded {
+                if let Some(child_mask) = self.get_child_mask(node_key) {
+                    self.only_detect_split_or_merge_recursive(
+                        node_key,
+                        child_mask,
+                        detail,
+                        old_clip_sphere,
+                        new_clip_sphere,
+                        chunk_bounding_radii,
+                        event_rx,
+                    );
+                }
             }
             return;
         }
@@ -366,6 +364,18 @@ where
     }
 }
 
+fn extent_containing_sphere<Nf, Ni>(sphere: Sphere<Nf>) -> ExtentN<Ni>
+where
+    PointN<Ni>: IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
+    PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
+{
+    let aabb = ExtentN::from_min_and_shape(
+        PointN::fill(-sphere.radius),
+        PointN::fill(2.0 * sphere.radius),
+    ) + sphere.center;
+    aabb.containing_integer_extent()
+}
+
 /// An event triggered by movement of the clipmap focus. A given chunk slot is guaranteed to receive at most one event per
 /// frame.
 ///
@@ -420,4 +430,109 @@ pub struct SplitChunk<N> {
 pub struct MergeChunks<N> {
     pub old_chunks: Vec<ChunkKey<N>>,
     pub new_chunk: ChunkKey<N>,
+}
+
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn old_and_new_clip_sphere_no_overlap_without_data() {
+        let chunks = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
+            chunk_shape: Point3i::fill(16),
+            ambient_value: 0,
+            root_lod: 5,
+        })
+        .build_with_hash_map_storage();
+
+        let old_clip_sphere = Sphere3 {
+            center: Point3::ZERO,
+            radius: 100.0,
+        };
+        let new_clip_sphere = Sphere3 {
+            center: Point3f::fill(300.0),
+            radius: 100.0,
+        };
+
+        let mut lod0_entrances = HashSet::new();
+        let mut lod0_exits = HashSet::new();
+        chunks.clipmap_events(
+            6.0,
+            0,
+            old_clip_sphere,
+            new_clip_sphere,
+            |event| match event {
+                ClipEvent::Enter(key, _) => {
+                    if key.lod == 0 {
+                        lod0_entrances.insert(key);
+                    }
+                }
+                ClipEvent::Exit(key, _) => {
+                    if key.lod == 0 {
+                        lod0_exits.insert(key);
+                    }
+                }
+                _ => panic!("unexpected event"),
+            },
+        );
+
+        assert!(!lod0_entrances.is_empty());
+        assert!(!lod0_exits.is_empty());
+
+        // All of the chunk in the old sphere should have exited.
+        let expected_lod0_exits: HashSet<_> = chunks
+            .indexer
+            .chunk_mins_for_extent(&extent_containing_sphere(old_clip_sphere))
+            .map(|chunk_min| ChunkKey3::new(0, chunk_min))
+            .filter(|key| {
+                sphere_contains_extent(
+                    old_clip_sphere,
+                    chunks.indexer.extent_for_chunk_with_min(key.minimum),
+                )
+            })
+            .collect();
+        // All of the chunk in the new sphere should have entered.
+        let expected_lod0_entrances: HashSet<_> = chunks
+            .indexer
+            .chunk_mins_for_extent(&extent_containing_sphere(new_clip_sphere))
+            .map(|chunk_min| ChunkKey3::new(0, chunk_min))
+            .filter(|key| {
+                sphere_contains_extent(
+                    new_clip_sphere,
+                    chunks.indexer.extent_for_chunk_with_min(key.minimum),
+                )
+            })
+            .collect();
+
+        assert!(!expected_lod0_exits.is_empty());
+        assert!(!expected_lod0_entrances.is_empty());
+
+        assert!(
+            expected_lod0_entrances.eq(&lod0_entrances),
+            "# expected = {:?} # missing = {:?}",
+            expected_lod0_entrances.len(),
+            expected_lod0_entrances.difference(&lod0_entrances).count()
+        );
+        assert!(
+            expected_lod0_exits.eq(&lod0_exits),
+            "# expected = {:?} # missing = {:?}",
+            expected_lod0_exits.len(),
+            expected_lod0_exits.difference(&lod0_exits).count()
+        );
+    }
+
+    fn sphere_contains_extent(sphere: Sphere3, extent: Extent3i) -> bool {
+        let max_comp = extent.shape.max_component();
+        let chunk_bounding_radius = (max_comp >> 1) as f32 * 3f32.sqrt();
+        let extent_center = Point3f::from(extent.minimum + (extent.shape >> 1));
+        let dist = sphere.center.l2_distance_squared(extent_center).sqrt();
+        dist + chunk_bounding_radius < sphere.radius
+    }
 }

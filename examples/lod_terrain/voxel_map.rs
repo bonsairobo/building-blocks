@@ -12,12 +12,23 @@ pub trait VoxelMap: ecs::component::Component {
 
     fn clipmap_active_chunks(&self, lod0_center: Point3f, active_rx: impl FnMut(ChunkKey3));
 
-    fn clipmap_events(
+    fn lod_changes(
         &self,
-        old_lod0_center: Point3f,
-        new_lod0_center: Point3f,
-        update_rx: impl FnMut(ClipEvent3),
+        old_clip_sphere: Sphere3,
+        new_clip_sphere: Sphere3,
+        rx: impl FnMut(LodChange3),
     );
+
+    fn clipmap_new_chunks(
+        &self,
+        old_clip_sphere: Sphere3,
+        new_clip_sphere: Sphere3,
+        rx: impl FnMut(NewChunkSlot3),
+    );
+
+    fn chunk_indexer(&self) -> &ChunkIndexer3;
+
+    fn root_lod(&self) -> u8;
 
     fn init_mesh_buffers(&self) -> Self::MeshBuffers;
 
@@ -33,7 +44,7 @@ pub struct MapConfig {
     pub chunk_exponent: u8,
     pub num_lods: u8,
     pub clip_radius: f32,
-    pub min_enter_exit_lod: u8,
+    pub min_enter_lod: u8,
     pub detail: f32,
     pub chunks_processed_per_frame_per_core: usize,
     pub world_chunks_extent: ChunkUnits<Extent3i>,

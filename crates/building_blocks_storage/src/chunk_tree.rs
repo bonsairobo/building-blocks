@@ -412,6 +412,18 @@ where
             }
         }
     }
+
+    /// Call `visitor` on all children keys of `parent_key`.
+    pub fn for_each_child(&self, parent_key: ChunkKey<N>, mut visitor: impl FnMut(ChunkKey<N>)) {
+        if let Some(child_mask) = self.get_child_mask(parent_key) {
+            for child_i in 0..PointN::NUM_CORNERS {
+                if child_mask_has_child(child_mask, child_i) {
+                    let child_key = self.indexer.child_chunk_key(parent_key, child_i);
+                    visitor(child_key);
+                }
+            }
+        }
+    }
 }
 
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
@@ -507,14 +519,9 @@ where
                 }
             }
 
-            for child_i in 0..PointN::NUM_CORNERS {
-                if node.has_child(child_i) {
-                    self.visit_occupied_chunks_recursive(
-                        self.indexer.child_chunk_key(node_key, child_i),
-                        visitor,
-                    );
-                }
-            }
+            self.for_each_child(node_key, |child_key| {
+                self.visit_occupied_chunks_recursive(child_key, visitor);
+            });
         }
     }
 

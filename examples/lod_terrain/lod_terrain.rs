@@ -6,7 +6,8 @@ mod voxel_map;
 
 use level_of_detail::{level_of_detail_system, LodState};
 use mesh_generator::{
-    mesh_generator_system, ChunkMeshes, MeshCommand, MeshCommandQueue, MeshCommands, MeshMaterials,
+    mesh_deleter_system, mesh_generator_system, ChunkMeshes, MeshCommand, MeshCommandQueue,
+    MeshCommands, MeshMaterials,
 };
 use voxel_map::{MapConfig, VoxelMap};
 
@@ -77,7 +78,8 @@ fn run_example<Map: VoxelMap>() {
         .add_plugin(FpsCameraPlugin)
         .add_startup_system(setup::<Map>.system())
         .add_system(level_of_detail_system::<Map>.system())
-        .add_system(mesh_generator_system::<Map>.system())
+        .add_system(mesh_deleter_system::<Map>.system().label("mesh_deleter"))
+        .add_system(mesh_generator_system::<Map>.system().after("mesh_deleter"))
         .add_system(movement_sensitivity.system())
         .run();
 }

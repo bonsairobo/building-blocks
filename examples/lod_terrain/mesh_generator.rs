@@ -1,13 +1,14 @@
 use crate::voxel_map::{MapConfig, VoxelMap};
 
 use bevy_utilities::{
-    bevy::{asset::prelude::*, ecs, prelude::*, tasks::ComputeTaskPool, utils::tracing},
+    bevy::{asset::prelude::*, ecs, prelude::*, tasks::ComputeTaskPool, render::camera::Camera, utils::tracing},
     mesh::create_mesh_bundle,
     thread_local_resource::ThreadLocalResource,
 };
 use building_blocks::{
     mesh::*,
-    storage::{SmallKeyHashMap, prelude::{ChunkKey3, ClipEvent3}},
+    prelude::*,
+    storage::SmallKeyHashMap,
 };
 
 use std::{cell::RefCell, collections::VecDeque};
@@ -68,11 +69,10 @@ impl MeshCommandQueue {
     }
 }
 
-// PERF: try to eliminate the use of multiple Vecs
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MeshCommand {
     Create(ChunkKey3),
-    Update(ClipEvent3),
+    LodChange(LodChange3),
 }
 
 #[derive(Default)]
@@ -136,7 +136,7 @@ fn apply_mesh_commands<Map: VoxelMap>(
 
     let mut num_commands_processed = 0;
 
-    pool.scope(|s| {
+    let new_meshes = pool.scope(|s| {
         let mut make_mesh = |key: ChunkKey3| {
             s.spawn(async move {
                 let _trace_guard = make_mesh_span_ref.enter();
@@ -151,46 +151,33 @@ fn apply_mesh_commands<Map: VoxelMap>(
 
         let mut num_meshes_created = 0;
         for command in mesh_commands.command_queue.iter().rev().cloned() {
+            num_commands_processed += 1;
             match command {
                 MeshCommand::Create(key) => {
-                    num_commands_processed += 1;
                     num_meshes_created += 1;
                     make_mesh(key)
                 }
-                MeshCommand::Update(update) => {
-                    num_commands_processed += 1;
-                    match update {
-                        ClipEvent3::Split(split) => {
-                            if let Some(entity) = chunk_meshes.entities.remove(&split.old_chunk) {
+                MeshCommand::LodChange(update) => match update {
+                    LodChange3::Split(split) => {
+                        if let Some(entity) = chunk_meshes.entities.remove(&split.old_chunk) {
+                            commands.entity(entity).despawn();
+                        }
+                        for &key in split.new_chunks.iter() {
+                            num_meshes_created += 1;
+                            make_mesh(key)
+                        }
+                    }
+                    LodChange3::Merge(merge) => {
+                        for key in merge.old_chunks.iter() {
+                            if let Some(entity) = chunk_meshes.entities.remove(&key) {
                                 commands.entity(entity).despawn();
                             }
-                            for &key in split.new_chunks.iter() {
-                                num_meshes_created += 1;
-                                make_mesh(key)
-                            }
                         }
-                        ClipEvent3::Merge(merge) => {
-                            for key in merge.old_chunks.iter() {
-                                if let Some(entity) = chunk_meshes.entities.remove(&key) {
-                                    commands.entity(entity).despawn();
-                                }
-                            }
+
+                        if merge.new_chunk_is_bounded {
                             num_meshes_created += 1;
                             make_mesh(merge.new_chunk)
                         }
-                        ClipEvent3::Enter(key, is_active) => {
-                            if is_active {
-                                num_meshes_created += 1;
-                                make_mesh(key)
-                            }
-                        },
-                        ClipEvent3::Exit(key, was_active) => {
-                            if was_active {
-                                if let Some(entity) = chunk_meshes.entities.remove(&key) {
-                                    commands.entity(entity).despawn();
-                                }
-                            }
-                        },
                     }
                 }
             }
@@ -198,12 +185,14 @@ fn apply_mesh_commands<Map: VoxelMap>(
                 break;
             }
         }
+    });
 
-        let new_length = mesh_commands.len() - num_commands_processed;
-        mesh_commands.command_queue.truncate(new_length);
+    let new_length = mesh_commands.len() - num_commands_processed;
+    mesh_commands.command_queue.truncate(new_length);
 
-        new_mesh_commands.set_congested(!mesh_commands.command_queue.is_empty());
-    })
+    new_mesh_commands.set_congested(!mesh_commands.command_queue.is_empty());
+
+    new_meshes
 }
 
 // ThreadLocal doesn't let you get a mutable reference, so we need to use RefCell. We lock this down to only be used in this
@@ -234,6 +223,39 @@ fn spawn_mesh_entities(
         };
         if let Some(old_mesh) = old_mesh {
             commands.entity(old_mesh).despawn();
+        }
+    }
+}
+
+/// Deletes meshes that aren't bounded by the clip sphere.
+pub fn mesh_deleter_system<Map: VoxelMap>(
+    mut commands: Commands,
+    cameras: Query<(&Camera, &Transform)>,
+    voxel_map: Res<Map>,
+    mut chunk_meshes: ResMut<ChunkMeshes>,
+) {
+    let camera_position = if let Some((_camera, tfm)) = cameras.iter().next() {
+        tfm.translation
+    } else {
+        return;
+    };
+
+    let clip_sphere = Sphere3 {
+        center: Point3f::from(camera_position),
+        radius: voxel_map.config().clip_radius,
+    };
+
+    let mut chunks_to_remove = Vec::new();
+    for &chunk_key in chunk_meshes.entities.keys() {
+        let chunk_sphere = chunk_lod0_bounding_sphere(voxel_map.chunk_indexer(), chunk_key);
+        if !clip_sphere.contains(&chunk_sphere) {
+            chunks_to_remove.push(chunk_key);
+        }
+    }
+
+    for chunk_key in chunks_to_remove.into_iter() {
+        if let Some(entity) = chunk_meshes.entities.remove(&chunk_key) {
+            commands.entity(entity).despawn();
         }
     }
 }

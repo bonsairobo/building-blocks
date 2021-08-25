@@ -29,22 +29,41 @@ pub fn level_of_detail_system<Map: VoxelMap>(
         return;
     }
 
-    let lod_system_span = tracing::info_span!("lod_system");
-    let _trace_guard = lod_system_span.enter();
-
     let camera_position = if let Some((_camera, tfm)) = cameras.iter().next() {
         tfm.translation
     } else {
         return;
     };
 
-    let lod0_center = Point3f::from(camera_position);
+    let new_lod0_center = Point3f::from(camera_position);
+
+    let old_clip_sphere = Sphere3 {
+        center: lod_state.old_lod0_center,
+        radius: voxel_map.config().clip_radius,
+    };
+    let new_clip_sphere = Sphere3 {
+        center: new_lod0_center,
+        radius: voxel_map.config().clip_radius,
+    };
 
     let mut new_commands = Vec::new();
-    voxel_map.clipmap_events(lod_state.old_lod0_center, lod0_center, |event| {
-        new_commands.push(MeshCommand::Update(event))
-    });
+    let clip_events_span = tracing::info_span!("clip_events");
+    let lod_changes_span = tracing::info_span!("lod_changes");
+    {
+        let _trace_guard = clip_events_span.enter();
+        voxel_map.clipmap_new_chunks(old_clip_sphere, new_clip_sphere, |new_chunk| {
+            if new_chunk.is_active {
+                new_commands.push(MeshCommand::Create(new_chunk.key))
+            }
+        });
+    }
+    {
+        let _trace_guard = lod_changes_span.enter();
+        voxel_map.lod_changes(old_clip_sphere, new_clip_sphere, |c| {
+            new_commands.push(MeshCommand::LodChange(c))
+        });
+    }
     mesh_commands.add_commands(new_commands.into_iter());
 
-    lod_state.old_lod0_center = lod0_center;
+    lod_state.old_lod0_center = new_lod0_center;
 }

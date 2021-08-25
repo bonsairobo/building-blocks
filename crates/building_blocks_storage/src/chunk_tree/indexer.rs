@@ -15,6 +15,11 @@ pub struct ChunkIndexer<N> {
     chunk_shape_log2: PointN<N>,
 }
 
+/// A 2-dimensional [`ChunkIndexer`].
+pub type ChunkIndexer2 = ChunkIndexer<[i32; 2]>;
+/// A 3-dimensional [`ChunkIndexer`].
+pub type ChunkIndexer3 = ChunkIndexer<[i32; 3]>;
+
 impl<N> ChunkIndexer<N>
 where
     PointN<N>: IntegerPoint<N>,
@@ -75,9 +80,9 @@ where
     }
 
     #[inline]
-    pub fn ancestor_chunk_min(&self, chunk_min: PointN<N>, levels: i32) -> PointN<N> {
+    pub fn ancestor_chunk_min(&self, p: PointN<N>, levels: i32) -> PointN<N> {
         debug_assert!(levels >= 0);
-        (chunk_min & (self.chunk_shape_mask << levels)) >> levels
+        (p & (self.chunk_shape_mask << levels)) >> levels
     }
 
     /// Given a chunk at `key`, returns the `ChunkKey` of the ancestor chunk at `ancestor_lod`.

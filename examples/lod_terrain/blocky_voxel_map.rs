@@ -7,7 +7,6 @@ use building_blocks::{
         PosNormMesh, RIGHT_HANDED_Y_UP_CONFIG,
     },
     prelude::*,
-    storage::prelude::{ChunkKey3, HashMapChunkTree3x1},
 };
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -104,27 +103,37 @@ impl VoxelMap for BlockyVoxelMap {
             .clipmap_active_chunks(self.config().detail, clip_sphere, active_rx);
     }
 
-    fn clipmap_events(
+    fn clipmap_new_chunks(
         &self,
-        old_lod0_center: Point3f,
-        new_lod0_center: Point3f,
-        update_rx: impl FnMut(ClipEvent3),
+        old_clip_sphere: Sphere3,
+        new_clip_sphere: Sphere3,
+        rx: impl FnMut(NewChunkSlot3),
     ) {
-        let old_clip_sphere = Sphere3 {
-            center: old_lod0_center,
-            radius: self.config().clip_radius,
-        };
-        let new_clip_sphere = Sphere3 {
-            center: new_lod0_center,
-            radius: self.config().clip_radius,
-        };
-        self.chunks.clipmap_events(
+        self.chunks.clipmap_new_chunks(
             self.config().detail,
-            self.config().min_enter_exit_lod,
+            self.config().min_enter_lod,
             old_clip_sphere,
             new_clip_sphere,
-            update_rx,
+            rx,
         );
+    }
+
+    fn lod_changes(
+        &self,
+        old_clip_sphere: Sphere3,
+        new_clip_sphere: Sphere3,
+        rx: impl FnMut(LodChange3),
+    ) {
+        self.chunks
+            .lod_changes(self.config().detail, old_clip_sphere, new_clip_sphere, rx);
+    }
+
+    fn chunk_indexer(&self) -> &ChunkIndexer3 {
+        &self.chunks.indexer
+    }
+
+    fn root_lod(&self) -> u8 {
+        self.chunks.root_lod()
     }
 
     fn init_mesh_buffers(&self) -> Self::MeshBuffers {

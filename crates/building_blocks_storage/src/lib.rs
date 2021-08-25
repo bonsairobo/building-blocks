@@ -49,9 +49,10 @@ pub mod prelude {
     pub use super::{
         array::{IndexedArray, Local, Stride},
         chunk_tree::{
-            AmbientExtent, ChunkDownsampler, ChunkKey, ChunkKey2, ChunkKey3, ChunkStorage,
-            ChunkTreeBuilder, ChunkTreeConfig, ChunkUnits, ClipEvent2, ClipEvent3, IterChunkKeys,
-            PointDownsampler, SdfMeanDownsampler, UserChunk,
+            chunk_lod0_bounding_sphere, AmbientExtent, ChunkDownsampler, ChunkIndexer2,
+            ChunkIndexer3, ChunkKey, ChunkKey2, ChunkKey3, ChunkStorage, ChunkTreeBuilder,
+            ChunkTreeConfig, ChunkUnits, IterChunkKeys, LodChange2, LodChange3, NewChunkSlot2,
+            NewChunkSlot3, PointDownsampler, SdfMeanDownsampler, UserChunk,
         },
         compression::{
             BincodeCompression, BytesCompression, Compressed, Compression, FromBytesCompression,
@@ -95,8 +96,8 @@ pub mod dev_prelude {
             Array, IndexedArray,
         },
         chunk_tree::{
-            ChunkTree, ChunkTree2, ChunkTree3, ChunkTreeBuilderNxM, CompressibleChunkStorage,
-            HashMapChunkTree,
+            ChunkIndexer, ChunkTree, ChunkTree2, ChunkTree3, ChunkTreeBuilderNxM,
+            CompressibleChunkStorage, HashMapChunkTree,
         },
         SmallKeyHashMap, SmallKeyHashSet,
     };

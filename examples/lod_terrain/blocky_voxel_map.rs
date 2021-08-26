@@ -94,7 +94,7 @@ impl VoxelMap for BlockyVoxelMap {
         &self.config
     }
 
-    fn clipmap_active_chunks(&self, lod0_center: Point3f, active_rx: impl FnMut(ChunkKey3)) {
+    fn clipmap_active_chunks(&self, lod0_center: Point3f, active_rx: impl FnMut(ClipmapSlot3)) {
         let clip_sphere = Sphere3 {
             center: lod0_center,
             radius: self.config().clip_radius,
@@ -107,7 +107,7 @@ impl VoxelMap for BlockyVoxelMap {
         &self,
         old_clip_sphere: Sphere3,
         new_clip_sphere: Sphere3,
-        rx: impl FnMut(NewChunkSlot3),
+        rx: impl FnMut(ClipmapSlot3),
     ) {
         self.chunks.clipmap_new_chunks(
             self.config().detail,

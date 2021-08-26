@@ -424,6 +424,19 @@ where
             }
         }
     }
+
+    pub fn visit_descendants(&self, key: ChunkKey<N>, mut visitor: impl FnMut(ChunkKey<N>)) {
+        self.visit_descendants_recursive(key, &mut visitor);
+    }
+
+    fn visit_descendants_recursive(&self, key: ChunkKey<N>, visitor: &mut impl FnMut(ChunkKey<N>)) {
+        if key.lod > 0 {
+            self.for_each_child(key, |child_key| {
+                visitor(child_key);
+                self.visit_descendants_recursive(child_key, visitor);
+            });
+        }
+    }
 }
 
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>

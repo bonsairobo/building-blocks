@@ -37,7 +37,7 @@ where
         &self,
         detail: f32,
         clip_sphere: Sphere<Nf>,
-        mut active_rx: impl FnMut(ChunkKey<Ni>),
+        mut active_rx: impl FnMut(ClipmapSlot<Ni>),
     ) {
         assert!(clip_sphere.radius > 0.0);
 
@@ -58,7 +58,7 @@ where
         node_key: ChunkKey<Ni>,
         detail: f32,
         clip_sphere: Sphere<Nf>,
-        active_rx: &mut impl FnMut(ChunkKey<Ni>),
+        active_rx: &mut impl FnMut(ClipmapSlot<Ni>),
     ) {
         let node_lod0_extent = self.indexer.chunk_extent_at_lower_lod(node_key, 0);
         let node_lod0_center = node_lod0_extent.minimum + (node_lod0_extent.shape >> 1);
@@ -85,7 +85,11 @@ where
         if is_active {
             if node_bounded_by_clip_sphere {
                 // This node is active!
-                active_rx(node_key);
+                active_rx(ClipmapSlot {
+                    key: node_key,
+                    dist,
+                    is_active: true,
+                });
             }
         } else {
             // Need to split, continue by recursing on the children.
@@ -115,7 +119,7 @@ where
         min_lod: u8,
         old_clip_sphere: Sphere<Nf>,
         new_clip_sphere: Sphere<Nf>,
-        mut rx: impl FnMut(NewChunkSlot<Ni>),
+        mut rx: impl FnMut(ClipmapSlot<Ni>),
     ) {
         assert!(old_clip_sphere.radius > 0.0);
         assert!(new_clip_sphere.radius > 0.0);
@@ -161,7 +165,7 @@ where
         new_clip_sphere: Sphere<Nf>,
         ancestor_was_active: bool,
         ancestor_is_active: bool,
-        rx: &mut impl FnMut(NewChunkSlot<Ni>),
+        rx: &mut impl FnMut(ClipmapSlot<Ni>),
     ) {
         if ancestor_was_active && ancestor_is_active && node_key.lod < min_lod {
             // We can't have more active enters in this tree, and user said it's OK to skip the inactive ones at this LOD.
@@ -218,8 +222,9 @@ where
 
         // We check for enter events after recursing because we need to guarantee all descendant enter events come first.
         if !node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere {
-            rx(NewChunkSlot {
+            rx(ClipmapSlot {
                 key: node_key,
+                dist: info.dist_to_new_clip_sphere,
                 is_active,
             });
         }
@@ -276,9 +281,6 @@ where
             return;
         }
 
-        // We'll detect split/merge even for chunks that aren't totally bounded by the clip sphere. Some of their children might
-        // be bounded, and we want to know if they become active/inactive.
-
         let was_active = info.old_normalized_distance() > detail;
         let is_active = info.new_normalized_distance() > detail;
 
@@ -308,8 +310,7 @@ where
                         detail,
                         old_clip_sphere,
                         &mut |active_chunk| {
-                            // Only add the chunk if it didn't enter this
-                            old_chunks.push(active_chunk);
+                            old_chunks.push(active_chunk.key);
                         },
                     );
                 });
@@ -320,6 +321,7 @@ where
                 rx(LodChange::Merge(MergeChunks {
                     old_chunks,
                     new_chunk: node_key,
+                    new_chunk_dist: info.dist_to_new_clip_sphere,
                     new_chunk_is_bounded,
                 }));
             }
@@ -332,7 +334,7 @@ where
                         child_key,
                         detail,
                         new_clip_sphere,
-                        &mut |active_chunk| new_chunks.push(active_chunk),
+                        &mut |active_chunk| new_chunks.push(active_chunk.key),
                     );
                 });
 
@@ -341,6 +343,7 @@ where
 
                 rx(LodChange::Split(SplitChunk {
                     old_chunk: node_key,
+                    old_chunk_dist: info.dist_to_old_clip_sphere,
                     old_chunk_was_bounded,
                     new_chunks,
                 }));
@@ -410,19 +413,19 @@ where
     Sphere { center, radius }
 }
 
-/// A new chunk slot has entered the clip sphere.
-pub struct NewChunkSlot<N> {
+pub struct ClipmapSlot<N> {
     pub key: ChunkKey<N>,
+    pub dist: f32,
     pub is_active: bool,
 }
 
-/// A 2-dimensional `NewChunkSlot`.
-pub type NewChunkSlot2 = NewChunkSlot<[i32; 2]>;
-/// A 3-dimensional `NewChunkSlot`.
-pub type NewChunkSlot3 = NewChunkSlot<[i32; 3]>;
+/// A 2-dimensional `ClipmapSlot`.
+pub type ClipmapSlot2 = ClipmapSlot<[i32; 2]>;
+/// A 3-dimensional `ClipmapSlot`.
+pub type ClipmapSlot3 = ClipmapSlot<[i32; 3]>;
 
 /// A chunk's desired sample rate has changed based on proximity to the center of the clip sphere.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum LodChange<N> {
     /// The desired sample rate for this chunk increased this frame.
     Split(SplitChunk<N>),
@@ -437,18 +440,20 @@ pub type LodChange3 = LodChange<[i32; 3]>;
 
 /// Split `old_chunk` into many `new_chunks`. The number of new chunks depends on how many levels of detail the octant has
 /// moved.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SplitChunk<N> {
     pub old_chunk: ChunkKey<N>,
+    pub old_chunk_dist: f32,
     pub old_chunk_was_bounded: bool,
     pub new_chunks: Vec<ChunkKey<N>>,
 }
 
 /// Merge many `old_chunks` into `new_chunk`. The number of old chunks depends on how many levels of detail the octant has
 /// moved.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MergeChunks<N> {
     pub old_chunks: Vec<ChunkKey<N>>,
     pub new_chunk: ChunkKey<N>,
+    pub new_chunk_dist: f32,
     pub new_chunk_is_bounded: bool,
 }

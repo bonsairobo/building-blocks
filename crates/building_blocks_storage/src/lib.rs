@@ -51,8 +51,8 @@ pub mod prelude {
         chunk_tree::{
             chunk_lod0_bounding_sphere, AmbientExtent, ChunkDownsampler, ChunkIndexer2,
             ChunkIndexer3, ChunkKey, ChunkKey2, ChunkKey3, ChunkStorage, ChunkTreeBuilder,
-            ChunkTreeConfig, ChunkUnits, IterChunkKeys, LodChange2, LodChange3, NewChunkSlot2,
-            NewChunkSlot3, PointDownsampler, SdfMeanDownsampler, UserChunk,
+            ChunkTreeConfig, ChunkUnits, ClipmapSlot2, ClipmapSlot3, IterChunkKeys, LodChange2,
+            LodChange3, PointDownsampler, SdfMeanDownsampler, UserChunk,
         },
         compression::{
             BincodeCompression, BytesCompression, Compressed, Compression, FromBytesCompression,

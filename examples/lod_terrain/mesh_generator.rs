@@ -1,18 +1,22 @@
 use crate::voxel_map::{MapConfig, VoxelMap};
 
 use bevy_utilities::{
-    bevy::{asset::prelude::*, ecs, prelude::*, tasks::ComputeTaskPool, render::camera::Camera, utils::tracing},
+    bevy::{
+        asset::prelude::*, ecs, prelude::*, render::camera::Camera, tasks::ComputeTaskPool,
+        utils::tracing,
+    },
     mesh::create_mesh_bundle,
     thread_local_resource::ThreadLocalResource,
 };
-use building_blocks::{
-    mesh::*,
-    prelude::*,
-    storage::SmallKeyHashMap,
-};
+use building_blocks::{mesh::*, prelude::*, storage::SmallKeyHashMap};
 
-use std::{cell::RefCell, collections::VecDeque};
-use std::sync::{atomic::{AtomicBool, Ordering}, Mutex};
+use float_ord::FloatOrd;
+use std::cell::RefCell;
+use std::collections::BinaryHeap;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Mutex,
+};
 
 fn max_mesh_creations_per_frame(config: &MapConfig, pool: &ComputeTaskPool) -> usize {
     config.chunks_processed_per_frame_per_core * pool.thread_num()
@@ -21,18 +25,18 @@ fn max_mesh_creations_per_frame(config: &MapConfig, pool: &ComputeTaskPool) -> u
 #[derive(Default)]
 pub struct MeshCommands {
     /// New commands for this frame.
-    new_commands: Mutex<Vec<MeshCommand>>,
+    new_commands: Mutex<Vec<MeshCommandQueueElem>>,
     is_congested: AtomicBool,
 }
 
 impl MeshCommands {
-    pub fn add_commands(&self, commands: impl Iterator<Item = MeshCommand>) {
+    pub fn add_commands(&self, commands: impl Iterator<Item = MeshCommandQueueElem>) {
         let mut new_commands = self.new_commands.lock().unwrap();
         new_commands.extend(commands);
     }
 
     pub fn is_congested(&self) -> bool {
-        self.is_congested.load(Ordering::Relaxed)
+        self.is_congested.load(Ordering::Relaxed) || !self.new_commands.lock().unwrap().is_empty()
     }
 
     pub fn set_congested(&self, is_congested: bool) {
@@ -42,34 +46,78 @@ impl MeshCommands {
 
 #[derive(Default)]
 pub struct MeshCommandQueue {
-    command_queue: VecDeque<MeshCommand>,
+    command_queue: BinaryHeap<MeshCommandQueueElem>,
+}
+
+#[derive(Clone, PartialEq)]
+pub struct MeshCommandQueueElem {
+    dist_to_camera: FloatOrd<f32>,
+    command: MeshCommand,
+}
+
+impl Eq for MeshCommandQueueElem {}
+
+impl PartialOrd for MeshCommandQueueElem {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.dist_to_camera
+            .partial_cmp(&other.dist_to_camera)
+            .map(|o| o.reverse())
+    }
+}
+
+impl Ord for MeshCommandQueueElem {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.dist_to_camera.cmp(&other.dist_to_camera).reverse()
+    }
+}
+
+impl From<ClipmapSlot3> for MeshCommandQueueElem {
+    fn from(slot: ClipmapSlot3) -> Self {
+        Self {
+            dist_to_camera: FloatOrd(slot.dist),
+            command: MeshCommand::Create(slot.key),
+        }
+    }
+}
+
+impl From<LodChange3> for MeshCommandQueueElem {
+    fn from(c: LodChange3) -> Self {
+        let d = match &c {
+            LodChange3::Merge(m) => m.new_chunk_dist,
+            LodChange3::Split(s) => s.old_chunk_dist,
+        };
+        Self {
+            dist_to_camera: FloatOrd(d),
+            command: MeshCommand::LodChange(c),
+        }
+    }
 }
 
 impl MeshCommandQueue {
     pub fn merge_new_commands(&mut self, new_commands: &MeshCommands) {
+        if !self.is_empty() {
+            return;
+        }
+
         let new_commands = {
             let mut new_commands = new_commands.new_commands.lock().unwrap();
             std::mem::replace(&mut *new_commands, Vec::new())
         };
         for command in new_commands.into_iter() {
-            self.command_queue.push_front(command);
+            self.command_queue.push(command);
         }
     }
 
-    pub fn enqueue(&mut self, command: MeshCommand) {
-        self.command_queue.push_front(command);
+    pub fn enqueue(&mut self, command: MeshCommandQueueElem) {
+        self.command_queue.push(command);
     }
 
     pub fn is_empty(&self) -> bool {
         self.command_queue.is_empty()
     }
-
-    pub fn len(&self) -> usize {
-        self.command_queue.len()
-    }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum MeshCommand {
     Create(ChunkKey3),
     LodChange(LodChange3),
@@ -150,9 +198,9 @@ fn apply_mesh_commands<Map: VoxelMap>(
         };
 
         let mut num_meshes_created = 0;
-        for command in mesh_commands.command_queue.iter().rev().cloned() {
+        while let Some(command) = mesh_commands.command_queue.pop() {
             num_commands_processed += 1;
-            match command {
+            match command.command {
                 MeshCommand::Create(key) => {
                     num_meshes_created += 1;
                     make_mesh(key)
@@ -179,16 +227,13 @@ fn apply_mesh_commands<Map: VoxelMap>(
                             make_mesh(merge.new_chunk)
                         }
                     }
-                }
+                },
             }
             if num_meshes_created >= max_meshes_per_frame {
                 break;
             }
         }
     });
-
-    let new_length = mesh_commands.len() - num_commands_processed;
-    mesh_commands.command_queue.truncate(new_length);
 
     new_mesh_commands.set_congested(!mesh_commands.command_queue.is_empty());
 

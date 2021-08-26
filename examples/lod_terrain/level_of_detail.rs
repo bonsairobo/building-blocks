@@ -1,7 +1,4 @@
-use crate::{
-    mesh_generator::{MeshCommand, MeshCommands},
-    voxel_map::VoxelMap,
-};
+use crate::{mesh_generator::MeshCommands, voxel_map::VoxelMap};
 
 use building_blocks::core::prelude::*;
 
@@ -53,14 +50,14 @@ pub fn level_of_detail_system<Map: VoxelMap>(
         let _trace_guard = clip_events_span.enter();
         voxel_map.clipmap_new_chunks(old_clip_sphere, new_clip_sphere, |new_chunk| {
             if new_chunk.is_active {
-                new_commands.push(MeshCommand::Create(new_chunk.key))
+                new_commands.push(new_chunk.into())
             }
         });
     }
     {
         let _trace_guard = lod_changes_span.enter();
         voxel_map.lod_changes(old_clip_sphere, new_clip_sphere, |c| {
-            new_commands.push(MeshCommand::LodChange(c))
+            new_commands.push(c.into())
         });
     }
     mesh_commands.add_commands(new_commands.into_iter());

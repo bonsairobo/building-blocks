@@ -441,14 +441,25 @@ where
             });
         }
     }
+}
 
-    pub fn visit_all_keys(&self, mut visitor: impl FnMut(ChunkKey<N>))
-    where
-        Store: for<'r> IterChunkKeys<'r, N>,
-    {
-        for &root in self.lod_storage(0).chunk_keys() {
-            self.visit_descendant_keys(ChunkKey::new(0, root), &mut visitor);
+impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
+where
+    PointN<N>: IntegerPoint<N>,
+    Store: ChunkStorage<N, Chunk = Usr> + for<'r> IterChunkKeys<'r, N>,
+    Bldr: ChunkTreeBuilder<N, T>,
+{
+    pub fn visit_root_keys(&self, mut visitor: impl FnMut(ChunkKey<N>)) {
+        let root_lod = self.root_lod();
+        for &root in self.lod_storage(root_lod).chunk_keys() {
+            visitor(ChunkKey::new(root_lod, root));
         }
+    }
+
+    pub fn visit_all_keys(&self, mut visitor: impl FnMut(ChunkKey<N>)) {
+        self.visit_root_keys(|root_key| {
+            self.visit_descendant_keys(root_key, &mut visitor);
+        })
     }
 }
 

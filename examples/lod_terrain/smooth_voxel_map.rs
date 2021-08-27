@@ -124,6 +124,10 @@ impl VoxelMap for SmoothVoxelMap {
         key: ChunkKey3,
         mesh_buffers: &mut Self::MeshBuffers,
     ) -> Option<PosNormMesh> {
+        if self.chunks.get_chunk(key).is_none() {
+            return None;
+        }
+
         let chunk_extent = self.chunks.indexer.extent_for_chunk_with_min(key.minimum);
         let padded_chunk_extent = padded_surface_nets_chunk_extent(&chunk_extent);
 

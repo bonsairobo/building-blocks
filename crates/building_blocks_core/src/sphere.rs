@@ -1,5 +1,6 @@
 use crate::prelude::{Distance, ExtentN, FloatPoint, Point, PointN};
 
+#[derive(Debug)]
 pub struct Sphere<Nf> {
     pub center: PointN<Nf>,
     pub radius: f32,

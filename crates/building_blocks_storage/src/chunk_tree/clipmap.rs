@@ -276,7 +276,7 @@ where
             (false, false) => {
                 // Keep looking for any active descendants.
                 if node_key.lod > 1 {
-                    self.for_each_child(node_key, |child_key| {
+                    self.visit_child_keys(node_key, |child_key| {
                         self.lod_changes_recursive(
                             child_key,
                             detail,
@@ -291,7 +291,7 @@ where
                 // This node just became active, and none if its ancestors were active, so it must have active descendants.
                 // Merge those active descendants into this node.
                 let mut old_chunks = Vec::with_capacity(8);
-                self.for_each_child(node_key, |child_key| {
+                self.visit_child_keys(node_key, |child_key| {
                     self.clipmap_active_chunks_recursive(
                         child_key,
                         detail,
@@ -316,7 +316,7 @@ where
                 // This node just became inactive, and none of its ancestors were active, so it must have active descendants.
                 // Split this node into the children.
                 let mut new_chunks = Vec::with_capacity(8);
-                self.for_each_child(node_key, |child_key| {
+                self.visit_child_keys(node_key, |child_key| {
                     self.clipmap_active_chunks_recursive(
                         child_key,
                         detail,

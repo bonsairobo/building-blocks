@@ -414,7 +414,7 @@ where
     }
 
     /// Call `visitor` on all children keys of `parent_key`.
-    pub fn for_each_child(&self, parent_key: ChunkKey<N>, mut visitor: impl FnMut(ChunkKey<N>)) {
+    pub fn visit_child_keys(&self, parent_key: ChunkKey<N>, mut visitor: impl FnMut(ChunkKey<N>)) {
         if let Some(child_mask) = self.get_child_mask(parent_key) {
             for child_i in 0..PointN::NUM_CORNERS {
                 if child_mask_has_child(child_mask, child_i) {
@@ -425,16 +425,29 @@ where
         }
     }
 
-    pub fn visit_descendants(&self, key: ChunkKey<N>, mut visitor: impl FnMut(ChunkKey<N>)) {
-        self.visit_descendants_recursive(key, &mut visitor);
+    pub fn visit_descendant_keys(&self, key: ChunkKey<N>, mut visitor: impl FnMut(ChunkKey<N>)) {
+        self.visit_descendant_keys_recursive(key, &mut visitor);
     }
 
-    fn visit_descendants_recursive(&self, key: ChunkKey<N>, visitor: &mut impl FnMut(ChunkKey<N>)) {
+    fn visit_descendant_keys_recursive(
+        &self,
+        key: ChunkKey<N>,
+        visitor: &mut impl FnMut(ChunkKey<N>),
+    ) {
         if key.lod > 0 {
-            self.for_each_child(key, |child_key| {
+            self.visit_child_keys(key, |child_key| {
                 visitor(child_key);
-                self.visit_descendants_recursive(child_key, visitor);
+                self.visit_descendant_keys_recursive(child_key, visitor);
             });
+        }
+    }
+
+    pub fn visit_all_keys(&self, mut visitor: impl FnMut(ChunkKey<N>))
+    where
+        Store: for<'r> IterChunkKeys<'r, N>,
+    {
+        for &root in self.lod_storage(0).chunk_keys() {
+            self.visit_descendant_keys(ChunkKey::new(0, root), &mut visitor);
         }
     }
 }
@@ -532,7 +545,7 @@ where
                 }
             }
 
-            self.for_each_child(node_key, |child_key| {
+            self.visit_child_keys(node_key, |child_key| {
                 self.visit_occupied_chunks_recursive(child_key, visitor);
             });
         }

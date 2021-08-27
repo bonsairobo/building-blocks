@@ -3,8 +3,6 @@ use crate::dev_prelude::*;
 
 use building_blocks_core::{prelude::*, Sphere};
 
-use std::collections::HashSet;
-
 impl<Ni, Nf, T, Usr, Bldr, Store> ChunkTree<Ni, T, Bldr, Store>
 where
     PointN<Ni>: std::hash::Hash + IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
@@ -126,23 +124,12 @@ where
 
         let root_lod = self.root_lod();
 
-        let old_lod0_clip_extent = old_clip_sphere.aabb().containing_integer_extent();
         let new_lod0_clip_extent = new_clip_sphere.aabb().containing_integer_extent();
-        let old_root_clip_extent = self
-            .indexer
-            .covering_ancestor_extent(old_lod0_clip_extent, root_lod as i32);
         let new_root_clip_extent = self
             .indexer
             .covering_ancestor_extent(new_lod0_clip_extent, root_lod as i32);
 
-        // Union the root nodes covering both clip spheres.
-        let root_nodes: HashSet<PointN<Ni>> = self
-            .indexer
-            .chunk_mins_for_extent(&old_root_clip_extent)
-            .chain(self.indexer.chunk_mins_for_extent(&new_root_clip_extent))
-            .collect();
-
-        for chunk_min in root_nodes.into_iter() {
+        for chunk_min in self.indexer.chunk_mins_for_extent(&new_root_clip_extent) {
             self.clipmap_new_chunks_recursive(
                 ChunkKey::new(root_lod, chunk_min),
                 detail,

@@ -183,9 +183,15 @@ fn apply_mesh_commands<Map: VoxelMap>(
     mesh_commands.merge_new_commands(new_mesh_commands);
 
     let mut num_commands_processed = 0;
+    let mut num_meshes_created = 0;
+    let mut chunks_to_remove = Vec::new();
 
     let new_meshes = pool.scope(|s| {
         let mut make_mesh = |key: ChunkKey3| {
+            if chunk_meshes.entities.contains_key(&key) {
+                return 0;
+            }
+
             s.spawn(async move {
                 let _trace_guard = make_mesh_span_ref.enter();
                 let mesh_tls = local_mesh_buffers.get();
@@ -195,36 +201,30 @@ fn apply_mesh_commands<Map: VoxelMap>(
 
                 (key, voxel_map.create_mesh_for_chunk(key, &mut mesh_buffers))
             });
+
+            1
         };
 
-        let mut num_meshes_created = 0;
         while let Some(command) = mesh_commands.command_queue.pop() {
             num_commands_processed += 1;
             match command.command {
                 MeshCommand::Create(key) => {
-                    num_meshes_created += 1;
-                    make_mesh(key)
+                    num_meshes_created += make_mesh(key);
                 }
                 MeshCommand::LodChange(update) => match update {
                     LodChange3::Split(split) => {
-                        if let Some(entity) = chunk_meshes.entities.remove(&split.old_chunk) {
-                            commands.entity(entity).despawn();
-                        }
+                        chunks_to_remove.push(split.old_chunk);
                         for &key in split.new_chunks.iter() {
-                            num_meshes_created += 1;
-                            make_mesh(key)
+                            num_meshes_created += make_mesh(key)
                         }
                     }
                     LodChange3::Merge(merge) => {
-                        for key in merge.old_chunks.iter() {
-                            if let Some(entity) = chunk_meshes.entities.remove(&key) {
-                                commands.entity(entity).despawn();
-                            }
+                        for &key in merge.old_chunks.iter() {
+                            chunks_to_remove.push(key);
                         }
 
                         if merge.new_chunk_is_bounded {
-                            num_meshes_created += 1;
-                            make_mesh(merge.new_chunk)
+                            num_meshes_created += make_mesh(merge.new_chunk)
                         }
                     }
                 },
@@ -234,6 +234,12 @@ fn apply_mesh_commands<Map: VoxelMap>(
             }
         }
     });
+
+    for key in chunks_to_remove.into_iter() {
+        if let Some(entity) = chunk_meshes.entities.remove(&key) {
+            commands.entity(entity).despawn();
+        }
+    }
 
     new_mesh_commands.set_congested(!mesh_commands.command_queue.is_empty());
 

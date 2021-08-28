@@ -1,4 +1,3 @@
-use super::child_mask_has_child;
 use crate::dev_prelude::*;
 
 use building_blocks_core::{prelude::*, Sphere};
@@ -39,16 +38,9 @@ where
     ) {
         assert!(clip_sphere.radius > 0.0);
 
-        let root_lod = self.root_lod();
-        let root_storage = self.lod_storage(root_lod);
-        for &chunk_min in root_storage.chunk_keys() {
-            self.clipmap_active_chunks_recursive(
-                ChunkKey::new(root_lod, chunk_min),
-                detail,
-                clip_sphere,
-                &mut active_rx,
-            );
-        }
+        self.visit_root_keys(|root| {
+            self.clipmap_active_chunks_recursive(root, detail, clip_sphere, &mut active_rx);
+        });
     }
 
     fn clipmap_active_chunks_recursive(
@@ -82,7 +74,6 @@ where
 
         if is_active {
             if node_bounded_by_clip_sphere {
-                // This node is active!
                 active_rx(ClipmapSlot {
                     key: node_key,
                     dist,
@@ -91,17 +82,9 @@ where
             }
         } else {
             // Need to split, continue by recursing on the children.
-            let child_mask = self.get_child_mask(node_key).unwrap();
-            for child_i in 0..PointN::NUM_CORNERS {
-                if child_mask_has_child(child_mask, child_i) {
-                    self.clipmap_active_chunks_recursive(
-                        self.indexer.child_chunk_key(node_key, child_i),
-                        detail,
-                        clip_sphere,
-                        active_rx,
-                    );
-                }
-            }
+            self.visit_child_keys(node_key, |child_key| {
+                self.clipmap_active_chunks_recursive(child_key, detail, clip_sphere, active_rx);
+            });
         }
     }
 
@@ -232,16 +215,9 @@ where
             return;
         }
 
-        let root_storage = self.lod_storage(root_lod);
-        for &chunk_min in root_storage.chunk_keys() {
-            self.lod_changes_recursive(
-                ChunkKey::new(root_lod, chunk_min),
-                detail,
-                old_clip_sphere,
-                new_clip_sphere,
-                &mut rx,
-            );
-        }
+        self.visit_root_keys(|root| {
+            self.lod_changes_recursive(root, detail, old_clip_sphere, new_clip_sphere, &mut rx);
+        });
     }
 
     fn lod_changes_recursive(

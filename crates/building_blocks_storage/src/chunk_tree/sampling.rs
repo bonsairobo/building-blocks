@@ -4,7 +4,6 @@ mod sdf_mean;
 pub use point::*;
 pub use sdf_mean::*;
 
-use super::child_mask_has_child;
 use crate::{
     array::{ArrayIndexer, LockStepArrayForEach},
     dev_prelude::*,
@@ -117,9 +116,9 @@ where
         src_extent: &ExtentN<N>,
     ) {
         if node_key.lod > src_lod {
-            if let Some(child_mask) = self.get_child_mask(node_key) {
+            if let Some(child_bits) = self.get_child_bits(node_key) {
                 for child_i in 0..PointN::NUM_CORNERS {
-                    if child_mask_has_child(child_mask, child_i) {
+                    if child_bits.has_child(child_i) {
                         let child_key = self.indexer.child_chunk_key(node_key, child_i);
 
                         // Only visit chunks overlapping src_extent and ancestors.
@@ -228,11 +227,11 @@ where
         DstUsr: UserChunk,
         DstUsr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
     {
-        if let Some(child_mask) = self.get_child_mask(node_key) {
+        if let Some(child_bits) = self.get_child_bits(node_key) {
             let dst_extent = self.indexer.extent_for_chunk_with_min(node_key.minimum);
             let mut dst_chunk = make_ambient(dst_extent);
             for child_i in 0..PointN::NUM_CORNERS {
-                if child_mask_has_child(child_mask, child_i) {
+                if child_bits.has_child(child_i) {
                     let child_key = self.indexer.child_chunk_key(node_key, child_i);
                     self.downsample_descendants_into_new_chunks_recursive(
                         sampler,
@@ -261,9 +260,9 @@ where
         Samp: ChunkDownsampler<N, Usr::Array, Dst>,
         Dst: FillExtent<N, Item = T> + IndexedArray<N>,
     {
-        if let Some(child_mask) = self.get_child_mask(dst_chunk_key) {
+        if let Some(child_bits) = self.get_child_bits(dst_chunk_key) {
             for child_i in 0..PointN::NUM_CORNERS {
-                if child_mask_has_child(child_mask, child_i) {
+                if child_bits.has_child(child_i) {
                     let child_key = self.indexer.child_chunk_key(dst_chunk_key, child_i);
                     self.downsample_into_external(sampler, child_key, dst_array);
                 }

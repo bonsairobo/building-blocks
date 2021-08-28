@@ -1,6 +1,6 @@
 use crate::dev_prelude::{ChunkTree, ChunkTreeBuilder, SmallKeyHashMap};
 
-use super::{ChunkNode, ChunkStorage, IterChunkKeys};
+use super::{ChildBits, ChunkNode, ChunkStorage, IterChunkKeys};
 
 use building_blocks_core::PointN;
 
@@ -69,24 +69,24 @@ where
     }
 
     #[inline]
-    fn get_child_mask(&self, key: PointN<N>) -> Option<u8> {
-        self.get(&key).map(|n| n.child_mask)
+    fn get_child_bits(&self, key: PointN<N>) -> Option<ChildBits> {
+        self.get(&key).map(|n| n.child_bits)
     }
 
     #[inline]
-    fn get_mut_child_mask(&mut self, key: PointN<N>) -> Option<(&mut u8, bool)> {
+    fn get_mut_child_bits(&mut self, key: PointN<N>) -> Option<(&mut ChildBits, bool)> {
         self.get_mut(&key)
-            .map(|n| (&mut n.child_mask, n.user_chunk.is_some()))
+            .map(|n| (&mut n.child_bits, n.user_chunk.is_some()))
     }
 
     #[inline]
-    fn get_mut_child_mask_or_insert_with(
+    fn get_mut_child_bits_or_insert_with(
         &mut self,
         key: PointN<N>,
         create_node: impl FnOnce() -> ChunkNode<Self::Chunk>,
-    ) -> &mut u8 {
+    ) -> &mut ChildBits {
         let node = self.entry(key).or_insert_with(create_node);
-        &mut node.child_mask
+        &mut node.child_bits
     }
 }
 

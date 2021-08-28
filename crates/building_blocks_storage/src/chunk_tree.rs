@@ -369,8 +369,8 @@ where
         self.lod_storage_mut(key.lod).pop_raw_node(key.minimum)
     }
 
-    fn get_child_mask(&self, key: ChunkKey<N>) -> Option<u8> {
-        self.lod_storage(key.lod).get_child_mask(key.minimum)
+    fn get_child_bits(&self, key: ChunkKey<N>) -> Option<ChildBits> {
+        self.lod_storage(key.lod).get_child_bits(key.minimum)
     }
 }
 
@@ -415,9 +415,9 @@ where
 
     /// Call `visitor` on all children keys of `parent_key`.
     pub fn visit_child_keys(&self, parent_key: ChunkKey<N>, mut visitor: impl FnMut(ChunkKey<N>)) {
-        if let Some(child_mask) = self.get_child_mask(parent_key) {
+        if let Some(child_bits) = self.get_child_bits(parent_key) {
             for child_i in 0..PointN::NUM_CORNERS {
-                if child_mask_has_child(child_mask, child_i) {
+                if child_bits.has_child(child_i) {
                     let child_key = self.indexer.child_chunk_key(parent_key, child_i);
                     visitor(child_key);
                 }
@@ -568,14 +568,14 @@ where
         while key.lod < self.root_lod() {
             let parent = self.indexer.parent_chunk_key(key);
             let mut parent_already_exists = true;
-            let child_mask = self.storages[parent.lod as usize].get_mut_child_mask_or_insert_with(
+            let child_bits = self.storages[parent.lod as usize].get_mut_child_bits_or_insert_with(
                 parent.minimum,
                 || {
                     parent_already_exists = false;
                     ChunkNode::new_empty()
                 },
             );
-            child_mask_add_child(child_mask, self.indexer.corner_index(key.minimum));
+            child_bits.add_child(self.indexer.corner_index(key.minimum));
             if parent_already_exists {
                 return;
             }
@@ -588,12 +588,12 @@ where
         // might do better by removing them in a batch and sorting the chunks in morton order before unlinking from the tree.
         while key.lod < self.root_lod() {
             let parent = self.indexer.parent_chunk_key(key);
-            let (child_mask, parent_has_data) = self.storages[parent.lod as usize]
-                .get_mut_child_mask(parent.minimum)
+            let (child_bits, parent_has_data) = self.storages[parent.lod as usize]
+                .get_mut_child_bits(parent.minimum)
                 .unwrap();
             let child_corner_index = self.indexer.corner_index(key.minimum);
-            child_mask_remove_child(child_mask, child_corner_index);
-            if child_mask_has_any_children(*child_mask) || parent_has_data {
+            child_bits.remove_child(child_corner_index);
+            if child_bits.has_any_children() || parent_has_data {
                 return;
             }
             key = parent;
@@ -769,61 +769,68 @@ pub struct ChunkNode<U> {
     /// Parent chunks are `None` until written or downsampled into. This means that users can opt-in to storing downsampled
     /// chunks, which requires more memory.
     pub user_chunk: Option<U>,
-    child_mask: u8,
+    pub child_bits: ChildBits,
 }
 
 impl<U> ChunkNode<U> {
     #[inline]
-    pub(crate) fn new(user_chunk: Option<U>, child_mask: u8) -> Self {
+    pub(crate) fn new(user_chunk: Option<U>, child_bits: ChildBits) -> Self {
         Self {
             user_chunk,
-            child_mask,
+            child_bits,
         }
     }
 
     #[inline]
     pub(crate) fn new_empty() -> Self {
-        Self::new(None, 0)
+        Self::new(None, ChildBits::default())
     }
 
     #[inline]
-    pub(crate) fn new_without_data(child_mask: u8) -> Self {
-        Self::new(None, child_mask)
+    pub(crate) fn new_without_data(child_bits: ChildBits) -> Self {
+        Self::new(None, child_bits)
     }
 
     #[inline]
     pub(crate) fn as_ref(&self) -> ChunkNode<&U> {
-        ChunkNode::new(self.user_chunk.as_ref(), self.child_mask)
+        ChunkNode::new(self.user_chunk.as_ref(), self.child_bits)
     }
 
     #[inline]
     pub(crate) fn map<T>(self, f: impl Fn(U) -> T) -> ChunkNode<T> {
-        ChunkNode::new(self.user_chunk.map(f), self.child_mask)
+        ChunkNode::new(self.user_chunk.map(f), self.child_bits)
     }
 
     fn has_child(&self, corner_index: u8) -> bool {
-        child_mask_has_child(self.child_mask, corner_index)
+        self.child_bits.has_child(corner_index)
     }
 
     fn has_any_children(&self) -> bool {
-        child_mask_has_any_children(self.child_mask)
+        self.child_bits.has_any_children()
     }
 }
 
-fn child_mask_has_child(mask: u8, corner_index: u8) -> bool {
-    mask & (1 << corner_index) != 0
+#[derive(Clone, Copy, Default, Deserialize, Serialize)]
+pub struct ChildBits {
+    bits: u8,
 }
 
-fn child_mask_has_any_children(mask: u8) -> bool {
-    mask != 0
-}
+impl ChildBits {
+    pub fn has_child(&self, corner_index: u8) -> bool {
+        self.bits & (1 << corner_index) != 0
+    }
 
-fn child_mask_add_child(mask: &mut u8, corner_index: u8) {
-    *mask |= 1 << corner_index;
-}
+    pub fn has_any_children(&self) -> bool {
+        self.bits != 0
+    }
 
-fn child_mask_remove_child(mask: &mut u8, corner_index: u8) {
-    *mask &= !(1 << corner_index);
+    fn add_child(&mut self, corner_index: u8) {
+        self.bits |= 1 << corner_index;
+    }
+
+    fn remove_child(&mut self, corner_index: u8) {
+        self.bits &= !(1 << corner_index);
+    }
 }
 
 /// An extent that takes the same value everywhere.

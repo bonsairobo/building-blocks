@@ -124,7 +124,7 @@ fn setup<Map: VoxelMap>(
     commands.insert_resource(map);
     commands.insert_resource(ChunkMeshes::default());
 
-    commands.insert_resource(load_mesh_materials(&mut *materials));
+    commands.insert_resource(load_mesh_materials(map_config.lod_colors, &mut *materials));
 
     // Lights, camera, action!
     commands.spawn_bundle(FpsCameraBundle::new(
@@ -159,7 +159,10 @@ fn setup<Map: VoxelMap>(
     });
 }
 
-fn load_mesh_materials(materials: &mut Assets<StandardMaterial>) -> MeshMaterials {
+fn load_mesh_materials(
+    lod_colors: bool,
+    materials: &mut Assets<StandardMaterial>,
+) -> MeshMaterials {
     let colors = [
         Color::rgb(1.0, 0.0, 0.0),
         Color::rgb(0.0, 1.0, 0.0),
@@ -170,10 +173,10 @@ fn load_mesh_materials(materials: &mut Assets<StandardMaterial>) -> MeshMaterial
     ];
 
     MeshMaterials(
-        colors
-            .iter()
-            .map(|c| {
-                let mut material = StandardMaterial::from(*c);
+        (0..6)
+            .map(|i| {
+                let mut material =
+                    StandardMaterial::from(if lod_colors { colors[i] } else { colors[0] });
                 material.roughness = 0.9;
 
                 materials.add(material)

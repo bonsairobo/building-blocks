@@ -50,6 +50,7 @@ pub struct MapConfig {
     pub world_chunks_extent: ChunkUnits<Extent3i>,
     pub noise: NoiseConfig,
     pub wireframes: bool,
+    pub lod_colors: bool,
     pub msaa: Option<u32>,
 }
 

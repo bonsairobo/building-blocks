@@ -3,7 +3,7 @@ use crate::{
     chunk_tree::ChunkNode,
     compression::MaybeCompressed,
     dev_prelude::{
-        ChunkStorage, ChunkTree, Compressed, Compression, FastArrayCompression,
+        ChildBits, ChunkStorage, ChunkTree, Compressed, Compression, FastArrayCompression,
         FastChannelsCompression, FromBytesCompression, IterChunkKeys,
     },
     SmallKeyBuildHasher,
@@ -381,14 +381,14 @@ where
         if let Some(user_chunk) = node.user_chunk {
             match user_chunk {
                 MaybeCompressed::Compressed(c) => {
-                    self.insert_compressed(key, ChunkNode::new(Some(c), node.child_mask));
+                    self.insert_compressed(key, ChunkNode::new(Some(c), node.child_bits));
                 }
                 MaybeCompressed::Decompressed(d) => {
-                    self.write_node(key, ChunkNode::new(Some(d), node.child_mask))
+                    self.write_node(key, ChunkNode::new(Some(d), node.child_bits))
                 }
             }
         } else {
-            self.write_node(key, ChunkNode::new_without_data(node.child_mask))
+            self.write_node(key, ChunkNode::new_without_data(node.child_bits))
         }
     }
 
@@ -417,7 +417,7 @@ where
             key,
             |location| {
                 let node = compressed.remove(location.0);
-                ChunkNode::new_without_data(node.child_mask)
+                ChunkNode::new_without_data(node.child_bits)
             },
             ChunkNode::new_empty,
         );
@@ -425,32 +425,32 @@ where
     }
 
     #[inline]
-    fn get_child_mask(&self, key: PointN<N>) -> Option<u8> {
+    fn get_child_bits(&self, key: PointN<N>) -> Option<ChildBits> {
         self.get_without_caching_and_skip_thread_local(key)
             .map(|e| match e {
-                MaybeCompressed::Compressed(n) => n.child_mask,
-                MaybeCompressed::Decompressed(n) => n.child_mask,
+                MaybeCompressed::Compressed(n) => n.child_bits,
+                MaybeCompressed::Decompressed(n) => n.child_bits,
             })
     }
 
     #[inline]
-    fn get_mut_child_mask(&mut self, key: PointN<N>) -> Option<(&mut u8, bool)> {
+    fn get_mut_child_bits(&mut self, key: PointN<N>) -> Option<(&mut ChildBits, bool)> {
         self.get_mut_without_caching_and_skip_thread_local(key)
             .map(|e| match e {
-                MaybeCompressed::Compressed(n) => (&mut n.child_mask, n.user_chunk.is_some()),
-                MaybeCompressed::Decompressed(n) => (&mut n.child_mask, n.user_chunk.is_some()),
+                MaybeCompressed::Compressed(n) => (&mut n.child_bits, n.user_chunk.is_some()),
+                MaybeCompressed::Decompressed(n) => (&mut n.child_bits, n.user_chunk.is_some()),
             })
     }
 
     #[inline]
-    fn get_mut_child_mask_or_insert_with(
+    fn get_mut_child_bits_or_insert_with(
         &mut self,
         key: PointN<N>,
         create_chunk: impl FnOnce() -> ChunkNode<Self::Chunk>,
-    ) -> &mut u8 {
+    ) -> &mut ChildBits {
         match self.get_mut_or_insert_without_caching_and_skip_thread_local(key, create_chunk) {
-            MaybeCompressed::Compressed(n) => &mut n.child_mask,
-            MaybeCompressed::Decompressed(n) => &mut n.child_mask,
+            MaybeCompressed::Compressed(n) => &mut n.child_bits,
+            MaybeCompressed::Decompressed(n) => &mut n.child_bits,
         }
     }
 }

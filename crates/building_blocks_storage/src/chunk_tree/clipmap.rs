@@ -210,8 +210,7 @@ where
         assert!(old_clip_sphere.radius > 0.0);
         assert!(new_clip_sphere.radius > 0.0);
 
-        let root_lod = self.root_lod();
-        if root_lod == 0 {
+        if self.root_lod() == 0 {
             return;
         }
 

@@ -32,17 +32,17 @@ pub fn level_of_detail_system<Map: VoxelMap>(
 
     let new_lod0_center = Point3f::from(camera_position);
 
-    let old_clip_sphere = Sphere3 {
-        center: lod_state.old_lod0_center,
-        radius: voxel_map.config().clip_radius,
-    };
+    // let old_clip_sphere = Sphere3 {
+    //     center: lod_state.old_lod0_center,
+    //     radius: voxel_map.config().clip_radius,
+    // };
     let new_clip_sphere = Sphere3 {
         center: new_lod0_center,
         radius: voxel_map.config().clip_radius,
     };
 
     let mut new_commands = Vec::new();
-    let clip_events_span = tracing::info_span!("clip_events");
+    // let clip_events_span = tracing::info_span!("clip_events");
     let lod_changes_span = tracing::info_span!("lod_changes");
     // {
     //     let _trace_guard = clip_events_span.enter();

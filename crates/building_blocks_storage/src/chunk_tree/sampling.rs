@@ -206,13 +206,15 @@ where
         DstUsr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
     {
         assert!(min_src_lod < ancestor_key.lod);
-        self.downsample_descendants_into_new_chunks_recursive(
+        if let Some(new_chunk) = self.downsample_descendants_into_new_chunks_recursive(
             sampler,
             ancestor_key,
             min_src_lod,
             &mut chunk_rx,
             &mut make_ambient,
-        );
+        ) {
+            chunk_rx(ancestor_key, new_chunk);
+        }
     }
 
     fn downsample_descendants_into_new_chunks_recursive<Samp, DstUsr>(
@@ -222,18 +224,23 @@ where
         min_src_lod: u8,
         chunk_rx: &mut impl FnMut(ChunkKey<N>, DstUsr),
         make_ambient: &mut impl FnMut(ExtentN<N>) -> DstUsr,
-    ) where
+    ) -> Option<DstUsr>
+    where
         Samp: ChunkDownsampler<N, Usr::Array, DstUsr::Array>
             + ChunkDownsampler<N, DstUsr::Array, DstUsr::Array>,
         DstUsr: UserChunk,
         DstUsr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
     {
-        if node_key.lod > min_src_lod {
-            let dst_extent = self.indexer.extent_for_chunk_with_min(node_key.minimum);
-            let mut dst_chunk = make_ambient(dst_extent);
+        if node_key.lod == min_src_lod {
+            return None;
+        }
 
+        let dst_extent = self.indexer.extent_for_chunk_with_min(node_key.minimum);
+        let mut dst_chunk = make_ambient(dst_extent);
+
+        if node_key.lod > min_src_lod {
             self.visit_child_keys(node_key, |child_key| {
-                self.downsample_descendants_into_new_chunks_recursive(
+                let new_child_chunk = self.downsample_descendants_into_new_chunks_recursive(
                     sampler,
                     child_key,
                     min_src_lod,
@@ -242,11 +249,47 @@ where
                 );
 
                 // Do a post-order traversal so we can start sampling from the bottom of the tree and work our way up.
-                self.downsample_into_external(sampler, child_key, dst_chunk.array_mut());
-            });
+                self.downsample_from_src_into_external(
+                    sampler,
+                    min_src_lod,
+                    child_key,
+                    new_child_chunk.as_ref(),
+                    dst_chunk.array_mut(),
+                );
 
-            chunk_rx(node_key, dst_chunk);
+                if let Some(new_chunk) = new_child_chunk {
+                    chunk_rx(child_key, new_chunk);
+                }
+            });
         }
+
+        Some(dst_chunk)
+    }
+
+    fn downsample_from_src_into_external<Samp, DstUsr>(
+        &self,
+        sampler: &Samp,
+        min_src_lod: u8,
+        src_chunk_key: ChunkKey<N>,
+        src_chunk: Option<&DstUsr>,
+        dst_array: &mut DstUsr::Array,
+    ) where
+        Samp: ChunkDownsampler<N, Usr::Array, DstUsr::Array>
+            + ChunkDownsampler<N, DstUsr::Array, DstUsr::Array>,
+        DstUsr: UserChunk,
+        DstUsr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
+    {
+        let dst = self.indexer.downsample_destination(src_chunk_key);
+
+        if src_chunk_key.lod == min_src_lod {
+            if let Some(src_chunk) = self.get_chunk(src_chunk_key) {
+                sampler.downsample(src_chunk.array(), dst_array, dst.offset);
+            }
+        } else {
+            if let Some(src_chunk) = src_chunk {
+                sampler.downsample(src_chunk.array(), dst_array, dst.offset);
+            }
+        };
     }
 
     /// Downsamples all children of `dst_chunk` into `dst_chunk`.

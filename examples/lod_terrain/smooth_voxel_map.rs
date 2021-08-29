@@ -16,7 +16,9 @@ pub struct SmoothVoxelMap {
 impl VoxelMap for SmoothVoxelMap {
     type MeshBuffers = MeshBuffers;
 
-    fn generate(pool: &ComputeTaskPool, config: MapConfig) -> Self {
+    type Chunk = Array3x1<f32>;
+
+    fn generate_lod0(pool: &ComputeTaskPool, config: MapConfig) -> Self {
         let MapConfig {
             chunk_exponent,
             num_lods,
@@ -56,9 +58,20 @@ impl VoxelMap for SmoothVoxelMap {
             chunks.write_chunk(ChunkKey::new(0, chunk_min), noise);
         }
 
-        chunks.downsample_extent_into_self(&SdfMeanDownsampler, 0, root_lod, config.world_extent());
-
         Self { chunks, config }
+    }
+
+    fn downsample_descendants_into_new_chunks(
+        &self,
+        node_key: ChunkKey3,
+        chunk_rx: impl FnMut(ChunkKey3, Self::Chunk),
+    ) {
+        self.chunks
+            .downsample_descendants_into_new_chunks(&PointDownsampler, node_key, 0, chunk_rx)
+    }
+
+    fn write_chunk(&mut self, key: ChunkKey3, chunk: Self::Chunk) {
+        self.chunks.write_chunk(key, chunk);
     }
 
     fn config(&self) -> &MapConfig {
@@ -95,6 +108,10 @@ impl VoxelMap for SmoothVoxelMap {
 
     fn root_lod(&self) -> u8 {
         self.chunks.root_lod()
+    }
+
+    fn visit_root_keys(&self, visitor: impl FnMut(ChunkKey3)) {
+        self.chunks.visit_root_keys(visitor);
     }
 
     fn init_mesh_buffers(&self) -> Self::MeshBuffers {

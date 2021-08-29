@@ -6,7 +6,17 @@ use serde::{Deserialize, Serialize};
 pub trait VoxelMap: ecs::component::Component {
     type MeshBuffers: Send;
 
-    fn generate(pool: &ComputeTaskPool, config: MapConfig) -> Self;
+    type Chunk: Send;
+
+    fn generate_lod0(pool: &ComputeTaskPool, config: MapConfig) -> Self;
+
+    fn downsample_descendants_into_new_chunks(
+        &self,
+        node_key: ChunkKey3,
+        chunk_rx: impl FnMut(ChunkKey3, Self::Chunk),
+    );
+
+    fn write_chunk(&mut self, key: ChunkKey3, chunk: Self::Chunk);
 
     fn config(&self) -> &MapConfig;
 
@@ -23,6 +33,8 @@ pub trait VoxelMap: ecs::component::Component {
 
     fn root_lod(&self) -> u8;
 
+    fn visit_root_keys(&self, visitor: impl FnMut(ChunkKey3));
+
     fn init_mesh_buffers(&self) -> Self::MeshBuffers;
 
     fn create_mesh_for_chunk(
@@ -30,6 +42,26 @@ pub trait VoxelMap: ecs::component::Component {
         key: ChunkKey3,
         mesh_buffers: &mut Self::MeshBuffers,
     ) -> Option<PosNormMesh>;
+
+    fn downsample_all(&mut self, pool: &ComputeTaskPool) {
+        let self_ref = &*self;
+        let new_chunks = pool.scope(|scope| {
+            self_ref.visit_root_keys(|root| {
+                scope.spawn(async move {
+                    let mut downsampled_chunks = Vec::new();
+                    self_ref.downsample_descendants_into_new_chunks(root, |key, new_chunk| {
+                        downsampled_chunks.push((key, new_chunk))
+                    });
+                    downsampled_chunks
+                });
+            });
+        });
+        for root_new_chunks in new_chunks.into_iter() {
+            for (key, new_chunk) in root_new_chunks.into_iter() {
+                self.write_chunk(key, new_chunk);
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy, Deserialize, Serialize)]
@@ -52,10 +84,6 @@ impl MapConfig {
         let reader = std::fs::File::open(path)?;
 
         ron::de::from_reader(reader)
-    }
-
-    pub fn world_extent(&self) -> Extent3i {
-        self.world_chunks_extent.0 * self.chunk_shape()
     }
 
     pub fn chunk_shape(&self) -> Point3i {

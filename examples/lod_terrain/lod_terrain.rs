@@ -108,7 +108,8 @@ fn setup<Map: VoxelMap>(
     }
 
     // Generate a voxel map from noise.
-    let map = Map::generate(&*pool, *map_config);
+    let mut map = Map::generate_lod0(&*pool, *map_config);
+    map.downsample_all(&*pool);
 
     let eye = Vec3::splat(100.0);
 

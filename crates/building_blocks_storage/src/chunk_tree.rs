@@ -370,8 +370,8 @@ where
         self.lod_storage_mut(key.lod).pop_raw_node(key.minimum)
     }
 
-    fn get_child_bits(&self, key: ChunkKey<N>) -> Option<Bitset8> {
-        self.lod_storage(key.lod).get_child_bits(key.minimum)
+    fn get_node_state(&self, key: ChunkKey<N>) -> Option<NodeState> {
+        self.lod_storage(key.lod).get_node_state(key.minimum)
     }
 }
 
@@ -416,9 +416,9 @@ where
 
     /// Call `visitor` on all children keys of `parent_key`.
     pub fn visit_child_keys(&self, parent_key: ChunkKey<N>, mut visitor: impl FnMut(ChunkKey<N>)) {
-        if let Some(child_bits) = self.get_child_bits(parent_key) {
+        if let Some(state) = self.get_node_state(parent_key) {
             for child_i in 0..PointN::NUM_CORNERS {
-                if child_bits.bit_is_set(child_i) {
+                if state.child_bits.bit_is_set(child_i) {
                     let child_key = self.indexer.child_chunk_key(parent_key, child_i);
                     visitor(child_key);
                 }
@@ -569,14 +569,16 @@ where
         while key.lod < self.root_lod() {
             let parent = self.indexer.parent_chunk_key(key);
             let mut parent_already_exists = true;
-            let child_bits = self.storages[parent.lod as usize].get_mut_child_bits_or_insert_with(
+            let state = self.storages[parent.lod as usize].get_mut_node_state_or_insert_with(
                 parent.minimum,
                 || {
                     parent_already_exists = false;
                     ChunkNode::new_empty()
                 },
             );
-            child_bits.set_bit(self.indexer.corner_index(key.minimum));
+            state
+                .child_bits
+                .set_bit(self.indexer.corner_index(key.minimum));
             if parent_already_exists {
                 return;
             }
@@ -589,12 +591,12 @@ where
         // might do better by removing them in a batch and sorting the chunks in morton order before unlinking from the tree.
         while key.lod < self.root_lod() {
             let parent = self.indexer.parent_chunk_key(key);
-            let (child_bits, parent_has_data) = self.storages[parent.lod as usize]
-                .get_mut_child_bits(parent.minimum)
+            let (state, parent_has_data) = self.storages[parent.lod as usize]
+                .get_mut_node_state(parent.minimum)
                 .unwrap();
             let child_corner_index = self.indexer.corner_index(key.minimum);
-            child_bits.unset_bit(child_corner_index);
-            if child_bits.any() || parent_has_data {
+            state.child_bits.unset_bit(child_corner_index);
+            if state.child_bits.any() || parent_has_data {
                 return;
             }
             key = parent;

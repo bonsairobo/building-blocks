@@ -48,7 +48,7 @@ pub fn mesh_generator_system<Map: VoxelMap>(
     voxel_map: Res<Map>,
     local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers<Map>>,
     mesh_materials: Res<MeshMaterials>,
-    mesh_command_queue: Res<MeshCommands>,
+    mesh_commands: Res<MeshCommands>,
     mut mesh_assets: ResMut<Assets<Mesh>>,
     mut chunk_meshes: ResMut<ChunkMeshes>,
 ) {
@@ -56,7 +56,7 @@ pub fn mesh_generator_system<Map: VoxelMap>(
         &*voxel_map,
         &*local_mesh_buffers,
         &*pool,
-        &*mesh_command_queue,
+        &*mesh_commands,
         &mut *chunk_meshes,
         &mut commands,
     );

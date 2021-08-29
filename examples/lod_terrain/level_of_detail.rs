@@ -44,15 +44,15 @@ pub fn level_of_detail_system<Map: VoxelMap>(
     let mut new_commands = Vec::new();
     let clip_events_span = tracing::info_span!("clip_events");
     let lod_changes_span = tracing::info_span!("lod_changes");
-    {
-        let _trace_guard = clip_events_span.enter();
-        voxel_map.clipmap_new_chunks(old_clip_sphere, new_clip_sphere, |new_chunk| {
-            // TODO: handle min LOD entrances
-            if new_chunk.is_active {
-                new_commands.push(MeshCommand::Create(new_chunk.key));
-            }
-        });
-    }
+    // {
+    //     let _trace_guard = clip_events_span.enter();
+    //     voxel_map.clipmap_new_chunks(old_clip_sphere, new_clip_sphere, |new_chunk| {
+    //         // TODO: handle min LOD entrances
+    //         if new_chunk.is_active {
+    //             new_commands.push(MeshCommand::Create(new_chunk.key));
+    //         }
+    //     });
+    // }
     {
         let _trace_guard = lod_changes_span.enter();
         voxel_map.clipmap_render_updates(new_clip_sphere, |c| {

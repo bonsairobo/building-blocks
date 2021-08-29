@@ -3,7 +3,7 @@
     num_lods: 6,
     detail: 8.0,
     chunks_processed_per_frame: 160,
-    clip_radius: 2000.0,
+    clip_radius: 1500.0,
     min_enter_lod: 2,
     world_chunks_extent: ((
         minimum: ((-50, -2, -50)),

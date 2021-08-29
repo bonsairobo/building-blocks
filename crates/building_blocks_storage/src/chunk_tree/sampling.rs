@@ -230,18 +230,15 @@ where
         if let Some(state) = self.get_node_state(node_key) {
             let dst_extent = self.indexer.extent_for_chunk_with_min(node_key.minimum);
             let mut dst_chunk = make_ambient(dst_extent);
-            for child_i in 0..PointN::NUM_CORNERS {
-                if state.child_bits.bit_is_set(child_i) {
-                    let child_key = self.indexer.child_chunk_key(node_key, child_i);
-                    self.downsample_descendants_into_new_chunks_recursive(
-                        sampler,
-                        child_key,
-                        min_src_lod,
-                        chunk_rx,
-                        make_ambient,
-                    );
-                }
-            }
+            self.visit_child_keys_of_node(node_key, state, |child_key| {
+                self.downsample_descendants_into_new_chunks_recursive(
+                    sampler,
+                    child_key,
+                    min_src_lod,
+                    chunk_rx,
+                    make_ambient,
+                );
+            });
             // Do a post-order traversal so we can start sampling from the bottom of the tree and work our way up.
             self.downsample_children_into_external(sampler, node_key, dst_chunk.array_mut());
         }
@@ -261,12 +258,9 @@ where
         Dst: FillExtent<N, Item = T> + IndexedArray<N>,
     {
         if let Some(state) = self.get_node_state(dst_chunk_key) {
-            for child_i in 0..PointN::NUM_CORNERS {
-                if state.child_bits.bit_is_set(child_i) {
-                    let child_key = self.indexer.child_chunk_key(dst_chunk_key, child_i);
-                    self.downsample_into_external(sampler, child_key, dst_array);
-                }
-            }
+            self.visit_child_keys_of_node(dst_chunk_key, state, |child_key| {
+                self.downsample_into_external(sampler, child_key, dst_array);
+            });
         }
     }
 

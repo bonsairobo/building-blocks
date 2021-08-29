@@ -415,13 +415,22 @@ where
     }
 
     /// Call `visitor` on all children keys of `parent_key`.
-    pub fn visit_child_keys(&self, parent_key: ChunkKey<N>, mut visitor: impl FnMut(ChunkKey<N>)) {
+    pub fn visit_child_keys(&self, parent_key: ChunkKey<N>, visitor: impl FnMut(ChunkKey<N>)) {
         if let Some(state) = self.get_node_state(parent_key) {
-            for child_i in 0..PointN::NUM_CORNERS {
-                if state.child_bits.bit_is_set(child_i) {
-                    let child_key = self.indexer.child_chunk_key(parent_key, child_i);
-                    visitor(child_key);
-                }
+            self.visit_child_keys_of_node(parent_key, &state, visitor);
+        }
+    }
+
+    pub fn visit_child_keys_of_node(
+        &self,
+        parent_key: ChunkKey<N>,
+        state: &NodeState,
+        mut visitor: impl FnMut(ChunkKey<N>),
+    ) {
+        for child_i in 0..PointN::NUM_CORNERS {
+            if state.child_bits.bit_is_set(child_i) {
+                let child_key = self.indexer.child_chunk_key(parent_key, child_i);
+                visitor(child_key);
             }
         }
     }

@@ -217,7 +217,7 @@ where
                 // Old and new frames agree this chunk is not active.
                 (false, false) => {
                     // Keep looking for any active descendants.
-                    self.visit_child_keys(node_key, |child_key| {
+                    self.visit_child_keys_of_node(node_key, &node_state, |child_key| {
                         candidate_heap.push(ChunkSphere::new(
                             clip_sphere,
                             &self.indexer,
@@ -230,7 +230,7 @@ where
                     // Merge those active descendants into this node.
                     let mut old_chunks = Vec::with_capacity(8);
                     if node_key.lod > 0 {
-                        self.visit_child_keys(node_key, |child_key| {
+                        self.visit_child_keys_of_node(node_key, &node_state, |child_key| {
                             self.visit_tree_keys(child_key, |descendant_key| {
                                 let descendant_node = self.get_node(descendant_key).unwrap();
                                 let descendant_was_active = descendant_node
@@ -268,7 +268,7 @@ where
                     // out of render chunk budget. To be fair to other chunks in the queue that need to be split, we will only
                     // split by one layer for now, but we'll re-insert the children back into the heap so they can be split
                     // again if we still have budget.
-                    self.visit_child_keys(node_key, |child_key| {
+                    self.visit_child_keys_of_node(node_key, &node_state, |child_key| {
                         let child_node = self.get_node(child_key).unwrap();
                         child_node.state.state_bits.set_bit(StateBit::Render as u8);
 

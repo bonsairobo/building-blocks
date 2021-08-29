@@ -143,8 +143,7 @@ where
 }
 
 /// The key for a chunk at a particular level of detail.
-#[allow(clippy::derive_hash_xor_eq)] // This is fine, the custom PartialEq is the same as what would've been derived.
-#[derive(Debug, Deserialize, Hash, Eq, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ChunkKey<N> {
     /// The minimum point of the chunk.
     pub minimum: PointN<N>,
@@ -174,6 +173,18 @@ where
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.minimum == other.minimum && self.lod == other.lod
+    }
+}
+
+impl<N> Eq for ChunkKey<N> where PointN<N>: PartialEq {}
+
+impl<N> std::hash::Hash for ChunkKey<N>
+where
+    PointN<N>: std::hash::Hash,
+{
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.minimum.hash(state);
+        state.write_u8(self.lod);
     }
 }
 

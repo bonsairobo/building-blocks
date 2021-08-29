@@ -9,7 +9,6 @@ use std::collections::BinaryHeap;
 
 impl<Ni, Nf, T, Usr, Bldr, Store> ChunkTree<Ni, T, Bldr, Store>
 where
-    Ni: Eq + std::hash::Hash, // TODO: get rid of these
     PointN<Ni>: std::hash::Hash + IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
     Bldr: ChunkTreeBuilder<Ni, T, Chunk = Usr>,
@@ -450,7 +449,7 @@ impl<Ni, Nf> Eq for ChunkSphere<Ni, Nf> where PointN<Ni>: Eq {}
 
 impl<Ni, Nf> PartialOrd for ChunkSphere<Ni, Nf>
 where
-    Ni: PartialEq,
+    PointN<Ni>: PartialEq,
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         FloatOrd(self.closest_dist_to_observer)
@@ -461,7 +460,7 @@ where
 
 impl<Ni, Nf> Ord for ChunkSphere<Ni, Nf>
 where
-    Ni: Eq,
+    PointN<Ni>: Eq,
 {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         FloatOrd(self.closest_dist_to_observer)

@@ -1,8 +1,8 @@
 (
     chunk_exponent: 4,
     num_lods: 6,
-    detail: 6.0,
-    chunks_processed_per_frame_per_core: 40,
+    detail: 8.0,
+    chunks_processed_per_frame: 160,
     clip_radius: 1000.0,
     min_enter_lod: 2,
     world_chunks_extent: ((
@@ -16,6 +16,6 @@
         octaves: 6,
     ),
     msaa: None,
-    lod_colors: true,
+    lod_colors: false,
     wireframes: false,
 )

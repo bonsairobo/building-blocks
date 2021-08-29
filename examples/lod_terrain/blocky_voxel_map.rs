@@ -113,8 +113,7 @@ impl VoxelMap for BlockyVoxelMap {
         self.chunks.clipmap_render_updates(
             self.config().detail,
             new_clip_sphere,
-            // TODO: get the actual number of cores
-            4 * self.config().chunks_processed_per_frame_per_core,
+            self.config().chunks_processed_per_frame,
             rx,
         );
     }

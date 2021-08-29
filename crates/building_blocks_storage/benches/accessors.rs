@@ -137,8 +137,8 @@ fn chunk_hash_map_visit_chunks_sparse(c: &mut Criterion) {
             b.iter_with_setup(
                 || set_up_sparse_chunk_map(SmallKeyHashMap::default, size, 3),
                 |(chunk_map, _)| {
-                    chunk_map.visit_occupied_chunks(|key, chunk| {
-                        black_box((key, chunk));
+                    chunk_map.visit_all_nodes(|key, node| {
+                        black_box((key, node));
                         true
                     });
                 },

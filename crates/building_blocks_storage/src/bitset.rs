@@ -22,10 +22,12 @@ impl Bitset8 {
         self.bits == 0xFF
     }
 
+    #[inline]
     pub fn set_bit(&mut self, bit: u8) {
         self.bits |= 1 << bit;
     }
 
+    #[inline]
     pub fn unset_bit(&mut self, bit: u8) {
         self.bits &= !(1 << bit);
     }

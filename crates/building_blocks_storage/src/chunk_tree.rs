@@ -536,38 +536,40 @@ where
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
-    /// Call `visitor` on all occupied chunks in a pre-order, depth-first traversal.
+    /// Call `visitor` on all occupied `ChunkNode`s in a pre-order, depth-first traversal.
     ///
-    /// If `visitor` returns `false`, then no descendants of that chunk will be visited.
-    #[inline]
-    pub fn visit_occupied_chunks(&self, mut visitor: impl FnMut(ChunkKey<N>, &Usr) -> bool)
+    /// If `visitor` returns `false`, then no descendants of that node will be visited.
+    pub fn visit_all_nodes(&self, mut visitor: impl FnMut(ChunkKey<N>, &ChunkNode<Usr>) -> bool)
     where
         Store: for<'r> IterChunkKeys<'r, N>,
     {
-        let root_lod = self.root_lod();
-        let root_storage = self.lod_storage(root_lod);
-        for &root_chunk_min in root_storage.chunk_keys() {
-            self.visit_occupied_chunks_recursive(
-                ChunkKey::new(root_lod, root_chunk_min),
-                &mut visitor,
-            );
-        }
+        self.visit_root_keys(|root_key| {
+            self.visit_chunk_nodes_recursive(root_key, &mut visitor);
+        });
     }
 
-    fn visit_occupied_chunks_recursive(
+    pub fn visit_tree_nodes(
         &self,
         node_key: ChunkKey<N>,
-        visitor: &mut impl FnMut(ChunkKey<N>, &Usr) -> bool,
+        mut visitor: impl FnMut(ChunkKey<N>, &ChunkNode<Usr>) -> bool,
+    ) where
+        Store: for<'r> IterChunkKeys<'r, N>,
+    {
+        self.visit_chunk_nodes_recursive(node_key, &mut visitor);
+    }
+
+    fn visit_chunk_nodes_recursive(
+        &self,
+        node_key: ChunkKey<N>,
+        visitor: &mut impl FnMut(ChunkKey<N>, &ChunkNode<Usr>) -> bool,
     ) {
         if let Some(node) = self.get_node(node_key) {
-            if let Some(chunk) = &node.user_chunk {
-                if !visitor(node_key, chunk) {
-                    return;
-                }
+            if !visitor(node_key, node) {
+                return;
             }
 
             self.visit_child_keys(node_key, |child_key| {
-                self.visit_occupied_chunks_recursive(child_key, visitor);
+                self.visit_chunk_nodes_recursive(child_key, visitor);
             });
         }
     }
@@ -711,7 +713,7 @@ where
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
         // PERF: we wouldn't always have to pop the node if we had a ChunkStorage::entry API
         self.pop_node(key).and_then(|mut node| {
-            if !node.has_any_children() {
+            if !node.state.has_any_children() {
                 // No children, so this node is useless.
                 self.unlink_node(key);
                 node.user_chunk
@@ -746,7 +748,7 @@ where
         mut chunk_rx: impl FnMut(ChunkKey<N>, Store::ChunkRepr),
     ) {
         for child_i in 0..PointN::NUM_CORNERS {
-            if node.has_child(child_i) {
+            if node.state.has_child(child_i) {
                 let child_key = self.indexer.child_chunk_key(key, child_i);
                 if let Some(child_node) = self.pop_raw_node(child_key) {
                     self.drain_tree_recursive(child_key, child_node, &mut chunk_rx);
@@ -781,20 +783,11 @@ pub struct ChunkNode<U> {
     /// Parent chunks are `None` until written or downsampled into. This means that users can opt-in to storing downsampled
     /// chunks, which requires more memory.
     pub user_chunk: Option<U>,
+    /// Chunk-related state. See [`NodeState`].
     pub state: NodeState,
 }
 
 impl<U> ChunkNode<U> {
-    #[inline]
-    pub fn has_child(&self, corner_index: u8) -> bool {
-        self.state.child_bits.bit_is_set(corner_index)
-    }
-
-    #[inline]
-    pub fn has_any_children(&self) -> bool {
-        self.state.child_bits.any()
-    }
-
     #[inline]
     pub fn as_ref(&self) -> ChunkNode<&U> {
         ChunkNode::new(self.user_chunk.as_ref(), self.state.clone())
@@ -827,6 +820,18 @@ pub struct NodeState {
     child_bits: Bitset8,
     /// A bitmask tracking other external state, like if the chunk is being rendered.
     pub state_bits: AtomicBitset8,
+}
+
+impl NodeState {
+    #[inline]
+    pub fn has_child(&self, corner_index: u8) -> bool {
+        self.child_bits.bit_is_set(corner_index)
+    }
+
+    #[inline]
+    pub fn has_any_children(&self) -> bool {
+        self.child_bits.any()
+    }
 }
 
 #[repr(u8)]
@@ -963,7 +968,7 @@ mod tests {
     }
 
     #[test]
-    fn visit_occupied_chunks() {
+    fn visit_chunk_nodes() {
         assert!(MAP_CONFIG.root_lod > 0);
         let mut map = ChunkTreeBuilder3x1::new(MAP_CONFIG).build_with_hash_map_storage();
 
@@ -980,12 +985,14 @@ mod tests {
         let visit_extent = Extent3i::from_min_and_shape(PointN([16, 0, 0]), Point3i::fill(17));
 
         let mut visited_lod0_chunk_mins = Vec::new();
-        map.visit_occupied_chunks(|key, chunk| {
-            if chunk.extent().intersection(&visit_extent).is_empty() {
-                return false;
-            }
-            if key.lod == 0 {
-                visited_lod0_chunk_mins.push(chunk.extent().minimum);
+        map.visit_all_nodes(|key, node| {
+            if let Some(chunk) = &node.user_chunk {
+                if chunk.extent().intersection(&visit_extent).is_empty() {
+                    return false;
+                }
+                if key.lod == 0 {
+                    visited_lod0_chunk_mins.push(chunk.extent().minimum);
+                }
             }
             true
         });

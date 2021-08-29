@@ -31,7 +31,6 @@ impl Bitset8 {
     }
 }
 
-/// An atomic bitset used for tracking external state about a chunk.
 #[derive(Default, Deserialize, Serialize)]
 pub struct AtomicBitset8 {
     pub bits: AtomicU8,

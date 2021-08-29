@@ -15,6 +15,7 @@
 #[macro_use]
 pub mod access_traits;
 pub mod array;
+pub mod bitset;
 pub mod caching;
 pub mod chunk_tree;
 pub mod compression;
@@ -48,8 +49,9 @@ pub type SmallKeyBuildHasher = ahash::RandomState;
 pub mod prelude {
     pub use super::{
         array::{IndexedArray, Local, Stride},
+        bitset::{AtomicBitset8, Bitset8},
         chunk_tree::{
-            chunk_lod0_bounding_sphere, AmbientExtent, Bitset8, ChunkDownsampler, ChunkIndexer2,
+            chunk_lod0_bounding_sphere, AmbientExtent, ChunkDownsampler, ChunkIndexer2,
             ChunkIndexer3, ChunkKey, ChunkKey2, ChunkKey3, ChunkNode, ChunkStorage,
             ChunkTreeBuilder, ChunkTreeConfig, ChunkUnits, ClipmapSlot2, ClipmapSlot3,
             IterChunkKeys, LodChange2, LodChange3, PointDownsampler, SdfMeanDownsampler, UserChunk,

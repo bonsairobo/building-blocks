@@ -7,13 +7,13 @@
 //! map from [`PointN`] to arbitrary data `T`. Starting at LOD0, voxels have edge length 1. At LOD1, edge length 2. And at each
 //! next level, the voxel edge length doubles. Equivalently, each next level halves the sample rate.
 //!
-//! Each level is also partitioned into "chunk slots," all slots having the same shape (in voxels). Although all chunks have the
+//! Each level is also partitioned into *chunk slots*, all slots having the same shape (in voxels). Although all chunks have the
 //! same "data shape," chunks at higher levels take up more "perceptual space." E.g. a chunk at LOD2 is 2^2 = 4 times as wide
 //! when it is rendered as a chunk at LOD0.
 //!
 //! A chunk slot can either be occupied or vacant. Occupied slots store some type `U: UserChunk`, where users are free to
 //! implement [`UserChunk`]. These chunks are densely populated via an [`Array`]. Vacant chunk slots do not take up any space,
-//! and we assume that all points in such a slot take the same "ambient value."
+//! and we assume that all points in such a slot take the same *ambient value*.
 //!
 //! # Iteration
 //!
@@ -21,7 +21,7 @@
 //! when it is convenient; iteration amortizes the cost of hashing to find chunks, and the tree structure allows us to
 //! efficiently skip over empty space.
 //!
-//! Most commonly you will want to iterate over an [`ExtentN`] in a single level of detail. For this, you can construct a
+//! You will commonly want to iterate over an [`ExtentN`] in a single level of detail. For this, you can construct a
 //! [`ChunkTreeLodView`] and use the familiar access traits to iterate or copy data:
 //!
 //! - [`ForEach`](crate::access_traits::ForEach)
@@ -152,7 +152,6 @@
 //! tree.lod_storage_mut(0).flush_thread_local_caches();
 //! ```
 
-pub mod bits;
 pub mod builder;
 pub mod clipmap;
 pub mod indexer;
@@ -160,7 +159,6 @@ pub mod lod_view;
 pub mod sampling;
 pub mod storage;
 
-pub use bits::*;
 pub use builder::*;
 pub use clipmap::*;
 pub use indexer::*;
@@ -169,6 +167,7 @@ pub use sampling::*;
 pub use storage::*;
 
 use crate::{
+    bitset::*,
     dev_prelude::{Array, ForEach, GetMutUnchecked, GetRefUnchecked, GetUnchecked},
     multi_ptr::MultiRef,
 };

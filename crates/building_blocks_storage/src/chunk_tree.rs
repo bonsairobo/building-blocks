@@ -350,12 +350,16 @@ impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
     Store: ChunkStorage<N, Chunk = Usr>,
 {
-    fn get_node(&self, key: ChunkKey<N>) -> Option<&ChunkNode<Usr>> {
+    pub fn get_node(&self, key: ChunkKey<N>) -> Option<&ChunkNode<Usr>> {
         self.lod_storage(key.lod).get_node(key.minimum)
     }
 
-    fn get_mut_node(&mut self, key: ChunkKey<N>) -> Option<&mut ChunkNode<Usr>> {
+    pub fn get_mut_node(&mut self, key: ChunkKey<N>) -> Option<&mut ChunkNode<Usr>> {
         self.lod_storage_mut(key.lod).get_mut_node(key.minimum)
+    }
+
+    pub fn get_node_state(&self, key: ChunkKey<N>) -> Option<NodeState> {
+        self.lod_storage(key.lod).get_node_state(key.minimum)
     }
 
     fn write_node(&mut self, key: ChunkKey<N>, node: ChunkNode<Usr>) {
@@ -368,10 +372,6 @@ where
 
     fn pop_raw_node(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Store::ChunkRepr>> {
         self.lod_storage_mut(key.lod).pop_raw_node(key.minimum)
-    }
-
-    fn get_node_state(&self, key: ChunkKey<N>) -> Option<NodeState> {
-        self.lod_storage(key.lod).get_node_state(key.minimum)
     }
 }
 

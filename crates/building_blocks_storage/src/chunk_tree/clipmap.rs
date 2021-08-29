@@ -201,16 +201,16 @@ where
                 continue;
             }
 
-            let node = self.get_node(node_key).unwrap();
+            let node_state = self.get_node_state(node_key).unwrap();
 
-            let was_active = node.state.state_bits.bit_is_set(StateBit::Render as u8);
+            let was_active = node_state.state_bits.bit_is_set(StateBit::Render as u8);
             let is_active =
                 node_key.lod == 0 || center_dist_to_observer / node_sphere.radius > detail;
 
             if is_active {
-                node.state.state_bits.set_bit(StateBit::Render as u8);
+                node_state.state_bits.set_bit(StateBit::Render as u8);
             } else {
-                node.state.state_bits.unset_bit(StateBit::Render as u8);
+                node_state.state_bits.unset_bit(StateBit::Render as u8);
             }
 
             match (was_active, is_active) {

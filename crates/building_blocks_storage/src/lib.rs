@@ -49,7 +49,7 @@ pub mod prelude {
     pub use super::{
         array::{IndexedArray, Local, Stride},
         chunk_tree::{
-            chunk_lod0_bounding_sphere, AmbientExtent, ChildBits, ChunkDownsampler, ChunkIndexer2,
+            chunk_lod0_bounding_sphere, AmbientExtent, Bitset8, ChunkDownsampler, ChunkIndexer2,
             ChunkIndexer3, ChunkKey, ChunkKey2, ChunkKey3, ChunkNode, ChunkStorage,
             ChunkTreeBuilder, ChunkTreeConfig, ChunkUnits, ClipmapSlot2, ClipmapSlot3,
             IterChunkKeys, LodChange2, LodChange3, PointDownsampler, SdfMeanDownsampler, UserChunk,

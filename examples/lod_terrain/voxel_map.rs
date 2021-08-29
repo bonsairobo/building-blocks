@@ -10,14 +10,7 @@ pub trait VoxelMap: ecs::component::Component {
 
     fn config(&self) -> &MapConfig;
 
-    fn clipmap_active_chunks(&self, lod0_center: Point3f, active_rx: impl FnMut(ClipmapSlot3));
-
-    fn lod_changes(
-        &self,
-        old_clip_sphere: Sphere3,
-        new_clip_sphere: Sphere3,
-        rx: impl FnMut(LodChange3),
-    );
+    fn clipmap_render_updates(&self, new_clip_sphere: Sphere3, rx: impl FnMut(LodChange3));
 
     fn clipmap_new_chunks(
         &self,

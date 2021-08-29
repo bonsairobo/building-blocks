@@ -4,7 +4,7 @@ pub mod hash_map;
 pub use compressible::*;
 pub use hash_map::*;
 
-use super::{ChildBits, ChunkNode};
+use super::{Bitset8, ChunkNode};
 
 use building_blocks_core::prelude::*;
 
@@ -54,16 +54,16 @@ pub trait ChunkStorage<N> {
     /// Overwrite the chunk at `key` with `chunk`. Drops the previous value. Any previous child mask is preserved.
     fn write_chunk(&mut self, key: PointN<N>, chunk: Self::Chunk);
 
-    fn get_child_bits(&self, key: PointN<N>) -> Option<ChildBits>;
+    fn get_child_bits(&self, key: PointN<N>) -> Option<Bitset8>;
 
     /// Mutably borrow the child mask for the node at `key`. Also returns a bool which is true iff the node has data.
-    fn get_mut_child_bits(&mut self, key: PointN<N>) -> Option<(&mut ChildBits, bool)>;
+    fn get_mut_child_bits(&mut self, key: PointN<N>) -> Option<(&mut Bitset8, bool)>;
 
     fn get_mut_child_bits_or_insert_with(
         &mut self,
         key: PointN<N>,
         create_chunk: impl FnOnce() -> ChunkNode<Self::Chunk>,
-    ) -> &mut ChildBits;
+    ) -> &mut Bitset8;
 }
 
 #[auto_impl(&, &mut)]

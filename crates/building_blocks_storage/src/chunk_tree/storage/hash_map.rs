@@ -1,6 +1,6 @@
 use crate::dev_prelude::{ChunkTree, ChunkTreeBuilder, SmallKeyHashMap};
 
-use super::{ChildBits, ChunkNode, ChunkStorage, IterChunkKeys};
+use super::{Bitset8, ChunkNode, ChunkStorage, IterChunkKeys};
 
 use building_blocks_core::PointN;
 
@@ -69,14 +69,14 @@ where
     }
 
     #[inline]
-    fn get_child_bits(&self, key: PointN<N>) -> Option<ChildBits> {
-        self.get(&key).map(|n| n.child_bits)
+    fn get_child_bits(&self, key: PointN<N>) -> Option<Bitset8> {
+        self.get(&key).map(|n| n.state.child_bits)
     }
 
     #[inline]
-    fn get_mut_child_bits(&mut self, key: PointN<N>) -> Option<(&mut ChildBits, bool)> {
+    fn get_mut_child_bits(&mut self, key: PointN<N>) -> Option<(&mut Bitset8, bool)> {
         self.get_mut(&key)
-            .map(|n| (&mut n.child_bits, n.user_chunk.is_some()))
+            .map(|n| (&mut n.state.child_bits, n.user_chunk.is_some()))
     }
 
     #[inline]
@@ -84,9 +84,9 @@ where
         &mut self,
         key: PointN<N>,
         create_node: impl FnOnce() -> ChunkNode<Self::Chunk>,
-    ) -> &mut ChildBits {
+    ) -> &mut Bitset8 {
         let node = self.entry(key).or_insert_with(create_node);
-        &mut node.child_bits
+        &mut node.state.child_bits
     }
 }
 

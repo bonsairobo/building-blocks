@@ -167,7 +167,7 @@ where
         }
     }
 
-    /// Downsamples all descendants of `ancestor_chunk`, down to `min_src_lod`.
+    /// Downsamples all descendants of `ancestor_chunk`, starting at `min_src_lod` and working up the tree.
     ///
     /// The newly created chunks will be passed to the `chunk_rx` callback.
     pub fn downsample_descendants_into_new_chunks<Samp>(
@@ -188,7 +188,8 @@ where
         );
     }
 
-    /// Downsamples all descendants of `ancestor_chunk`, down to `min_src_lod`. Supports a custom chunk factory `make_ambient`.
+    /// Downsamples all descendants of `ancestor_chunk`, starting at `min_src_lod` and working up the tree. Supports a custom
+    /// chunk factory `make_ambient`.
     ///
     /// The newly created chunks will be passed to the `chunk_rx` callback.
     pub fn downsample_descendants_into_new_custom_chunks<Samp, DstUsr>(
@@ -196,7 +197,7 @@ where
         sampler: &Samp,
         ancestor_key: ChunkKey<N>,
         min_src_lod: u8,
-        mut chunk_rx: impl FnMut(ChunkKey<N>, Usr),
+        mut chunk_rx: impl FnMut(ChunkKey<N>, DstUsr),
         mut make_ambient: impl FnMut(ExtentN<N>) -> DstUsr,
     ) where
         Samp: ChunkDownsampler<N, Usr::Array, DstUsr::Array>
@@ -219,7 +220,7 @@ where
         sampler: &Samp,
         node_key: ChunkKey<N>,
         min_src_lod: u8,
-        chunk_rx: &mut impl FnMut(ChunkKey<N>, Usr),
+        chunk_rx: &mut impl FnMut(ChunkKey<N>, DstUsr),
         make_ambient: &mut impl FnMut(ExtentN<N>) -> DstUsr,
     ) where
         Samp: ChunkDownsampler<N, Usr::Array, DstUsr::Array>
@@ -227,10 +228,11 @@ where
         DstUsr: UserChunk,
         DstUsr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
     {
-        if let Some(state) = self.get_node_state(node_key) {
+        if node_key.lod > min_src_lod {
             let dst_extent = self.indexer.extent_for_chunk_with_min(node_key.minimum);
             let mut dst_chunk = make_ambient(dst_extent);
-            self.visit_child_keys_of_node(node_key, state, |child_key| {
+
+            self.visit_child_keys(node_key, |child_key| {
                 self.downsample_descendants_into_new_chunks_recursive(
                     sampler,
                     child_key,
@@ -238,9 +240,12 @@ where
                     chunk_rx,
                     make_ambient,
                 );
+
+                // Do a post-order traversal so we can start sampling from the bottom of the tree and work our way up.
+                self.downsample_into_external(sampler, child_key, dst_chunk.array_mut());
             });
-            // Do a post-order traversal so we can start sampling from the bottom of the tree and work our way up.
-            self.downsample_children_into_external(sampler, node_key, dst_chunk.array_mut());
+
+            chunk_rx(node_key, dst_chunk);
         }
     }
 
@@ -257,11 +262,9 @@ where
         Samp: ChunkDownsampler<N, Usr::Array, Dst>,
         Dst: FillExtent<N, Item = T> + IndexedArray<N>,
     {
-        if let Some(state) = self.get_node_state(dst_chunk_key) {
-            self.visit_child_keys_of_node(dst_chunk_key, state, |child_key| {
-                self.downsample_into_external(sampler, child_key, dst_array);
-            });
-        }
+        self.visit_child_keys(dst_chunk_key, |child_key| {
+            self.downsample_into_external(sampler, child_key, dst_array);
+        })
     }
 
     /// Downsamples the chunk at `src_chunk_key` into `dst_chunk`, assuming that `dst_chunk` will be stored in the parent node.

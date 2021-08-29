@@ -68,17 +68,22 @@ where
             return;
         }
 
-        let info = ChunkSphereInfo::new(
-            &self.indexer,
-            old_clip_sphere.center,
-            new_clip_sphere.center,
-            node_key,
-        );
+        let node_sphere = chunk_lod0_bounding_sphere(&self.indexer, node_key);
+
+        // Calculate the Euclidean distance from each focus the center of the chunk.
+        let dist_to_old_clip_sphere = old_clip_sphere
+            .center
+            .l2_distance_squared(node_sphere.center)
+            .sqrt();
+        let dist_to_new_clip_sphere = new_clip_sphere
+            .center
+            .l2_distance_squared(node_sphere.center)
+            .sqrt();
 
         let node_intersects_old_clip_sphere =
-            info.dist_to_old_clip_sphere - info.lod0_radius < old_clip_sphere.radius;
+            dist_to_old_clip_sphere - node_sphere.radius < old_clip_sphere.radius;
         let node_intersects_new_clip_sphere =
-            info.dist_to_new_clip_sphere - info.lod0_radius < new_clip_sphere.radius;
+            dist_to_new_clip_sphere - node_sphere.radius < new_clip_sphere.radius;
 
         if !node_intersects_old_clip_sphere && !node_intersects_new_clip_sphere {
             // There are no events for this node or any of its descendants.
@@ -86,19 +91,19 @@ where
         }
 
         let node_bounded_by_old_clip_sphere =
-            info.dist_to_old_clip_sphere + info.lod0_radius < old_clip_sphere.radius;
+            dist_to_old_clip_sphere + node_sphere.radius < old_clip_sphere.radius;
         let node_bounded_by_new_clip_sphere =
-            info.dist_to_new_clip_sphere + info.lod0_radius < new_clip_sphere.radius;
+            dist_to_new_clip_sphere + node_sphere.radius < new_clip_sphere.radius;
 
         if node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere {
             // This node is stably bounded, so no enter events are possible.
             return;
         }
 
-        let was_active =
-            !ancestor_was_active && (node_key.lod == 0 || info.old_normalized_distance() > detail);
-        let is_active =
-            !ancestor_is_active && (node_key.lod == 0 || info.new_normalized_distance() > detail);
+        let was_active = !ancestor_was_active
+            && (node_key.lod == 0 || dist_to_old_clip_sphere / node_sphere.radius > detail);
+        let is_active = !ancestor_is_active
+            && (node_key.lod == 0 || dist_to_new_clip_sphere / node_sphere.radius > detail);
 
         // Recurse.
         if node_key.lod > 0 {
@@ -120,7 +125,7 @@ where
         if !node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere {
             rx(ClipmapSlot {
                 key: node_key,
-                dist: info.dist_to_new_clip_sphere,
+                dist: dist_to_new_clip_sphere,
                 is_active,
             });
         }
@@ -301,47 +306,6 @@ where
         for (_, split) in splits.into_iter() {
             rx(LodChange::Split(split));
         }
-    }
-}
-
-/// Some common intermediate calculations about a chunk.
-#[derive(Debug)]
-struct ChunkSphereInfo {
-    lod0_radius: f32,
-    dist_to_old_clip_sphere: f32,
-    dist_to_new_clip_sphere: f32,
-}
-
-impl ChunkSphereInfo {
-    fn new<Ni, Nf>(
-        indexer: &ChunkIndexer<Ni>,
-        old_focus: PointN<Nf>,
-        new_focus: PointN<Nf>,
-        node_key: ChunkKey<Ni>,
-    ) -> Self
-    where
-        PointN<Ni>: IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
-        PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
-    {
-        let node_sphere = chunk_lod0_bounding_sphere(indexer, node_key);
-
-        // Calculate the Euclidean distance from each focus the center of the chunk.
-        let dist_to_old_clip_sphere = old_focus.l2_distance_squared(node_sphere.center).sqrt();
-        let dist_to_new_clip_sphere = new_focus.l2_distance_squared(node_sphere.center).sqrt();
-
-        Self {
-            lod0_radius: node_sphere.radius,
-            dist_to_old_clip_sphere,
-            dist_to_new_clip_sphere,
-        }
-    }
-
-    fn old_normalized_distance(&self) -> f32 {
-        self.dist_to_old_clip_sphere / self.lod0_radius
-    }
-
-    fn new_normalized_distance(&self) -> f32 {
-        self.dist_to_new_clip_sphere / self.lod0_radius
     }
 }
 

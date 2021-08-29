@@ -424,11 +424,11 @@ where
     }
 
     #[inline]
-    fn get_node_state(&self, key: PointN<N>) -> Option<NodeState> {
+    fn get_node_state(&self, key: PointN<N>) -> Option<&NodeState> {
         self.get_without_caching_and_skip_thread_local(key)
             .map(|e| match e {
-                MaybeCompressed::Compressed(n) => n.state.clone(),
-                MaybeCompressed::Decompressed(n) => n.state.clone(),
+                MaybeCompressed::Compressed(n) => &n.state,
+                MaybeCompressed::Decompressed(n) => &n.state,
             })
     }
 

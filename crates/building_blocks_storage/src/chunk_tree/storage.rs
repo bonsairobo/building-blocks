@@ -54,7 +54,7 @@ pub trait ChunkStorage<N> {
     /// Overwrite the chunk at `key` with `chunk`. Drops the previous value. Any previous child mask is preserved.
     fn write_chunk(&mut self, key: PointN<N>, chunk: Self::Chunk);
 
-    fn get_node_state(&self, key: PointN<N>) -> Option<NodeState>;
+    fn get_node_state(&self, key: PointN<N>) -> Option<&NodeState>;
 
     /// Mutably borrow the child mask for the node at `key`. Also returns a bool which is true iff the node has data.
     fn get_mut_node_state(&mut self, key: PointN<N>) -> Option<(&mut NodeState, bool)>;

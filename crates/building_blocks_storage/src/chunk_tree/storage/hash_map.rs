@@ -69,8 +69,8 @@ where
     }
 
     #[inline]
-    fn get_node_state(&self, key: PointN<N>) -> Option<NodeState> {
-        self.get(&key).map(|n| n.state.clone())
+    fn get_node_state(&self, key: PointN<N>) -> Option<&NodeState> {
+        self.get(&key).map(|n| &n.state)
     }
 
     #[inline]

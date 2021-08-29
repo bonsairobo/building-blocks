@@ -358,7 +358,7 @@ where
         self.lod_storage_mut(key.lod).get_mut_node(key.minimum)
     }
 
-    pub fn get_node_state(&self, key: ChunkKey<N>) -> Option<NodeState> {
+    pub fn get_node_state(&self, key: ChunkKey<N>) -> Option<&NodeState> {
         self.lod_storage(key.lod).get_node_state(key.minimum)
     }
 
@@ -417,7 +417,7 @@ where
     /// Call `visitor` on all children keys of `parent_key`.
     pub fn visit_child_keys(&self, parent_key: ChunkKey<N>, visitor: impl FnMut(ChunkKey<N>)) {
         if let Some(state) = self.get_node_state(parent_key) {
-            self.visit_child_keys_of_node(parent_key, &state, visitor);
+            self.visit_child_keys_of_node(parent_key, state, visitor);
         }
     }
 

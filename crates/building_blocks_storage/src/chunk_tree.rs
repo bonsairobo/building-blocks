@@ -152,6 +152,7 @@
 //! tree.lod_storage_mut(0).flush_thread_local_caches();
 //! ```
 
+pub mod bits;
 pub mod builder;
 pub mod clipmap;
 pub mod indexer;
@@ -159,6 +160,7 @@ pub mod lod_view;
 pub mod sampling;
 pub mod storage;
 
+pub use bits::*;
 pub use builder::*;
 pub use clipmap::*;
 pub use indexer::*;
@@ -369,7 +371,7 @@ where
         self.lod_storage_mut(key.lod).pop_raw_node(key.minimum)
     }
 
-    fn get_child_bits(&self, key: ChunkKey<N>) -> Option<ChildBits> {
+    fn get_child_bits(&self, key: ChunkKey<N>) -> Option<Bitset8> {
         self.lod_storage(key.lod).get_child_bits(key.minimum)
     }
 }
@@ -417,7 +419,7 @@ where
     pub fn visit_child_keys(&self, parent_key: ChunkKey<N>, mut visitor: impl FnMut(ChunkKey<N>)) {
         if let Some(child_bits) = self.get_child_bits(parent_key) {
             for child_i in 0..PointN::NUM_CORNERS {
-                if child_bits.has_child(child_i) {
+                if child_bits.bit_is_set(child_i) {
                     let child_key = self.indexer.child_chunk_key(parent_key, child_i);
                     visitor(child_key);
                 }
@@ -425,19 +427,19 @@ where
         }
     }
 
-    pub fn visit_descendant_keys(&self, key: ChunkKey<N>, mut visitor: impl FnMut(ChunkKey<N>)) {
-        self.visit_descendant_keys_recursive(key, &mut visitor);
+    pub fn visit_tree_keys(&self, key: ChunkKey<N>, mut visitor: impl FnMut(ChunkKey<N>) -> bool) {
+        self.visit_tree_keys_recursive(key, &mut visitor);
     }
 
-    fn visit_descendant_keys_recursive(
+    fn visit_tree_keys_recursive(
         &self,
         key: ChunkKey<N>,
-        visitor: &mut impl FnMut(ChunkKey<N>),
+        visitor: &mut impl FnMut(ChunkKey<N>) -> bool,
     ) {
-        if key.lod > 0 {
+        let keep_going = visitor(key);
+        if keep_going && key.lod > 0 {
             self.visit_child_keys(key, |child_key| {
-                visitor(child_key);
-                self.visit_descendant_keys_recursive(child_key, visitor);
+                self.visit_tree_keys_recursive(child_key, visitor);
             });
         }
     }
@@ -456,9 +458,9 @@ where
         }
     }
 
-    pub fn visit_all_keys(&self, mut visitor: impl FnMut(ChunkKey<N>)) {
+    pub fn visit_all_keys(&self, mut visitor: impl FnMut(ChunkKey<N>) -> bool) {
         self.visit_root_keys(|root_key| {
-            self.visit_descendant_keys(root_key, &mut visitor);
+            self.visit_tree_keys(root_key, &mut visitor);
         })
     }
 }
@@ -575,7 +577,7 @@ where
                     ChunkNode::new_empty()
                 },
             );
-            child_bits.add_child(self.indexer.corner_index(key.minimum));
+            child_bits.set_bit(self.indexer.corner_index(key.minimum));
             if parent_already_exists {
                 return;
             }
@@ -592,8 +594,8 @@ where
                 .get_mut_child_bits(parent.minimum)
                 .unwrap();
             let child_corner_index = self.indexer.corner_index(key.minimum);
-            child_bits.remove_child(child_corner_index);
-            if child_bits.has_any_children() || parent_has_data {
+            child_bits.unset_bit(child_corner_index);
+            if child_bits.any() || parent_has_data {
                 return;
             }
             key = parent;
@@ -769,68 +771,58 @@ pub struct ChunkNode<U> {
     /// Parent chunks are `None` until written or downsampled into. This means that users can opt-in to storing downsampled
     /// chunks, which requires more memory.
     pub user_chunk: Option<U>,
-    pub child_bits: ChildBits,
+    pub state: NodeState,
 }
 
 impl<U> ChunkNode<U> {
     #[inline]
-    pub(crate) fn new(user_chunk: Option<U>, child_bits: ChildBits) -> Self {
-        Self {
-            user_chunk,
-            child_bits,
-        }
+    pub fn has_child(&self, corner_index: u8) -> bool {
+        self.state.child_bits.bit_is_set(corner_index)
+    }
+
+    #[inline]
+    pub fn has_any_children(&self) -> bool {
+        self.state.child_bits.any()
+    }
+
+    #[inline]
+    pub fn as_ref(&self) -> ChunkNode<&U> {
+        ChunkNode::new(self.user_chunk.as_ref(), self.state.clone())
+    }
+
+    #[inline]
+    pub fn map<T>(self, f: impl Fn(U) -> T) -> ChunkNode<T> {
+        ChunkNode::new(self.user_chunk.map(f), self.state)
+    }
+
+    #[inline]
+    pub(crate) fn new(user_chunk: Option<U>, state: NodeState) -> Self {
+        Self { user_chunk, state }
     }
 
     #[inline]
     pub(crate) fn new_empty() -> Self {
-        Self::new(None, ChildBits::default())
+        Self::new(None, NodeState::default())
     }
 
     #[inline]
-    pub(crate) fn new_without_data(child_bits: ChildBits) -> Self {
-        Self::new(None, child_bits)
-    }
-
-    #[inline]
-    pub(crate) fn as_ref(&self) -> ChunkNode<&U> {
-        ChunkNode::new(self.user_chunk.as_ref(), self.child_bits)
-    }
-
-    #[inline]
-    pub(crate) fn map<T>(self, f: impl Fn(U) -> T) -> ChunkNode<T> {
-        ChunkNode::new(self.user_chunk.map(f), self.child_bits)
-    }
-
-    fn has_child(&self, corner_index: u8) -> bool {
-        self.child_bits.has_child(corner_index)
-    }
-
-    fn has_any_children(&self) -> bool {
-        self.child_bits.has_any_children()
+    pub(crate) fn new_without_data(state: NodeState) -> Self {
+        Self::new(None, state)
     }
 }
 
-#[derive(Clone, Copy, Default, Deserialize, Serialize)]
-pub struct ChildBits {
-    bits: u8,
+#[derive(Clone, Default, Deserialize, Serialize)]
+pub struct NodeState {
+    /// A bitmask tracking which child nodes exist.
+    child_bits: Bitset8,
+    /// A bitmask tracking other external state, like if the chunk is being rendered.
+    pub state_bits: AtomicBitset8,
 }
 
-impl ChildBits {
-    pub fn has_child(&self, corner_index: u8) -> bool {
-        self.bits & (1 << corner_index) != 0
-    }
-
-    pub fn has_any_children(&self) -> bool {
-        self.bits != 0
-    }
-
-    fn add_child(&mut self, corner_index: u8) {
-        self.bits |= 1 << corner_index;
-    }
-
-    fn remove_child(&mut self, corner_index: u8) {
-        self.bits &= !(1 << corner_index);
-    }
+#[repr(u8)]
+pub enum StateBit {
+    /// This bit is set if the chunk is currently being rendered.
+    Render = 0,
 }
 
 /// An extent that takes the same value everywhere.

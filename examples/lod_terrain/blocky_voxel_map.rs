@@ -94,15 +94,6 @@ impl VoxelMap for BlockyVoxelMap {
         &self.config
     }
 
-    fn clipmap_active_chunks(&self, lod0_center: Point3f, active_rx: impl FnMut(ClipmapSlot3)) {
-        let clip_sphere = Sphere3 {
-            center: lod0_center,
-            radius: self.config().clip_radius,
-        };
-        self.chunks
-            .clipmap_active_chunks(self.config().detail, clip_sphere, active_rx);
-    }
-
     fn clipmap_new_chunks(
         &self,
         old_clip_sphere: Sphere3,
@@ -118,14 +109,14 @@ impl VoxelMap for BlockyVoxelMap {
         );
     }
 
-    fn lod_changes(
-        &self,
-        old_clip_sphere: Sphere3,
-        new_clip_sphere: Sphere3,
-        rx: impl FnMut(LodChange3),
-    ) {
-        self.chunks
-            .lod_changes(self.config().detail, old_clip_sphere, new_clip_sphere, rx);
+    fn clipmap_render_updates(&self, new_clip_sphere: Sphere3, rx: impl FnMut(LodChange3)) {
+        self.chunks.clipmap_render_updates(
+            self.config().detail,
+            new_clip_sphere,
+            // TODO: get the actual number of cores
+            4 * self.config().chunks_processed_per_frame_per_core,
+            rx,
+        );
     }
 
     fn chunk_indexer(&self) -> &ChunkIndexer3 {

@@ -113,14 +113,9 @@ fn setup<Map: VoxelMap>(
 
     let eye = Vec3::splat(100.0);
 
-    // Queue up commands to initialize the chunk meshes to their appropriate LODs given the starting camera position.
-    let init_lod0_center = Point3f::from(eye);
-    let mut mesh_commands = MeshCommandQueue::default();
-    map.clipmap_active_chunks(init_lod0_center, |slot| mesh_commands.enqueue(slot.into()));
-    assert!(!mesh_commands.is_empty());
-    commands.insert_resource(mesh_commands);
+    commands.insert_resource(MeshCommandQueue::default());
     commands.insert_resource(MeshCommands::default());
-    commands.insert_resource(LodState::new(init_lod0_center));
+    commands.insert_resource(LodState::new(Point3f::from(eye)));
     commands.insert_resource(map);
     commands.insert_resource(ChunkMeshes::default());
 

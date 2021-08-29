@@ -1,93 +1,20 @@
+use super::StateBit;
+
 use crate::dev_prelude::*;
 
 use building_blocks_core::{prelude::*, Sphere};
 
+use float_ord::FloatOrd;
+use std::collections::BinaryHeap;
+
 impl<Ni, Nf, T, Usr, Bldr, Store> ChunkTree<Ni, T, Bldr, Store>
 where
+    Ni: Eq + std::hash::Hash, // TODO: get rid of these
     PointN<Ni>: std::hash::Hash + IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
     Bldr: ChunkTreeBuilder<Ni, T, Chunk = Usr>,
     Store: ChunkStorage<Ni, Chunk = Usr> + for<'r> IterChunkKeys<'r, Ni>,
 {
-    /// Traverses from all roots to find the currently "active" chunks. Active chunks are passed to the `active_rx` callback.
-    ///
-    /// By "active," we mean that, given the current location of `clip_sphere`:
-    ///
-    ///   - the chunk is bounded by the clip sphere determined by `clip_sphere.radius`
-    ///   - the chunk has the desired LOD for rendering
-    ///
-    /// More specifically,
-    ///
-    ///   - let `D` be the Euclidean distance from `clip_sphere.center` to the center of the chunk (in LOD0 space)
-    ///   - let `B` be the radius of the chunk's bounding sphere (in LOD0 space)
-    ///   - let `S` be the shape of the chunk (in LOD0 space)
-    ///
-    /// The chunk *can* be active iff
-    ///
-    /// ```text
-    ///     D + B < clip_sphere.radius && (D / S) > detail
-    /// ```
-    ///
-    /// where `detail` is a nonnegative constant parameter supplied by you. Along a given path from a root chunk to a leaf, the
-    /// least detailed chunk that *can* be active is used.
-    pub fn clipmap_active_chunks(
-        &self,
-        detail: f32,
-        clip_sphere: Sphere<Nf>,
-        mut active_rx: impl FnMut(ClipmapSlot<Ni>),
-    ) {
-        assert!(clip_sphere.radius > 0.0);
-
-        self.visit_root_keys(|root| {
-            self.clipmap_active_chunks_recursive(root, detail, clip_sphere, &mut active_rx);
-        });
-    }
-
-    fn clipmap_active_chunks_recursive(
-        &self,
-        node_key: ChunkKey<Ni>,
-        detail: f32,
-        clip_sphere: Sphere<Nf>,
-        active_rx: &mut impl FnMut(ClipmapSlot<Ni>),
-    ) {
-        let node_lod0_extent = self.indexer.chunk_extent_at_lower_lod(node_key, 0);
-        let node_lod0_center = node_lod0_extent.minimum + (node_lod0_extent.shape >> 1);
-        let node_lod0_radius = (node_lod0_extent.shape.max_component() >> 1) as f32 * 3f32.sqrt();
-
-        // Calculate the Euclidean distance from the focus the center of the chunk.
-        let dist = clip_sphere
-            .center
-            .l2_distance_squared(PointN::<Nf>::from(node_lod0_center))
-            .sqrt();
-
-        let node_intersects_clip_sphere = dist - node_lod0_radius < clip_sphere.radius;
-
-        // Don't consider any chunk that doesn't intersect the clip sphere.
-        if !node_intersects_clip_sphere {
-            return;
-        }
-
-        let node_bounded_by_clip_sphere = dist + node_lod0_radius < clip_sphere.radius;
-
-        // Normalize distance by chunk shape.
-        let is_active = node_key.lod == 0 || (dist / node_lod0_radius) > detail;
-
-        if is_active {
-            if node_bounded_by_clip_sphere {
-                active_rx(ClipmapSlot {
-                    key: node_key,
-                    dist,
-                    is_active: true,
-                });
-            }
-        } else {
-            // Need to split, continue by recursing on the children.
-            self.visit_child_keys(node_key, |child_key| {
-                self.clipmap_active_chunks_recursive(child_key, detail, clip_sphere, active_rx);
-            });
-        }
-    }
-
     /// Detects new chunk slots that entered `new_clip_sphere` after it moved from `old_clip_sphere`.
     ///
     /// `min_lod` will be used to stop the search earlier than LOD0 when an *active* ancestor has already entered. This
@@ -200,119 +127,180 @@ where
         }
     }
 
-    pub fn lod_changes(
+    /// Detects changes in desired sample rate for occupied chunks based on distance from an observer at the center of
+    /// `clip_sphere`.
+    ///
+    /// Along any path from a leaf chunk to the root, there must be exactly one *active* chunk. By "active," we mean that, given
+    /// the current location of `clip_sphere`:
+    ///
+    ///   - the chunk is bounded by the clip sphere determined by `clip_sphere.radius`
+    ///   - the chunk has the desired LOD for rendering
+    ///
+    /// More specifically,
+    ///
+    ///   - let `D` be the Euclidean distance from `clip_sphere.center` to the center of the chunk (in LOD0 space)
+    ///   - let `B` be the radius of the chunk's bounding sphere (in LOD0 space)
+    ///   - let `S` be the shape of the chunk (in LOD0 space)
+    ///
+    /// The chunk is a *candidate* for being active if
+    ///
+    /// ```text
+    ///     D + B < clip_sphere.radius && (D / S) > detail
+    /// ```
+    ///
+    /// where `detail` is a nonnegative constant parameter supplied by you. Along a given path from a leaf to the root, the
+    /// least detailed candidate chunk is active.
+    ///
+    /// In order to prioritize rendering chunks closer to the observer, this method will traverse the tree, starting close to
+    /// the center of `clip_sphere` and working outwards. The `ChunkTree` remembers which chunks are currently being rendered,
+    /// and if we detect a chunk that should either increase or decrease sample rate, then it should be either `Split` or
+    /// `Merge`d respectively.
+    ///
+    /// A `Merge` only activates a single new chunk, so it counts for a single "render chunk." A `Split` may activate
+    /// arbitrarily many new chunks depending on how much the detail needs to change, and it will add them up while not
+    /// exceeding a total of `max_render_chunks` for the entire function call.
+    pub fn clipmap_render_updates(
         &self,
         detail: f32,
-        old_clip_sphere: Sphere<Nf>,
-        new_clip_sphere: Sphere<Nf>,
+        clip_sphere: Sphere<Nf>,
+        max_render_chunks: usize,
         mut rx: impl FnMut(LodChange<Ni>),
     ) {
-        assert!(old_clip_sphere.radius > 0.0);
-        assert!(new_clip_sphere.radius > 0.0);
+        assert!(clip_sphere.radius > 0.0);
 
         if self.root_lod() == 0 {
             return;
         }
 
+        // A map from descendant key to ancestor key. These are descendants of a chunk that we've committed to splitting. They
+        // might also be in the candidate heap awaiting another potential split. If one gets split again, it'll need to be
+        // replaced in the map with its children. When traversal finishes, these will be committed as-is along with their split
+        // ancestor.
+        let mut committed_split_descendants = SmallKeyHashMap::new();
+
+        let mut candidate_heap = BinaryHeap::new();
+        let mut num_render_chunks = 0;
+
         self.visit_root_keys(|root| {
-            self.lod_changes_recursive(root, detail, old_clip_sphere, new_clip_sphere, &mut rx);
+            candidate_heap.push(ChunkSphere::new(clip_sphere, &self.indexer, root));
         });
-    }
 
-    fn lod_changes_recursive(
-        &self,
-        node_key: ChunkKey<Ni>, // Precondition: not LOD0.
-        detail: f32,
-        old_clip_sphere: Sphere<Nf>,
-        new_clip_sphere: Sphere<Nf>,
-        rx: &mut impl FnMut(LodChange<Ni>),
-    ) {
-        let info = ChunkSphereInfo::new(
-            &self.indexer,
-            old_clip_sphere.center,
-            new_clip_sphere.center,
-            node_key,
-        );
+        while let Some(ChunkSphere {
+            key: node_key,
+            bounding_sphere: node_sphere,
+            center_dist_to_observer,
+            closest_dist_to_observer,
+        }) = candidate_heap.pop()
+        {
+            let node_intersects_clip_sphere = closest_dist_to_observer < clip_sphere.radius;
+            if !node_intersects_clip_sphere {
+                continue;
+            }
 
-        let node_intersects_old_clip_sphere =
-            info.dist_to_old_clip_sphere - info.lod0_radius < old_clip_sphere.radius;
-        let node_intersects_new_clip_sphere =
-            info.dist_to_new_clip_sphere - info.lod0_radius < new_clip_sphere.radius;
+            let node = self.get_node(node_key).unwrap();
 
-        if !node_intersects_old_clip_sphere && !node_intersects_new_clip_sphere {
-            return;
-        }
+            let was_active = node.state.state_bits.bit_is_set(StateBit::Render as u8);
+            let is_active =
+                node_key.lod == 0 || center_dist_to_observer / node_sphere.radius > detail;
 
-        let was_active = info.old_normalized_distance() > detail;
-        let is_active = info.new_normalized_distance() > detail;
+            if is_active {
+                node.state.state_bits.set_bit(StateBit::Render as u8);
+            } else {
+                node.state.state_bits.unset_bit(StateBit::Render as u8);
+            }
 
-        match (was_active, is_active) {
-            // Old and new frames agree this chunk is not active.
-            (false, false) => {
-                // Keep looking for any active descendants.
-                if node_key.lod > 1 {
+            match (was_active, is_active) {
+                // Old and new frames agree this chunk is not active.
+                (false, false) => {
+                    // Keep looking for any active descendants.
                     self.visit_child_keys(node_key, |child_key| {
-                        self.lod_changes_recursive(
+                        candidate_heap.push(ChunkSphere::new(
+                            clip_sphere,
+                            &self.indexer,
                             child_key,
-                            detail,
-                            old_clip_sphere,
-                            new_clip_sphere,
-                            rx,
-                        );
+                        ));
                     });
                 }
+                (false, true) => {
+                    // This node just became active, and none if its ancestors were active, so it must have active descendants.
+                    // Merge those active descendants into this node.
+                    let mut old_chunks = Vec::with_capacity(8);
+                    if node_key.lod > 0 {
+                        self.visit_child_keys(node_key, |child_key| {
+                            self.visit_tree_keys(child_key, |descendant_key| {
+                                let descendant_node = self.get_node(descendant_key).unwrap();
+                                let descendant_was_active = descendant_node
+                                    .state
+                                    .state_bits
+                                    .fetch_and_unset_bit(StateBit::Render as u8);
+                                if descendant_was_active {
+                                    old_chunks.push(descendant_key);
+                                }
+                                !descendant_was_active
+                            });
+                        });
+                    }
+
+                    rx(LodChange::Merge(MergeChunks {
+                        old_chunks,
+                        new_chunk: node_key,
+                    }));
+                    num_render_chunks += 1;
+                }
+                (true, false) => {
+                    // This node just became inactive, and none of its ancestors were active, so it must have active
+                    // descendants. Split this node into active descendants.
+
+                    // This node might have already split off from some ancestor.
+                    let split_ancestor =
+                        if let Some(a) = committed_split_descendants.remove(&node_key) {
+                            num_render_chunks -= 1;
+                            a
+                        } else {
+                            node_key
+                        };
+
+                    // This chunk could potentially need to be split by multiple levels, but we need to be careful not to run
+                    // out of render chunk budget. To be fair to other chunks in the queue that need to be split, we will only
+                    // split by one layer for now, but we'll re-insert the children back into the heap so they can be split
+                    // again if we still have budget.
+                    self.visit_child_keys(node_key, |child_key| {
+                        let child_node = self.get_node(child_key).unwrap();
+                        child_node.state.state_bits.set_bit(StateBit::Render as u8);
+
+                        num_render_chunks += 1;
+                        committed_split_descendants.insert(child_key, split_ancestor);
+                        if child_key.lod > 0 {
+                            candidate_heap.push(ChunkSphere::new(
+                                clip_sphere,
+                                &self.indexer,
+                                child_key,
+                            ));
+                        }
+                    });
+                }
+                // Old and new agree this node is active. No need to merge or split. None of the descendants can merge or split
+                // either.
+                (true, true) => (),
             }
-            (false, true) => {
-                // This node just became active, and none if its ancestors were active, so it must have active descendants.
-                // Merge those active descendants into this node.
-                let mut old_chunks = Vec::with_capacity(8);
-                self.visit_child_keys(node_key, |child_key| {
-                    self.clipmap_active_chunks_recursive(
-                        child_key,
-                        detail,
-                        old_clip_sphere,
-                        &mut |active_chunk| {
-                            old_chunks.push(active_chunk.key);
-                        },
-                    );
-                });
 
-                let new_chunk_is_bounded =
-                    info.dist_to_new_clip_sphere + info.lod0_radius < new_clip_sphere.radius;
-
-                rx(LodChange::Merge(MergeChunks {
-                    old_chunks,
-                    new_chunk: node_key,
-                    new_chunk_dist: info.dist_to_new_clip_sphere,
-                    new_chunk_is_bounded,
-                }));
+            if num_render_chunks >= max_render_chunks {
+                break;
             }
-            (true, false) => {
-                // This node just became inactive, and none of its ancestors were active, so it must have active descendants.
-                // Split this node into the children.
-                let mut new_chunks = Vec::with_capacity(8);
-                self.visit_child_keys(node_key, |child_key| {
-                    self.clipmap_active_chunks_recursive(
-                        child_key,
-                        detail,
-                        new_clip_sphere,
-                        &mut |active_chunk| new_chunks.push(active_chunk.key),
-                    );
-                });
+        }
 
-                let old_chunk_was_bounded =
-                    info.dist_to_old_clip_sphere + info.lod0_radius < old_clip_sphere.radius;
+        // Reconstruct the splits and send to the receiver.
+        let mut splits = SmallKeyHashMap::new();
+        for (descendant, split_ancestor) in committed_split_descendants.into_iter() {
+            let split = splits.entry(split_ancestor).or_insert_with(|| SplitChunk {
+                old_chunk: split_ancestor,
+                new_chunks: Vec::with_capacity(8),
+            });
+            split.new_chunks.push(descendant);
+        }
 
-                rx(LodChange::Split(SplitChunk {
-                    old_chunk: node_key,
-                    old_chunk_dist: info.dist_to_old_clip_sphere,
-                    old_chunk_was_bounded,
-                    new_chunks,
-                }));
-            }
-            // Old and new agree this node is active. No need to merge or split. None of the descendants can merge or split
-            // either.
-            (true, true) => (),
+        for (_, split) in splits.into_iter() {
+            rx(LodChange::Split(split));
         }
     }
 }
@@ -405,8 +393,6 @@ pub type LodChange3 = LodChange<[i32; 3]>;
 #[derive(Clone, Debug, PartialEq)]
 pub struct SplitChunk<N> {
     pub old_chunk: ChunkKey<N>,
-    pub old_chunk_dist: f32,
-    pub old_chunk_was_bounded: bool,
     pub new_chunks: Vec<ChunkKey<N>>,
 }
 
@@ -416,6 +402,70 @@ pub struct SplitChunk<N> {
 pub struct MergeChunks<N> {
     pub old_chunks: Vec<ChunkKey<N>>,
     pub new_chunk: ChunkKey<N>,
-    pub new_chunk_dist: f32,
-    pub new_chunk_is_bounded: bool,
+}
+
+#[derive(Clone)]
+struct ChunkSphere<Ni, Nf> {
+    bounding_sphere: Sphere<Nf>,
+    key: ChunkKey<Ni>,
+    center_dist_to_observer: f32,
+    closest_dist_to_observer: f32,
+}
+
+impl<Ni, Nf> ChunkSphere<Ni, Nf>
+where
+    PointN<Ni>: IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
+    PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
+{
+    fn new(clip_sphere: Sphere<Nf>, indexer: &ChunkIndexer<Ni>, key: ChunkKey<Ni>) -> Self {
+        let bounding_sphere = chunk_lod0_bounding_sphere(indexer, key);
+
+        let center_dist_to_observer = clip_sphere
+            .center
+            .l2_distance_squared(bounding_sphere.center)
+            .sqrt();
+        // Subtract the bounding sphere's radius to estimate the distance from the observer to the *closest point* on the chunk.
+        // This should make it more fair for higher LODs.
+        let closest_dist_to_observer = center_dist_to_observer - bounding_sphere.radius;
+
+        Self {
+            bounding_sphere,
+            key,
+            center_dist_to_observer,
+            closest_dist_to_observer,
+        }
+    }
+}
+
+impl<Ni, Nf> PartialEq for ChunkSphere<Ni, Nf>
+where
+    PointN<Ni>: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.key == other.key
+    }
+}
+
+impl<Ni, Nf> Eq for ChunkSphere<Ni, Nf> where PointN<Ni>: Eq {}
+
+impl<Ni, Nf> PartialOrd for ChunkSphere<Ni, Nf>
+where
+    Ni: PartialEq,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        FloatOrd(self.closest_dist_to_observer)
+            .partial_cmp(&FloatOrd(other.closest_dist_to_observer))
+            .map(|o| o.reverse())
+    }
+}
+
+impl<Ni, Nf> Ord for ChunkSphere<Ni, Nf>
+where
+    Ni: Eq,
+{
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        FloatOrd(self.closest_dist_to_observer)
+            .cmp(&FloatOrd(other.closest_dist_to_observer))
+            .reverse()
+    }
 }

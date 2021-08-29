@@ -1,6 +1,9 @@
-use crate::{mesh_generator::MeshCommands, voxel_map::VoxelMap};
+use crate::{
+    mesh_generator::{MeshCommand, MeshCommands},
+    voxel_map::VoxelMap,
+};
 
-use building_blocks::core::prelude::*;
+use building_blocks::{core::prelude::*, storage::chunk_tree::LodChange};
 
 use bevy_utilities::bevy::{prelude::*, render::camera::Camera, utils::tracing};
 
@@ -20,12 +23,8 @@ pub fn level_of_detail_system<Map: VoxelMap>(
     voxel_map: Res<Map>,
     mut lod_state: ResMut<LodState>,
     mesh_commands: Res<MeshCommands>,
+    time: Res<Time>,
 ) {
-    if mesh_commands.is_congested() {
-        // Don't generate more events until the old ones have finished processing.
-        return;
-    }
-
     let camera_position = if let Some((_camera, tfm)) = cameras.iter().next() {
         tfm.translation
     } else {
@@ -49,15 +48,16 @@ pub fn level_of_detail_system<Map: VoxelMap>(
     {
         let _trace_guard = clip_events_span.enter();
         voxel_map.clipmap_new_chunks(old_clip_sphere, new_clip_sphere, |new_chunk| {
+            // TODO: handle min LOD entrances
             if new_chunk.is_active {
-                new_commands.push(new_chunk.into())
+                new_commands.push(MeshCommand::Create(new_chunk.key));
             }
         });
     }
     {
         let _trace_guard = lod_changes_span.enter();
-        voxel_map.lod_changes(old_clip_sphere, new_clip_sphere, |c| {
-            new_commands.push(c.into())
+        voxel_map.clipmap_render_updates(new_clip_sphere, |c| {
+            new_commands.push(MeshCommand::LodChange(c))
         });
     }
     mesh_commands.add_commands(new_commands.into_iter());

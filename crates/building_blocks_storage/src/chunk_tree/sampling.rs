@@ -118,7 +118,7 @@ where
         if node_key.lod > src_lod {
             if let Some(child_bits) = self.get_child_bits(node_key) {
                 for child_i in 0..PointN::NUM_CORNERS {
-                    if child_bits.has_child(child_i) {
+                    if child_bits.bit_is_set(child_i) {
                         let child_key = self.indexer.child_chunk_key(node_key, child_i);
 
                         // Only visit chunks overlapping src_extent and ancestors.
@@ -231,7 +231,7 @@ where
             let dst_extent = self.indexer.extent_for_chunk_with_min(node_key.minimum);
             let mut dst_chunk = make_ambient(dst_extent);
             for child_i in 0..PointN::NUM_CORNERS {
-                if child_bits.has_child(child_i) {
+                if child_bits.bit_is_set(child_i) {
                     let child_key = self.indexer.child_chunk_key(node_key, child_i);
                     self.downsample_descendants_into_new_chunks_recursive(
                         sampler,
@@ -262,7 +262,7 @@ where
     {
         if let Some(child_bits) = self.get_child_bits(dst_chunk_key) {
             for child_i in 0..PointN::NUM_CORNERS {
-                if child_bits.has_child(child_i) {
+                if child_bits.bit_is_set(child_i) {
                     let child_key = self.indexer.child_chunk_key(dst_chunk_key, child_i);
                     self.downsample_into_external(sampler, child_key, dst_array);
                 }

@@ -1,4 +1,4 @@
-use crate::voxel_map::{MapConfig, VoxelMap};
+use crate::voxel_map::VoxelMap;
 
 use bevy_utilities::{
     bevy::{
@@ -10,87 +10,26 @@ use bevy_utilities::{
 };
 use building_blocks::{mesh::*, prelude::*, storage::SmallKeyHashMap};
 
-use float_ord::FloatOrd;
 use std::cell::RefCell;
-use std::collections::BinaryHeap;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Mutex,
-};
-
-fn max_mesh_creations_per_frame(config: &MapConfig, pool: &ComputeTaskPool) -> usize {
-    config.chunks_processed_per_frame_per_core * pool.thread_num()
-}
+use std::collections::VecDeque;
+use std::sync::Mutex;
 
 #[derive(Default)]
 pub struct MeshCommands {
     /// New commands for this frame.
-    new_commands: Mutex<Vec<MeshCommandQueueElem>>,
-    is_congested: AtomicBool,
+    new_commands: Mutex<Vec<MeshCommand>>,
 }
 
 impl MeshCommands {
-    pub fn add_commands(&self, commands: impl Iterator<Item = MeshCommandQueueElem>) {
+    pub fn add_commands(&self, commands: impl Iterator<Item = MeshCommand>) {
         let mut new_commands = self.new_commands.lock().unwrap();
         new_commands.extend(commands);
-    }
-
-    pub fn is_congested(&self) -> bool {
-        self.is_congested.load(Ordering::Relaxed) || !self.new_commands.lock().unwrap().is_empty()
-    }
-
-    pub fn set_congested(&self, is_congested: bool) {
-        self.is_congested.store(is_congested, Ordering::Relaxed)
     }
 }
 
 #[derive(Default)]
 pub struct MeshCommandQueue {
-    command_queue: BinaryHeap<MeshCommandQueueElem>,
-}
-
-#[derive(Clone, PartialEq)]
-pub struct MeshCommandQueueElem {
-    dist_to_camera: FloatOrd<f32>,
-    command: MeshCommand,
-}
-
-impl Eq for MeshCommandQueueElem {}
-
-impl PartialOrd for MeshCommandQueueElem {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.dist_to_camera
-            .partial_cmp(&other.dist_to_camera)
-            .map(|o| o.reverse())
-    }
-}
-
-impl Ord for MeshCommandQueueElem {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.dist_to_camera.cmp(&other.dist_to_camera).reverse()
-    }
-}
-
-impl From<ClipmapSlot3> for MeshCommandQueueElem {
-    fn from(slot: ClipmapSlot3) -> Self {
-        Self {
-            dist_to_camera: FloatOrd(slot.dist),
-            command: MeshCommand::Create(slot.key),
-        }
-    }
-}
-
-impl From<LodChange3> for MeshCommandQueueElem {
-    fn from(c: LodChange3) -> Self {
-        let d = match &c {
-            LodChange3::Merge(m) => m.new_chunk_dist,
-            LodChange3::Split(s) => s.old_chunk_dist,
-        };
-        Self {
-            dist_to_camera: FloatOrd(d),
-            command: MeshCommand::LodChange(c),
-        }
-    }
+    command_queue: VecDeque<MeshCommand>,
 }
 
 impl MeshCommandQueue {
@@ -104,12 +43,12 @@ impl MeshCommandQueue {
             std::mem::replace(&mut *new_commands, Vec::new())
         };
         for command in new_commands.into_iter() {
-            self.command_queue.push(command);
+            self.command_queue.push_front(command);
         }
     }
 
-    pub fn enqueue(&mut self, command: MeshCommandQueueElem) {
-        self.command_queue.push(command);
+    pub fn enqueue(&mut self, command: MeshCommand) {
+        self.command_queue.push_front(command);
     }
 
     pub fn is_empty(&self) -> bool {
@@ -136,7 +75,6 @@ pub struct ChunkMeshes {
 pub fn mesh_generator_system<Map: VoxelMap>(
     mut commands: Commands,
     pool: Res<ComputeTaskPool>,
-    config: Res<MapConfig>,
     voxel_map: Res<Map>,
     local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers<Map>>,
     mesh_materials: Res<MeshMaterials>,
@@ -146,7 +84,6 @@ pub fn mesh_generator_system<Map: VoxelMap>(
     mut chunk_meshes: ResMut<ChunkMeshes>,
 ) {
     let new_chunk_meshes = apply_mesh_commands(
-        &*config,
         &*voxel_map,
         &*local_mesh_buffers,
         &*pool,
@@ -166,7 +103,6 @@ pub fn mesh_generator_system<Map: VoxelMap>(
 }
 
 fn apply_mesh_commands<Map: VoxelMap>(
-    config: &MapConfig,
     voxel_map: &Map,
     local_mesh_buffers: &ThreadLocalMeshBuffers<Map>,
     pool: &ComputeTaskPool,
@@ -178,20 +114,12 @@ fn apply_mesh_commands<Map: VoxelMap>(
     let make_mesh_span = tracing::info_span!("make_mesh");
     let make_mesh_span_ref = &make_mesh_span;
 
-    let max_meshes_per_frame = max_mesh_creations_per_frame(config, pool);
-
     mesh_commands.merge_new_commands(new_mesh_commands);
 
-    let mut num_commands_processed = 0;
-    let mut num_meshes_created = 0;
     let mut chunks_to_remove = Vec::new();
 
     let new_meshes = pool.scope(|s| {
         let mut make_mesh = |key: ChunkKey3| {
-            if chunk_meshes.entities.contains_key(&key) {
-                return 0;
-            }
-
             s.spawn(async move {
                 let _trace_guard = make_mesh_span_ref.enter();
                 let mesh_tls = local_mesh_buffers.get();
@@ -201,36 +129,29 @@ fn apply_mesh_commands<Map: VoxelMap>(
 
                 (key, voxel_map.create_mesh_for_chunk(key, &mut mesh_buffers))
             });
-
-            1
         };
 
-        while let Some(command) = mesh_commands.command_queue.pop() {
-            num_commands_processed += 1;
-            match command.command {
+        while let Some(command) = mesh_commands.command_queue.pop_back() {
+            match command {
                 MeshCommand::Create(key) => {
-                    num_meshes_created += make_mesh(key);
+                    // make_mesh(key);
                 }
                 MeshCommand::LodChange(update) => match update {
                     LodChange3::Split(split) => {
                         chunks_to_remove.push(split.old_chunk);
                         for &key in split.new_chunks.iter() {
-                            num_meshes_created += make_mesh(key)
+                            make_mesh(key);
                         }
                     }
                     LodChange3::Merge(merge) => {
                         for &key in merge.old_chunks.iter() {
                             chunks_to_remove.push(key);
                         }
-
-                        if merge.new_chunk_is_bounded {
-                            num_meshes_created += make_mesh(merge.new_chunk)
-                        }
+                        // if merge.new_chunk_is_bounded {
+                        make_mesh(merge.new_chunk);
+                        // }
                     }
                 },
-            }
-            if num_meshes_created >= max_meshes_per_frame {
-                break;
             }
         }
     });
@@ -240,8 +161,6 @@ fn apply_mesh_commands<Map: VoxelMap>(
             commands.entity(entity).despawn();
         }
     }
-
-    new_mesh_commands.set_congested(!mesh_commands.command_queue.is_empty());
 
     new_meshes
 }

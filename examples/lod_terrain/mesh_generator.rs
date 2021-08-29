@@ -11,7 +11,6 @@ use bevy_utilities::{
 use building_blocks::{mesh::*, prelude::*, storage::SmallKeyHashMap};
 
 use std::cell::RefCell;
-use std::collections::VecDeque;
 use std::sync::Mutex;
 
 #[derive(Default)]
@@ -24,35 +23,6 @@ impl MeshCommands {
     pub fn add_commands(&self, commands: impl Iterator<Item = MeshCommand>) {
         let mut new_commands = self.new_commands.lock().unwrap();
         new_commands.extend(commands);
-    }
-}
-
-#[derive(Default)]
-pub struct MeshCommandQueue {
-    command_queue: VecDeque<MeshCommand>,
-}
-
-impl MeshCommandQueue {
-    pub fn merge_new_commands(&mut self, new_commands: &MeshCommands) {
-        if !self.is_empty() {
-            return;
-        }
-
-        let new_commands = {
-            let mut new_commands = new_commands.new_commands.lock().unwrap();
-            std::mem::replace(&mut *new_commands, Vec::new())
-        };
-        for command in new_commands.into_iter() {
-            self.command_queue.push_front(command);
-        }
-    }
-
-    pub fn enqueue(&mut self, command: MeshCommand) {
-        self.command_queue.push_front(command);
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.command_queue.is_empty()
     }
 }
 
@@ -78,8 +48,7 @@ pub fn mesh_generator_system<Map: VoxelMap>(
     voxel_map: Res<Map>,
     local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers<Map>>,
     mesh_materials: Res<MeshMaterials>,
-    new_mesh_commands: Res<MeshCommands>,
-    mut mesh_command_queue: ResMut<MeshCommandQueue>,
+    mesh_command_queue: Res<MeshCommands>,
     mut mesh_assets: ResMut<Assets<Mesh>>,
     mut chunk_meshes: ResMut<ChunkMeshes>,
 ) {
@@ -87,8 +56,7 @@ pub fn mesh_generator_system<Map: VoxelMap>(
         &*voxel_map,
         &*local_mesh_buffers,
         &*pool,
-        &*new_mesh_commands,
-        &mut *mesh_command_queue,
+        &*mesh_command_queue,
         &mut *chunk_meshes,
         &mut commands,
     );
@@ -106,15 +74,12 @@ fn apply_mesh_commands<Map: VoxelMap>(
     voxel_map: &Map,
     local_mesh_buffers: &ThreadLocalMeshBuffers<Map>,
     pool: &ComputeTaskPool,
-    new_mesh_commands: &MeshCommands,
-    mesh_commands: &mut MeshCommandQueue,
+    mesh_commands: &MeshCommands,
     chunk_meshes: &mut ChunkMeshes,
     commands: &mut Commands,
 ) -> Vec<(ChunkKey3, Option<PosNormMesh>)> {
     let make_mesh_span = tracing::info_span!("make_mesh");
     let make_mesh_span_ref = &make_mesh_span;
-
-    mesh_commands.merge_new_commands(new_mesh_commands);
 
     let mut chunks_to_remove = Vec::new();
 
@@ -131,7 +96,10 @@ fn apply_mesh_commands<Map: VoxelMap>(
             });
         };
 
-        while let Some(command) = mesh_commands.command_queue.pop_back() {
+        let new_commands =
+            std::mem::replace(&mut *mesh_commands.new_commands.lock().unwrap(), Vec::new());
+
+        for command in new_commands.into_iter() {
             match command {
                 MeshCommand::Create(key) => {
                     // make_mesh(key);

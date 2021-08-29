@@ -3,7 +3,7 @@ use crate::{
     voxel_map::VoxelMap,
 };
 
-use building_blocks::{core::prelude::*, storage::chunk_tree::LodChange};
+use building_blocks::core::prelude::*;
 
 use bevy_utilities::bevy::{prelude::*, render::camera::Camera, utils::tracing};
 
@@ -23,7 +23,6 @@ pub fn level_of_detail_system<Map: VoxelMap>(
     voxel_map: Res<Map>,
     mut lod_state: ResMut<LodState>,
     mesh_commands: Res<MeshCommands>,
-    time: Res<Time>,
 ) {
     let camera_position = if let Some((_camera, tfm)) = cameras.iter().next() {
         tfm.translation

@@ -6,8 +6,7 @@ mod voxel_map;
 
 use level_of_detail::{level_of_detail_system, LodState};
 use mesh_generator::{
-    mesh_deleter_system, mesh_generator_system, ChunkMeshes, MeshCommandQueue, MeshCommands,
-    MeshMaterials,
+    mesh_deleter_system, mesh_generator_system, ChunkMeshes, MeshCommands, MeshMaterials,
 };
 use voxel_map::{MapConfig, VoxelMap};
 
@@ -113,7 +112,6 @@ fn setup<Map: VoxelMap>(
 
     let eye = Vec3::splat(100.0);
 
-    commands.insert_resource(MeshCommandQueue::default());
     commands.insert_resource(MeshCommands::default());
     commands.insert_resource(LodState::new(Point3f::from(eye)));
     commands.insert_resource(map);

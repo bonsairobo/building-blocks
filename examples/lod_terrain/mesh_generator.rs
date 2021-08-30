@@ -1,10 +1,10 @@
-use crate::voxel_map::VoxelMap;
+use crate::{
+    voxel_map::{MapConfig, VoxelMap},
+    ClipSpheres,
+};
 
 use bevy_utilities::{
-    bevy::{
-        asset::prelude::*, ecs, prelude::*, render::camera::Camera, tasks::ComputeTaskPool,
-        utils::tracing,
-    },
+    bevy::{asset::prelude::*, ecs, prelude::*, tasks::ComputeTaskPool, utils::tracing},
     mesh::create_mesh_bundle,
     thread_local_resource::ThreadLocalResource,
 };
@@ -166,27 +166,18 @@ fn spawn_mesh_entities(
 }
 
 /// Deletes meshes that aren't bounded by the clip sphere.
-pub fn mesh_deleter_system<Map: VoxelMap>(
+pub fn mesh_deleter_system(
     mut commands: Commands,
-    cameras: Query<(&Camera, &Transform)>,
-    voxel_map: Res<Map>,
+    config: Res<MapConfig>,
+    clip_spheres: Res<ClipSpheres>,
     mut chunk_meshes: ResMut<ChunkMeshes>,
 ) {
-    let camera_position = if let Some((_camera, tfm)) = cameras.iter().next() {
-        tfm.translation
-    } else {
-        return;
-    };
-
-    let clip_sphere = Sphere3 {
-        center: Point3f::from(camera_position),
-        radius: voxel_map.config().clip_radius,
-    };
+    let indexer = ChunkIndexer3::new(config.chunk_shape());
 
     let mut chunks_to_remove = Vec::new();
     for &chunk_key in chunk_meshes.entities.keys() {
-        let chunk_sphere = chunk_lod0_bounding_sphere(voxel_map.chunk_indexer(), chunk_key);
-        if !clip_sphere.contains(&chunk_sphere) {
+        let chunk_sphere = chunk_lod0_bounding_sphere(&indexer, chunk_key);
+        if !clip_spheres.new_sphere.contains(&chunk_sphere) {
             chunks_to_remove.push(chunk_key);
         }
     }

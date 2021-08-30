@@ -78,23 +78,6 @@ impl VoxelMap for SmoothVoxelMap {
         &self.config
     }
 
-    fn clipmap_new_chunks(
-        &self,
-        old_clip_sphere: Sphere3,
-        new_clip_sphere: Sphere3,
-        rx: impl FnMut(ClipmapSlot3),
-    ) {
-        clipmap_new_chunks(
-            &self.chunks.indexer,
-            self.chunks.root_lod(),
-            self.config().min_enter_lod,
-            self.config().detail,
-            old_clip_sphere,
-            new_clip_sphere,
-            rx,
-        );
-    }
-
     fn clipmap_render_updates(&self, new_clip_sphere: Sphere3, rx: impl FnMut(LodChange3)) {
         self.chunks.clipmap_render_updates(
             self.config().detail,

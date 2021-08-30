@@ -113,9 +113,11 @@ impl VoxelMap for BlockyVoxelMap {
         new_clip_sphere: Sphere3,
         rx: impl FnMut(ClipmapSlot3),
     ) {
-        self.chunks.clipmap_new_chunks(
-            self.config().detail,
+        clipmap_new_chunks(
+            &self.chunks.indexer,
+            self.chunks.root_lod(),
             self.config().min_enter_lod,
+            self.config().detail,
             old_clip_sphere,
             new_clip_sphere,
             rx,

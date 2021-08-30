@@ -818,6 +818,11 @@ impl<U> ChunkNode<U> {
 pub struct NodeState {
     /// A bitmask tracking which child nodes exist.
     child_bits: Bitset8,
+    /// A bitmask tracking which children have been loaded.
+    ///
+    /// A node may only be a downsample target if all of its children are loaded. Leaf nodes may only be missing data if these
+    /// bits are not all set.
+    pub child_loaded_bits: Bitset8,
     /// A bitmask tracking other external state, like if the chunk is being rendered.
     pub state_bits: AtomicBitset8,
 }

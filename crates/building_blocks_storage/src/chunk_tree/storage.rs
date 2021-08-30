@@ -19,6 +19,9 @@ pub trait ChunkStorage<N> {
     /// The raw representation of a chunk while in storage. Might be compressed in some implementations.
     type ChunkRepr;
 
+    /// Returns true iff storage contains chunk data (not just a node) for `key`.
+    fn contains_chunk(&self, key: PointN<N>) -> bool;
+
     /// Borrow the node at `key`.
     fn get_node(&self, key: PointN<N>) -> Option<&ChunkNode<Self::Chunk>>;
 
@@ -51,7 +54,7 @@ pub trait ChunkStorage<N> {
     /// Removes and returns the raw node at `key`.
     fn pop_raw_node(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::ChunkRepr>>;
 
-    /// Overwrite the chunk at `key` with `chunk`. Drops the previous value. Any previous child mask is preserved.
+    /// Overwrite the chunk at `key` with `chunk`. Drops the previous value. Any previous `NodeState` is preserved.
     fn write_chunk(&mut self, key: PointN<N>, chunk: Self::Chunk);
 
     fn get_node_state(&self, key: PointN<N>) -> Option<&NodeState>;

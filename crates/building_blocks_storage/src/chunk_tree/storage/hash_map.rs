@@ -15,6 +15,13 @@ where
     type ChunkRepr = Ch;
 
     #[inline]
+    fn contains_chunk(&self, key: PointN<N>) -> bool {
+        self.get(&key)
+            .map(|node| node.user_chunk.is_some())
+            .unwrap_or(false)
+    }
+
+    #[inline]
     fn get_node(&self, key: PointN<N>) -> Option<&ChunkNode<Self::Chunk>> {
         self.get(&key)
     }

@@ -350,6 +350,10 @@ impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
     Store: ChunkStorage<N, Chunk = Usr>,
 {
+    pub fn contains_chunk(&self, key: ChunkKey<N>) -> bool {
+        self.lod_storage(key.lod).contains_chunk(key.minimum)
+    }
+
     pub fn get_node(&self, key: ChunkKey<N>) -> Option<&ChunkNode<Usr>> {
         self.lod_storage(key.lod).get_node(key.minimum)
     }
@@ -360,6 +364,11 @@ where
 
     pub fn get_node_state(&self, key: ChunkKey<N>) -> Option<&NodeState> {
         self.lod_storage(key.lod).get_node_state(key.minimum)
+    }
+
+    pub fn get_mut_node_state(&mut self, key: ChunkKey<N>) -> Option<(&mut NodeState, bool)> {
+        self.lod_storage_mut(key.lod)
+            .get_mut_node_state(key.minimum)
     }
 
     fn write_node(&mut self, key: ChunkKey<N>, node: ChunkNode<Usr>) {
@@ -729,7 +738,6 @@ where
     /// Remove the chunk at `key` and all descendants. All chunks will be given to the `chunk_rx` callback.
     ///
     /// Raw chunks are given to `chunk_rx` to avoid any decompression that would happen otherwise.
-    #[inline]
     pub fn drain_tree(
         &mut self,
         key: ChunkKey<N>,
@@ -822,7 +830,7 @@ pub struct NodeState {
     ///
     /// A node may only be a downsample target if all of its children are loaded. Leaf nodes may only be missing data if these
     /// bits are not all set.
-    pub child_loaded_bits: Bitset8,
+    pub child_needs_loading_bits: Bitset8,
     /// A bitmask tracking other external state, like if the chunk is being rendered.
     pub state_bits: AtomicBitset8,
 }

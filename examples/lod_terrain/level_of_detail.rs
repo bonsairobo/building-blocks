@@ -1,8 +1,4 @@
-use crate::{
-    mesh_generator::{MeshCommand, MeshCommands},
-    voxel_map::VoxelMap,
-    ClipSpheres,
-};
+use crate::{mesh_generator::MeshCommands, voxel_map::VoxelMap, ClipSpheres};
 
 use bevy_utilities::bevy::{prelude::*, utils::tracing};
 
@@ -16,9 +12,7 @@ pub fn level_of_detail_system<Map: VoxelMap>(
     let mut new_commands = Vec::new();
     {
         let _trace_guard = lod_changes_span.enter();
-        voxel_map.clipmap_render_updates(clip_spheres.new_sphere, |c| {
-            new_commands.push(MeshCommand::LodChange(c))
-        });
+        voxel_map.clipmap_render_updates(clip_spheres.new_sphere, |c| new_commands.push(c));
     }
     mesh_commands.add_commands(new_commands.into_iter());
 }

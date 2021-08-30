@@ -1,4 +1,5 @@
 mod blocky_voxel_map;
+mod chunk_generator;
 mod clip_spheres;
 mod level_of_detail;
 mod mesh_generator;
@@ -6,6 +7,7 @@ mod new_chunk_detector;
 mod smooth_voxel_map;
 mod voxel_map;
 
+use chunk_generator::{chunk_generator_system, new_chunk_filler_system, GenerateCommands};
 use clip_spheres::{clip_sphere_system, ClipSpheres};
 use level_of_detail::level_of_detail_system;
 use mesh_generator::{
@@ -82,6 +84,8 @@ fn run_example<Map: VoxelMap>() {
         .add_startup_system(setup::<Map>.system())
         .add_system(clip_sphere_system.system())
         .add_system(detect_new_chunks_system.system())
+        .add_system(new_chunk_filler_system::<Map>.system())
+        .add_system(chunk_generator_system::<Map>.system())
         .add_system(level_of_detail_system::<Map>.system())
         .add_system(mesh_deleter_system.system().label("mesh_deleter"))
         .add_system(mesh_generator_system::<Map>.system().after("mesh_deleter"))
@@ -120,6 +124,7 @@ fn setup<Map: VoxelMap>(
     let eye = Vec3::splat(100.0);
 
     commands.insert_resource(MeshCommands::default());
+    commands.insert_resource(GenerateCommands::default());
     commands.insert_resource(ClipSpheres::new(Sphere3 {
         center: Point3f::from(eye),
         radius: map_config.clip_radius,

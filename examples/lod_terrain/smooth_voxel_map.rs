@@ -1,6 +1,9 @@
 use crate::voxel_map::{MapConfig, NoiseConfig, VoxelMap};
 
-use bevy_utilities::{bevy::tasks::ComputeTaskPool, noise::generate_noise_chunks3};
+use bevy_utilities::{
+    bevy::tasks::ComputeTaskPool,
+    noise::{generate_noise_chunk3, generate_noise_chunks3},
+};
 use building_blocks::{
     mesh::{padded_surface_nets_chunk_extent, surface_nets, PosNormMesh, SurfaceNetsBuffer},
     prelude::*,
@@ -59,6 +62,16 @@ impl VoxelMap for SmoothVoxelMap {
         }
 
         Self { chunks, config }
+    }
+
+    fn generate_lod0_chunk(
+        extent: Extent3i,
+        freq: f32,
+        scale: f32,
+        seed: i32,
+        octaves: u8,
+    ) -> Option<Self::Chunk> {
+        generate_noise_chunk3(extent, freq, scale, seed, octaves, true)
     }
 
     fn downsample_descendants_into_new_chunks(
@@ -152,6 +165,10 @@ impl VoxelMap for SmoothVoxelMap {
         } else {
             Some(mesh_buffer.mesh.clone())
         }
+    }
+
+    fn mark_node_for_loading_if_vacant(&mut self, key: ChunkKey3) {
+        self.chunks.clipmap_mark_node_for_loading_if_vacant(key);
     }
 }
 

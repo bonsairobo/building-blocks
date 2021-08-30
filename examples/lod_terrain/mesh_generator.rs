@@ -16,20 +16,14 @@ use std::sync::Mutex;
 #[derive(Default)]
 pub struct MeshCommands {
     /// New commands for this frame.
-    new_commands: Mutex<Vec<MeshCommand>>,
+    new_commands: Mutex<Vec<LodChange3>>,
 }
 
 impl MeshCommands {
-    pub fn add_commands(&self, commands: impl Iterator<Item = MeshCommand>) {
+    pub fn add_commands(&self, commands: impl Iterator<Item = LodChange3>) {
         let mut new_commands = self.new_commands.lock().unwrap();
         new_commands.extend(commands);
     }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum MeshCommand {
-    Create(ChunkKey3),
-    LodChange(LodChange3),
 }
 
 #[derive(Default)]
@@ -96,30 +90,27 @@ fn apply_mesh_commands<Map: VoxelMap>(
             });
         };
 
-        let new_commands =
-            std::mem::replace(&mut *mesh_commands.new_commands.lock().unwrap(), Vec::new());
+        let new_commands: Vec<_> = mesh_commands
+            .new_commands
+            .lock()
+            .unwrap()
+            .drain(..)
+            .collect();
 
         for command in new_commands.into_iter() {
             match command {
-                MeshCommand::Create(key) => {
-                    // make_mesh(key);
+                LodChange3::Split(split) => {
+                    chunks_to_remove.push(split.old_chunk);
+                    for &key in split.new_chunks.iter() {
+                        make_mesh(key);
+                    }
                 }
-                MeshCommand::LodChange(update) => match update {
-                    LodChange3::Split(split) => {
-                        chunks_to_remove.push(split.old_chunk);
-                        for &key in split.new_chunks.iter() {
-                            make_mesh(key);
-                        }
+                LodChange3::Merge(merge) => {
+                    for &key in merge.old_chunks.iter() {
+                        chunks_to_remove.push(key);
                     }
-                    LodChange3::Merge(merge) => {
-                        for &key in merge.old_chunks.iter() {
-                            chunks_to_remove.push(key);
-                        }
-                        // if merge.new_chunk_is_bounded {
-                        make_mesh(merge.new_chunk);
-                        // }
-                    }
-                },
+                    make_mesh(merge.new_chunk);
+                }
             }
         }
     });

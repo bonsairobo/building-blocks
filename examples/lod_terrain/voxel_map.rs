@@ -4,11 +4,18 @@ use building_blocks::{mesh::PosNormMesh, prelude::*};
 use serde::{Deserialize, Serialize};
 
 pub trait VoxelMap: ecs::component::Component {
+    type Chunk: Send;
     type MeshBuffers: Send;
 
-    type Chunk: Send;
-
     fn generate_lod0(pool: &ComputeTaskPool, config: MapConfig) -> Self;
+
+    fn generate_lod0_chunk(
+        extent: Extent3i,
+        freq: f32,
+        scale: f32,
+        seed: i32,
+        octaves: u8,
+    ) -> Option<Self::Chunk>;
 
     fn downsample_descendants_into_new_chunks(
         &self,
@@ -35,6 +42,26 @@ pub trait VoxelMap: ecs::component::Component {
         key: ChunkKey3,
         mesh_buffers: &mut Self::MeshBuffers,
     ) -> Option<PosNormMesh>;
+
+    fn mark_node_for_loading_if_vacant(&mut self, key: ChunkKey3);
+
+    fn generate_lod0_chunk_with_config(
+        config: MapConfig,
+        chunk_min: Point3i,
+    ) -> Option<Self::Chunk> {
+        let chunk_shape = config.chunk_shape();
+
+        let NoiseConfig {
+            freq,
+            scale,
+            seed,
+            octaves,
+        } = config.noise;
+
+        let chunk_extent = Extent3i::from_min_and_shape(chunk_min, chunk_shape);
+
+        Self::generate_lod0_chunk(chunk_extent, freq, scale, seed, octaves)
+    }
 
     fn downsample_all(&mut self, pool: &ComputeTaskPool) {
         let self_ref = &*self;

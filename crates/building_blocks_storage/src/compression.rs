@@ -88,6 +88,13 @@ pub enum MaybeCompressed<D, C> {
 }
 
 impl<D, C> MaybeCompressed<D, C> {
+    pub fn as_ref(&self) -> MaybeCompressed<&D, &C> {
+        match self {
+            MaybeCompressed::Compressed(c) => MaybeCompressed::Compressed(&c),
+            MaybeCompressed::Decompressed(d) => MaybeCompressed::Decompressed(&d),
+        }
+    }
+
     pub fn unwrap_decompressed(self) -> D {
         match self {
             MaybeCompressed::Compressed(_) => panic!("Must be decompressed"),

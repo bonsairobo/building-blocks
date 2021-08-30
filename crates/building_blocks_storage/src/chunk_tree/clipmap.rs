@@ -14,6 +14,47 @@ where
     Bldr: ChunkTreeBuilder<Ni, T, Chunk = Usr>,
     Store: ChunkStorage<Ni, Chunk = Usr> + for<'r> IterChunkKeys<'r, Ni>,
 {
+    /// Sets all of the `child_needs_loading` bits on the node at `key`, creating a new node if one does not exist.
+    ///
+    /// Ancestor nodes will not be touched, so it is advisable to start searching at `key` when finding chunks to load.
+    pub fn clipmap_mark_node_for_loading_if_vacant(&mut self, key: ChunkKey<Ni>) {
+        let mut already_exists = true;
+        let state =
+            self.storages[key.lod as usize].get_mut_node_state_or_insert_with(key.minimum, || {
+                already_exists = false;
+                ChunkNode::new_empty()
+            });
+
+        if already_exists {
+            return;
+        }
+
+        state.child_needs_loading_bits.set_all();
+
+        self.link_node(key);
+    }
+
+    /// Inserts `chunk` at `key` and unsets the `child_needs_loading` bit on the parent node. Ancestor nodes also have their
+    /// bits unset if applicable.
+    pub fn clipmap_write_loaded_chunk(&mut self, mut key: ChunkKey<Ni>, chunk: Option<Usr>) {
+        if let Some(chunk) = chunk {
+            self.write_chunk(key, chunk);
+        }
+
+        while key.lod < self.root_lod() {
+            let parent = self.indexer.parent_chunk_key(key);
+            let corner_index = self.indexer.corner_index(key.minimum);
+            let (parent_state, _) = self.get_mut_node_state(parent).unwrap();
+            parent_state
+                .child_needs_loading_bits
+                .unset_bit(corner_index);
+            if !parent_state.child_needs_loading_bits.all() {
+                break;
+            }
+            key = parent;
+        }
+    }
+
     /// Detects changes in desired sample rate for occupied chunks based on distance from an observer at the center of
     /// `clip_sphere`.
     ///

@@ -293,7 +293,17 @@ where
     Compr::Data: Send,
 {
     type Chunk = Compr::Data;
-    type ChunkRepr = MaybeCompressed<Compr::Data, Compressed<Compr>>;
+    type ChunkRepr = MaybeCompressed<Self::Chunk, Compressed<Compr>>;
+
+    #[inline]
+    fn contains_chunk(&self, key: PointN<N>) -> bool {
+        self.get_without_caching_and_skip_thread_local(key)
+            .map(|e| match e {
+                MaybeCompressed::Compressed(n) => n.user_chunk.is_some(),
+                MaybeCompressed::Decompressed(n) => n.user_chunk.is_some(),
+            })
+            .unwrap_or(false)
+    }
 
     /// Borrow the node at `key`.
     fn get_node(&self, key: PointN<N>) -> Option<&ChunkNode<Self::Chunk>> {

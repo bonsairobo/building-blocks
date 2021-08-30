@@ -1,11 +1,10 @@
-mod blocky_voxel_map;
 mod chunk_generator;
 mod clip_spheres;
 mod level_of_detail;
 mod mesh_generator;
 mod new_chunk_detector;
-mod smooth_voxel_map;
 mod voxel_map;
+mod voxel_mesh;
 
 use chunk_generator::{chunk_generator_system, new_chunk_filler_system, GenerateCommands};
 use clip_spheres::{clip_sphere_system, ClipSpheres};
@@ -15,6 +14,7 @@ use mesh_generator::{
 };
 use new_chunk_detector::detect_new_chunks_system;
 use voxel_map::{MapConfig, VoxelMap};
+use voxel_mesh::{BlockyMesh, SmoothMesh, VoxelMesh};
 
 use building_blocks::core::prelude::*;
 
@@ -39,18 +39,12 @@ enum Options {
 
 fn main() {
     match Options::from_args() {
-        Options::Blocky => {
-            use blocky_voxel_map::BlockyVoxelMap;
-            run_example::<BlockyVoxelMap>()
-        }
-        Options::Smooth => {
-            use smooth_voxel_map::SmoothVoxelMap;
-            run_example::<SmoothVoxelMap>()
-        }
+        Options::Blocky => run_example::<BlockyMesh>(),
+        Options::Smooth => run_example::<SmoothMesh>(),
     }
 }
 
-fn run_example<Map: VoxelMap>() {
+fn run_example<Mesh: VoxelMesh>() {
     let map_config = MapConfig::read_file("lod_terrain/map.ron").unwrap();
 
     let window_desc = WindowDescriptor {
@@ -81,14 +75,14 @@ fn run_example<Map: VoxelMap>() {
         .add_plugin(WireframePlugin)
         .add_plugin(LookTransformPlugin)
         .add_plugin(FpsCameraPlugin)
-        .add_startup_system(setup::<Map>.system())
+        .add_startup_system(setup.system())
         .add_system(clip_sphere_system.system())
         .add_system(detect_new_chunks_system.system())
-        .add_system(new_chunk_filler_system::<Map>.system())
-        .add_system(chunk_generator_system::<Map>.system())
-        .add_system(level_of_detail_system::<Map>.system())
+        .add_system(new_chunk_filler_system.system())
+        .add_system(chunk_generator_system.system())
+        .add_system(level_of_detail_system.system())
         .add_system(mesh_deleter_system.system().label("mesh_deleter"))
-        .add_system(mesh_generator_system::<Map>.system().after("mesh_deleter"))
+        .add_system(mesh_generator_system::<Mesh>.system().after("mesh_deleter"))
         .add_system(movement_sensitivity.system())
         .run();
 }
@@ -106,7 +100,7 @@ fn movement_sensitivity(
     }
 }
 
-fn setup<Map: VoxelMap>(
+fn setup(
     map_config: Res<MapConfig>,
     mut commands: Commands,
     mut wireframe_config: ResMut<WireframeConfig>,
@@ -118,7 +112,7 @@ fn setup<Map: VoxelMap>(
     }
 
     // Generate a voxel map from noise.
-    let mut map = Map::generate_lod0(&*pool, *map_config);
+    let mut map = VoxelMap::generate_lod0(&*pool, *map_config);
     map.downsample_all(&*pool);
 
     let eye = Vec3::splat(100.0);

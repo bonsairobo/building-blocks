@@ -3,8 +3,8 @@ use crate::{mesh_generator::MeshCommands, voxel_map::VoxelMap, ClipSpheres};
 use bevy_utilities::bevy::{prelude::*, utils::tracing};
 
 /// Adjusts the sample rate of voxels depending on their distance from the camera.
-pub fn level_of_detail_system<Map: VoxelMap>(
-    voxel_map: Res<Map>,
+pub fn level_of_detail_system(
+    voxel_map: Res<VoxelMap>,
     clip_spheres: Res<ClipSpheres>,
     mesh_commands: Res<MeshCommands>,
 ) {

@@ -1,54 +1,79 @@
-use bevy_utilities::bevy::{ecs, tasks::ComputeTaskPool};
-use building_blocks::{mesh::PosNormMesh, prelude::*};
+use bevy_utilities::{
+    bevy::tasks::ComputeTaskPool,
+    noise::{generate_noise_chunk3, generate_noise_chunks3},
+};
+use building_blocks::{
+    mesh::{IsOpaque, MergeVoxel},
+    prelude::*,
+};
 
 use serde::{Deserialize, Serialize};
 
-pub trait VoxelMap: ecs::component::Component {
-    type Chunk: Send;
-    type MeshBuffers: Send;
+pub struct VoxelMap {
+    pub config: MapConfig,
+    pub chunks: HashMapChunkTree3x1<Voxel>,
+}
 
-    fn generate_lod0(pool: &ComputeTaskPool, config: MapConfig) -> Self;
+impl VoxelMap {
+    pub fn generate_lod0(pool: &ComputeTaskPool, config: MapConfig) -> Self {
+        let MapConfig {
+            chunk_exponent,
+            num_lods,
+            world_chunks_extent,
+            noise:
+                NoiseConfig {
+                    freq,
+                    scale,
+                    seed,
+                    octaves,
+                },
+            ..
+        } = config;
 
-    fn generate_lod0_chunk(
-        extent: Extent3i,
-        freq: f32,
-        scale: f32,
-        seed: i32,
-        octaves: u8,
-    ) -> Option<Self::Chunk>;
+        let chunk_shape = Point3i::fill(1 << chunk_exponent);
 
-    fn downsample_descendants_into_new_chunks(
-        &self,
-        node_key: ChunkKey3,
-        chunk_rx: impl FnMut(ChunkKey3, Self::Chunk),
-    );
+        let noise_chunks = generate_noise_chunks3(
+            pool,
+            world_chunks_extent,
+            chunk_shape,
+            freq,
+            scale,
+            seed,
+            octaves,
+            true,
+        );
 
-    fn write_chunk(&mut self, key: ChunkKey3, chunk: Self::Chunk);
+        let root_lod = num_lods - 1;
+        let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
+            chunk_shape,
+            ambient_value: Voxel::EMPTY,
+            root_lod,
+        });
+        let mut chunks = builder.build_with_hash_map_storage();
 
-    fn config(&self) -> &MapConfig;
+        for (chunk_min, noise) in noise_chunks.into_iter() {
+            chunks.write_chunk(ChunkKey::new(0, chunk_min), unsafe {
+                // SAFE: Voxel is a transparent wrapper of f32
+                std::mem::transmute(noise)
+            });
+        }
 
-    fn clipmap_render_updates(&self, new_clip_sphere: Sphere3, rx: impl FnMut(LodChange3));
+        Self { chunks, config }
+    }
 
-    fn chunk_indexer(&self) -> &ChunkIndexer3;
+    pub fn clipmap_render_updates(&self, new_clip_sphere: Sphere3, rx: impl FnMut(LodChange3)) {
+        self.chunks.clipmap_render_updates(
+            self.config.detail,
+            new_clip_sphere,
+            self.config.chunks_processed_per_frame,
+            rx,
+        );
+    }
 
-    fn root_lod(&self) -> u8;
-
-    fn visit_root_keys(&self, visitor: impl FnMut(ChunkKey3));
-
-    fn init_mesh_buffers(&self) -> Self::MeshBuffers;
-
-    fn create_mesh_for_chunk(
-        &self,
-        key: ChunkKey3,
-        mesh_buffers: &mut Self::MeshBuffers,
-    ) -> Option<PosNormMesh>;
-
-    fn mark_node_for_loading_if_vacant(&mut self, key: ChunkKey3);
-
-    fn generate_lod0_chunk_with_config(
+    pub fn generate_lod0_chunk_with_config(
         config: MapConfig,
         chunk_min: Point3i,
-    ) -> Option<Self::Chunk> {
+    ) -> Option<Array3x1<Voxel>> {
         let chunk_shape = config.chunk_shape();
 
         let NoiseConfig {
@@ -60,25 +85,38 @@ pub trait VoxelMap: ecs::component::Component {
 
         let chunk_extent = Extent3i::from_min_and_shape(chunk_min, chunk_shape);
 
-        Self::generate_lod0_chunk(chunk_extent, freq, scale, seed, octaves)
+        unsafe {
+            // SAFE: Voxel is a transparent wrapper of f32
+            std::mem::transmute(generate_noise_chunk3(
+                chunk_extent,
+                freq,
+                scale,
+                seed,
+                octaves,
+                true,
+            ))
+        }
     }
 
-    fn downsample_all(&mut self, pool: &ComputeTaskPool) {
-        let self_ref = &*self;
+    pub fn downsample_all(&mut self, pool: &ComputeTaskPool) {
+        let chunks = &self.chunks;
         let new_chunks = pool.scope(|scope| {
-            self_ref.visit_root_keys(|root| {
+            chunks.visit_root_keys(|root| {
                 scope.spawn(async move {
                     let mut downsampled_chunks = Vec::new();
-                    self_ref.downsample_descendants_into_new_chunks(root, |key, new_chunk| {
-                        downsampled_chunks.push((key, new_chunk))
-                    });
+                    chunks.downsample_descendants_into_new_chunks(
+                        &SdfMeanDownsampler,
+                        root,
+                        0,
+                        |key, new_chunk| downsampled_chunks.push((key, new_chunk)),
+                    );
                     downsampled_chunks
                 });
             });
         });
         for root_new_chunks in new_chunks.into_iter() {
             for (key, new_chunk) in root_new_chunks.into_iter() {
-                self.write_chunk(key, new_chunk);
+                self.chunks.write_chunk(key, new_chunk);
             }
         }
     }
@@ -121,4 +159,50 @@ pub struct NoiseConfig {
     pub scale: f32,
     pub seed: i32,
     pub octaves: u8,
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct Voxel(pub f32);
+
+impl Voxel {
+    pub const EMPTY: Self = Self(1.0);
+    pub const FILLED: Self = Self(-1.0);
+}
+
+impl IsEmpty for Voxel {
+    fn is_empty(&self) -> bool {
+        self.0 >= 0.0
+    }
+}
+
+impl IsOpaque for Voxel {
+    fn is_opaque(&self) -> bool {
+        true
+    }
+}
+
+impl MergeVoxel for Voxel {
+    type VoxelValue = bool;
+
+    fn voxel_merge_value(&self) -> Self::VoxelValue {
+        self.0 < 0.0
+    }
+}
+
+impl From<Voxel> for f32 {
+    fn from(v: Voxel) -> Self {
+        v.0
+    }
+}
+
+impl From<f32> for Voxel {
+    fn from(x: f32) -> Self {
+        Voxel(x)
+    }
+}
+
+impl SignedDistance for Voxel {
+    fn is_negative(&self) -> bool {
+        self.0.is_negative()
+    }
 }

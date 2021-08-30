@@ -1,10 +1,14 @@
 use crate::{
     voxel_map::{MapConfig, VoxelMap},
+    voxel_mesh::VoxelMesh,
     ClipSpheres,
 };
 
 use bevy_utilities::{
-    bevy::{asset::prelude::*, ecs, prelude::*, tasks::ComputeTaskPool, utils::tracing},
+    bevy::{
+        asset::prelude::*, ecs, prelude::Mesh as BevyMesh, prelude::*, tasks::ComputeTaskPool,
+        utils::tracing,
+    },
     mesh::create_mesh_bundle,
     thread_local_resource::ThreadLocalResource,
 };
@@ -36,17 +40,17 @@ pub struct ChunkMeshes {
 }
 
 /// Generates new meshes for all dirty chunks.
-pub fn mesh_generator_system<Map: VoxelMap>(
+pub fn mesh_generator_system<Mesh: VoxelMesh>(
     mut commands: Commands,
     pool: Res<ComputeTaskPool>,
-    voxel_map: Res<Map>,
-    local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers<Map>>,
+    voxel_map: Res<VoxelMap>,
+    local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers<Mesh>>,
     mesh_materials: Res<MeshMaterials>,
     mesh_commands: Res<MeshCommands>,
-    mut mesh_assets: ResMut<Assets<Mesh>>,
+    mut mesh_assets: ResMut<Assets<BevyMesh>>,
     mut chunk_meshes: ResMut<ChunkMeshes>,
 ) {
-    let new_chunk_meshes = apply_mesh_commands(
+    let new_chunk_meshes = apply_mesh_commands::<Mesh>(
         &*voxel_map,
         &*local_mesh_buffers,
         &*pool,
@@ -64,9 +68,9 @@ pub fn mesh_generator_system<Map: VoxelMap>(
     );
 }
 
-fn apply_mesh_commands<Map: VoxelMap>(
-    voxel_map: &Map,
-    local_mesh_buffers: &ThreadLocalMeshBuffers<Map>,
+fn apply_mesh_commands<Mesh: VoxelMesh>(
+    voxel_map: &VoxelMap,
+    local_mesh_buffers: &ThreadLocalMeshBuffers<Mesh>,
     pool: &ComputeTaskPool,
     mesh_commands: &MeshCommands,
     chunk_meshes: &mut ChunkMeshes,
@@ -83,10 +87,15 @@ fn apply_mesh_commands<Map: VoxelMap>(
                 let _trace_guard = make_mesh_span_ref.enter();
                 let mesh_tls = local_mesh_buffers.get();
                 let mut mesh_buffers = mesh_tls
-                    .get_or_create_with(|| RefCell::new(voxel_map.init_mesh_buffers()))
+                    .get_or_create_with(|| {
+                        RefCell::new(Mesh::init_mesh_buffers(voxel_map.chunks.chunk_shape()))
+                    })
                     .borrow_mut();
 
-                (key, voxel_map.create_mesh_for_chunk(key, &mut mesh_buffers))
+                (
+                    key,
+                    Mesh::create_mesh_for_chunk(&voxel_map.chunks, key, &mut mesh_buffers),
+                )
             });
         };
 
@@ -126,7 +135,7 @@ fn apply_mesh_commands<Map: VoxelMap>(
 
 // ThreadLocal doesn't let you get a mutable reference, so we need to use RefCell. We lock this down to only be used in this
 // module as a Local resource, so we know it's safe.
-type ThreadLocalMeshBuffers<Map> = ThreadLocalResource<RefCell<<Map as VoxelMap>::MeshBuffers>>;
+type ThreadLocalMeshBuffers<Mesh> = ThreadLocalResource<RefCell<<Mesh as VoxelMesh>::MeshBuffers>>;
 
 fn spawn_mesh_entities(
     new_chunk_meshes: Vec<(ChunkKey3, Option<PosNormMesh>)>,

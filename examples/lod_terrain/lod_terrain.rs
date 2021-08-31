@@ -2,21 +2,24 @@ mod chunk_generator;
 mod clip_spheres;
 mod level_of_detail;
 mod mesh_generator;
-mod new_chunk_detector;
+mod new_slot_detector;
+mod sync_batch;
 mod voxel_map;
 mod voxel_mesh;
 
-use chunk_generator::{chunk_generator_system, new_chunk_filler_system, GenerateCommands};
+use chunk_generator::{
+    chunk_downsampler_system, chunk_generator_system, find_loading_slots_system,
+    new_chunk_writer_system, DownsampleSlots, GenerateSlots, LoadedChunks, NewSlot,
+};
 use clip_spheres::{clip_sphere_system, ClipSpheres};
 use level_of_detail::level_of_detail_system;
-use mesh_generator::{
-    mesh_deleter_system, mesh_generator_system, ChunkMeshes, MeshCommands, MeshMaterials,
-};
-use new_chunk_detector::detect_new_chunks_system;
+use mesh_generator::{mesh_deleter_system, mesh_generator_system, ChunkMeshes, MeshMaterials};
+use new_slot_detector::detect_new_slots_system;
+use sync_batch::SyncBatch;
 use voxel_map::{MapConfig, VoxelMap};
 use voxel_mesh::{BlockyMesh, SmoothMesh, VoxelMesh};
 
-use building_blocks::core::prelude::*;
+use building_blocks::{core::prelude::*, prelude::LodChange3};
 
 use bevy_utilities::{
     bevy::{
@@ -77,9 +80,29 @@ fn run_example<Mesh: VoxelMesh>() {
         .add_plugin(FpsCameraPlugin)
         .add_startup_system(setup.system())
         .add_system(clip_sphere_system.system())
-        .add_system(detect_new_chunks_system.system())
-        .add_system(new_chunk_filler_system.system())
-        .add_system(chunk_generator_system.system())
+        .add_system(detect_new_slots_system.system())
+        // TODO: put these in a ChunkGenerator plugin
+        // We need a specific ordering for these systems because we want to ensure that the chunks we found to load are written
+        // back to the chunk tree in the same frame.
+        .add_system(find_loading_slots_system.system().label("find_loading"))
+        .add_system(
+            chunk_generator_system
+                .system()
+                .after("find_loading")
+                .before("new_chunk_writer"),
+        )
+        .add_system(
+            chunk_downsampler_system
+                .system()
+                .after("find_loading")
+                .before("new_chunk_writer"),
+        )
+        .add_system(
+            new_chunk_writer_system
+                .system()
+                .label("new_chunk_writer")
+                .after("find_loading"),
+        )
         .add_system(level_of_detail_system.system())
         .add_system(mesh_deleter_system.system().label("mesh_deleter"))
         .add_system(mesh_generator_system::<Mesh>.system().after("mesh_deleter"))
@@ -117,8 +140,13 @@ fn setup(
 
     let eye = Vec3::splat(100.0);
 
-    commands.insert_resource(MeshCommands::default());
-    commands.insert_resource(GenerateCommands::default());
+    // TODO: put these in a ChunkGenerator plugin
+    commands.insert_resource(SyncBatch::<LodChange3>::default());
+    commands.insert_resource(SyncBatch::<NewSlot>::default());
+    commands.insert_resource(GenerateSlots::default());
+    commands.insert_resource(DownsampleSlots::default());
+    commands.insert_resource(LoadedChunks::default());
+
     commands.insert_resource(ClipSpheres::new(Sphere3 {
         center: Point3f::from(eye),
         radius: map_config.clip_radius,

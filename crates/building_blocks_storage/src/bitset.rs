@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU8, Ordering};
 
-#[derive(Clone, Copy, Default, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub struct Bitset8 {
     pub bits: u8,
 }
@@ -15,6 +15,11 @@ impl Bitset8 {
     #[inline]
     pub fn any(&self) -> bool {
         self.bits != 0
+    }
+
+    #[inline]
+    pub fn none(&self) -> bool {
+        self.bits == 0
     }
 
     #[inline]
@@ -38,7 +43,7 @@ impl Bitset8 {
     }
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct AtomicBitset8 {
     pub bits: AtomicU8,
 }

@@ -32,16 +32,16 @@ impl VoxelMap {
 
         let chunk_shape = Point3i::fill(1 << chunk_exponent);
 
-        let noise_chunks = generate_noise_chunks3(
-            pool,
-            world_chunks_extent,
-            chunk_shape,
-            freq,
-            scale,
-            seed,
-            octaves,
-            true,
-        );
+        // let noise_chunks = generate_noise_chunks3(
+        //     pool,
+        //     world_chunks_extent,
+        //     chunk_shape,
+        //     freq,
+        //     scale,
+        //     seed,
+        //     octaves,
+        //     true,
+        // );
 
         let root_lod = num_lods - 1;
         let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
@@ -51,12 +51,12 @@ impl VoxelMap {
         });
         let mut chunks = builder.build_with_hash_map_storage();
 
-        for (chunk_min, noise) in noise_chunks.into_iter() {
-            chunks.write_chunk(ChunkKey::new(0, chunk_min), unsafe {
-                // SAFE: Voxel is a transparent wrapper of f32
-                std::mem::transmute(noise)
-            });
-        }
+        // for (chunk_min, noise) in noise_chunks.into_iter() {
+        //     chunks.write_chunk(ChunkKey::new(0, chunk_min), unsafe {
+        //         // SAFE: Voxel is a transparent wrapper of f32
+        //         std::mem::transmute(noise)
+        //     });
+        // }
 
         Self { chunks, config }
     }
@@ -70,10 +70,12 @@ impl VoxelMap {
         );
     }
 
-    pub fn generate_lod0_chunk_with_config(
-        config: MapConfig,
-        chunk_min: Point3i,
-    ) -> Option<Array3x1<Voxel>> {
+    pub fn clipmap_loading_slots(&self, clip_sphere: Sphere3, rx: impl FnMut(ChunkKey3)) {
+        self.chunks
+            .clipmap_loading_slots(self.config.chunks_processed_per_frame, clip_sphere, rx);
+    }
+
+    pub fn generate_lod0_chunk(config: &MapConfig, chunk_min: Point3i) -> Option<Array3x1<Voxel>> {
         let chunk_shape = config.chunk_shape();
 
         let NoiseConfig {

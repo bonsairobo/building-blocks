@@ -14,44 +14,162 @@ where
     Bldr: ChunkTreeBuilder<Ni, T, Chunk = Usr>,
     Store: ChunkStorage<Ni, Chunk = Usr> + for<'r> IterChunkKeys<'r, Ni>,
 {
-    /// Sets all of the `child_needs_loading` bits on the node at `key`, creating a new node if one does not exist.
-    ///
-    /// Ancestor nodes will not be touched, so it is advisable to start searching at `key` when finding chunks to load.
-    pub fn clipmap_mark_node_for_loading_if_vacant(&mut self, key: ChunkKey<Ni>) {
+    /// If no node exists at `key`, create one and set all of the `child_needs_loading` bits. Ancestor nodes are also marked
+    /// appropriately so that loading chunks can be found from any root. Nothing happens if the node already exists.
+    pub fn clipmap_mark_node_for_loading(&mut self, mut key: ChunkKey<Ni>) {
         let mut already_exists = true;
-        let state =
-            self.storages[key.lod as usize].get_mut_node_state_or_insert_with(key.minimum, || {
-                already_exists = false;
-                ChunkNode::new_empty()
-            });
+        self.storages[key.lod as usize].get_mut_node_state_or_insert_with(key.minimum, || {
+            already_exists = false;
+            ChunkNode::new_loading()
+        });
 
         if already_exists {
             return;
         }
 
-        state.child_needs_loading_bits.set_all();
-
-        self.link_node(key);
-    }
-
-    /// Inserts `chunk` at `key` and unsets the `child_needs_loading` bit on the parent node. Ancestor nodes also have their
-    /// bits unset if applicable.
-    pub fn clipmap_write_loaded_chunk(&mut self, mut key: ChunkKey<Ni>, chunk: Option<Usr>) {
-        if let Some(chunk) = chunk {
-            self.write_chunk(key, chunk);
-        }
-
         while key.lod < self.root_lod() {
             let parent = self.indexer.parent_chunk_key(key);
             let corner_index = self.indexer.corner_index(key.minimum);
-            let (parent_state, _) = self.get_mut_node_state(parent).unwrap();
-            parent_state
-                .child_needs_loading_bits
-                .unset_bit(corner_index);
-            if !parent_state.child_needs_loading_bits.all() {
+            let state = self.storages[parent.lod as usize]
+                .get_mut_node_state_or_insert_with(parent.minimum, ChunkNode::new_empty);
+            state.child_bits.set_bit(corner_index);
+            state.child_needs_loading_bits.set_bit(corner_index);
+            key = parent;
+        }
+    }
+
+    pub fn clipmap_write_loaded_chunk(&mut self, mut key: ChunkKey<Ni>, chunk: Option<Usr>) {
+        let mut link_child = if let Some(chunk) = chunk {
+            self.lod_storage_mut(key.lod)
+                .write_chunk(key.minimum, chunk);
+            true
+        } else {
+            self.delete_chunk_and_node_if_no_children(key);
+            false
+        };
+
+        let mut child_loaded = true;
+
+        // We need to ensure there is a linked parent to mark that this chunk has been loaded.
+        while key.lod < self.root_lod() {
+            let parent = self.indexer.parent_chunk_key(key);
+            let corner_index = self.indexer.corner_index(key.minimum);
+
+            let mut parent_already_exists = true;
+            let parent_state = self
+                .lod_storage_mut(parent.lod)
+                .get_mut_node_state_or_insert_with(parent.minimum, || {
+                    parent_already_exists = false;
+                    ChunkNode::new_loading()
+                });
+
+            if child_loaded {
+                parent_state
+                    .child_needs_loading_bits
+                    .unset_bit(corner_index);
+            }
+
+            if link_child {
+                parent_state.child_bits.set_bit(corner_index);
+            } else {
+                parent_state.child_bits.unset_bit(corner_index);
+            }
+
+            if parent_already_exists {
+                // This parent must have already been linked, so we can stop linking.
                 break;
             }
+
             key = parent;
+            link_child = true;
+            child_loaded = false;
+        }
+    }
+
+    /// Searches for chunk slots that need to be loaded, prioritizing the slots closest to the center of `clip_sphere`.
+    ///
+    /// By "slots that need to be loaded," we mean those whose parent `NodeState` has a corresponding `child_needs_loading` bit
+    /// set. These should be set with `clipmap_mark_node_for_loading_if_missing` and unset with `clipmap_write_loaded_chunk`.
+    /// Note that this implies root nodes will **never** be passed to `rx` (since they have no parent).
+    ///
+    /// A slot will only be considered for loading if all of its children are already loaded. This is necessary to correctly
+    /// downsample.
+    pub fn clipmap_loading_slots(
+        &self,
+        load_chunk_budget: usize,
+        clip_sphere: Sphere<Nf>,
+        mut rx: impl FnMut(ChunkKey<Ni>),
+    ) {
+        assert!(clip_sphere.radius > 0.0);
+
+        if self.root_lod() == 0 {
+            return;
+        }
+
+        let mut candidate_heap = BinaryHeap::new();
+        let mut num_load_slots = 0;
+
+        self.visit_root_keys(|root| {
+            // Don't consider roots for loading, just their children.
+            self.visit_child_keys(root, |child_key, corner_index| {
+                let state = self.get_node_state(root).unwrap();
+                if state.child_needs_loading_bits.bit_is_set(corner_index) {
+                    candidate_heap.push(ChunkSphere::new(clip_sphere, &self.indexer, child_key));
+                }
+            });
+        });
+
+        while let Some(ChunkSphere {
+            key: node_key,
+            closest_dist_to_observer,
+            ..
+        }) = candidate_heap.pop()
+        {
+            if num_load_slots >= load_chunk_budget {
+                break;
+            }
+
+            let node_intersects_clip_sphere = closest_dist_to_observer < clip_sphere.radius;
+            if !node_intersects_clip_sphere {
+                continue;
+            }
+
+            if node_key.lod == 0 {
+                // We hit LOD0 so this chunk needs to be loaded.
+                rx(node_key);
+                num_load_slots += 1;
+                continue;
+            }
+
+            if let Some(node_state) = self.get_node_state(node_key) {
+                if node_state.child_needs_loading_bits.none() {
+                    // All descendants have loaded, so this slot is ready to be loaded.
+                    rx(node_key);
+                    num_load_slots += 1;
+                    continue;
+                }
+
+                if node_key.lod > 0 {
+                    // Visit all children that need loading, regardless of what the child mask says.
+                    for child_i in 0..PointN::NUM_CORNERS {
+                        if node_state.child_needs_loading_bits.bit_is_set(child_i) {
+                            let child_key = self.indexer.child_chunk_key(node_key, child_i);
+                            candidate_heap.push(ChunkSphere::new(
+                                clip_sphere,
+                                &self.indexer,
+                                child_key,
+                            ));
+                        }
+                    }
+                }
+            } else if node_key.lod > 0 {
+                // We need to enumerate all child corners because this node doesn't exist, but we know it needs to be
+                // loaded.
+                for child_i in 0..PointN::NUM_CORNERS {
+                    let child_key = self.indexer.child_chunk_key(node_key, child_i);
+                    candidate_heap.push(ChunkSphere::new(clip_sphere, &self.indexer, child_key));
+                }
+            }
         }
     }
 
@@ -116,6 +234,10 @@ where
             closest_dist_to_observer,
         }) = candidate_heap.pop()
         {
+            if num_render_chunks >= render_chunk_budget {
+                break;
+            }
+
             let node_intersects_clip_sphere = closest_dist_to_observer < clip_sphere.radius;
             if !node_intersects_clip_sphere {
                 continue;
@@ -137,7 +259,7 @@ where
                 // Old and new frames agree this chunk is not active.
                 (false, false) => {
                     // Keep looking for any active descendants.
-                    self.visit_child_keys_of_node(node_key, &node_state, |child_key| {
+                    self.visit_child_keys_of_node(node_key, &node_state, |child_key, _| {
                         candidate_heap.push(ChunkSphere::new(
                             clip_sphere,
                             &self.indexer,
@@ -150,7 +272,7 @@ where
                     // Merge those active descendants into this node.
                     let mut old_chunks = Vec::with_capacity(8);
                     if node_key.lod > 0 {
-                        self.visit_child_keys_of_node(node_key, &node_state, |child_key| {
+                        self.visit_child_keys_of_node(node_key, &node_state, |child_key, _| {
                             self.visit_tree_keys(child_key, |descendant_key| {
                                 let descendant_node = self.get_node(descendant_key).unwrap();
                                 let descendant_was_active = descendant_node
@@ -188,7 +310,7 @@ where
                     // out of render chunk budget. To be fair to other chunks in the queue that need to be split, we will only
                     // split by one layer for now, but we'll re-insert the children back into the heap so they can be split
                     // again if we still have budget.
-                    self.visit_child_keys_of_node(node_key, &node_state, |child_key| {
+                    self.visit_child_keys_of_node(node_key, &node_state, |child_key, _| {
                         let child_node = self.get_node(child_key).unwrap();
                         child_node.state.state_bits.set_bit(StateBit::Render as u8);
 
@@ -206,10 +328,6 @@ where
                 // Old and new agree this node is active. No need to merge or split. None of the descendants can merge or split
                 // either.
                 (true, true) => (),
-            }
-
-            if num_render_chunks >= render_chunk_budget {
-                break;
             }
         }
 

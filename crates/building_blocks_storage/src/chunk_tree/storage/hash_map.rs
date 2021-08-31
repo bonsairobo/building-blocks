@@ -70,6 +70,11 @@ where
     }
 
     #[inline]
+    fn delete_chunk(&mut self, key: PointN<N>) {
+        self.remove(&key);
+    }
+
+    #[inline]
     fn write_chunk(&mut self, key: PointN<N>, chunk: Self::Chunk) {
         let node = self.entry(key).or_insert_with(ChunkNode::new_empty);
         node.user_chunk = Some(chunk);

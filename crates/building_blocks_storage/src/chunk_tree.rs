@@ -424,7 +424,7 @@ where
     }
 
     /// Call `visitor` on all children keys of `parent_key`.
-    pub fn visit_child_keys(&self, parent_key: ChunkKey<N>, visitor: impl FnMut(ChunkKey<N>)) {
+    pub fn visit_child_keys(&self, parent_key: ChunkKey<N>, visitor: impl FnMut(ChunkKey<N>, u8)) {
         if let Some(state) = self.get_node_state(parent_key) {
             self.visit_child_keys_of_node(parent_key, state, visitor);
         }
@@ -434,12 +434,12 @@ where
         &self,
         parent_key: ChunkKey<N>,
         state: &NodeState,
-        mut visitor: impl FnMut(ChunkKey<N>),
+        mut visitor: impl FnMut(ChunkKey<N>, u8),
     ) {
         for child_i in 0..PointN::NUM_CORNERS {
             if state.child_bits.bit_is_set(child_i) {
                 let child_key = self.indexer.child_chunk_key(parent_key, child_i);
-                visitor(child_key);
+                visitor(child_key, child_i);
             }
         }
     }
@@ -455,7 +455,7 @@ where
     ) {
         let keep_going = visitor(key);
         if keep_going && key.lod > 0 {
-            self.visit_child_keys(key, |child_key| {
+            self.visit_child_keys(key, |child_key, _| {
                 self.visit_tree_keys_recursive(child_key, visitor);
             });
         }
@@ -577,7 +577,7 @@ where
                 return;
             }
 
-            self.visit_child_keys(node_key, |child_key| {
+            self.visit_child_keys(node_key, |child_key, _| {
                 self.visit_chunk_nodes_recursive(child_key, visitor);
             });
         }
@@ -767,6 +767,17 @@ where
             }
         }
     }
+
+    fn delete_chunk_and_node_if_no_children(&mut self, key: ChunkKey<N>) {
+        // PERF: we wouldn't always need to pop if we had an entry API
+        if let Some(mut node) = self.pop_raw_node(key) {
+            node.user_chunk = None;
+            if node.state.child_bits.any() {
+                self.lod_storage_mut(key.lod)
+                    .write_raw_node(key.minimum, node);
+            }
+        }
+    }
 }
 
 impl<'a, N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>
@@ -817,12 +828,19 @@ impl<U> ChunkNode<U> {
     }
 
     #[inline]
+    pub(crate) fn new_loading() -> Self {
+        let mut state = NodeState::default();
+        state.child_needs_loading_bits.set_all();
+        Self::new_without_data(state)
+    }
+
+    #[inline]
     pub(crate) fn new_without_data(state: NodeState) -> Self {
         Self::new(None, state)
     }
 }
 
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct NodeState {
     /// A bitmask tracking which child nodes exist.
     child_bits: Bitset8,

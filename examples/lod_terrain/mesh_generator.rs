@@ -1,7 +1,7 @@
 use crate::{
     voxel_map::{MapConfig, VoxelMap},
     voxel_mesh::VoxelMesh,
-    ClipSpheres,
+    ClipSpheres, SyncBatch,
 };
 
 use bevy_utilities::{
@@ -15,20 +15,6 @@ use bevy_utilities::{
 use building_blocks::{mesh::*, prelude::*, storage::SmallKeyHashMap};
 
 use std::cell::RefCell;
-use std::sync::Mutex;
-
-#[derive(Default)]
-pub struct MeshCommands {
-    /// New commands for this frame.
-    new_commands: Mutex<Vec<LodChange3>>,
-}
-
-impl MeshCommands {
-    pub fn add_commands(&self, commands: impl Iterator<Item = LodChange3>) {
-        let mut new_commands = self.new_commands.lock().unwrap();
-        new_commands.extend(commands);
-    }
-}
 
 #[derive(Default)]
 pub struct MeshMaterials(pub Vec<Handle<StandardMaterial>>);
@@ -46,7 +32,7 @@ pub fn mesh_generator_system<Mesh: VoxelMesh>(
     voxel_map: Res<VoxelMap>,
     local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers<Mesh>>,
     mesh_materials: Res<MeshMaterials>,
-    mesh_commands: Res<MeshCommands>,
+    mesh_commands: Res<SyncBatch<LodChange3>>,
     mut mesh_assets: ResMut<Assets<BevyMesh>>,
     mut chunk_meshes: ResMut<ChunkMeshes>,
 ) {
@@ -72,7 +58,7 @@ fn apply_mesh_commands<Mesh: VoxelMesh>(
     voxel_map: &VoxelMap,
     local_mesh_buffers: &ThreadLocalMeshBuffers<Mesh>,
     pool: &ComputeTaskPool,
-    mesh_commands: &MeshCommands,
+    mesh_commands: &SyncBatch<LodChange3>,
     chunk_meshes: &mut ChunkMeshes,
     commands: &mut Commands,
 ) -> Vec<(ChunkKey3, Option<PosNormMesh>)> {
@@ -99,14 +85,7 @@ fn apply_mesh_commands<Mesh: VoxelMesh>(
             });
         };
 
-        let new_commands: Vec<_> = mesh_commands
-            .new_commands
-            .lock()
-            .unwrap()
-            .drain(..)
-            .collect();
-
-        for command in new_commands.into_iter() {
+        for command in mesh_commands.take_all().into_iter() {
             match command {
                 LodChange3::Split(split) => {
                     chunks_to_remove.push(split.old_chunk);
@@ -177,7 +156,7 @@ pub fn mesh_deleter_system(
     let mut chunks_to_remove = Vec::new();
     for &chunk_key in chunk_meshes.entities.keys() {
         let chunk_sphere = chunk_lod0_bounding_sphere(&indexer, chunk_key);
-        if !clip_spheres.new_sphere.contains(&chunk_sphere) {
+        if !clip_spheres.new_sphere.intersects(&chunk_sphere) {
             chunks_to_remove.push(chunk_key);
         }
     }

@@ -239,7 +239,7 @@ where
         let mut dst_chunk = make_ambient(dst_extent);
 
         if node_key.lod > min_src_lod {
-            self.visit_child_keys(node_key, |child_key| {
+            self.visit_child_keys(node_key, |child_key, _| {
                 let new_child_chunk = self.downsample_descendants_into_new_chunks_recursive(
                     sampler,
                     child_key,
@@ -305,7 +305,7 @@ where
         Samp: ChunkDownsampler<N, Usr::Array, Dst>,
         Dst: FillExtent<N, Item = T> + IndexedArray<N>,
     {
-        self.visit_child_keys(dst_chunk_key, |child_key| {
+        self.visit_child_keys(dst_chunk_key, |child_key, _| {
             self.downsample_into_external(sampler, child_key, dst_array);
         })
     }

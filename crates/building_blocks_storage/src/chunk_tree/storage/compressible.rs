@@ -210,6 +210,9 @@ where
         &mut self,
         key: PointN<N>,
     ) -> Option<MaybeCompressed<ChunkNode<Compr::Data>, ChunkNode<Compressed<Compr>>>> {
+        // This forces a flush so we don't write over the node we're removing.
+        self.flush_thread_local_caches();
+
         self.main_cache.remove(&key).map(|entry| match entry {
             CacheEntry::Cached(chunk) => MaybeCompressed::Decompressed(chunk),
             CacheEntry::Evicted(location) => {
@@ -259,6 +262,7 @@ where
 
     /// Consumes and flushes all thread local caches into the global cache. This should be done occasionally to reduce memory
     /// usage and improve caching efficiency.
+    #[inline]
     pub fn flush_thread_local_caches(&mut self) {
         let taken_caches = std::mem::replace(&mut self.thread_local_caches, ThreadLocal::new());
         for mut cache in taken_caches.into_iter() {
@@ -269,6 +273,7 @@ where
     }
 
     /// Inserts `node` at `key` and returns the old node.
+    #[inline]
     pub fn insert(
         &mut self,
         key: PointN<N>,
@@ -413,6 +418,11 @@ where
             MaybeCompressed::Compressed(n) => n.map(MaybeCompressed::Compressed),
             MaybeCompressed::Decompressed(n) => n.map(MaybeCompressed::Decompressed),
         })
+    }
+
+    #[inline]
+    fn delete_chunk(&mut self, key: PointN<N>) {
+        todo!()
     }
 
     #[inline]

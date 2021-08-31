@@ -43,6 +43,15 @@ where
     K: Eq + Hash,
     H: Default + BuildHasher,
 {
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn len(&self) -> usize {
+        let store = unsafe { &*self.store.get() };
+        store.len()
+    }
+
     /// Fetch the value for `key`.
     pub fn get(&self, key: K) -> Option<&V> {
         let store = unsafe { &*self.store.get() };

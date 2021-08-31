@@ -54,6 +54,9 @@ pub trait ChunkStorage<N> {
     /// Removes and returns the raw node at `key`.
     fn pop_raw_node(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::ChunkRepr>>;
 
+    /// Deletes the chunk (but not the node) at `key`.
+    fn delete_chunk(&mut self, key: PointN<N>);
+
     /// Overwrite the chunk at `key` with `chunk`. Drops the previous value. Any previous `NodeState` is preserved.
     fn write_chunk(&mut self, key: PointN<N>, chunk: Self::Chunk);
 

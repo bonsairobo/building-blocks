@@ -259,13 +259,19 @@ where
                 // Old and new frames agree this chunk is not active.
                 (false, false) => {
                     // Keep looking for any active descendants.
-                    self.visit_child_keys_of_node(node_key, &node_state, |child_key, _| {
-                        candidate_heap.push(ChunkSphere::new(
-                            clip_sphere,
-                            &self.indexer,
-                            child_key,
-                        ));
-                    });
+                    self.visit_child_keys_of_node(
+                        node_key,
+                        &node_state,
+                        |child_key, corner_index| {
+                            if !node_state.child_needs_loading_bits.bit_is_set(corner_index) {
+                                candidate_heap.push(ChunkSphere::new(
+                                    clip_sphere,
+                                    &self.indexer,
+                                    child_key,
+                                ));
+                            }
+                        },
+                    );
                 }
                 (false, true) => {
                     // This node just became active, and none if its ancestors were active, so it must have active descendants.

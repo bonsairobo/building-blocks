@@ -53,10 +53,7 @@ pub fn chunk_downsampler_system(
     let generated_chunks = pool.scope(|scope| {
         for dst_chunk_key in downsample_slots.slots.drain(..) {
             scope.spawn(async move {
-                let dst_extent = chunks_ref
-                    .indexer
-                    .extent_for_chunk_with_min(dst_chunk_key.minimum);
-                let mut dst_chunk = Array3x1::fill(dst_extent, Voxel::EMPTY);
+                let mut dst_chunk = chunks_ref.new_ambient_chunk(dst_chunk_key);
                 chunks_ref.downsample_children_into_external(
                     &SdfMeanDownsampler,
                     dst_chunk_key,

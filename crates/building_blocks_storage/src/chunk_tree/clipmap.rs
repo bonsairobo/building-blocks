@@ -356,6 +356,88 @@ where
     }
 }
 
+pub fn clipmap_chunks_in_sphere<Ni, Nf>(
+    indexer: &ChunkIndexer<Ni>,
+    root_lod: u8,
+    detect_lod: u8,
+    detail: f32,
+    clip_sphere: Sphere<Nf>,
+    mut rx: impl FnMut(ClipmapSlot<Ni>),
+) where
+    PointN<Ni>: std::hash::Hash + IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
+    PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
+{
+    assert!(clip_sphere.radius > 0.0);
+
+    let new_lod0_clip_extent = clip_sphere.aabb().containing_integer_extent();
+    let new_root_clip_extent =
+        indexer.covering_ancestor_extent(new_lod0_clip_extent, root_lod as i32);
+
+    for chunk_min in indexer.chunk_mins_for_extent(&new_root_clip_extent) {
+        clipmap_chunks_in_sphere_recursive(
+            indexer,
+            ChunkKey::new(root_lod, chunk_min),
+            detect_lod,
+            detail,
+            clip_sphere,
+            &mut rx,
+        );
+    }
+}
+
+fn clipmap_chunks_in_sphere_recursive<Ni, Nf>(
+    indexer: &ChunkIndexer<Ni>,
+    node_key: ChunkKey<Ni>, // May not exist in the ChunkTree!
+    detect_lod: u8,
+    detail: f32,
+    clip_sphere: Sphere<Nf>,
+    rx: &mut impl FnMut(ClipmapSlot<Ni>),
+) where
+    PointN<Ni>: std::hash::Hash + IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
+    PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
+{
+    let node_sphere = chunk_lod0_bounding_sphere(indexer, node_key);
+
+    // Calculate the Euclidean distance the observer to the center of the chunk.
+    let dist_to_clip_sphere = clip_sphere
+        .center
+        .l2_distance_squared(node_sphere.center)
+        .sqrt();
+
+    let node_intersects_clip_sphere = dist_to_clip_sphere - node_sphere.radius < clip_sphere.radius;
+
+    if !node_intersects_clip_sphere {
+        return;
+    }
+
+    if node_key.lod > detect_lod {
+        for child_i in 0..PointN::NUM_CORNERS {
+            clipmap_chunks_in_sphere_recursive(
+                indexer,
+                indexer.child_chunk_key(node_key, child_i),
+                detect_lod,
+                detail,
+                clip_sphere,
+                rx,
+            );
+        }
+    } else {
+        // This is the LOD where we want to detect slots inside the sphere.
+        let node_bounded_by_clip_sphere =
+            dist_to_clip_sphere + node_sphere.radius < clip_sphere.radius;
+        let is_render_candidate =
+            node_key.lod == 0 || dist_to_clip_sphere / node_sphere.radius > detail;
+
+        if node_bounded_by_clip_sphere {
+            rx(ClipmapSlot {
+                key: node_key,
+                dist: dist_to_clip_sphere,
+                is_render_candidate,
+            });
+        }
+    }
+}
+
 /// Detects new chunk slots at `detect_lod` that entered `new_clip_sphere` after it moved from `old_clip_sphere`.
 pub fn clipmap_new_chunks<Ni, Nf>(
     indexer: &ChunkIndexer<Ni>,

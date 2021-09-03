@@ -105,7 +105,7 @@ fn run_example<Mesh: VoxelMesh>() {
                 .after("find_loading"),
         )
         .add_system(level_of_detail_system.system())
-        .add_system(mesh_deleter_system.system().label("mesh_deleter"))
+        // .add_system(mesh_deleter_system.system().label("mesh_deleter"))
         .add_system(mesh_generator_system::<Mesh>.system().after("mesh_deleter"))
         .add_system(movement_sensitivity.system())
         .run();

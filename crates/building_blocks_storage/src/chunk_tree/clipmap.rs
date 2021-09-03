@@ -33,7 +33,7 @@ where
             let state = self.storages[parent.lod as usize]
                 .get_mut_node_state_or_insert_with(parent.minimum, ChunkNode::new_empty);
             state.child_bits.set_bit(corner_index);
-            state.child_needs_loading_bits.set_bit(corner_index);
+            state.descendant_needs_loading_bits.set_bit(corner_index);
             key = parent;
         }
     }
@@ -69,7 +69,7 @@ where
 
             if child_loaded {
                 parent_state
-                    .child_needs_loading_bits
+                    .descendant_needs_loading_bits
                     .unset_bit(corner_index);
             }
 
@@ -117,7 +117,7 @@ where
             // Don't consider roots for loading, just their children.
             self.visit_child_keys(root, |child_key, corner_index| {
                 let state = self.get_node_state(root).unwrap();
-                if state.child_needs_loading_bits.bit_is_set(corner_index) {
+                if state.descendant_needs_loading_bits.bit_is_set(corner_index) {
                     candidate_heap.push(ChunkSphere::new(clip_sphere, &self.indexer, child_key));
                 }
             });
@@ -146,7 +146,7 @@ where
             }
 
             if let Some(node_state) = self.get_node_state(node_key) {
-                if node_state.child_needs_loading_bits.none() {
+                if node_state.descendant_needs_loading_bits.none() {
                     // All descendants have loaded, so this slot is ready to be loaded.
                     rx(node_key);
                     num_load_slots += 1;
@@ -156,7 +156,7 @@ where
                 if node_key.lod > 0 {
                     // Visit all children that need loading, regardless of what the child mask says.
                     for child_i in 0..PointN::NUM_CORNERS {
-                        if node_state.child_needs_loading_bits.bit_is_set(child_i) {
+                        if node_state.descendant_needs_loading_bits.bit_is_set(child_i) {
                             let child_key = self.indexer.child_chunk_key(node_key, child_i);
                             candidate_heap.push(ChunkSphere::new(
                                 clip_sphere,
@@ -262,7 +262,10 @@ where
                         node_key,
                         &node_state,
                         |child_key, corner_index| {
-                            if !node_state.child_needs_loading_bits.bit_is_set(corner_index) {
+                            if !node_state
+                                .descendant_needs_loading_bits
+                                .bit_is_set(corner_index)
+                            {
                                 candidate_heap.push(ChunkSphere::new(
                                     clip_sphere,
                                     &self.indexer,

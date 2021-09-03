@@ -843,7 +843,7 @@ impl<U> ChunkNode<U> {
     #[inline]
     pub(crate) fn new_loading() -> Self {
         let mut state = NodeState::default();
-        state.child_needs_loading_bits.set_all();
+        state.descendant_needs_loading_bits.set_all();
         Self::new_without_data(state)
     }
 
@@ -857,11 +857,11 @@ impl<U> ChunkNode<U> {
 pub struct NodeState {
     /// A bitmask tracking which child nodes exist.
     child_bits: Bitset8,
-    /// A bitmask tracking which children have been loaded.
+    /// A bitmask to help with searching for nodes that need to be loaded.
     ///
     /// A node may only be a downsample target if all of its children are loaded. Leaf nodes may only be missing data if these
     /// bits are not all set.
-    pub child_needs_loading_bits: Bitset8,
+    pub descendant_needs_loading_bits: Bitset8,
     /// A bitmask tracking other external state, like if the chunk is being rendered.
     pub state_bits: AtomicBitset8,
 }

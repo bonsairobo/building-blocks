@@ -44,7 +44,7 @@ where
                 .write_chunk(key.minimum, chunk);
             true
         } else {
-            self.delete_chunk_and_node_if_no_children(key);
+            self.lod_storage_mut(key.lod).delete_chunk(key.minimum);
             false
         };
 

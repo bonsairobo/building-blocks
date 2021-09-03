@@ -70,8 +70,16 @@ where
     }
 
     #[inline]
-    fn delete_chunk(&mut self, key: PointN<N>) {
-        self.remove(&key);
+    fn delete_chunk(&mut self, key: PointN<N>) -> bool {
+        if let hash_map::Entry::Occupied(occupied) = self.entry(key) {
+            let has_children = occupied.get().state.has_any_children();
+            if !has_children {
+                occupied.remove();
+            }
+            has_children
+        } else {
+            false
+        }
     }
 
     #[inline]

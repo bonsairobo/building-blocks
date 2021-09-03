@@ -768,14 +768,10 @@ where
         }
     }
 
-    fn delete_chunk_and_node_if_no_children(&mut self, key: ChunkKey<N>) {
-        // PERF: we wouldn't always need to pop if we had an entry API
-        if let Some(mut node) = self.pop_raw_node(key) {
-            node.user_chunk = None;
-            if node.state.child_bits.any() {
-                self.lod_storage_mut(key.lod)
-                    .write_raw_node(key.minimum, node);
-            }
+    pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
+        if !self.lod_storage_mut(key.lod).delete_chunk(key.minimum) {
+            // Node has no children, so we can unlink.
+            self.unlink_node(key);
         }
     }
 }

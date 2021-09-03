@@ -421,7 +421,7 @@ where
     }
 
     #[inline]
-    fn delete_chunk(&mut self, key: PointN<N>) {
+    fn delete_chunk(&mut self, key: PointN<N>) -> bool {
         todo!()
     }
 

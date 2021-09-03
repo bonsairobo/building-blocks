@@ -348,38 +348,55 @@ impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store> {
 // Convenience adapters over the chunk storage.
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
+    PointN<N>: IntegerPoint<N>,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
     pub fn contains_chunk(&self, key: ChunkKey<N>) -> bool {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+
         self.lod_storage(key.lod).contains_chunk(key.minimum)
     }
 
     pub fn get_node(&self, key: ChunkKey<N>) -> Option<&ChunkNode<Usr>> {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+
         self.lod_storage(key.lod).get_node(key.minimum)
     }
 
     pub fn get_mut_node(&mut self, key: ChunkKey<N>) -> Option<&mut ChunkNode<Usr>> {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+
         self.lod_storage_mut(key.lod).get_mut_node(key.minimum)
     }
 
     pub fn get_node_state(&self, key: ChunkKey<N>) -> Option<&NodeState> {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+
         self.lod_storage(key.lod).get_node_state(key.minimum)
     }
 
     pub fn get_mut_node_state(&mut self, key: ChunkKey<N>) -> Option<(&mut NodeState, bool)> {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+
         self.lod_storage_mut(key.lod)
             .get_mut_node_state(key.minimum)
     }
 
     fn write_node(&mut self, key: ChunkKey<N>, node: ChunkNode<Usr>) {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+
         self.lod_storage_mut(key.lod).write_node(key.minimum, node)
     }
 
     fn pop_node(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Usr>> {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+
         self.lod_storage_mut(key.lod).pop_node(key.minimum)
     }
 
     fn pop_raw_node(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Store::ChunkRepr>> {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+
         self.lod_storage_mut(key.lod).pop_raw_node(key.minimum)
     }
 }

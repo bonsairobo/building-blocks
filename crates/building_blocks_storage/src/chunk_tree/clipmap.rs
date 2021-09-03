@@ -269,30 +269,38 @@ where
                     );
                 }
                 (false, true) => {
-                    // This node just became active, and none if its ancestors were active, so it must have active descendants.
-                    // Merge those active descendants into this node.
-                    let mut old_chunks = Vec::with_capacity(8);
-                    if node_key.lod > 0 {
-                        self.visit_child_keys_of_node(node_key, &node_state, |child_key, _| {
-                            self.visit_tree_keys(child_key, |descendant_key| {
-                                let descendant_node = self.get_node(descendant_key).unwrap();
-                                let descendant_was_active = descendant_node
-                                    .state
-                                    .state_bits
-                                    .fetch_and_unset_bit(StateBit::Render as u8);
-                                if descendant_was_active {
-                                    old_chunks.push(descendant_key);
-                                }
-                                !descendant_was_active
-                            });
-                        });
+                    // This node just became active, and none if its ancestors were active.
+                    num_render_chunks += 1;
+
+                    if node_key.lod == 0 {
+                        rx(LodChange::Spawn(node_key));
+                        continue;
                     }
 
-                    rx(LodChange::Merge(MergeChunks {
-                        old_chunks,
-                        new_chunk: node_key,
-                    }));
-                    num_render_chunks += 1;
+                    // This node might have active descendants. Merge those active descendants into this node.
+                    let mut old_chunks = Vec::with_capacity(8);
+                    self.visit_child_keys_of_node(node_key, &node_state, |child_key, _| {
+                        self.visit_tree_keys(child_key, |descendant_key| {
+                            let descendant_node = self.get_node(descendant_key).unwrap();
+                            let descendant_was_active = descendant_node
+                                .state
+                                .state_bits
+                                .fetch_and_unset_bit(StateBit::Render as u8);
+                            if descendant_was_active {
+                                old_chunks.push(descendant_key);
+                            }
+                            !descendant_was_active
+                        });
+                    });
+
+                    if old_chunks.is_empty() {
+                        rx(LodChange::Spawn(node_key));
+                    } else {
+                        rx(LodChange::Merge(MergeChunks {
+                            old_chunks,
+                            new_chunk: node_key,
+                        }));
+                    }
                 }
                 (true, false) => {
                     // This node just became inactive, and none of its ancestors were active, so it must have active
@@ -483,6 +491,8 @@ pub type ClipmapSlot3 = ClipmapSlot<[i32; 3]>;
 /// A chunk's desired sample rate has changed based on proximity to the center of the clip sphere.
 #[derive(Clone, Debug, PartialEq)]
 pub enum LodChange<N> {
+    /// This is just a `Merge` with no descendants.
+    Spawn(ChunkKey<N>),
     /// The desired sample rate for this chunk increased this frame.
     Split(SplitChunk<N>),
     /// The desired sample rate for this chunk decreased this frame.

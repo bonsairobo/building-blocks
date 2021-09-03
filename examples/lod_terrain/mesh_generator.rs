@@ -87,6 +87,9 @@ fn apply_mesh_commands<Mesh: VoxelMesh>(
 
         for command in mesh_commands.take_all().into_iter() {
             match command {
+                LodChange3::Spawn(key) => {
+                    make_mesh(key);
+                }
                 LodChange3::Split(split) => {
                     chunks_to_remove.push(split.old_chunk);
                     for &key in split.new_chunks.iter() {

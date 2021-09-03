@@ -80,7 +80,6 @@ pub struct MapConfig {
     pub detect_enter_lod: u8,
     pub detail: f32,
     pub chunks_processed_per_frame: usize,
-    pub world_chunks_extent: ChunkUnits<Extent3i>,
     pub noise: NoiseConfig,
     pub wireframes: bool,
     pub lod_colors: bool,

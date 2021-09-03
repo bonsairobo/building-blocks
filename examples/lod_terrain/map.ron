@@ -5,10 +5,6 @@
     chunks_processed_per_frame: 100,
     clip_radius: 1500.0,
     detect_enter_lod: 3,
-    world_chunks_extent: ((
-        minimum: ((-50, -2, -50)),
-        shape: ((100, 4, 100)),
-    )),
     noise: (
         freq: 0.25,
         scale: 5.0,

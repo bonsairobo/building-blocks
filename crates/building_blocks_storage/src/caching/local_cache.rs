@@ -9,11 +9,12 @@ use std::pin::Pin;
 ///
 /// # Safety
 ///
-/// We guarantee in these APIs that all references returned are valid for the lifetime of the `LocalCache`, even as new values
-/// are added to the map. The invariants are:
-///   1. Once a value is placed here, it will never get dropped or moved until calling `drain_iter`.
-///   2. The values are placed into `Pin<Box<V>>` so the memory address is guaranteed stable.
+/// We guarantee in these APIs that all references returned are valid until `LocalCache::drain_iter` is called, even as new
+/// values are added to the map. The invariants are:
+///   1. Once a value is placed here, it will never get dropped or moved until calling `drain_iter` or `delete`.
+///   2. Callers of `delete` must take precautions to ensure no one is borrowing the deleted data.
 ///   3. Returned references must be dropped before calling `drain_iter` (since it borrows self mutably).
+///   4. The values are placed into `Pin<Box<V>>` so the memory address is guaranteed stable.
 pub struct LocalCache<K, V, H> {
     store: UnsafeCell<HashMap<K, Pin<Box<V>>, H>>,
 }
@@ -63,6 +64,15 @@ where
         let mut_store = unsafe { &mut *self.store.get() };
 
         mut_store.entry(key).or_insert_with(|| Box::pin(f()))
+    }
+
+    /// Deletes the value at `key`.
+    ///
+    /// # Safety
+    /// This is only safe if you know that no one is currently borrowing the value at `key`.
+    pub unsafe fn delete(&self, key: &K) {
+        let mut_store = &mut *self.store.get();
+        mut_store.remove(key);
     }
 
     /// Consume and iterate over all (key, value) pairs.

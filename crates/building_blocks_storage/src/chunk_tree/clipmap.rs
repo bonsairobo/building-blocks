@@ -38,8 +38,8 @@ where
         }
     }
 
-    pub fn clipmap_write_loaded_chunk(&mut self, mut key: ChunkKey<Ni>, chunk: Option<Usr>) {
-        let mut link_child = if let Some(chunk) = chunk {
+    pub fn clipmap_write_loaded_chunk(&mut self, key: ChunkKey<Ni>, chunk: Option<Usr>) {
+        let link_child = if let Some(chunk) = chunk {
             self.lod_storage_mut(key.lod)
                 .write_chunk(key.minimum, chunk);
             true
@@ -48,6 +48,10 @@ where
             false
         };
 
+        self.link_loaded_node(key, link_child);
+    }
+
+    fn link_loaded_node(&mut self, mut key: ChunkKey<Ni>, mut link: bool) {
         let mut child_loaded = true;
 
         // We need to ensure there is a linked parent to mark that this chunk has been loaded.
@@ -69,7 +73,7 @@ where
                     .unset_bit(corner_index);
             }
 
-            if link_child {
+            if link {
                 parent_state.child_bits.set_bit(corner_index);
             } else {
                 parent_state.child_bits.unset_bit(corner_index);
@@ -81,7 +85,7 @@ where
             }
 
             key = parent;
-            link_child = true;
+            link = true;
             child_loaded = false;
         }
     }

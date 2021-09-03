@@ -1,7 +1,7 @@
 use crate::{
     voxel_map::{MapConfig, VoxelMap},
     voxel_mesh::VoxelMesh,
-    ClipSpheres, SyncBatch,
+    ClipSpheres,
 };
 
 use bevy_utilities::{
@@ -25,6 +25,20 @@ pub struct ChunkMeshes {
     entities: SmallKeyHashMap<ChunkKey3, Entity>,
 }
 
+/// It's important that this container only has at most ONE frame's worth of changes at a given time. The mesh generator system
+/// does not respect ordering of events across multiple frames. It also assumes a bounded number of meshes to generate per
+/// frame, and hence a bounded latency to do that work.
+#[derive(Default)]
+pub struct MeshCommands {
+    commands: Vec<LodChange3>,
+}
+
+impl MeshCommands {
+    pub fn push(&mut self, command: LodChange3) {
+        self.commands.push(command);
+    }
+}
+
 /// Generates new meshes for all dirty chunks.
 pub fn mesh_generator_system<Mesh: VoxelMesh>(
     mut commands: Commands,
@@ -32,7 +46,7 @@ pub fn mesh_generator_system<Mesh: VoxelMesh>(
     voxel_map: Res<VoxelMap>,
     local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers<Mesh>>,
     mesh_materials: Res<MeshMaterials>,
-    mesh_commands: Res<SyncBatch<LodChange3>>,
+    mut mesh_commands: ResMut<MeshCommands>,
     mut mesh_assets: ResMut<Assets<BevyMesh>>,
     mut chunk_meshes: ResMut<ChunkMeshes>,
 ) {
@@ -40,7 +54,7 @@ pub fn mesh_generator_system<Mesh: VoxelMesh>(
         &*voxel_map,
         &*local_mesh_buffers,
         &*pool,
-        &*mesh_commands,
+        &mut *mesh_commands,
         &mut *chunk_meshes,
         &mut commands,
     );
@@ -58,7 +72,7 @@ fn apply_mesh_commands<Mesh: VoxelMesh>(
     voxel_map: &VoxelMap,
     local_mesh_buffers: &ThreadLocalMeshBuffers<Mesh>,
     pool: &ComputeTaskPool,
-    mesh_commands: &SyncBatch<LodChange3>,
+    mesh_commands: &mut MeshCommands,
     chunk_meshes: &mut ChunkMeshes,
     commands: &mut Commands,
 ) -> Vec<(ChunkKey3, Option<PosNormMesh>)> {
@@ -85,7 +99,7 @@ fn apply_mesh_commands<Mesh: VoxelMesh>(
             });
         };
 
-        for command in mesh_commands.take_all().into_iter() {
+        for command in mesh_commands.commands.drain(..) {
             match command {
                 LodChange3::Spawn(key) => {
                     make_mesh(key);

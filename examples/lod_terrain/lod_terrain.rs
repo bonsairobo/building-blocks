@@ -13,13 +13,15 @@ use chunk_generator::{
 };
 use clip_spheres::{clip_sphere_system, ClipSpheres};
 use level_of_detail::level_of_detail_system;
-use mesh_generator::{mesh_deleter_system, mesh_generator_system, ChunkMeshes, MeshMaterials};
+use mesh_generator::{
+    mesh_deleter_system, mesh_generator_system, ChunkMeshes, MeshCommands, MeshMaterials,
+};
 use new_slot_detector::detect_new_slots_system;
 use sync_batch::SyncBatch;
 use voxel_map::{MapConfig, VoxelMap};
 use voxel_mesh::{BlockyMesh, SmoothMesh, VoxelMesh};
 
-use building_blocks::{core::prelude::*, prelude::LodChange3};
+use building_blocks::core::prelude::*;
 
 use bevy_utilities::{
     bevy::{
@@ -141,8 +143,8 @@ fn setup(
     let eye = Vec3::splat(100.0);
 
     // TODO: put these in a ChunkGenerator plugin
-    commands.insert_resource(SyncBatch::<LodChange3>::default());
     commands.insert_resource(SyncBatch::<NewSlot>::default());
+    commands.insert_resource(MeshCommands::default());
     commands.insert_resource(GenerateSlots::default());
     commands.insert_resource(DownsampleSlots::default());
     commands.insert_resource(LoadedChunks::default());

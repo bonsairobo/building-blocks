@@ -1,6 +1,4 @@
-use crate::{voxel_map::VoxelMap, ClipSpheres, SyncBatch};
-
-use building_blocks::prelude::LodChange3;
+use crate::{mesh_generator::MeshCommands, voxel_map::VoxelMap, ClipSpheres};
 
 use bevy_utilities::bevy::{prelude::*, utils::tracing};
 
@@ -8,13 +6,11 @@ use bevy_utilities::bevy::{prelude::*, utils::tracing};
 pub fn level_of_detail_system(
     voxel_map: Res<VoxelMap>,
     clip_spheres: Res<ClipSpheres>,
-    mesh_commands: Res<SyncBatch<LodChange3>>,
+    mut mesh_commands: ResMut<MeshCommands>,
 ) {
     let lod_changes_span = tracing::info_span!("lod_changes");
-    let mut new_commands = Vec::new();
     {
         let _trace_guard = lod_changes_span.enter();
-        voxel_map.clipmap_render_updates(clip_spheres.new_sphere, |c| new_commands.push(c));
+        voxel_map.clipmap_render_updates(clip_spheres.new_sphere, |c| mesh_commands.push(c));
     }
-    mesh_commands.extend(new_commands.into_iter());
 }

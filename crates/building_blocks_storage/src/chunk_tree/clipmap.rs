@@ -231,16 +231,11 @@ where
             key: node_key,
             bounding_sphere: node_sphere,
             center_dist_to_observer,
-            closest_dist_to_observer,
+            ..
         }) = candidate_heap.pop()
         {
             if num_render_chunks >= render_chunk_budget {
                 break;
-            }
-
-            let node_intersects_clip_sphere = closest_dist_to_observer < clip_sphere.radius;
-            if !node_intersects_clip_sphere {
-                continue;
             }
 
             let node_state = self.get_node_state(node_key).unwrap();

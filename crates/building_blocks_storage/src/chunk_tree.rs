@@ -382,19 +382,19 @@ where
             .get_mut_node_state(key.minimum)
     }
 
-    fn write_node(&mut self, key: ChunkKey<N>, node: ChunkNode<Usr>) {
+    fn write_node_dangling(&mut self, key: ChunkKey<N>, node: ChunkNode<Usr>) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.lod_storage_mut(key.lod).write_node(key.minimum, node)
     }
 
-    fn pop_node(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Usr>> {
+    fn pop_node_dangling(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Usr>> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.lod_storage_mut(key.lod).pop_node(key.minimum)
     }
 
-    fn pop_raw_node(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Store::ChunkRepr>> {
+    fn pop_raw_node_dangling(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Store::ChunkRepr>> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.lod_storage_mut(key.lod).pop_raw_node(key.minimum)
@@ -738,7 +738,7 @@ where
     pub fn pop_chunk(&mut self, key: ChunkKey<N>) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
         // PERF: we wouldn't always have to pop the node if we had a ChunkStorage::entry API
-        self.pop_node(key).and_then(|mut node| {
+        self.pop_node_dangling(key).and_then(|mut node| {
             if !node.state.has_any_children() {
                 // No children, so this node is useless.
                 self.unlink_node(key);
@@ -746,7 +746,7 @@ where
             } else {
                 // Still has children, so only delete the user data and leave the node.
                 let user_chunk = node.user_chunk.take();
-                self.write_node(key, node);
+                self.write_node_dangling(key, node);
                 user_chunk
             }
         })
@@ -760,7 +760,7 @@ where
         key: ChunkKey<N>,
         chunk_rx: impl FnMut(ChunkKey<N>, Store::ChunkRepr),
     ) {
-        if let Some(node) = self.pop_raw_node(key) {
+        if let Some(node) = self.pop_raw_node_dangling(key) {
             self.unlink_node(key);
             self.drain_tree_recursive(key, node, chunk_rx);
         }
@@ -775,7 +775,7 @@ where
         for child_i in 0..PointN::NUM_CORNERS {
             if node.state.has_child(child_i) {
                 let child_key = self.indexer.child_chunk_key(key, child_i);
-                if let Some(child_node) = self.pop_raw_node(child_key) {
+                if let Some(child_node) = self.pop_raw_node_dangling(child_key) {
                     self.drain_tree_recursive(child_key, child_node, &mut chunk_rx);
                 }
             }

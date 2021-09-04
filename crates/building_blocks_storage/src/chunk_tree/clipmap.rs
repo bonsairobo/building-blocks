@@ -128,19 +128,9 @@ where
             });
         });
 
-        while let Some(ChunkSphere {
-            key: node_key,
-            closest_dist_to_observer,
-            ..
-        }) = candidate_heap.pop()
-        {
+        while let Some(ChunkSphere { key: node_key, .. }) = candidate_heap.pop() {
             if num_load_slots >= load_chunk_budget {
                 break;
-            }
-
-            let node_intersects_clip_sphere = closest_dist_to_observer < clip_sphere.radius;
-            if !node_intersects_clip_sphere {
-                continue;
             }
 
             if node_key.lod == 0 {

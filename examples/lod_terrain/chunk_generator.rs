@@ -13,6 +13,9 @@ pub fn new_chunk_writer_system(
     mut loaded_chunks: ResMut<LoadedChunks>,
     mut map: ResMut<VoxelMap>,
 ) {
+    let span = tracing::info_span!("chunk_writer");
+    let _trace_guard = span.enter();
+
     for (key, chunk) in loaded_chunks.chunks.drain(..) {
         map.chunks.clipmap_write_loaded_chunk(key, chunk)
     }
@@ -27,12 +30,14 @@ pub fn chunk_generator_system(
     mut generate_slots: ResMut<GenerateSlots>,
     mut loaded_chunks: ResMut<LoadedChunks>,
 ) {
+    let span = tracing::info_span!("generate_chunk");
+    let span_ref = &span;
+
     let config_ref = &*config;
     let generated_chunks = pool.scope(|scope| {
         for key in generate_slots.slots.drain(..) {
             scope.spawn(async move {
-                let span = tracing::info_span!("generate_chunk");
-                let _trace_guard = span.enter();
+                let _trace_guard = span_ref.enter();
                 (key, VoxelMap::generate_lod0_chunk(config_ref, key.minimum))
             });
         }

@@ -8,9 +8,8 @@ pub fn level_of_detail_system(
     clip_spheres: Res<ClipSpheres>,
     mut mesh_commands: ResMut<MeshCommands>,
 ) {
-    let lod_changes_span = tracing::info_span!("lod_changes");
-    {
-        let _trace_guard = lod_changes_span.enter();
-        voxel_map.clipmap_render_updates(clip_spheres.new_sphere, |c| mesh_commands.push(c));
-    }
+    let span = tracing::info_span!("lod_changes");
+    let _trace_guard = span.enter();
+
+    voxel_map.clipmap_render_updates(clip_spheres.new_sphere, |c| mesh_commands.push(c));
 }

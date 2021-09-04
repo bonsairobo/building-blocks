@@ -76,15 +76,15 @@ fn apply_mesh_commands<Mesh: VoxelMesh>(
     chunk_meshes: &mut ChunkMeshes,
     commands: &mut Commands,
 ) -> Vec<(ChunkKey3, Option<PosNormMesh>)> {
-    let make_mesh_span = tracing::info_span!("make_mesh");
-    let make_mesh_span_ref = &make_mesh_span;
+    let span = tracing::info_span!("make_mesh");
+    let span_ref = &span;
 
     let mut chunks_to_remove = Vec::new();
 
     let new_meshes = pool.scope(|s| {
         let mut make_mesh = |key: ChunkKey3| {
             s.spawn(async move {
-                let _trace_guard = make_mesh_span_ref.enter();
+                let _trace_guard = span_ref.enter();
                 let mesh_tls = local_mesh_buffers.get();
                 let mut mesh_buffers = mesh_tls
                     .get_or_create_with(|| {

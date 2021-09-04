@@ -4,7 +4,7 @@
     detail: 5.0,
     chunks_processed_per_frame: 100,
     clip_radius: 1500.0,
-    detect_enter_lod: 3,
+    detect_enter_lod: 4,
     noise: (
         freq: 0.25,
         scale: 5.0,

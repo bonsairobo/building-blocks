@@ -178,7 +178,6 @@ use building_blocks_core::{
     ExtentN, PointN,
 };
 
-use either::Either;
 use serde::{Deserialize, Serialize};
 
 /// The user-accessible data stored in each chunk of a [`ChunkTree`].
@@ -351,30 +350,35 @@ where
     PointN<N>: IntegerPoint<N>,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
+    #[inline]
     pub fn contains_chunk(&self, key: ChunkKey<N>) -> bool {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.lod_storage(key.lod).contains_chunk(key.minimum)
     }
 
+    #[inline]
     pub fn get_node(&self, key: ChunkKey<N>) -> Option<&ChunkNode<Usr>> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.lod_storage(key.lod).get_node(key.minimum)
     }
 
+    #[inline]
     pub fn get_mut_node(&mut self, key: ChunkKey<N>) -> Option<&mut ChunkNode<Usr>> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.lod_storage_mut(key.lod).get_mut_node(key.minimum)
     }
 
+    #[inline]
     pub fn get_node_state(&self, key: ChunkKey<N>) -> Option<&NodeState> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.lod_storage(key.lod).get_node_state(key.minimum)
     }
 
+    #[inline]
     pub fn get_mut_node_state(&mut self, key: ChunkKey<N>) -> Option<(&mut NodeState, bool)> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
@@ -416,37 +420,15 @@ where
         self.get_node(key).and_then(|ch| ch.user_chunk.as_ref())
     }
 
-    /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be represented by an `AmbientExtent`.
-    #[inline]
-    pub fn visit_chunks(
-        &self,
-        lod: u8,
-        extent: ExtentN<N>,
-        mut visitor: impl FnMut(Either<&Usr, (&ExtentN<N>, AmbientExtent<N, T>)>),
-    ) where
-        T: Clone,
-    {
-        // PERF: we could traverse the octree to avoid using hashing to check for occupancy
-        for chunk_min in self.indexer.chunk_mins_for_extent(&extent) {
-            if let Some(chunk) = self.get_chunk(ChunkKey::new(lod, chunk_min)) {
-                visitor(Either::Left(chunk))
-            } else {
-                let chunk_extent = self.indexer.extent_for_chunk_with_min(chunk_min);
-                visitor(Either::Right((
-                    &chunk_extent,
-                    AmbientExtent::new(self.ambient_value.clone()),
-                )))
-            }
-        }
-    }
-
     /// Call `visitor` on all children keys of `parent_key`.
+    #[inline]
     pub fn visit_child_keys(&self, parent_key: ChunkKey<N>, visitor: impl FnMut(ChunkKey<N>, u8)) {
         if let Some(state) = self.get_node_state(parent_key) {
             self.visit_child_keys_of_node(parent_key, state, visitor);
         }
     }
 
+    #[inline]
     pub fn visit_child_keys_of_node(
         &self,
         parent_key: ChunkKey<N>,
@@ -485,6 +467,7 @@ where
     Store: ChunkStorage<N, Chunk = Usr> + for<'r> IterChunkKeys<'r, N>,
     Bldr: ChunkTreeBuilder<N, T>,
 {
+    #[inline]
     pub fn visit_root_keys(&self, mut visitor: impl FnMut(ChunkKey<N>)) {
         let root_lod = self.root_lod();
         for &root in self.lod_storage(root_lod).chunk_keys() {
@@ -718,19 +701,6 @@ where
             .get_or_insert_with(|| {
                 builder.new_ambient(indexer.extent_for_chunk_with_min(chunk_min))
             })
-    }
-
-    /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be created first with ambient value.
-    #[inline]
-    pub fn visit_mut_chunks(
-        &mut self,
-        lod: u8,
-        extent: &ExtentN<N>,
-        mut visitor: impl FnMut(&mut Usr),
-    ) {
-        for chunk_min in self.indexer.chunk_mins_for_extent(extent) {
-            visitor(self.get_mut_chunk_or_insert_ambient(ChunkKey::new(lod, chunk_min)));
-        }
     }
 
     /// Remove the chunk at `key`. This does not affect descendant or ancestor chunks.

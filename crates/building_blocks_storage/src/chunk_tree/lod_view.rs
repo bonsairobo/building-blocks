@@ -26,6 +26,55 @@ impl<Delegate> ChunkTreeLodView<Delegate> {
     }
 }
 
+impl<Delegate, N, T, Bldr, Store, Usr> ChunkTreeLodView<Delegate>
+where
+    Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
+    Store: ChunkStorage<N, Chunk = Usr>,
+    PointN<N>: IntegerPoint<N>,
+{
+    /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be represented by an `AmbientExtent`.
+    #[inline]
+    pub fn visit_chunks(
+        &self,
+        extent: ExtentN<N>,
+        mut visitor: impl FnMut(Either<&Usr, (&ExtentN<N>, AmbientExtent<N, T>)>),
+    ) where
+        T: Clone,
+    {
+        // PERF: we could traverse the octree to avoid using hashing to check for occupancy
+        for chunk_min in self.delegate.indexer.chunk_mins_for_extent(&extent) {
+            if let Some(chunk) = self.delegate.get_chunk(ChunkKey::new(self.lod, chunk_min)) {
+                visitor(Either::Left(chunk))
+            } else {
+                let chunk_extent = self.delegate.indexer.extent_for_chunk_with_min(chunk_min);
+                visitor(Either::Right((
+                    &chunk_extent,
+                    AmbientExtent::new(self.delegate.ambient_value.clone()),
+                )))
+            }
+        }
+    }
+}
+
+impl<Delegate, N, T, Bldr, Store, Usr> ChunkTreeLodView<Delegate>
+where
+    Delegate: DerefMut<Target = ChunkTree<N, T, Bldr, Store>>,
+    Store: ChunkStorage<N, Chunk = Usr>,
+    PointN<N>: IntegerPoint<N>,
+    Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
+{
+    /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be created first with ambient value.
+    #[inline]
+    pub fn visit_mut_chunks(&mut self, extent: &ExtentN<N>, mut visitor: impl FnMut(&mut Usr)) {
+        for chunk_min in self.delegate.indexer.chunk_mins_for_extent(extent) {
+            visitor(
+                self.delegate
+                    .get_mut_chunk_or_insert_ambient(ChunkKey::new(self.lod, chunk_min)),
+            );
+        }
+    }
+}
+
 //  ██████╗ ███████╗████████╗████████╗███████╗██████╗ ███████╗
 // ██╔════╝ ██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗██╔════╝
 // ██║  ███╗█████╗     ██║      ██║   █████╗  ██████╔╝███████╗
@@ -107,15 +156,14 @@ where
 
     #[inline]
     fn for_each(&self, extent: &ExtentN<N>, mut f: impl FnMut(PointN<N>, Self::Item)) {
-        self.delegate
-            .visit_chunks(self.lod, *extent, |chunk| match chunk {
-                Either::Left(chunk) => {
-                    chunk.array().for_each(extent, |p, value| f(p, value));
-                }
-                Either::Right((chunk_extent, ambient)) => {
-                    ambient.for_each(&extent.intersection(chunk_extent), |p, value| f(p, value))
-                }
-            });
+        self.visit_chunks(*extent, |chunk| match chunk {
+            Either::Left(chunk) => {
+                chunk.array().for_each(extent, |p, value| f(p, value));
+            }
+            Either::Right((chunk_extent, ambient)) => {
+                ambient.for_each(&extent.intersection(chunk_extent), |p, value| f(p, value))
+            }
+        });
     }
 }
 
@@ -137,7 +185,7 @@ where
         extent: &ExtentN<N>,
         mut f: impl FnMut(PointN<N>, Self::Item),
     ) {
-        self.delegate.visit_mut_chunks(self.lod, extent, |chunk| {
+        self.visit_mut_chunks(extent, |chunk| {
             chunk
                 .array_mut()
                 .for_each_mut_ptr(extent, |p, ptr| f(p, ptr))
@@ -232,7 +280,7 @@ where
     Src: Clone,
 {
     fn write_extent(&mut self, extent: &ExtentN<N>, src: Src) {
-        self.delegate.visit_mut_chunks(self.lod, extent, |chunk| {
+        self.visit_mut_chunks(extent, |chunk| {
             chunk.array_mut().write_extent(extent, src.clone())
         });
     }

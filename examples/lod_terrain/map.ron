@@ -1,6 +1,6 @@
 (
     chunk_exponent: 4,
-    num_lods: 7,
+    num_lods: 6,
     detail: 5.0,
     chunks_processed_per_frame: 100,
     clip_radius: 1500.0,

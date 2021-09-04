@@ -256,7 +256,11 @@ where
                 node_key.lod == 0 || center_dist_to_observer / node_sphere.radius > detail;
 
             if is_active {
-                node_state.state_bits.set_bit(StateBit::Render as u8);
+                // Only set the render bits if we plan on returning an LodChange for this node. Otherwise we won't try rendering
+                // it even after it's done loading.
+                if !is_loading {
+                    node_state.state_bits.set_bit(StateBit::Render as u8);
+                }
             } else {
                 node_state.state_bits.unset_bit(StateBit::Render as u8);
             }

@@ -808,24 +808,24 @@ impl<U> ChunkNode<U> {
     }
 
     #[inline]
-    pub(crate) fn new(user_chunk: Option<U>, state: NodeState) -> Self {
+    pub fn new(user_chunk: Option<U>, state: NodeState) -> Self {
         Self { user_chunk, state }
     }
 
     #[inline]
-    pub(crate) fn new_empty() -> Self {
+    pub fn new_empty() -> Self {
         Self::new(None, NodeState::default())
     }
 
     #[inline]
-    pub(crate) fn new_loading() -> Self {
+    pub fn new_loading() -> Self {
         let mut state = NodeState::default();
         state.descendant_needs_loading_bits.set_all();
         Self::new_without_data(state)
     }
 
     #[inline]
-    pub(crate) fn new_without_data(state: NodeState) -> Self {
+    pub fn new_without_data(state: NodeState) -> Self {
         Self::new(None, state)
     }
 }

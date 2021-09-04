@@ -1,3 +1,4 @@
+mod chunk_compressor;
 mod chunk_generator;
 mod clip_spheres;
 mod level_of_detail;
@@ -7,6 +8,7 @@ mod sync_batch;
 mod voxel_map;
 mod voxel_mesh;
 
+use chunk_compressor::chunk_compression_system;
 use chunk_generator::{
     chunk_downsampler_system, chunk_generator_system, find_loading_slots_system,
     new_chunk_writer_system, DownsampleSlots, GenerateSlots, LoadedChunks, NewSlot,
@@ -107,6 +109,7 @@ fn run_example<Mesh: VoxelMesh>() {
         .add_system(level_of_detail_system.system())
         .add_system(mesh_deleter_system.system().label("mesh_deleter"))
         .add_system(mesh_generator_system::<Mesh>.system().after("mesh_deleter"))
+        .add_system(chunk_compression_system.system())
         .add_system(movement_sensitivity.system())
         .run();
 }

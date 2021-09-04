@@ -8,7 +8,7 @@ pub trait VoxelMesh: 'static + Send {
     fn init_mesh_buffers(chunk_shape: Point3i) -> Self::MeshBuffers;
 
     fn create_mesh_for_chunk(
-        chunks: &HashMapChunkTree3x1<Voxel>,
+        chunks: &CompressibleChunkTree3x1<Lz4, Voxel>,
         key: ChunkKey3,
         mesh_buffers: &mut Self::MeshBuffers,
     ) -> Option<PosNormMesh>;
@@ -32,7 +32,7 @@ impl VoxelMesh for SmoothMesh {
     }
 
     fn create_mesh_for_chunk(
-        chunks: &HashMapChunkTree3x1<Voxel>,
+        chunks: &CompressibleChunkTree3x1<Lz4, Voxel>,
         key: ChunkKey3,
         mesh_buffers: &mut Self::MeshBuffers,
     ) -> Option<PosNormMesh> {
@@ -98,7 +98,7 @@ impl VoxelMesh for BlockyMesh {
     }
 
     fn create_mesh_for_chunk(
-        chunks: &HashMapChunkTree3x1<Voxel>,
+        chunks: &CompressibleChunkTree3x1<Lz4, Voxel>,
         key: ChunkKey3,
         mesh_buffers: &mut Self::MeshBuffers,
     ) -> Option<PosNormMesh> {

@@ -1,5 +1,6 @@
 use bevy_utilities::noise::generate_noise_chunk3;
 use building_blocks::{
+    core::bytemuck::{Pod, Zeroable},
     mesh::{IsOpaque, MergeVoxel},
     prelude::*,
 };
@@ -8,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 pub struct VoxelMap {
     pub config: MapConfig,
-    pub chunks: HashMapChunkTree3x1<Voxel>,
+    pub chunks: CompressibleChunkTree3x1<Lz4, Voxel>,
 }
 
 impl VoxelMap {
@@ -27,7 +28,9 @@ impl VoxelMap {
             ambient_value: Voxel::EMPTY,
             root_lod,
         });
-        let chunks = builder.build_with_hash_map_storage();
+        let chunks = builder.build_with_storage(|| {
+            FastCompressibleChunkStorageNx1::with_bytes_compression(Lz4 { level: 10 })
+        });
 
         Self { chunks, config }
     }
@@ -117,6 +120,9 @@ impl Voxel {
     pub const EMPTY: Self = Self(1.0);
     pub const FILLED: Self = Self(-1.0);
 }
+
+unsafe impl Zeroable for Voxel {}
+unsafe impl Pod for Voxel {}
 
 impl IsEmpty for Voxel {
     fn is_empty(&self) -> bool {

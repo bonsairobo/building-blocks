@@ -12,6 +12,6 @@
         octaves: 6,
     ),
     msaa: None,
-    lod_colors: false,
+    lod_colors: true,
     wireframes: false,
 )

@@ -35,20 +35,6 @@ impl VoxelMap {
         Self { chunks, config }
     }
 
-    pub fn clipmap_render_updates(&self, new_clip_sphere: Sphere3, rx: impl FnMut(LodChange3)) {
-        self.chunks.clipmap_render_updates(
-            self.config.detail,
-            new_clip_sphere,
-            self.config.chunks_processed_per_frame,
-            rx,
-        );
-    }
-
-    pub fn clipmap_loading_slots(&self, clip_sphere: Sphere3, rx: impl FnMut(ChunkKey3)) {
-        self.chunks
-            .clipmap_loading_slots(self.config.chunks_processed_per_frame, clip_sphere, rx);
-    }
-
     pub fn generate_lod0_chunk(config: &MapConfig, chunk_min: Point3i) -> Option<Array3x1<Voxel>> {
         let chunk_shape = config.chunk_shape();
 
@@ -82,7 +68,7 @@ pub struct MapConfig {
     pub clip_radius: f32,
     pub detect_enter_lod: u8,
     pub detail: f32,
-    pub chunks_processed_per_frame: usize,
+    pub target_frame_processing_time_us: u32,
     pub noise: NoiseConfig,
     pub wireframes: bool,
     pub lod_colors: bool,

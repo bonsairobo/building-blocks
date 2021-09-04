@@ -1,4 +1,7 @@
+use std::collections::VecDeque;
+
 use crate::{
+    frame_budget::FrameBudget,
     voxel_map::{MapConfig, Voxel, VoxelMap},
     ClipSpheres, SyncBatch,
 };
@@ -6,6 +9,8 @@ use crate::{
 use building_blocks::prelude::{Array3x1, ChunkKey3, SdfMeanDownsampler};
 
 use bevy_utilities::bevy::{prelude::*, tasks::ComputeTaskPool, utils::tracing};
+
+use std::time::Instant;
 
 /// Inserts new chunks into the `ChunkTree` after they are generated.
 pub fn new_chunk_writer_system(
@@ -27,11 +32,18 @@ pub fn new_chunk_writer_system(
 pub fn chunk_generator_system(
     config: Res<MapConfig>,
     pool: Res<ComputeTaskPool>,
+    mut budget: ResMut<GenerateBudget>,
     mut generate_slots: ResMut<GenerateSlots>,
     mut loaded_chunks: ResMut<LoadedChunks>,
 ) {
+    if generate_slots.slots.is_empty() {
+        return;
+    }
+
     let span = tracing::info_span!("generate_chunk");
     let span_ref = &span;
+
+    let start = Instant::now();
 
     let config_ref = &*config;
     let generated_chunks = pool.scope(|scope| {
@@ -43,6 +55,8 @@ pub fn chunk_generator_system(
         }
     });
     loaded_chunks.chunks.extend(generated_chunks.into_iter());
+
+    budget.0.update_estimate(start.elapsed());
 }
 
 pub fn chunk_downsampler_system(
@@ -75,6 +89,7 @@ pub fn chunk_downsampler_system(
 /// Drives new chunk generation by searching the chunk tree for nodes that need to be loaded.
 pub fn find_loading_slots_system(
     clip_spheres: Res<ClipSpheres>,
+    budget: Res<GenerateBudget>,
     voxel_map: Res<VoxelMap>,
     mut generate_slots: ResMut<GenerateSlots>,
     mut downsample_slots: ResMut<DownsampleSlots>,
@@ -82,13 +97,19 @@ pub fn find_loading_slots_system(
     let span = tracing::info_span!("find_loading_slots");
     let _trace_guard = span.enter();
 
-    voxel_map.clipmap_loading_slots(clip_spheres.new_sphere, |key| {
-        if key.lod == 0 {
-            generate_slots.slots.push(key);
-        } else {
-            downsample_slots.slots.push(key);
-        }
-    });
+    let this_frame_budget = budget.0.request_work(0);
+
+    voxel_map.chunks.clipmap_loading_slots(
+        this_frame_budget as usize,
+        clip_spheres.new_sphere,
+        |key| {
+            if key.lod == 0 {
+                generate_slots.slots.push_back(key);
+            } else {
+                downsample_slots.slots.push(key);
+            }
+        },
+    );
 }
 
 pub struct NewSlot {
@@ -98,7 +119,7 @@ pub struct NewSlot {
 /// Chunks found to be generated this frame.
 #[derive(Default)]
 pub struct GenerateSlots {
-    slots: Vec<ChunkKey3>,
+    slots: VecDeque<ChunkKey3>,
 }
 
 /// Chunks found to be downsampled this frame.
@@ -112,3 +133,5 @@ pub struct DownsampleSlots {
 pub struct LoadedChunks {
     chunks: Vec<(ChunkKey3, Option<Array3x1<Voxel>>)>,
 }
+
+pub struct GenerateBudget(pub FrameBudget);

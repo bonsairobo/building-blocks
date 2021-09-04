@@ -1,6 +1,7 @@
 mod chunk_compressor;
 mod chunk_generator;
 mod clip_spheres;
+mod frame_budget;
 mod level_of_detail;
 mod mesh_generator;
 mod new_slot_detector;
@@ -11,12 +12,14 @@ mod voxel_mesh;
 use chunk_compressor::chunk_compression_system;
 use chunk_generator::{
     chunk_downsampler_system, chunk_generator_system, find_loading_slots_system,
-    new_chunk_writer_system, DownsampleSlots, GenerateSlots, LoadedChunks, NewSlot,
+    new_chunk_writer_system, DownsampleSlots, GenerateBudget, GenerateSlots, LoadedChunks, NewSlot,
 };
 use clip_spheres::{clip_sphere_system, ClipSpheres};
+use frame_budget::FrameBudget;
 use level_of_detail::level_of_detail_system;
 use mesh_generator::{
-    mesh_deleter_system, mesh_generator_system, ChunkMeshes, MeshCommands, MeshMaterials,
+    mesh_deleter_system, mesh_generator_system, ChunkMeshes, MeshBudget, MeshCommands,
+    MeshMaterials,
 };
 use new_slot_detector::detect_new_slots_system;
 use sync_batch::SyncBatch;
@@ -165,7 +168,15 @@ fn setup(
 
     // TODO: put these in a ChunkGenerator plugin
     commands.insert_resource(new_slots_batch);
+    commands.insert_resource(MeshBudget(FrameBudget::new(
+        map_config.target_frame_processing_time_us,
+        200,
+    )));
     commands.insert_resource(MeshCommands::default());
+    commands.insert_resource(GenerateBudget(FrameBudget::new(
+        map_config.target_frame_processing_time_us,
+        200,
+    )));
     commands.insert_resource(GenerateSlots::default());
     commands.insert_resource(DownsampleSlots::default());
     commands.insert_resource(LoadedChunks::default());

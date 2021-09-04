@@ -1,4 +1,5 @@
 use crate::{
+    frame_budget::FrameBudget,
     voxel_map::{MapConfig, VoxelMap},
     voxel_mesh::VoxelMesh,
     ClipSpheres,
@@ -15,6 +16,7 @@ use bevy_utilities::{
 use building_blocks::{mesh::*, prelude::*, storage::SmallKeyHashMap};
 
 use std::cell::RefCell;
+use std::time::Instant;
 
 #[derive(Default)]
 pub struct MeshMaterials(pub Vec<Handle<StandardMaterial>>);
@@ -37,7 +39,13 @@ impl MeshCommands {
     pub fn push(&mut self, command: LodChange3) {
         self.commands.push(command);
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.commands.is_empty()
+    }
 }
+
+pub struct MeshBudget(pub FrameBudget);
 
 /// Generates new meshes for all dirty chunks.
 pub fn mesh_generator_system<Mesh: VoxelMesh>(
@@ -46,10 +54,17 @@ pub fn mesh_generator_system<Mesh: VoxelMesh>(
     voxel_map: Res<VoxelMap>,
     local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers<Mesh>>,
     mesh_materials: Res<MeshMaterials>,
+    mut budget: ResMut<MeshBudget>,
     mut mesh_commands: ResMut<MeshCommands>,
     mut mesh_assets: ResMut<Assets<BevyMesh>>,
     mut chunk_meshes: ResMut<ChunkMeshes>,
 ) {
+    if mesh_commands.is_empty() {
+        return;
+    }
+
+    let start = Instant::now();
+
     let new_chunk_meshes = apply_mesh_commands::<Mesh>(
         &*voxel_map,
         &*local_mesh_buffers,
@@ -58,6 +73,8 @@ pub fn mesh_generator_system<Mesh: VoxelMesh>(
         &mut *chunk_meshes,
         &mut commands,
     );
+
+    budget.0.update_estimate(start.elapsed());
 
     spawn_mesh_entities(
         new_chunk_meshes,

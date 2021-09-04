@@ -256,6 +256,7 @@ where
         }
     }
 
+    /// The value used for any point in a vacant chunk slot.
     #[inline]
     pub fn ambient_value(&self) -> T {
         self.builder().ambient_value()
@@ -272,6 +273,7 @@ impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
     Bldr: ChunkTreeBuilder<N, T>,
 {
+    /// The LOD index for root nodes, i.e. the maximum LOD.
     #[inline]
     pub fn root_lod(&self) -> u8 {
         self.builder().root_lod()
@@ -283,6 +285,7 @@ where
     PointN<N>: Clone,
     Bldr: ChunkTreeBuilder<N, T>,
 {
+    /// The data shape of any chunk, regardless of LOD.
     #[inline]
     pub fn chunk_shape(&self) -> PointN<N> {
         self.builder().chunk_shape()
@@ -320,6 +323,7 @@ impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store> {
         &mut self.storages[lod as usize]
     }
 
+    /// The `ChunkTreeBuilder` for this tree.
     #[inline]
     pub fn builder(&self) -> &Bldr {
         &self.builder
@@ -350,6 +354,7 @@ where
     PointN<N>: IntegerPoint<N>,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
+    /// Returns `true` iff the tree contains a chunk for `key`.
     #[inline]
     pub fn contains_chunk(&self, key: ChunkKey<N>) -> bool {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
@@ -357,6 +362,7 @@ where
         self.lod_storage(key.lod).contains_chunk(key.minimum)
     }
 
+    /// Borrows the `ChunkNode` for `key`.
     #[inline]
     pub fn get_node(&self, key: ChunkKey<N>) -> Option<&ChunkNode<Usr>> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
@@ -364,6 +370,7 @@ where
         self.lod_storage(key.lod).get_node(key.minimum)
     }
 
+    /// Mutably borrows the `ChunkNode` for `key`.
     #[inline]
     pub fn get_mut_node(&mut self, key: ChunkKey<N>) -> Option<&mut ChunkNode<Usr>> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
@@ -371,6 +378,7 @@ where
         self.lod_storage_mut(key.lod).get_mut_node(key.minimum)
     }
 
+    /// Borrows the `NodeState` for the node at `key`.
     #[inline]
     pub fn get_node_state(&self, key: ChunkKey<N>) -> Option<&NodeState> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
@@ -378,6 +386,7 @@ where
         self.lod_storage(key.lod).get_node_state(key.minimum)
     }
 
+    /// Mutably borrows the `NodeState` for the node at `key`.
     #[inline]
     pub fn get_mut_node_state(&mut self, key: ChunkKey<N>) -> Option<(&mut NodeState, bool)> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
@@ -411,8 +420,6 @@ where
     Store: ChunkStorage<N, Chunk = Usr>,
 {
     /// Borrow the chunk at `key`.
-    ///
-    /// In debug mode only, asserts that `key` is valid.
     #[inline]
     pub fn get_chunk(&self, key: ChunkKey<N>) -> Option<&Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
@@ -428,6 +435,7 @@ where
         }
     }
 
+    /// Call `visitor` on all children keys of `parent_key`, reusing the child bitmask on `state` to avoid a hash map lookup.
     #[inline]
     pub fn visit_child_keys_of_node(
         &self,
@@ -443,6 +451,9 @@ where
         }
     }
 
+    /// Call `visitor` on all chunk keys in the subtree with root at `key`.
+    ///
+    /// A subtree will be pruned from the traversal iff `visitor` returns `false`.
     pub fn visit_tree_keys(&self, key: ChunkKey<N>, mut visitor: impl FnMut(ChunkKey<N>) -> bool) {
         self.visit_tree_keys_recursive(key, &mut visitor);
     }
@@ -467,6 +478,7 @@ where
     Store: ChunkStorage<N, Chunk = Usr> + for<'r> IterChunkKeys<'r, N>,
     Bldr: ChunkTreeBuilder<N, T>,
 {
+    /// Call `visitor` on all root chunk keys.
     #[inline]
     pub fn visit_root_keys(&self, mut visitor: impl FnMut(ChunkKey<N>)) {
         let root_lod = self.root_lod();
@@ -475,6 +487,9 @@ where
         }
     }
 
+    /// Call `visitor` on all keys in the entire tree. This happens in depth-first order.
+    ///
+    /// A subtree will be pruned from the traversal iff `visitor` returns `false`.
     pub fn visit_all_keys(&self, mut visitor: impl FnMut(ChunkKey<N>) -> bool) {
         self.visit_root_keys(|root_key| {
             self.visit_tree_keys(root_key, &mut visitor);
@@ -557,6 +572,7 @@ where
         });
     }
 
+    /// Visit all `ChunkNode`s in the subtree with root at `node_key`.
     pub fn visit_tree_nodes(
         &self,
         node_key: ChunkKey<N>,
@@ -624,8 +640,6 @@ where
     }
 
     /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
-    ///
-    /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
     #[inline]
     pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
@@ -636,8 +650,6 @@ where
     }
 
     /// Replace the `Chunk` at `key` with `chunk`, returning the old value.
-    ///
-    /// In debug mode only, asserts that `key` is valid and `chunk`'s shape is valid.
     #[inline]
     pub fn replace_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
@@ -650,8 +662,6 @@ where
     }
 
     /// Mutably borrow the chunk at `key`.
-    ///
-    /// In debug mode only, asserts that `key` is valid.
     #[inline]
     pub fn get_mut_chunk(&mut self, key: ChunkKey<N>) -> Option<&mut Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
@@ -660,8 +670,6 @@ where
     }
 
     /// Mutably borrow the chunk at `key`. If the chunk doesn't exist, `create_chunk` is called to insert one.
-    ///
-    /// In debug mode only, asserts that `key` is valid.
     #[inline]
     pub fn get_mut_chunk_or_insert_with(
         &mut self,
@@ -679,8 +687,6 @@ where
     }
 
     /// Mutably borrow the chunk at `key`. If the chunk doesn't exist, a new chunk is created with the ambient value.
-    ///
-    /// In debug mode only, asserts that `key` is valid.
     #[inline]
     pub fn get_mut_chunk_or_insert_ambient(&mut self, key: ChunkKey<N>) -> &mut Usr {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
@@ -755,6 +761,7 @@ where
         }
     }
 
+    /// Deletes the chunk at `key`. This does not affect an ancestor or descendant chunks.
     pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
         if !self.lod_storage_mut(key.lod).delete_chunk(key.minimum) {
             // Node has no children, so we can unlink.
@@ -837,11 +844,13 @@ pub struct NodeState {
 }
 
 impl NodeState {
+    /// Returns `true` iff the child slot at `corner_index` has a node in the tree.
     #[inline]
     pub fn has_child(&self, corner_index: u8) -> bool {
         self.child_bits.bit_is_set(corner_index)
     }
 
+    /// Returns `true` iff any child slots have a node in the tree.
     #[inline]
     pub fn has_any_children(&self) -> bool {
         self.child_bits.any()

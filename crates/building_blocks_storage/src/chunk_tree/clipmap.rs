@@ -154,7 +154,12 @@ where
                 if node_state.descendant_needs_loading_bits.none() {
                     // All descendants have loaded, so this slot is ready to be loaded.
                     rx(node_key);
-                    num_load_slots += 1;
+
+                    // Leaving this commented, we are choosing not to count LOD > 0 against the budget. Downsampling is much
+                    // faster than generating LOD0, and there are many more LOD0 chunks, so it seems fair to just let as much
+                    // downsampling happen as possible.
+                    // num_load_slots += 1;
+
                     continue;
                 }
 

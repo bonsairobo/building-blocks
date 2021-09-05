@@ -7,9 +7,14 @@ pub trait VoxelMesh: 'static + Send {
 
     fn init_mesh_buffers(chunk_shape: Point3i) -> Self::MeshBuffers;
 
-    fn create_mesh_for_chunk(
+    fn copy_chunk_neighborhood(
         chunks: &CompressibleChunkTree3x1<Lz4, Voxel>,
         key: ChunkKey3,
+    ) -> Array3x1<Voxel>;
+
+    fn create_mesh_for_chunk(
+        key: ChunkKey3,
+        neighborhood: &Array3x1<Voxel>,
         mesh_buffers: &mut Self::MeshBuffers,
     ) -> Option<PosNormMesh>;
 }
@@ -19,49 +24,39 @@ pub struct SmoothMesh;
 impl VoxelMesh for SmoothMesh {
     type MeshBuffers = SmoothMeshBuffers;
 
-    fn init_mesh_buffers(chunk_shape: Point3i) -> Self::MeshBuffers {
-        let extent = padded_surface_nets_chunk_extent(&Extent3i::from_min_and_shape(
-            Point3i::ZERO,
-            chunk_shape,
-        ));
-
+    fn init_mesh_buffers(_chunk_shape: Point3i) -> Self::MeshBuffers {
         Self::MeshBuffers {
             mesh_buffer: Default::default(),
-            neighborhood_buffer: Array3x1::fill(extent, Voxel::EMPTY),
         }
     }
 
-    fn create_mesh_for_chunk(
+    fn copy_chunk_neighborhood(
         chunks: &CompressibleChunkTree3x1<Lz4, Voxel>,
         key: ChunkKey3,
-        mesh_buffers: &mut Self::MeshBuffers,
-    ) -> Option<PosNormMesh> {
-        if chunks.get_chunk(key).is_none() {
-            return None;
-        }
-
+    ) -> Array3x1<Voxel> {
         let chunk_extent = chunks.indexer.extent_for_chunk_with_min(key.minimum);
         let padded_chunk_extent = padded_surface_nets_chunk_extent(&chunk_extent);
-
-        // Keep a thread-local cache of buffers to avoid expensive reallocations every time we want to mesh a chunk.
-        let Self::MeshBuffers {
-            mesh_buffer,
-            neighborhood_buffer,
-        } = &mut *mesh_buffers;
-
-        // While the chunk shape doesn't change, we need to make sure that it's in the right position for each particular chunk.
-        neighborhood_buffer.set_minimum(padded_chunk_extent.minimum);
-
+        let mut neighborhood = Array3x1::fill(padded_chunk_extent, Voxel::EMPTY);
         copy_extent(
             &padded_chunk_extent,
             &chunks.lod_view(key.lod),
-            neighborhood_buffer,
+            &mut neighborhood,
         );
+        neighborhood
+    }
+
+    fn create_mesh_for_chunk(
+        key: ChunkKey3,
+        neighborhood: &Array3x1<Voxel>,
+        mesh_buffers: &mut Self::MeshBuffers,
+    ) -> Option<PosNormMesh> {
+        // Keep a thread-local cache of buffers to avoid expensive reallocations every time we want to mesh a chunk.
+        let Self::MeshBuffers { mesh_buffer } = &mut *mesh_buffers;
 
         let voxel_size = (1 << key.lod) as f32;
         surface_nets(
-            neighborhood_buffer,
-            &padded_chunk_extent,
+            neighborhood,
+            &neighborhood.extent(),
             voxel_size,
             true,
             &mut *mesh_buffer,
@@ -77,7 +72,6 @@ impl VoxelMesh for SmoothMesh {
 
 pub struct SmoothMeshBuffers {
     mesh_buffer: SurfaceNetsBuffer,
-    neighborhood_buffer: Array3x1<Voxel>,
 }
 
 pub struct BlockyMesh;
@@ -93,40 +87,31 @@ impl VoxelMesh for BlockyMesh {
 
         Self::MeshBuffers {
             mesh_buffer: GreedyQuadsBuffer::new(extent, RIGHT_HANDED_Y_UP_CONFIG.quad_groups()),
-            neighborhood_buffer: Array3x1::fill(extent, Voxel::EMPTY),
         }
     }
 
-    fn create_mesh_for_chunk(
+    fn copy_chunk_neighborhood(
         chunks: &CompressibleChunkTree3x1<Lz4, Voxel>,
         key: ChunkKey3,
-        mesh_buffers: &mut Self::MeshBuffers,
-    ) -> Option<PosNormMesh> {
-        if chunks.get_chunk(key).is_none() {
-            return None;
-        }
-
+    ) -> Array3x1<Voxel> {
         let chunk_extent = chunks.indexer.extent_for_chunk_with_min(key.minimum);
         let padded_chunk_extent = padded_greedy_quads_chunk_extent(&chunk_extent);
-
-        // Keep a thread-local cache of buffers to avoid expensive reallocations every time we want to mesh a chunk.
-        let Self::MeshBuffers {
-            mesh_buffer,
-            neighborhood_buffer,
-        } = &mut *mesh_buffers;
-
-        // While the chunk shape doesn't change, we need to make sure that it's in the right position for each particular chunk.
-        neighborhood_buffer.set_minimum(padded_chunk_extent.minimum);
-
+        let mut neighborhood = Array3x1::fill(padded_chunk_extent, Voxel::EMPTY);
         // Only copy the chunk_extent, leaving the padding empty so that we don't get holes on LOD boundaries.
-        copy_extent(
-            &chunk_extent,
-            &chunks.lod_view(key.lod),
-            neighborhood_buffer,
-        );
+        copy_extent(&chunk_extent, &chunks.lod_view(key.lod), &mut neighborhood);
+        neighborhood
+    }
+
+    fn create_mesh_for_chunk(
+        key: ChunkKey3,
+        neighborhood: &Array3x1<Voxel>,
+        mesh_buffers: &mut Self::MeshBuffers,
+    ) -> Option<PosNormMesh> {
+        // Keep a thread-local cache of buffers to avoid expensive reallocations every time we want to mesh a chunk.
+        let Self::MeshBuffers { mesh_buffer } = &mut *mesh_buffers;
 
         let voxel_size = (1 << key.lod) as f32;
-        greedy_quads(neighborhood_buffer, &padded_chunk_extent, &mut *mesh_buffer);
+        greedy_quads(neighborhood, &neighborhood.extent(), &mut *mesh_buffer);
 
         if mesh_buffer.num_quads() == 0 {
             None
@@ -147,5 +132,4 @@ impl VoxelMesh for BlockyMesh {
 
 pub struct BlockyMeshBuffers {
     mesh_buffer: GreedyQuadsBuffer,
-    neighborhood_buffer: Array3x1<Voxel>,
 }

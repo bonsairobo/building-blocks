@@ -2,7 +2,7 @@
     chunk_exponent: 4,
     num_lods: 6,
     detail: 5.0,
-    target_frame_processing_time_us: 2000,
+    target_frame_processing_time_us: 16000,
     clip_radius: 1500.0,
     detect_enter_lod: 4,
     noise: (
@@ -12,6 +12,6 @@
         octaves: 6,
     ),
     msaa: None,
-    lod_colors: false,
+    lod_colors: true,
     wireframes: false,
 )

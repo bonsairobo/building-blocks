@@ -7,7 +7,11 @@ use crate::{
 
 use bevy_utilities::{
     bevy::{
-        asset::prelude::*, ecs, prelude::Mesh as BevyMesh, prelude::*, tasks::ComputeTaskPool,
+        asset::prelude::*,
+        ecs,
+        prelude::Mesh as BevyMesh,
+        prelude::*,
+        tasks::{AsyncComputeTaskPool, Task},
         utils::tracing,
     },
     mesh::create_mesh_bundle,
@@ -15,149 +19,149 @@ use bevy_utilities::{
 };
 use building_blocks::{mesh::*, prelude::*, storage::SmallKeyHashMap};
 
+use futures_lite::future;
 use std::cell::RefCell;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
-#[derive(Default)]
-pub struct MeshMaterials(pub Vec<Handle<StandardMaterial>>);
-
-#[derive(Default)]
-pub struct ChunkMeshes {
-    // Map from chunk key to mesh entity.
-    entities: SmallKeyHashMap<ChunkKey3, Entity>,
-}
-
-/// It's important that this container only has at most ONE frame's worth of changes at a given time. The mesh generator system
-/// does not respect ordering of events across multiple frames. It also assumes a bounded number of meshes to generate per
-/// frame, and hence a bounded latency to do that work.
-#[derive(Default)]
-pub struct MeshCommands {
-    commands: Vec<LodChange3>,
-}
-
-impl MeshCommands {
-    pub fn push(&mut self, command: LodChange3) {
-        self.commands.push(command);
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.commands.is_empty()
-    }
-}
-
-pub struct MeshBudget(pub FrameBudget);
-
-/// Generates new meshes for all dirty chunks.
+/// Starts and polls tasks to generate new meshes.
+///
+/// In order to have tasks running for the full duration of a frame, we first poll all outstanding tasks to completion, then
+/// spawn new ones.
 pub fn mesh_generator_system<Mesh: VoxelMesh>(
     mut commands: Commands,
-    pool: Res<ComputeTaskPool>,
+    pool: Res<AsyncComputeTaskPool>,
     voxel_map: Res<VoxelMap>,
+    clip_spheres: Res<ClipSpheres>,
     local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers<Mesh>>,
     mesh_materials: Res<MeshMaterials>,
-    mut budget: ResMut<MeshBudget>,
-    mut mesh_commands: ResMut<MeshCommands>,
     mut mesh_assets: ResMut<Assets<BevyMesh>>,
+    mut budget: ResMut<MeshBudget>,
+    mut mesh_tasks: ResMut<MeshTasks>,
     mut chunk_meshes: ResMut<ChunkMeshes>,
 ) {
-    if mesh_commands.is_empty() {
-        return;
-    }
-
-    let start = Instant::now();
-
-    let new_chunk_meshes = apply_mesh_commands::<Mesh>(
-        &*voxel_map,
-        &*local_mesh_buffers,
-        &*pool,
-        &mut *mesh_commands,
-        &mut *chunk_meshes,
-        &mut commands,
-    );
-
-    budget.0.update_estimate(start.elapsed());
-
-    spawn_mesh_entities(
-        new_chunk_meshes,
+    // Atomically spawn and remove mesh entities for this frame.
+    spawn_and_despawn_mesh_entities(
+        &mut *mesh_tasks,
+        &mut budget.0,
         &*mesh_materials,
         &mut commands,
         &mut *mesh_assets,
         &mut *chunk_meshes,
     );
-}
 
-fn apply_mesh_commands<Mesh: VoxelMesh>(
-    voxel_map: &VoxelMap,
-    local_mesh_buffers: &ThreadLocalMeshBuffers<Mesh>,
-    pool: &ComputeTaskPool,
-    mesh_commands: &mut MeshCommands,
-    chunk_meshes: &mut ChunkMeshes,
-    commands: &mut Commands,
-) -> Vec<(ChunkKey3, Option<PosNormMesh>)> {
-    let span = tracing::info_span!("make_mesh");
-    let span_ref = &span;
+    budget.0.update_estimate();
 
-    let mut chunks_to_remove = Vec::new();
+    // Find render updates.
+    let mut updates = Vec::new();
+    let span = tracing::info_span!("lod_changes");
+    {
+        let _trace_guard = span.enter();
 
-    let new_meshes = pool.scope(|s| {
-        let mut make_mesh = |key: ChunkKey3| {
-            s.spawn(async move {
-                let _trace_guard = span_ref.enter();
-                let mesh_tls = local_mesh_buffers.get();
-                let mut mesh_buffers = mesh_tls
-                    .get_or_create_with(|| {
-                        RefCell::new(Mesh::init_mesh_buffers(voxel_map.chunks.chunk_shape()))
-                    })
-                    .borrow_mut();
+        let this_frame_budget = budget.0.request_work(0);
 
-                (
-                    key,
-                    Mesh::create_mesh_for_chunk(&voxel_map.chunks, key, &mut mesh_buffers),
-                )
-            });
-        };
-
-        for command in mesh_commands.commands.drain(..) {
-            match command {
-                LodChange3::Spawn(key) => {
-                    make_mesh(key);
-                }
-                LodChange3::Split(split) => {
-                    chunks_to_remove.push(split.old_chunk);
-                    for &key in split.new_chunks.iter() {
-                        make_mesh(key);
-                    }
-                }
-                LodChange3::Merge(merge) => {
-                    for &key in merge.old_chunks.iter() {
-                        chunks_to_remove.push(key);
-                    }
-                    make_mesh(merge.new_chunk);
-                }
-            }
-        }
-    });
-
-    for key in chunks_to_remove.into_iter() {
-        if let Some(entity) = chunk_meshes.entities.remove(&key) {
-            commands.entity(entity).despawn();
-        }
+        voxel_map.chunks.clipmap_render_updates(
+            voxel_map.config.detail,
+            clip_spheres.new_sphere,
+            this_frame_budget as usize,
+            |c| updates.push(c),
+        );
     }
 
-    new_meshes
+    budget.0.reset_timer();
+
+    start_mesh_tasks::<Mesh>(
+        &*voxel_map,
+        &*local_mesh_buffers,
+        &*pool,
+        updates,
+        &mut *mesh_tasks,
+    );
+}
+
+fn start_mesh_tasks<Mesh: VoxelMesh>(
+    voxel_map: &VoxelMap,
+    local_mesh_buffers: &ThreadLocalMeshBuffers<Mesh>,
+    pool: &AsyncComputeTaskPool,
+    updates: Vec<LodChange3>,
+    mesh_tasks: &mut MeshTasks,
+) {
+    let MeshTasks { tasks, removals } = mesh_tasks;
+
+    let mut start_task = |key: ChunkKey3| {
+        if voxel_map.chunks.get_chunk(key).is_none() {
+            return;
+        }
+
+        let chunk_shape = voxel_map.chunks.chunk_shape();
+        let task_local_mesh_buffers = local_mesh_buffers.get();
+        let neighborhood = Mesh::copy_chunk_neighborhood(&voxel_map.chunks, key);
+
+        let task = pool.spawn(async move {
+            let span = tracing::info_span!("make_mesh");
+            let _trace_guard = span.enter();
+
+            let start_time = Instant::now();
+
+            let mut mesh_buffers = task_local_mesh_buffers
+                .get_or_create_with(|| RefCell::new(Mesh::init_mesh_buffers(chunk_shape)))
+                .borrow_mut();
+
+            let mesh = Mesh::create_mesh_for_chunk(key, &neighborhood, &mut mesh_buffers);
+
+            (key, mesh, start_time.elapsed())
+        });
+        tasks.push(task);
+    };
+
+    for update in updates.into_iter() {
+        match update {
+            LodChange3::Spawn(key) => {
+                start_task(key);
+            }
+            LodChange3::Split(split) => {
+                removals.push(split.old_chunk);
+                for &key in split.new_chunks.iter() {
+                    start_task(key);
+                }
+            }
+            LodChange3::Merge(merge) => {
+                for &key in merge.old_chunks.iter() {
+                    removals.push(key);
+                }
+                start_task(merge.new_chunk);
+            }
+        }
+    }
 }
 
 // ThreadLocal doesn't let you get a mutable reference, so we need to use RefCell. We lock this down to only be used in this
 // module as a Local resource, so we know it's safe.
 type ThreadLocalMeshBuffers<Mesh> = ThreadLocalResource<RefCell<<Mesh as VoxelMesh>::MeshBuffers>>;
 
-fn spawn_mesh_entities(
-    new_chunk_meshes: Vec<(ChunkKey3, Option<PosNormMesh>)>,
+fn spawn_and_despawn_mesh_entities(
+    mesh_tasks: &mut MeshTasks,
+    budget: &mut FrameBudget,
     mesh_materials: &MeshMaterials,
     commands: &mut Commands,
     mesh_assets: &mut Assets<Mesh>,
     chunk_meshes: &mut ChunkMeshes,
 ) {
-    for (chunk_key, item) in new_chunk_meshes.into_iter() {
+    // Finish all outstanding tasks.
+    let mut mesh_outputs = Vec::new();
+    // PERF: is this the best way to block on many futures?
+    for task in mesh_tasks.tasks.drain(..) {
+        mesh_outputs.push(future::block_on(task));
+    }
+
+    for chunk_key in mesh_tasks.removals.drain(..) {
+        if let Some(mesh_entity) = chunk_meshes.entities.remove(&chunk_key) {
+            commands.entity(mesh_entity).despawn();
+        }
+    }
+
+    for (chunk_key, item, item_duration) in mesh_outputs.into_iter() {
+        budget.complete_item(item_duration);
+
         let old_mesh = if let Some(mesh) = item {
             chunk_meshes.entities.insert(
                 chunk_key,
@@ -201,3 +205,24 @@ pub fn mesh_deleter_system(
         }
     }
 }
+
+#[derive(Default)]
+pub struct MeshMaterials(pub Vec<Handle<StandardMaterial>>);
+
+#[derive(Default)]
+pub struct ChunkMeshes {
+    // Map from chunk key to mesh entity.
+    entities: SmallKeyHashMap<ChunkKey3, Entity>,
+}
+
+pub struct MeshBudget(pub FrameBudget);
+
+/// All mesh tasks currently running.
+#[derive(Default)]
+pub struct MeshTasks {
+    tasks: Vec<Task<MeshTaskOutput>>,
+    // These need to be applied in the same frame when the new meshes are created so splits/merges happen atomically.
+    removals: Vec<ChunkKey3>,
+}
+
+pub type MeshTaskOutput = (ChunkKey3, Option<PosNormMesh>, Duration);

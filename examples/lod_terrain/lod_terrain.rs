@@ -2,7 +2,6 @@ mod chunk_compressor;
 mod chunk_generator;
 mod clip_spheres;
 mod frame_budget;
-mod level_of_detail;
 mod mesh_generator;
 mod new_slot_detector;
 mod sync_batch;
@@ -16,10 +15,8 @@ use chunk_generator::{
 };
 use clip_spheres::{clip_sphere_system, ClipSpheres};
 use frame_budget::FrameBudget;
-use level_of_detail::level_of_detail_system;
 use mesh_generator::{
-    mesh_deleter_system, mesh_generator_system, ChunkMeshes, MeshBudget, MeshCommands,
-    MeshMaterials,
+    mesh_deleter_system, mesh_generator_system, ChunkMeshes, MeshBudget, MeshMaterials, MeshTasks,
 };
 use new_slot_detector::detect_new_slots_system;
 use sync_batch::SyncBatch;
@@ -34,6 +31,7 @@ use bevy_utilities::{
         prelude::*,
         render::camera::PerspectiveProjection,
         render::wireframe::{WireframeConfig, WireframePlugin},
+        tasks::AsyncComputeTaskPool,
         wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
     },
     smooth_cameras::{controllers::fps::*, LookTransformPlugin},
@@ -109,7 +107,6 @@ fn run_example<Mesh: VoxelMesh>() {
                 .label("new_chunk_writer")
                 .after("find_loading"),
         )
-        .add_system(level_of_detail_system.system())
         .add_system(mesh_deleter_system.system().label("mesh_deleter"))
         .add_system(mesh_generator_system::<Mesh>.system().after("mesh_deleter"))
         .add_system(chunk_compression_system.system())
@@ -132,6 +129,7 @@ fn movement_sensitivity(
 
 fn setup(
     map_config: Res<MapConfig>,
+    async_pool: Res<AsyncComputeTaskPool>,
     mut commands: Commands,
     mut wireframe_config: ResMut<WireframeConfig>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -169,11 +167,13 @@ fn setup(
     // TODO: put these in a ChunkGenerator plugin
     commands.insert_resource(new_slots_batch);
     commands.insert_resource(MeshBudget(FrameBudget::new(
+        async_pool.thread_num() as u32,
         map_config.target_frame_processing_time_us,
         200,
     )));
-    commands.insert_resource(MeshCommands::default());
+    commands.insert_resource(MeshTasks::default());
     commands.insert_resource(GenerateBudget(FrameBudget::new(
+        async_pool.thread_num() as u32,
         map_config.target_frame_processing_time_us,
         200,
     )));

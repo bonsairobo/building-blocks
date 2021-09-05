@@ -43,20 +43,28 @@ pub fn chunk_generator_system(
     let span = tracing::info_span!("generate_chunk");
     let span_ref = &span;
 
-    let start = Instant::now();
+    budget.0.reset_timer();
 
     let config_ref = &*config;
     let generated_chunks = pool.scope(|scope| {
         for key in generate_slots.slots.drain(..) {
             scope.spawn(async move {
                 let _trace_guard = span_ref.enter();
-                (key, VoxelMap::generate_lod0_chunk(config_ref, key.minimum))
+                let start_time = Instant::now();
+                let chunk = VoxelMap::generate_lod0_chunk(config_ref, key.minimum);
+                (key, chunk, start_time.elapsed())
             });
         }
     });
+    let generated_chunks = generated_chunks
+        .into_iter()
+        .map(|(key, chunk, item_duration)| {
+            budget.0.complete_item(item_duration);
+            (key, chunk)
+        });
     loaded_chunks.chunks.extend(generated_chunks.into_iter());
 
-    budget.0.update_estimate(start.elapsed());
+    budget.0.update_estimate();
 }
 
 pub fn chunk_downsampler_system(

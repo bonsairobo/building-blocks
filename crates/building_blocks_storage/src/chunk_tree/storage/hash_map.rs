@@ -55,11 +55,6 @@ where
     }
 
     #[inline]
-    fn write_raw_node(&mut self, key: PointN<N>, chunk: ChunkNode<Self::Chunk>) {
-        self.insert(key, chunk);
-    }
-
-    #[inline]
     fn pop_node(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::Chunk>> {
         self.remove(&key)
     }

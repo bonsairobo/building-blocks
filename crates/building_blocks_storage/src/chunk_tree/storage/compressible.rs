@@ -505,22 +505,6 @@ where
     }
 
     #[inline]
-    fn write_raw_node(&mut self, key: PointN<N>, node: ChunkNode<Self::ChunkRepr>) {
-        if let Some(user_chunk) = node.user_chunk {
-            match user_chunk {
-                MaybeCompressed::Compressed(c) => {
-                    self.insert_compressed(key, ChunkNode::new(Some(c), node.state));
-                }
-                MaybeCompressed::Decompressed(d) => {
-                    self.write_node(key, ChunkNode::new(Some(d), node.state))
-                }
-            }
-        } else {
-            self.write_node(key, ChunkNode::new_without_data(node.state))
-        }
-    }
-
-    #[inline]
     fn pop_node(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::Chunk>> {
         self.remove(key)
             .map(|ch| ch.into_decompressed_with(|c| c.as_ref().map(Compressed::decompress)))

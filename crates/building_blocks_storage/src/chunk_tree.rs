@@ -29,8 +29,6 @@
 //! - [`ReadExtent`](crate::access_traits::ReadExtent)
 //! - [`WriteExtent`](crate::access_traits::WriteExtent)
 //!
-//! You may also want to utilize the tree structure more directly via some kind of traversal. **TODO**: better traversal APIs
-//!
 //! # Random Access
 //!
 //! ## Chunks

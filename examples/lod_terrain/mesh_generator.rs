@@ -11,7 +11,7 @@ use bevy_utilities::{
         ecs,
         prelude::Mesh as BevyMesh,
         prelude::*,
-        tasks::{AsyncComputeTaskPool, Task},
+        tasks::{ComputeTaskPool, Task},
         utils::tracing,
     },
     mesh::create_mesh_bundle,
@@ -29,7 +29,7 @@ use std::time::{Duration, Instant};
 /// spawn new ones.
 pub fn mesh_generator_system<Mesh: VoxelMesh>(
     mut commands: Commands,
-    pool: Res<AsyncComputeTaskPool>,
+    pool: Res<ComputeTaskPool>,
     voxel_map: Res<VoxelMap>,
     clip_spheres: Res<ClipSpheres>,
     local_mesh_buffers: ecs::system::Local<ThreadLocalMeshBuffers<Mesh>>,
@@ -49,8 +49,6 @@ pub fn mesh_generator_system<Mesh: VoxelMesh>(
         &mut *chunk_meshes,
     );
 
-    budget.0.update_estimate();
-
     // Find render updates.
     let mut updates = Vec::new();
     let span = tracing::info_span!("lod_changes");
@@ -67,8 +65,6 @@ pub fn mesh_generator_system<Mesh: VoxelMesh>(
         );
     }
 
-    budget.0.reset_timer();
-
     start_mesh_tasks::<Mesh>(
         &*voxel_map,
         &*local_mesh_buffers,
@@ -81,7 +77,7 @@ pub fn mesh_generator_system<Mesh: VoxelMesh>(
 fn start_mesh_tasks<Mesh: VoxelMesh>(
     voxel_map: &VoxelMap,
     local_mesh_buffers: &ThreadLocalMeshBuffers<Mesh>,
-    pool: &AsyncComputeTaskPool,
+    pool: &ComputeTaskPool,
     updates: Vec<LodChange3>,
     mesh_tasks: &mut MeshTasks,
 ) {
@@ -146,20 +142,13 @@ fn spawn_and_despawn_mesh_entities(
     mesh_assets: &mut Assets<Mesh>,
     chunk_meshes: &mut ChunkMeshes,
 ) {
+    budget.reset_timer();
+
     // Finish all outstanding tasks.
-    let mut mesh_outputs = Vec::new();
-    // PERF: is this the best way to block on many futures?
     for task in mesh_tasks.tasks.drain(..) {
-        mesh_outputs.push(future::block_on(task));
-    }
+        // PERF: is this the best way to block on many futures?
+        let (chunk_key, item, item_duration) = future::block_on(task);
 
-    for chunk_key in mesh_tasks.removals.drain(..) {
-        if let Some(mesh_entity) = chunk_meshes.entities.remove(&chunk_key) {
-            commands.entity(mesh_entity).despawn();
-        }
-    }
-
-    for (chunk_key, item, item_duration) in mesh_outputs.into_iter() {
         budget.complete_item(item_duration);
 
         let old_mesh = if let Some(mesh) = item {
@@ -178,6 +167,14 @@ fn spawn_and_despawn_mesh_entities(
         };
         if let Some(old_mesh) = old_mesh {
             commands.entity(old_mesh).despawn();
+        }
+    }
+
+    budget.update_estimate();
+
+    for chunk_key in mesh_tasks.removals.drain(..) {
+        if let Some(mesh_entity) = chunk_meshes.entities.remove(&chunk_key) {
+            commands.entity(mesh_entity).despawn();
         }
     }
 }

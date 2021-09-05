@@ -35,17 +35,16 @@ impl VoxelMap {
         Self { chunks, config }
     }
 
-    pub fn generate_lod0_chunk(config: &MapConfig, chunk_min: Point3i) -> Option<Array3x1<Voxel>> {
-        let chunk_shape = config.chunk_shape();
-
+    pub fn generate_lod0_chunk(
+        config: NoiseConfig,
+        chunk_extent: Extent3i,
+    ) -> Option<Array3x1<Voxel>> {
         let NoiseConfig {
             freq,
             scale,
             seed,
             octaves,
-        } = config.noise;
-
-        let chunk_extent = Extent3i::from_min_and_shape(chunk_min, chunk_shape);
+        } = config;
 
         unsafe {
             // SAFE: Voxel is a transparent wrapper of f32
@@ -68,7 +67,8 @@ pub struct MapConfig {
     pub clip_radius: f32,
     pub detect_enter_lod: u8,
     pub detail: f32,
-    pub target_frame_processing_time_us: u32,
+    pub chunk_generation_frame_time_budget_us: u32,
+    pub mesh_generation_frame_time_budget_us: u32,
     pub noise: NoiseConfig,
     pub wireframes: bool,
     pub lod_colors: bool,

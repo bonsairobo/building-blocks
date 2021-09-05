@@ -2,7 +2,8 @@
     chunk_exponent: 4,
     num_lods: 6,
     detail: 5.0,
-    target_frame_processing_time_us: 16000,
+    chunk_generation_frame_time_budget_us: 6000,
+    mesh_generation_frame_time_budget_us: 6000,
     clip_radius: 1500.0,
     detect_enter_lod: 4,
     noise: (

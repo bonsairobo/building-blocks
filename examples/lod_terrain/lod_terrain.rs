@@ -9,10 +9,7 @@ mod voxel_map;
 mod voxel_mesh;
 
 use chunk_compressor::chunk_compression_system;
-use chunk_generator::{
-    chunk_downsampler_system, chunk_generator_system, find_loading_slots_system,
-    new_chunk_writer_system, DownsampleSlots, GenerateBudget, GenerateSlots, LoadedChunks, NewSlot,
-};
+use chunk_generator::{chunk_generator_system, GenerateBudget, GenerateTasks, NewSlot};
 use clip_spheres::{clip_sphere_system, ClipSpheres};
 use frame_budget::FrameBudget;
 use mesh_generator::{
@@ -31,7 +28,7 @@ use bevy_utilities::{
         prelude::*,
         render::camera::PerspectiveProjection,
         render::wireframe::{WireframeConfig, WireframePlugin},
-        tasks::AsyncComputeTaskPool,
+        tasks::ComputeTaskPool,
         wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
     },
     smooth_cameras::{controllers::fps::*, LookTransformPlugin},
@@ -85,28 +82,7 @@ fn run_example<Mesh: VoxelMesh>() {
         .add_startup_system(setup.system())
         .add_system(clip_sphere_system.system())
         .add_system(detect_new_slots_system.system())
-        // TODO: put these in a ChunkGenerator plugin
-        // We need a specific ordering for these systems because we want to ensure that the chunks we found to load are written
-        // back to the chunk tree in the same frame.
-        .add_system(find_loading_slots_system.system().label("find_loading"))
-        .add_system(
-            chunk_generator_system
-                .system()
-                .after("find_loading")
-                .before("new_chunk_writer"),
-        )
-        .add_system(
-            chunk_downsampler_system
-                .system()
-                .after("find_loading")
-                .before("new_chunk_writer"),
-        )
-        .add_system(
-            new_chunk_writer_system
-                .system()
-                .label("new_chunk_writer")
-                .after("find_loading"),
-        )
+        .add_system(chunk_generator_system.system())
         .add_system(mesh_deleter_system.system().label("mesh_deleter"))
         .add_system(mesh_generator_system::<Mesh>.system().after("mesh_deleter"))
         .add_system(chunk_compression_system.system())
@@ -129,7 +105,7 @@ fn movement_sensitivity(
 
 fn setup(
     map_config: Res<MapConfig>,
-    async_pool: Res<AsyncComputeTaskPool>,
+    async_pool: Res<ComputeTaskPool>,
     mut commands: Commands,
     mut wireframe_config: ResMut<WireframeConfig>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -168,18 +144,16 @@ fn setup(
     commands.insert_resource(new_slots_batch);
     commands.insert_resource(MeshBudget(FrameBudget::new(
         async_pool.thread_num() as u32,
-        map_config.target_frame_processing_time_us,
+        map_config.mesh_generation_frame_time_budget_us,
         200,
     )));
     commands.insert_resource(MeshTasks::default());
+    commands.insert_resource(GenerateTasks::default());
     commands.insert_resource(GenerateBudget(FrameBudget::new(
         async_pool.thread_num() as u32,
-        map_config.target_frame_processing_time_us,
+        map_config.chunk_generation_frame_time_budget_us,
         200,
     )));
-    commands.insert_resource(GenerateSlots::default());
-    commands.insert_resource(DownsampleSlots::default());
-    commands.insert_resource(LoadedChunks::default());
 
     commands.insert_resource(clip_spheres);
     commands.insert_resource(map);

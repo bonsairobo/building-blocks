@@ -181,7 +181,7 @@ where
                     // Keep looking for any active descendants.
                     self.visit_child_keys_of_node(
                         node_key,
-                        &node_state,
+                        node_state,
                         |child_key, corner_index| {
                             candidate_heap.push(ChunkSphere::new(
                                 observer,
@@ -207,7 +207,7 @@ where
 
                     // This node might have active descendants. Merge those active descendants into this node.
                     let mut old_chunks = Vec::with_capacity(8);
-                    self.visit_child_keys_of_node(node_key, &node_state, |child_key, _| {
+                    self.visit_child_keys_of_node(node_key, node_state, |child_key, _| {
                         self.visit_tree_keys(child_key, |descendant_key| {
                             let descendant_node = self.get_node(descendant_key).unwrap();
                             let descendant_was_active = descendant_node
@@ -249,7 +249,7 @@ where
                     // again if we still have budget.
                     self.visit_child_keys_of_node(
                         node_key,
-                        &node_state,
+                        node_state,
                         |child_key, corner_index| {
                             let child_node = self.get_node(child_key).unwrap();
                             child_node.state.state_bits.set_bit(StateBit::Render as u8);

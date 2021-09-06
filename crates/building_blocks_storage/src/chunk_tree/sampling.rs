@@ -286,10 +286,8 @@ where
             if let Some(src_chunk) = self.get_chunk(src_chunk_key) {
                 sampler.downsample(src_chunk.array(), dst_array, dst.offset);
             }
-        } else {
-            if let Some(src_chunk) = src_chunk {
-                sampler.downsample(src_chunk.array(), dst_array, dst.offset);
-            }
+        } else if let Some(src_chunk) = src_chunk {
+            sampler.downsample(src_chunk.array(), dst_array, dst.offset);
         };
     }
 

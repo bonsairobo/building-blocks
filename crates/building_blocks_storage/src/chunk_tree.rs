@@ -98,7 +98,7 @@
 //!   - if the chunk is currently being rendered
 //!
 //! The `ChunkTree::clipmap_*` algorithms can be given a work budget and search the tree to find a set of chunks that need to be
-//! loaded or rendered at a different level of detail. See the "lod_terrain" example for proper usage.
+//! loaded or rendered at a different level of detail. See the "lod terrain" example for proper usage.
 //!
 //! # Serialization
 //!

@@ -21,8 +21,7 @@ where
         key: PointN<N>,
         node: ChunkNode<Self::Chunk>,
     ) -> Option<ChunkNode<Either<Self::Chunk, Self::ColdChunk>>> {
-        self.insert(key, node)
-            .map(|node| node.map(|c| Either::Left(c)))
+        self.insert(key, node).map(|node| node.map(Either::Left))
     }
 
     #[inline]
@@ -85,7 +84,7 @@ where
         &mut self,
         key: PointN<N>,
     ) -> Option<ChunkNode<Either<Self::Chunk, Self::ColdChunk>>> {
-        self.remove(&key).map(|node| node.map(|c| Either::Left(c)))
+        self.remove(&key).map(|node| node.map(Either::Left))
     }
 
     #[inline]

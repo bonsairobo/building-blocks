@@ -10,9 +10,9 @@ use std::cmp::Ordering;
 /// A 3-dimensional point with scalar type `T`.
 pub type Point3<T> = PointN<[T; 3]>;
 /// A 3-dimensional point with scalar type `i32`.
-pub type Point3i = PointN<[i32; 3]>;
+pub type Point3i = Point3<i32>;
 /// A 3-dimensional point with scalar type `f32`.
-pub type Point3f = PointN<[f32; 3]>;
+pub type Point3f = Point3<f32>;
 
 impl<T> Point3<T> {
     #[inline]

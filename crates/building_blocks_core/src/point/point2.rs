@@ -10,9 +10,9 @@ use std::cmp::Ordering;
 /// A 2-dimensional point with scalar type `T`.
 pub type Point2<T> = PointN<[T; 2]>;
 /// A 2-dimensional point with scalar type `i32`.
-pub type Point2i = PointN<[i32; 2]>;
+pub type Point2i = Point2<i32>;
 /// A 2-dimensional point with scalar type `f32`.
-pub type Point2f = PointN<[f32; 2]>;
+pub type Point2f = Point2<f32>;
 
 impl<T> Point2<T> {
     #[inline]

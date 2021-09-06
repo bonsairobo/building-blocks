@@ -136,7 +136,7 @@
 //!
 //! // Save some space by compressing the least recently used chunks. On further access to the
 //! // compressed chunks, they will get decompressed and cached.
-//! tree.lod_storage_mut(0).compress_lru();
+//! while !tree.lod_storage_mut(0).try_compress_lru() {}
 //!
 //! // Sometimes you need to implement very fast algorithms (like kernel-based methods) that do a
 //! // lot of random access inside some bounding extent. In this case it's most efficient to use
@@ -176,6 +176,7 @@ use building_blocks_core::{
     ExtentN, PointN,
 };
 
+use either::Either;
 use serde::{Deserialize, Serialize};
 
 /// The user-accessible data stored in each chunk of a [`ChunkTree`].
@@ -357,7 +358,11 @@ where
     pub fn contains_chunk(&self, key: ChunkKey<N>) -> bool {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.lod_storage(key.lod).contains_chunk(key.minimum)
+        if let Some((_, has_data)) = self.lod_storage(key.lod).get_node_state(key.minimum) {
+            has_data
+        } else {
+            false
+        }
     }
 
     /// Borrows the `ChunkNode` for `key`.
@@ -376,15 +381,15 @@ where
         self.lod_storage_mut(key.lod).get_mut_node(key.minimum)
     }
 
-    /// Borrows the `NodeState` for the node at `key`.
+    /// Borrows the `NodeState` for the node at `key`. The returned `bool` is `true` iff this node has data.
     #[inline]
-    pub fn get_node_state(&self, key: ChunkKey<N>) -> Option<&NodeState> {
+    pub fn get_node_state(&self, key: ChunkKey<N>) -> Option<(&NodeState, bool)> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.lod_storage(key.lod).get_node_state(key.minimum)
     }
 
-    /// Mutably borrows the `NodeState` for the node at `key`.
+    /// Mutably borrows the `NodeState` for the node at `key`. The returned `bool` is `true` iff this node has data.
     #[inline]
     pub fn get_mut_node_state(&mut self, key: ChunkKey<N>) -> Option<(&mut NodeState, bool)> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
@@ -396,7 +401,7 @@ where
     fn write_node_dangling(&mut self, key: ChunkKey<N>, node: ChunkNode<Usr>) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.lod_storage_mut(key.lod).write_node(key.minimum, node)
+        self.lod_storage_mut(key.lod).insert_node(key.minimum, node);
     }
 
     fn pop_node_dangling(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Usr>> {
@@ -405,10 +410,26 @@ where
         self.lod_storage_mut(key.lod).pop_node(key.minimum)
     }
 
-    fn pop_raw_node_dangling(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Store::ChunkRepr>> {
+    fn pop_raw_node_dangling(
+        &mut self,
+        key: ChunkKey<N>,
+    ) -> Option<ChunkNode<Either<Store::Chunk, Store::ColdChunk>>> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.lod_storage_mut(key.lod).pop_raw_node(key.minimum)
+    }
+
+    fn delete_chunk_dangling(&mut self, key: ChunkKey<N>) -> (Option<NodeState>, bool) {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+
+        self.lod_storage_mut(key.lod).delete_chunk(key.minimum)
+    }
+
+    fn write_chunk_dangling(&mut self, key: ChunkKey<N>, chunk: Usr) -> (&mut NodeState, bool) {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+
+        self.lod_storage_mut(key.lod)
+            .write_chunk(key.minimum, chunk)
     }
 }
 
@@ -428,7 +449,7 @@ where
     /// Call `visitor` on all children keys of `parent_key`.
     #[inline]
     pub fn visit_child_keys(&self, parent_key: ChunkKey<N>, visitor: impl FnMut(ChunkKey<N>, u8)) {
-        if let Some(state) = self.get_node_state(parent_key) {
+        if let Some((state, _)) = self.get_node_state(parent_key) {
             self.visit_child_keys_of_node(parent_key, state, visitor);
         }
     }
@@ -603,7 +624,7 @@ where
         while key.lod < self.root_lod() {
             let parent = self.indexer.parent_chunk_key(key);
             let mut parent_already_exists = true;
-            let state = self.storages[parent.lod as usize].get_mut_node_state_or_insert_with(
+            let (state, _) = self.storages[parent.lod as usize].get_mut_node_state_or_insert_with(
                 parent.minimum,
                 || {
                     parent_already_exists = false;
@@ -639,12 +660,9 @@ where
 
     /// Overwrite the `Chunk` at `key` with `chunk`. Drops the previous value.
     #[inline]
-    pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) {
-        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
-
+    pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) -> (&mut NodeState, bool) {
         self.link_node(key);
-        self.lod_storage_mut(key.lod)
-            .write_chunk(key.minimum, chunk);
+        self.write_chunk_dangling(key, chunk)
     }
 
     /// Replace the `Chunk` at `key` with `chunk`, returning the old value.
@@ -732,7 +750,7 @@ where
     pub fn drain_tree(
         &mut self,
         key: ChunkKey<N>,
-        chunk_rx: impl FnMut(ChunkKey<N>, Store::ChunkRepr),
+        chunk_rx: impl FnMut(ChunkKey<N>, ChunkNode<Either<Store::Chunk, Store::ColdChunk>>),
     ) {
         if let Some(node) = self.pop_raw_node_dangling(key) {
             self.unlink_node(key);
@@ -743,8 +761,8 @@ where
     fn drain_tree_recursive(
         &mut self,
         key: ChunkKey<N>,
-        mut node: ChunkNode<Store::ChunkRepr>,
-        mut chunk_rx: impl FnMut(ChunkKey<N>, Store::ChunkRepr),
+        node: ChunkNode<Either<Store::Chunk, Store::ColdChunk>>,
+        mut chunk_rx: impl FnMut(ChunkKey<N>, ChunkNode<Either<Store::Chunk, Store::ColdChunk>>),
     ) {
         for child_i in 0..PointN::NUM_CORNERS {
             if node.state.has_child(child_i) {
@@ -753,17 +771,19 @@ where
                     self.drain_tree_recursive(child_key, child_node, &mut chunk_rx);
                 }
             }
-            if let Some(user_chunk) = node.user_chunk.take() {
-                chunk_rx(key, user_chunk);
-            }
         }
+        chunk_rx(key, node);
     }
 
     /// Deletes the chunk at `key`. This does not affect an ancestor or descendant chunks.
     pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
-        if !self.lod_storage_mut(key.lod).delete_chunk(key.minimum) {
-            // Node has no children, so we can unlink.
-            self.unlink_node(key);
+        let (state, _) = self.delete_chunk_dangling(key);
+        if let Some(state) = state {
+            if !state.has_any_children() {
+                // Node has no children, so we can unlink.
+                self.pop_node_dangling(key);
+                self.unlink_node(key);
+            }
         }
     }
 }

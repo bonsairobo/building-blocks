@@ -116,7 +116,8 @@ where
         src_extent: &ExtentN<N>,
     ) {
         if node_key.lod > src_lod {
-            if let Some(state) = self.get_node_state(node_key).cloned() {
+            if let Some((state, _)) = self.get_node_state(node_key) {
+                let state = state.clone();
                 for child_i in 0..PointN::NUM_CORNERS {
                     if state.child_bits.bit_is_set(child_i) {
                         let child_key = self.indexer.child_chunk_key(node_key, child_i);

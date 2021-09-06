@@ -50,12 +50,12 @@ where
 impl<K, V, E, H> LruCache<K, V, E, H>
 where
     K: Hash + Eq + Clone,
-    E: Copy,
+    E: Clone,
     H: BuildHasher,
 {
     /// Borrow the entry for `key`. This will not update the LRU order.
     #[inline]
-    pub fn get(&self, key: &K) -> Option<CacheEntry<&V, E>> {
+    pub fn get(&self, key: &K) -> Option<CacheEntry<&V, &E>> {
         self.store
             .get(key)
             .map(|entry| entry.as_ref().map_cached(|(val, _)| val))
@@ -63,7 +63,7 @@ where
 
     /// Mutably borrow the entry for `key`. This will not update the LRU order.
     #[inline]
-    pub fn get_mut(&mut self, key: &K) -> Option<CacheEntry<&mut V, E>> {
+    pub fn get_mut(&mut self, key: &K) -> Option<CacheEntry<&mut V, &mut E>> {
         self.store
             .get_mut(key)
             .map(|entry| entry.as_mut().map_cached(|(val, _)| val))
@@ -85,7 +85,7 @@ where
                     let old_entry = std::mem::replace(x, CacheEntry::Cached((new_val, new_i)));
                     self.num_evicted -= 1;
 
-                    Some(CacheEntry::Evicted(old_entry.unwrap_evicted()))
+                    Some(CacheEntry::Evicted(old_entry.unwrap_evicted().clone()))
                 }
             },
             hash_map::Entry::Vacant(vacant) => {
@@ -132,7 +132,7 @@ where
             hash_map::Entry::Occupied(occupied) => match occupied.into_mut() {
                 CacheEntry::Cached((val, _)) => Some(val),
                 x => {
-                    let repop_val = on_evicted(x.unwrap_evicted());
+                    let repop_val = on_evicted(x.unwrap_evicted().clone());
                     let new_i = order.push_front(Some(key));
                     std::mem::swap(x, &mut CacheEntry::Cached((repop_val, new_i)));
                     self.num_evicted -= 1;
@@ -151,7 +151,7 @@ where
     pub fn get_mut_or_insert_with(
         &mut self,
         key: K,
-        on_evicted: impl FnOnce(E) -> V,
+        on_evicted: impl FnOnce(&E) -> V,
         on_missing: impl FnOnce() -> V,
     ) -> &mut V {
         let Self { store, order, .. } = self;
@@ -187,7 +187,7 @@ where
         &mut self,
         key: K,
         on_missing: impl FnOnce() -> V,
-    ) -> CacheEntry<&mut V, E> {
+    ) -> CacheEntry<&mut V, &mut E> {
         let Self { store, order, .. } = self;
         match store.entry(key.clone()) {
             hash_map::Entry::Occupied(occupied) => {
@@ -249,19 +249,21 @@ where
     ///
     /// Nothing happens if the cache is empty.
     #[inline]
-    pub fn evict_lru(&mut self, new_location: E) -> Option<(K, V)> {
+    pub fn evict_lru(&mut self, new_location: impl Fn(&V) -> E) -> Option<(K, V)> {
         if self.len_cached() == 0 {
             return None;
         }
 
         let key = self.order.pop_back();
-        let entry = std::mem::replace(
-            self.store.get_mut(&key).unwrap(),
-            CacheEntry::Evicted(new_location),
-        );
+        let entry = self.store.get_mut(&key).unwrap();
+
+        let (value, _) = entry.as_ref().some_if_cached().unwrap();
+        let location = new_location(value);
+
+        let old_entry = std::mem::replace(entry, CacheEntry::Evicted(location));
         self.num_evicted += 1;
 
-        Some((key, entry.unwrap_value()))
+        Some((key, old_entry.unwrap_value()))
     }
 
     /// Removes the least-recently used value, leaving no trace.
@@ -320,7 +322,7 @@ where
 
 impl<K, V, E, H> IntoIterator for LruCache<K, V, E, H>
 where
-    E: Copy,
+    E: Clone,
 {
     type Item = (K, CacheEntry<V, E>);
     type IntoIter = LruCacheIntoIter<K, V, E>;
@@ -343,9 +345,9 @@ pub struct LruCacheEntries<'a, K, V, E> {
 
 impl<'a, K, V, E> Iterator for LruCacheEntries<'a, K, V, E>
 where
-    E: Copy,
+    E: Clone,
 {
-    type Item = (&'a K, CacheEntry<&'a V, E>);
+    type Item = (&'a K, CacheEntry<&'a V, &'a E>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner
@@ -360,7 +362,7 @@ pub struct LruCacheIntoIter<K, V, E> {
 
 impl<K, V, E> Iterator for LruCacheIntoIter<K, V, E>
 where
-    E: Copy,
+    E: Clone,
 {
     type Item = (K, CacheEntry<V, E>);
 
@@ -377,30 +379,32 @@ pub enum CacheEntry<C, E> {
     Evicted(E),
 }
 
-impl<C, E> CacheEntry<C, E>
-where
-    E: Copy,
-{
-    #[inline]
-    pub fn as_ref(&self) -> CacheEntry<&C, E> {
-        match self {
-            Self::Cached(c) => CacheEntry::Cached(c),
-            Self::Evicted(e) => CacheEntry::Evicted(*e),
-        }
-    }
-
-    #[inline]
-    pub fn as_mut(&mut self) -> CacheEntry<&mut C, E> {
-        match self {
-            Self::Cached(c) => CacheEntry::Cached(c),
-            Self::Evicted(e) => CacheEntry::Evicted(*e),
-        }
-    }
-
+impl<C, E> CacheEntry<C, E> {
     #[inline]
     pub fn map_cached<T>(self, f: impl FnOnce(C) -> T) -> CacheEntry<T, E> {
         match self {
             Self::Cached(c) => CacheEntry::Cached(f(c)),
+            Self::Evicted(e) => CacheEntry::Evicted(e),
+        }
+    }
+
+    #[inline]
+    pub fn unwrap_evicted(&self) -> &E {
+        self.some_if_evicted().unwrap()
+    }
+
+    #[inline]
+    pub fn as_ref(&self) -> CacheEntry<&C, &E> {
+        match self {
+            Self::Cached(c) => CacheEntry::Cached(c),
+            Self::Evicted(e) => CacheEntry::Evicted(e),
+        }
+    }
+
+    #[inline]
+    pub fn as_mut(&mut self) -> CacheEntry<&mut C, &mut E> {
+        match self {
+            Self::Cached(c) => CacheEntry::Cached(c),
             Self::Evicted(e) => CacheEntry::Evicted(e),
         }
     }
@@ -414,33 +418,22 @@ where
     }
 
     #[inline]
-    pub fn some_if_evicted(&self) -> Option<E> {
+    pub fn some_if_evicted(&self) -> Option<&E> {
         match self {
             Self::Cached(_) => None,
-            Self::Evicted(e) => Some(*e),
+            Self::Evicted(e) => Some(e),
         }
-    }
-
-    #[inline]
-    pub fn unwrap_evicted(&self) -> E {
-        self.some_if_evicted().unwrap()
     }
 }
 
-impl<C, E> CacheEntry<(C, usize), E>
-where
-    E: Copy,
-{
+impl<C, E> CacheEntry<(C, usize), E> {
     #[inline]
     pub fn unwrap_value(self) -> C {
         self.some_if_cached().unwrap().0
     }
 }
 
-impl<'a, C, E> CacheEntry<&'a mut (C, usize), E>
-where
-    E: Copy,
-{
+impl<'a, C, E> CacheEntry<&'a mut (C, usize), E> {
     #[inline]
     pub fn unwrap_value(self) -> &'a mut C {
         &mut self.some_if_cached().unwrap().0
@@ -552,12 +545,12 @@ impl<T> LruList<T> {
     }
 }
 
-// ████████╗███████╗███████╗████████╗███████╗
-// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝██╔════╝
-//    ██║   █████╗  ███████╗   ██║   ███████╗
-//    ██║   ██╔══╝  ╚════██║   ██║   ╚════██║
-//    ██║   ███████╗███████║   ██║   ███████║
-//    ╚═╝   ╚══════╝╚══════╝   ╚═╝   ╚══════╝
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
 
 #[cfg(test)]
 mod tests {
@@ -575,8 +568,11 @@ mod tests {
         assert_eq!(cache.get(&1), Some(CacheEntry::Cached(&2)));
         assert_eq!(cache.len_cached(), 1);
 
-        cache.evict_lru(EvictedLocation(0));
-        assert_eq!(cache.get(&1), Some(CacheEntry::Evicted(EvictedLocation(0))));
+        cache.evict_lru(|_| EvictedLocation(0));
+        assert_eq!(
+            cache.get(&1),
+            Some(CacheEntry::Evicted(&EvictedLocation(0)))
+        );
         assert_eq!(cache.len_evicted(), 1);
 
         cache.remove(&1);
@@ -601,7 +597,7 @@ mod tests {
         assert_eq!(cache.get(&1), None);
 
         cache.insert(1, 2);
-        cache.evict_lru(EvictedLocation(0));
+        cache.evict_lru(|_| EvictedLocation(0));
 
         assert_eq!(
             cache.get_mut_or_repopulate_with(1, |loc| {
@@ -623,10 +619,10 @@ mod tests {
         cache.insert(4, 5);
         cache.insert(2, 5);
 
-        assert_eq!(cache.evict_lru(()), Some((1, 2)));
-        assert_eq!(cache.evict_lru(()), Some((3, 4)));
-        assert_eq!(cache.evict_lru(()), Some((4, 5)));
-        assert_eq!(cache.evict_lru(()), Some((2, 5)));
+        assert_eq!(cache.evict_lru(|_| ()), Some((1, 2)));
+        assert_eq!(cache.evict_lru(|_| ()), Some((3, 4)));
+        assert_eq!(cache.evict_lru(|_| ()), Some((4, 5)));
+        assert_eq!(cache.evict_lru(|_| ()), Some((2, 5)));
 
         assert!(cache.len_cached() == 0);
         assert!(cache.len_evicted() == 4);
@@ -640,8 +636,8 @@ mod tests {
         cache.insert(2, 3);
         cache.get(&1);
 
-        assert_eq!(cache.evict_lru(()), Some((1, 2)));
-        assert_eq!(cache.evict_lru(()), Some((2, 3)));
+        assert_eq!(cache.evict_lru(|_| ()), Some((1, 2)));
+        assert_eq!(cache.evict_lru(|_| ()), Some((2, 3)));
     }
 
     #[test]

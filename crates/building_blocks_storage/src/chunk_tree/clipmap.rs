@@ -30,7 +30,7 @@ where
         while key.lod < self.root_lod() {
             let parent = self.indexer.parent_chunk_key(key);
             let corner_index = self.indexer.corner_index(key.minimum);
-            let state = self.storages[parent.lod as usize]
+            let (state, _) = self.storages[parent.lod as usize]
                 .get_mut_node_state_or_insert_with(parent.minimum, ChunkNode::new_empty);
             state.child_bits.set_bit(corner_index);
             state.descendant_needs_loading_bits.set_bit(corner_index);
@@ -40,12 +40,16 @@ where
 
     pub fn clipmap_write_loaded_chunk(&mut self, key: ChunkKey<Ni>, chunk: Option<Usr>) {
         let link_child = if let Some(chunk) = chunk {
-            self.lod_storage_mut(key.lod)
-                .write_chunk(key.minimum, chunk);
+            self.write_chunk_dangling(key, chunk);
             true
         } else {
-            self.lod_storage_mut(key.lod).delete_chunk(key.minimum);
-            false
+            let (state, _) = self.delete_chunk_dangling(key);
+            if let Some(state) = state {
+                assert!(state.descendant_needs_loading_bits.none());
+                state.has_any_children()
+            } else {
+                false
+            }
         };
 
         self.link_loaded_node(key, link_child);
@@ -60,7 +64,7 @@ where
             let corner_index = self.indexer.corner_index(key.minimum);
 
             let mut parent_already_exists = true;
-            let parent_state = self
+            let (parent_state, _) = self
                 .lod_storage_mut(parent.lod)
                 .get_mut_node_state_or_insert_with(parent.minimum, || {
                     parent_already_exists = false;
@@ -116,7 +120,7 @@ where
         self.visit_root_keys(|root| {
             // Don't consider roots for loading, just their children.
             self.visit_child_keys(root, |child_key, corner_index| {
-                let state = self.get_node_state(root).unwrap();
+                let (state, _) = self.get_node_state(root).unwrap();
                 if state.descendant_needs_loading_bits.bit_is_set(corner_index) {
                     candidate_heap.push(ChunkSphere::new(
                         clip_sphere,
@@ -140,7 +144,7 @@ where
                 continue;
             }
 
-            if let Some(node_state) = self.get_node_state(node_key) {
+            if let Some((node_state, _)) = self.get_node_state(node_key) {
                 if node_state.descendant_needs_loading_bits.none() {
                     // All descendants have loaded, so this slot is ready to be loaded.
                     rx(node_key);
@@ -249,7 +253,7 @@ where
                 break;
             }
 
-            let node_state = self.get_node_state(node_key).unwrap();
+            let (node_state, _) = self.get_node_state(node_key).unwrap();
 
             let was_active = node_state.state_bits.bit_is_set(StateBit::Render as u8);
             let is_active =

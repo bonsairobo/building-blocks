@@ -5,6 +5,7 @@ use super::{ChunkNode, ChunkStorage, IterChunkKeys, NodeState};
 use building_blocks_core::PointN;
 
 use core::hash::Hash;
+use either::Either;
 use std::collections::hash_map;
 
 impl<N, Ch> ChunkStorage<N> for SmallKeyHashMap<PointN<N>, ChunkNode<Ch>>
@@ -12,13 +13,16 @@ where
     PointN<N>: Hash + Eq,
 {
     type Chunk = Ch;
-    type ChunkRepr = Ch;
+    type ColdChunk = Ch;
 
     #[inline]
-    fn contains_chunk(&self, key: PointN<N>) -> bool {
-        self.get(&key)
-            .map(|node| node.user_chunk.is_some())
-            .unwrap_or(false)
+    fn insert_node(
+        &mut self,
+        key: PointN<N>,
+        node: ChunkNode<Self::Chunk>,
+    ) -> Option<ChunkNode<Either<Self::Chunk, Self::ColdChunk>>> {
+        self.insert(key, node)
+            .map(|node| node.map(|c| Either::Left(c)))
     }
 
     #[inline]
@@ -27,8 +31,29 @@ where
     }
 
     #[inline]
+    fn get_raw_node(
+        &self,
+        key: PointN<N>,
+    ) -> Option<(&NodeState, Either<Option<&Self::Chunk>, &Self::ColdChunk>)> {
+        self.get(&key)
+            .map(|node| (&node.state, Either::Left(node.user_chunk.as_ref())))
+    }
+
+    #[inline]
+    fn get_node_state(&self, key: PointN<N>) -> Option<(&NodeState, bool)> {
+        self.get(&key)
+            .map(|node| (&node.state, node.user_chunk.is_some()))
+    }
+
+    #[inline]
     fn get_mut_node(&mut self, key: PointN<N>) -> Option<&mut ChunkNode<Self::Chunk>> {
         self.get_mut(&key)
+    }
+
+    #[inline]
+    fn get_mut_node_state(&mut self, key: PointN<N>) -> Option<(&mut NodeState, bool)> {
+        self.get_mut(&key)
+            .map(|node| (&mut node.state, node.user_chunk.is_some()))
     }
 
     #[inline]
@@ -41,17 +66,13 @@ where
     }
 
     #[inline]
-    fn replace_node(
+    fn get_mut_node_state_or_insert_with(
         &mut self,
         key: PointN<N>,
-        chunk: ChunkNode<Self::Chunk>,
-    ) -> Option<ChunkNode<Self::Chunk>> {
-        self.insert(key, chunk)
-    }
-
-    #[inline]
-    fn write_node(&mut self, key: PointN<N>, chunk: ChunkNode<Self::Chunk>) {
-        self.insert(key, chunk);
+        create_node: impl FnOnce() -> ChunkNode<Self::Chunk>,
+    ) -> (&mut NodeState, bool) {
+        let node = self.entry(key).or_insert_with(create_node);
+        (&mut node.state, node.user_chunk.is_some())
     }
 
     #[inline]
@@ -60,48 +81,30 @@ where
     }
 
     #[inline]
-    fn pop_raw_node(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::ChunkRepr>> {
-        self.remove(&key)
-    }
-
-    #[inline]
-    fn delete_chunk(&mut self, key: PointN<N>) -> bool {
-        if let hash_map::Entry::Occupied(occupied) = self.entry(key) {
-            let has_children = occupied.get().state.has_any_children();
-            if !has_children {
-                occupied.remove();
-            }
-            has_children
-        } else {
-            false
-        }
-    }
-
-    #[inline]
-    fn write_chunk(&mut self, key: PointN<N>, chunk: Self::Chunk) {
-        let node = self.entry(key).or_insert_with(ChunkNode::new_empty);
-        node.user_chunk = Some(chunk);
-    }
-
-    #[inline]
-    fn get_node_state(&self, key: PointN<N>) -> Option<&NodeState> {
-        self.get(&key).map(|n| &n.state)
-    }
-
-    #[inline]
-    fn get_mut_node_state(&mut self, key: PointN<N>) -> Option<(&mut NodeState, bool)> {
-        self.get_mut(&key)
-            .map(|n| (&mut n.state, n.user_chunk.is_some()))
-    }
-
-    #[inline]
-    fn get_mut_node_state_or_insert_with(
+    fn pop_raw_node(
         &mut self,
         key: PointN<N>,
-        create_node: impl FnOnce() -> ChunkNode<Self::Chunk>,
-    ) -> &mut NodeState {
-        let node = self.entry(key).or_insert_with(create_node);
-        &mut node.state
+    ) -> Option<ChunkNode<Either<Self::Chunk, Self::ColdChunk>>> {
+        self.remove(&key).map(|node| node.map(|c| Either::Left(c)))
+    }
+
+    #[inline]
+    fn write_chunk(&mut self, key: PointN<N>, chunk: Self::Chunk) -> (&mut NodeState, bool) {
+        let node = self.get_mut_node_or_insert_with(key, ChunkNode::new_empty);
+        let had_data = node.user_chunk.is_some();
+        node.user_chunk = Some(chunk);
+        (&mut node.state, had_data)
+    }
+
+    #[inline]
+    fn delete_chunk(&mut self, key: PointN<N>) -> (Option<NodeState>, bool) {
+        if let Some(node) = self.get_mut_node(key) {
+            let had_data = node.user_chunk.is_some();
+            node.user_chunk = None;
+            (Some(node.state.clone()), had_data)
+        } else {
+            (None, false)
+        }
     }
 }
 

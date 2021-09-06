@@ -2,7 +2,6 @@ use crate::{point::point_traits::*, Point2, Point2f, Point3, Point3f, PointN};
 
 use bytemuck::{Pod, Zeroable};
 use core::ops::{Add, AddAssign, Mul, Shl, Shr, Sub, SubAssign};
-use num::Zero;
 use serde::{Deserialize, Serialize};
 
 /// A 2-dimensional extent with scalar type `T`.
@@ -113,6 +112,16 @@ where
             self.shape + PointN::fill(pad_amount + pad_amount),
         )
     }
+
+    /// Returns `Some(self)` iff this extent has a positive shape, otherise `None`.
+    #[inline]
+    pub fn check_positive_shape(self) -> Option<Self> {
+        if self.shape <= PointN::ZERO {
+            None
+        } else {
+            Some(self)
+        }
+    }
 }
 
 impl<N> ExtentN<N>
@@ -136,7 +145,7 @@ where
     pub fn from_min_and_lub(minimum: PointN<N>, least_upper_bound: PointN<N>) -> Self {
         let minimum = minimum;
         // We want to avoid negative shape components.
-        let shape = (least_upper_bound - minimum).join(PointN::zero());
+        let shape = (least_upper_bound - minimum).join(PointN::ZERO);
 
         Self { minimum, shape }
     }

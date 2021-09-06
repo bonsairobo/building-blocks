@@ -3,12 +3,15 @@ use crate::{
     dev_prelude::{
         AmbientExtent, ChunkKey, ChunkStorage, ChunkTree, ChunkTreeBuilder, FillExtent, ForEach,
         ForEachMut, ForEachMutPtr, Get, GetMut, GetMutUnchecked, GetRef, GetRefUnchecked,
-        GetUnchecked, ReadExtent, UserChunk, WriteExtent,
+        GetUnchecked, IterChunkKeys, ReadExtent, UserChunk, WriteExtent,
     },
     multi_ptr::*,
 };
 
-use building_blocks_core::{point_traits::IntegerPoint, ExtentN, PointN};
+use building_blocks_core::{
+    point_traits::{Bounded, IntegerPoint, LatticeOrder},
+    ExtentN, PointN,
+};
 
 use either::Either;
 use std::ops::{Deref, DerefMut};
@@ -52,6 +55,59 @@ where
                     AmbientExtent::new(self.delegate.ambient_value.clone()),
                 )))
             }
+        }
+    }
+}
+
+impl<'a, Delegate, N, T, Bldr, Store> ChunkTreeLodView<Delegate>
+where
+    Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
+    PointN<N>: IntegerPoint<N>,
+    Store: ChunkStorage<N> + for<'r> IterChunkKeys<'r, N>,
+    Bldr: ChunkTreeBuilder<N, T>,
+{
+    /// The smallest extent that bounds all chunks in this level of detail.
+    pub fn bounding_extent(&self) -> Option<ExtentN<N>> {
+        let root_lod = self.delegate.root_lod();
+
+        let mut min_root_key = PointN::MAX;
+        let mut max_root_key = PointN::MIN;
+        self.delegate.visit_root_keys(|root_key| {
+            min_root_key = root_key.minimum.meet(min_root_key);
+            max_root_key = root_key.minimum.join(max_root_key);
+        });
+
+        // Find the minimal chunk key in the min root tree.
+        let min_lod_key = self.min_key_recursive(ChunkKey::new(root_lod, min_root_key));
+        // Find the maximal chunk key in the max root tree.
+        let max_lod_key = self.max_key_recursive(ChunkKey::new(root_lod, max_root_key));
+
+        let lub = max_lod_key + self.delegate.chunk_shape();
+
+        ExtentN::from_min_and_lub(min_lod_key, lub).check_positive_shape()
+    }
+
+    fn min_key_recursive(&self, node_key: ChunkKey<N>) -> PointN<N> {
+        if node_key.lod > self.lod {
+            let mut min_key = PointN::MAX;
+            self.delegate.visit_child_keys(node_key, |child_key, _| {
+                min_key = min_key.meet(self.min_key_recursive(child_key));
+            });
+            min_key
+        } else {
+            node_key.minimum
+        }
+    }
+
+    fn max_key_recursive(&self, node_key: ChunkKey<N>) -> PointN<N> {
+        if node_key.lod > self.lod {
+            let mut max_key = PointN::MIN;
+            self.delegate.visit_child_keys(node_key, |child_key, _| {
+                max_key = max_key.join(self.max_key_recursive(child_key));
+            });
+            max_key
+        } else {
+            node_key.minimum
         }
     }
 }

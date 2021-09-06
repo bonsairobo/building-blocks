@@ -112,7 +112,7 @@
 //!
 //! // Even though the tree is sparse, we can get the smallest extent that bounds all of the occupied
 //! // chunks in LOD0.
-//! let bounding_extent = tree.bounding_extent(0);
+//! let bounding_extent = tree.lod_view(0).bounding_extent().unwrap();
 //!
 //! // Now we can read back the values.
 //! let lod0 = tree.lod_view(0);
@@ -171,7 +171,6 @@ use crate::{
 };
 
 use building_blocks_core::{
-    bounding_extent,
     point_traits::{IntegerPoint, Neighborhoods},
     ExtentN, PointN,
 };
@@ -398,6 +397,22 @@ where
             .get_mut_node_state(key.minimum)
     }
 
+    /// Borrow the chunk at `key`.
+    #[inline]
+    pub fn get_chunk(&self, key: ChunkKey<N>) -> Option<&Usr> {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+
+        self.get_node(key).and_then(|ch| ch.user_chunk.as_ref())
+    }
+
+    /// Mutably borrow the chunk at `key`.
+    #[inline]
+    pub fn get_mut_chunk(&mut self, key: ChunkKey<N>) -> Option<&mut Usr> {
+        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
+
+        self.get_mut_node(key).and_then(|c| c.user_chunk.as_mut())
+    }
+
     fn write_node_dangling(&mut self, key: ChunkKey<N>, node: ChunkNode<Usr>) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
@@ -433,19 +448,11 @@ where
     }
 }
 
-impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
+impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    Store: ChunkStorage<N, Chunk = Usr>,
+    Store: ChunkStorage<N>,
 {
-    /// Borrow the chunk at `key`.
-    #[inline]
-    pub fn get_chunk(&self, key: ChunkKey<N>) -> Option<&Usr> {
-        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
-
-        self.get_node(key).and_then(|ch| ch.user_chunk.as_ref())
-    }
-
     /// Call `visitor` on all children keys of `parent_key`.
     #[inline]
     pub fn visit_child_keys(&self, parent_key: ChunkKey<N>, visitor: impl FnMut(ChunkKey<N>, u8)) {
@@ -491,10 +498,10 @@ where
     }
 }
 
-impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
+impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
-    Store: ChunkStorage<N, Chunk = Usr> + for<'r> IterChunkKeys<'r, N>,
+    Store: ChunkStorage<N> + for<'r> IterChunkKeys<'r, N>,
     Bldr: ChunkTreeBuilder<N, T>,
 {
     /// Call `visitor` on all root chunk keys.
@@ -638,14 +645,6 @@ where
         node.user_chunk.replace(chunk)
     }
 
-    /// Mutably borrow the chunk at `key`.
-    #[inline]
-    pub fn get_mut_chunk(&mut self, key: ChunkKey<N>) -> Option<&mut Usr> {
-        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
-
-        self.get_mut_node(key).and_then(|c| c.user_chunk.as_mut())
-    }
-
     /// Mutably borrow the chunk at `key`. If the chunk doesn't exist, `create_chunk` is called to insert one.
     #[inline]
     pub fn get_mut_chunk_or_insert_with(
@@ -746,22 +745,6 @@ where
                 self.unlink_node(key);
             }
         }
-    }
-}
-
-impl<'a, N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>
-where
-    PointN<N>: IntegerPoint<N>,
-    Store: IterChunkKeys<'a, N>,
-{
-    /// The smallest extent that bounds all chunks in level of detail `lod`.
-    pub fn bounding_extent(&'a self, lod: u8) -> ExtentN<N> {
-        // PERF: this is theoretically faster using a tree search
-        bounding_extent(self.lod_storage(lod).chunk_keys().flat_map(|&chunk_min| {
-            let chunk_extent = self.indexer.extent_for_chunk_with_min(chunk_min);
-
-            vec![chunk_extent.minimum, chunk_extent.max()].into_iter()
-        }))
     }
 }
 

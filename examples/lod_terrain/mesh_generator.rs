@@ -190,7 +190,7 @@ pub fn mesh_deleter_system(
 
     let mut chunks_to_remove = Vec::new();
     for &chunk_key in chunk_meshes.entities.keys() {
-        let chunk_sphere = chunk_lod0_bounding_sphere(&indexer, chunk_key);
+        let chunk_sphere = chunk_bounding_sphere(&indexer, chunk_key, 0);
         if !clip_spheres.new_sphere.intersects(&chunk_sphere) {
             chunks_to_remove.push(chunk_key);
         }

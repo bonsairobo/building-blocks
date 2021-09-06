@@ -329,7 +329,7 @@ fn clipmap_chunks_in_sphere_recursive<Ni, Nf>(
     PointN<Ni>: std::hash::Hash + IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
 {
-    let node_sphere = chunk_lod0_bounding_sphere(indexer, node_key);
+    let node_sphere = chunk_bounding_sphere(indexer, node_key, 0);
 
     // Calculate the Euclidean distance the observer to the center of the chunk.
     let dist_to_clip_sphere = clip_sphere
@@ -416,7 +416,7 @@ fn clipmap_new_chunks_recursive<Ni, Nf>(
     PointN<Ni>: std::hash::Hash + IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
 {
-    let node_sphere = chunk_lod0_bounding_sphere(indexer, node_key);
+    let node_sphere = chunk_bounding_sphere(indexer, node_key, 0);
 
     // Calculate the Euclidean distance from each focus the center of the chunk.
     let dist_to_old_clip_sphere = old_clip_sphere
@@ -475,18 +475,19 @@ fn clipmap_new_chunks_recursive<Ni, Nf>(
     }
 }
 
-pub fn chunk_lod0_bounding_sphere<Ni, Nf>(
+pub fn chunk_bounding_sphere<Ni, Nf>(
     indexer: &ChunkIndexer<Ni>,
     chunk_key: ChunkKey<Ni>,
+    at_lod: u8,
 ) -> Sphere<Nf>
 where
     PointN<Ni>: IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
 {
-    let node_lod0_extent = indexer.chunk_extent_at_lower_lod(chunk_key, 0);
-    let center = PointN::<Nf>::from(node_lod0_extent.minimum + (node_lod0_extent.shape >> 1));
+    let node_lod_extent = indexer.chunk_extent_at_lower_lod(chunk_key, at_lod);
+    let center = PointN::<Nf>::from(node_lod_extent.minimum + (node_lod_extent.shape >> 1));
 
-    let shape_max_comp = node_lod0_extent.shape.max_component();
+    let shape_max_comp = node_lod_extent.shape.max_component();
     let radius = (shape_max_comp >> 1) as f32 * 3f32.sqrt();
 
     Sphere { center, radius }
@@ -555,7 +556,7 @@ where
         key: ChunkKey<Ni>,
         is_loading: bool,
     ) -> Self {
-        let bounding_sphere = chunk_lod0_bounding_sphere(indexer, key);
+        let bounding_sphere = chunk_bounding_sphere(indexer, key, 0);
 
         let center_dist_to_observer = observer.l2_distance_squared(bounding_sphere.center).sqrt();
         // Subtract the bounding sphere's radius to estimate the distance from the observer to the *closest point* on the chunk.

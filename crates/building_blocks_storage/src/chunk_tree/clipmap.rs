@@ -289,6 +289,7 @@ where
     }
 }
 
+/// Detects all chunk slots at `detect_lod` that are bounded by `clip_sphere`.
 pub fn clipmap_chunks_in_sphere<Ni, Nf>(
     indexer: &ChunkIndexer<Ni>,
     root_lod: u8,
@@ -475,6 +476,7 @@ fn clipmap_new_chunks_recursive<Ni, Nf>(
     }
 }
 
+/// Returns a sphere that bounds the chunk at `chunk_key`, measured in voxel units of `at_lod`.
 pub fn chunk_bounding_sphere<Ni, Nf>(
     indexer: &ChunkIndexer<Ni>,
     chunk_key: ChunkKey<Ni>,

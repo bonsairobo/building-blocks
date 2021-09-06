@@ -517,6 +517,61 @@ where
             self.visit_tree_keys(root_key, &mut visitor);
         })
     }
+
+    /// Returns `true` iff any chunk overlapping `extent` is loading.
+    ///
+    /// `extent` should be given in voxel units of the given `lod`. This should be used before editing `extent` to ensure loads
+    /// are not interrupted.
+    pub fn extent_is_loading(&self, lod: u8, extent: ExtentN<N>) -> bool {
+        assert!(lod < self.root_lod());
+
+        let mut loading = false;
+        self.visit_root_keys(|root_key| {
+            let (root_state, _) = self.get_node_state(root_key).unwrap();
+            self.visit_child_keys(root_key, |child_key, corner_index| {
+                loading |= self.extent_is_loading_recursive(
+                    child_key,
+                    root_state.descendant_needs_loading.bit_is_set(corner_index),
+                    lod,
+                    extent,
+                );
+            });
+        });
+        loading
+    }
+
+    fn extent_is_loading_recursive(
+        &self,
+        key: ChunkKey<N>,
+        key_is_loading: bool,
+        lod: u8,
+        extent: ExtentN<N>,
+    ) -> bool {
+        if !key_is_loading {
+            return false;
+        }
+
+        let lod_extent = self.indexer.chunk_extent_at_lower_lod(key, lod);
+        if lod_extent.intersection(&extent).is_empty() {
+            return false;
+        }
+
+        if key.lod == lod {
+            key_is_loading
+        } else {
+            let (node_state, _) = self.get_node_state(key).unwrap();
+            let mut descendant_is_loading = false;
+            self.visit_child_keys(key, |child_key, corner_index| {
+                descendant_is_loading |= self.extent_is_loading_recursive(
+                    child_key,
+                    node_state.descendant_needs_loading.bit_is_set(corner_index),
+                    lod,
+                    extent,
+                );
+            });
+            descendant_is_loading
+        }
+    }
 }
 
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
@@ -1139,5 +1194,39 @@ mod tests {
     where
         T: Deserialize<'a> + Serialize,
     {
+    }
+
+    #[test]
+    fn load_and_edit() {
+        let mut map = ChunkTreeBuilder3x1::new(MAP_CONFIG).build_with_hash_map_storage();
+
+        let load_lod = 1;
+        let load_key = ChunkKey::new(load_lod, PointN::ZERO);
+        map.mark_tree_for_loading(load_key);
+
+        let load_key_extent = map.indexer.extent_for_chunk_with_min(load_key.minimum);
+        let partial_overlap = load_key_extent + map.chunk_shape() / 2;
+
+        assert!(map.extent_is_loading(load_lod, partial_overlap));
+
+        let loading_extent_lod0 = map.indexer.chunk_extent_at_lower_lod(load_key, 0);
+        let mut lod0 = map.lod_view_mut(0);
+        lod0.fill_extent(&loading_extent_lod0, 1);
+
+        // No longer loading at LOD0.
+        assert!(!map.extent_is_loading(0, loading_extent_lod0));
+        // Still loading at LOD1.
+        assert!(map.extent_is_loading(load_lod, load_key_extent));
+
+        let other_key = ChunkKey::new(load_key.lod, load_key.minimum + map.chunk_shape());
+        map.write_chunk(other_key, Array3x1::fill(load_key_extent, 1));
+
+        // Still loading at LOD1.
+        assert!(map.extent_is_loading(load_lod, load_key_extent));
+
+        map.write_chunk(load_key, Array3x1::fill(load_key_extent, 1));
+
+        // Done loading at LOD1.
+        assert!(!map.extent_is_loading(load_lod, load_key_extent));
     }
 }

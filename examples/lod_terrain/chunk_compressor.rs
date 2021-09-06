@@ -19,9 +19,9 @@ pub fn chunk_compression_system(pool: Res<ComputeTaskPool>, mut voxel_map: ResMu
         return;
     }
 
-    let overgrowth = num_cached - MAX_CACHED_CHUNKS;
+    let mut overgrowth = num_cached - MAX_CACHED_CHUNKS;
 
-    let num_to_compress = overgrowth.min(MAX_CHUNKS_COMPRESSED_PER_FRAME);
+    let mut num_to_compress = overgrowth.min(MAX_CHUNKS_COMPRESSED_PER_FRAME);
 
     let lod0_storage = voxel_map.chunks.lod_storage_mut(0);
     let mut nodes_to_compress = Vec::new();
@@ -30,6 +30,10 @@ pub fn chunk_compression_system(pool: Res<ComputeTaskPool>, mut voxel_map: ResMu
             if node.user_chunk.is_some() {
                 nodes_to_compress.push((key, node));
             } else {
+                // TODO: make len_cached only return the number of cached nodes *with data*
+                // This node doesn't have any data to compress, so we need to adjust our target.
+                overgrowth -= 1;
+                num_to_compress = overgrowth.min(MAX_CHUNKS_COMPRESSED_PER_FRAME);
                 lod0_storage.insert_node(key, node);
             }
         } else {

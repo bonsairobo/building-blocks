@@ -130,15 +130,15 @@ fn chunk_hash_map_point_indexing(c: &mut Criterion) {
     group.finish();
 }
 
-fn chunk_hash_map_visit_chunks_sparse(c: &mut Criterion) {
-    let mut group = c.benchmark_group("chunk_hash_map_visit_chunks_sparse");
+fn hash_map_chunk_tree_visit_sparse_keys(c: &mut Criterion) {
+    let mut group = c.benchmark_group("hash_map_chunk_tree_visit_sparse_keys");
     for size in [128, 256, 512].iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
                 || set_up_sparse_chunk_map(SmallKeyHashMap::default, size, 3),
                 |(chunk_map, _)| {
-                    chunk_map.visit_all_nodes(|key, node| {
-                        black_box((key, node));
+                    chunk_map.visit_all_keys(|key| {
+                        black_box(key);
                         true
                     });
                 },
@@ -232,7 +232,7 @@ criterion_group!(
     chunk_hash_map_for_each_point,
     chunk_hash_map_for_each_point_mut,
     chunk_hash_map_point_indexing,
-    chunk_hash_map_visit_chunks_sparse,
+    hash_map_chunk_tree_visit_sparse_keys,
     chunk_hash_map_copy,
     compressible_chunk_map_point_indexing
 );

@@ -358,7 +358,7 @@ where
     pub fn contains_chunk(&self, key: ChunkKey<N>) -> bool {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        if let Some((_, has_data)) = self.lod_storage(key.lod).get_node_state(key.minimum) {
+        if let Some((_, has_data)) = self.get_node_state(key) {
             has_data
         } else {
             false
@@ -579,45 +579,6 @@ where
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
-    /// Call `visitor` on all occupied `ChunkNode`s in a pre-order, depth-first traversal.
-    ///
-    /// If `visitor` returns `false`, then no descendants of that node will be visited.
-    pub fn visit_all_nodes(&self, mut visitor: impl FnMut(ChunkKey<N>, &ChunkNode<Usr>) -> bool)
-    where
-        Store: for<'r> IterChunkKeys<'r, N>,
-    {
-        self.visit_root_keys(|root_key| {
-            self.visit_chunk_nodes_recursive(root_key, &mut visitor);
-        });
-    }
-
-    /// Visit all `ChunkNode`s in the subtree with root at `node_key`.
-    pub fn visit_tree_nodes(
-        &self,
-        node_key: ChunkKey<N>,
-        mut visitor: impl FnMut(ChunkKey<N>, &ChunkNode<Usr>) -> bool,
-    ) where
-        Store: for<'r> IterChunkKeys<'r, N>,
-    {
-        self.visit_chunk_nodes_recursive(node_key, &mut visitor);
-    }
-
-    fn visit_chunk_nodes_recursive(
-        &self,
-        node_key: ChunkKey<N>,
-        visitor: &mut impl FnMut(ChunkKey<N>, &ChunkNode<Usr>) -> bool,
-    ) {
-        if let Some(node) = self.get_node(node_key) {
-            if !visitor(node_key, node) {
-                return;
-            }
-
-            self.visit_child_keys(node_key, |child_key, _| {
-                self.visit_chunk_nodes_recursive(child_key, visitor);
-            });
-        }
-    }
-
     fn link_node(&mut self, mut key: ChunkKey<N>) {
         // PERF: when writing many chunks, we would revisit nodes many times as we travel up to the root for every chunk. We
         // might do better by inserting them in a batch and sorting the chunks in morton order before linking into the tree.
@@ -1006,39 +967,6 @@ mod tests {
                 assert_eq!(lod0.get(p), 0);
             }
         }
-    }
-
-    #[test]
-    fn visit_chunk_nodes() {
-        assert!(MAP_CONFIG.root_lod > 0);
-        let mut map = ChunkTreeBuilder3x1::new(MAP_CONFIG).build_with_hash_map_storage();
-
-        let insert_chunk_mins = [PointN([0, 0, 0]), PointN([16, 0, 0]), PointN([32, 0, 0])];
-        for chunk_min in insert_chunk_mins.iter() {
-            let chunk_extent = map.indexer.extent_for_chunk_with_min(*chunk_min);
-            map.write_chunk(
-                ChunkKey::new(0, *chunk_min),
-                Array3x1::fill(chunk_extent, 1),
-            );
-        }
-
-        // This intentionally doesn't cover all of the inserted chunks, but it overlaps two roots.
-        let visit_extent = Extent3i::from_min_and_shape(PointN([16, 0, 0]), Point3i::fill(17));
-
-        let mut visited_lod0_chunk_mins = Vec::new();
-        map.visit_all_nodes(|key, node| {
-            if let Some(chunk) = &node.user_chunk {
-                if chunk.extent().intersection(&visit_extent).is_empty() {
-                    return false;
-                }
-                if key.lod == 0 {
-                    visited_lod0_chunk_mins.push(chunk.extent().minimum);
-                }
-            }
-            true
-        });
-
-        assert_eq!(&visited_lod0_chunk_mins, &insert_chunk_mins[1..=2]);
     }
 
     #[test]

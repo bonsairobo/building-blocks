@@ -119,7 +119,7 @@ where
             if let Some((state, _)) = self.get_node_state(node_key) {
                 let state = state.clone();
                 for child_i in 0..PointN::NUM_CORNERS {
-                    if state.child_bits.bit_is_set(child_i) {
+                    if state.children.bit_is_set(child_i) {
                         let child_key = self.indexer.child_chunk_key(node_key, child_i);
 
                         // Only visit chunks overlapping src_extent and ancestors.

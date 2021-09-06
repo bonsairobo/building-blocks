@@ -39,7 +39,7 @@ pub fn chunk_generator_system(
 
     // Mark chunks for loading so we can search for them asynchronously.
     for slot in new_slots.take_all().into_iter() {
-        map.chunks.clipmap_mark_node_for_loading(slot.key);
+        map.chunks.mark_tree_for_loading(slot.key);
     }
 
     // Find new chunks to load this frame.
@@ -93,7 +93,11 @@ pub fn chunk_generator_system(
         let _trace_guard = span.enter();
 
         for (key, chunk) in loaded_chunks.drain(..) {
-            map.chunks.clipmap_write_loaded_chunk(key, chunk)
+            if let Some(chunk) = chunk {
+                map.chunks.write_chunk(key, chunk);
+            } else {
+                map.chunks.delete_chunk(key);
+            }
         }
     }
 

@@ -14,86 +14,6 @@ where
     Bldr: ChunkTreeBuilder<Ni, T, Chunk = Usr>,
     Store: ChunkStorage<Ni, Chunk = Usr> + for<'r> IterChunkKeys<'r, Ni>,
 {
-    /// If no node exists at `key`, create one and set all of the `child_needs_loading` bits. Ancestor nodes are also marked
-    /// appropriately so that loading chunks can be found from any root. Nothing happens if the node already exists.
-    pub fn clipmap_mark_node_for_loading(&mut self, mut key: ChunkKey<Ni>) {
-        let mut already_exists = true;
-        self.storages[key.lod as usize].get_mut_node_state_or_insert_with(key.minimum, || {
-            already_exists = false;
-            ChunkNode::new_loading()
-        });
-
-        if already_exists {
-            return;
-        }
-
-        while key.lod < self.root_lod() {
-            let parent = self.indexer.parent_chunk_key(key);
-            let corner_index = self.indexer.corner_index(key.minimum);
-            let (state, _) = self.storages[parent.lod as usize]
-                .get_mut_node_state_or_insert_with(parent.minimum, ChunkNode::new_empty);
-            state.child_bits.set_bit(corner_index);
-            state.descendant_needs_loading_bits.set_bit(corner_index);
-            key = parent;
-        }
-    }
-
-    pub fn clipmap_write_loaded_chunk(&mut self, key: ChunkKey<Ni>, chunk: Option<Usr>) {
-        let link_child = if let Some(chunk) = chunk {
-            self.write_chunk_dangling(key, chunk);
-            true
-        } else {
-            let (state, _) = self.delete_chunk_dangling(key);
-            if let Some(state) = state {
-                assert!(state.descendant_needs_loading_bits.none());
-                state.has_any_children()
-            } else {
-                false
-            }
-        };
-
-        self.link_loaded_node(key, link_child);
-    }
-
-    fn link_loaded_node(&mut self, mut key: ChunkKey<Ni>, mut link: bool) {
-        let mut child_loaded = true;
-
-        // We need to ensure there is a linked parent to mark that this chunk has been loaded.
-        while key.lod < self.root_lod() {
-            let parent = self.indexer.parent_chunk_key(key);
-            let corner_index = self.indexer.corner_index(key.minimum);
-
-            let mut parent_already_exists = true;
-            let (parent_state, _) = self
-                .lod_storage_mut(parent.lod)
-                .get_mut_node_state_or_insert_with(parent.minimum, || {
-                    parent_already_exists = false;
-                    ChunkNode::new_loading()
-                });
-
-            if child_loaded {
-                parent_state
-                    .descendant_needs_loading_bits
-                    .unset_bit(corner_index);
-            }
-
-            if link {
-                parent_state.child_bits.set_bit(corner_index);
-            } else {
-                parent_state.child_bits.unset_bit(corner_index);
-            }
-
-            if parent_already_exists {
-                // This parent must have already been linked, so we can stop linking.
-                break;
-            }
-
-            key = parent;
-            link = true;
-            child_loaded = false;
-        }
-    }
-
     /// Searches for chunk slots that need to be loaded, prioritizing the slots closest to the center of `clip_sphere`.
     ///
     /// By "slots that need to be loaded," we mean those whose parent `NodeState` has a corresponding `child_needs_loading` bit
@@ -121,7 +41,7 @@ where
             // Don't consider roots for loading, just their children.
             self.visit_child_keys(root, |child_key, corner_index| {
                 let (state, _) = self.get_node_state(root).unwrap();
-                if state.descendant_needs_loading_bits.bit_is_set(corner_index) {
+                if state.descendant_needs_loading.bit_is_set(corner_index) {
                     candidate_heap.push(ChunkSphere::new(
                         clip_sphere,
                         &self.indexer,
@@ -145,7 +65,7 @@ where
             }
 
             if let Some((node_state, _)) = self.get_node_state(node_key) {
-                if node_state.descendant_needs_loading_bits.none() {
+                if node_state.descendant_needs_loading.none() {
                     // All descendants have loaded, so this slot is ready to be loaded.
                     rx(node_key);
 
@@ -160,7 +80,7 @@ where
                 if node_key.lod > 0 {
                     // Visit all children that need loading, regardless of what the child mask says.
                     for child_i in 0..PointN::NUM_CORNERS {
-                        if node_state.descendant_needs_loading_bits.bit_is_set(child_i) {
+                        if node_state.descendant_needs_loading.bit_is_set(child_i) {
                             let child_key = self.indexer.child_chunk_key(node_key, child_i);
                             candidate_heap.push(ChunkSphere::new(
                                 clip_sphere,
@@ -281,9 +201,7 @@ where
                                 clip_sphere,
                                 &self.indexer,
                                 child_key,
-                                node_state
-                                    .descendant_needs_loading_bits
-                                    .bit_is_set(corner_index),
+                                node_state.descendant_needs_loading.bit_is_set(corner_index),
                             ));
                         },
                     );
@@ -357,9 +275,7 @@ where
                                     clip_sphere,
                                     &self.indexer,
                                     child_key,
-                                    node_state
-                                        .descendant_needs_loading_bits
-                                        .bit_is_set(corner_index),
+                                    node_state.descendant_needs_loading.bit_is_set(corner_index),
                                 ));
                             }
                         },

@@ -1106,7 +1106,7 @@ pub struct NodeState {
     pub descendant_needs_loading: Bitset8,
     /// A bitmask tracking other external state, like if the chunk is being rendered.
     ///
-    /// Check `StateBit` to see which bits are being used internally.
+    /// Check [`StateBit`] to see which bits are being used internally.
     pub state_bits: AtomicBitset8,
 }
 

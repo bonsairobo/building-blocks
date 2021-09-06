@@ -53,7 +53,7 @@ pub fn chunk_generator_system(
 
         map.chunks.clipmap_loading_slots(
             this_frame_budget as usize,
-            clip_spheres.new_sphere,
+            clip_spheres.new_sphere.center,
             |key| {
                 if key.lod == 0 {
                     generate_slots.push(key);

@@ -21,6 +21,8 @@
 //! when it is convenient; iteration amortizes the cost of hashing to find chunks, and the tree structure allows us to
 //! efficiently skip over empty space.
 //!
+//! ## Extents
+//!
 //! You will commonly want to iterate over an [`ExtentN`] in a single level of detail. For this, you can construct a
 //! [`ChunkTreeLodView`] and use the familiar access traits to iterate or copy data:
 //!
@@ -28,6 +30,13 @@
 //! - [`ForEachMut`](crate::access_traits::ForEachMut)
 //! - [`ReadExtent`](crate::access_traits::ReadExtent)
 //! - [`WriteExtent`](crate::access_traits::WriteExtent)
+//!
+//! ## Tree Search
+//!
+//! The `ChunkTree` is technically a forest, because it has many roots. Since each LOD lives in a different `ChunkStorage`, we
+//! are able to efficiently iterate over the full set of roots with `ChunkTree::visit_root_keys`. To continue the traversal, you
+//! can use `ChunkTree::visit_child_keys`, or any of the other `visit_*` methods. Any kind of traversal can be implemented by
+//! composing the key visitor methods.
 //!
 //! # Random Access
 //!
@@ -74,6 +83,17 @@
 //! [`ChunkStorage`] trait. A storage can be as simple as a [`SmallKeyHashMap`](crate::SmallKeyHashMap). It could also be
 //! something more memory efficient like [`CompressibleChunkStorage`](self::CompressibleChunkStorage) which performs nearly as
 //! well but involves some overhead for caching and compression.
+//!
+//! # Clipmap
+//!
+//! The `ChunkTree` is designed to be used as a clipmap, i.e. a structure that controls which chunks are visible and their level
+//! of detail based on proximity to an observer (camera). Each [`NodeState`] in the tree knows:
+//!
+//!   - if there is chunk data that needs to be loaded
+//!   - if the chunk is currently being rendered
+//!
+//! The `ChunkTree::clipmap_*` algorithms can be given a work budget and search the tree to find a set of chunks that need to be
+//! loaded or rendered at a different level of detail. See the "lod_terrain" example for proper usage.
 //!
 //! # Serialization
 //!

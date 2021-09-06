@@ -25,11 +25,9 @@ where
     pub fn clipmap_loading_slots(
         &self,
         load_chunk_budget: usize,
-        clip_sphere: Sphere<Nf>,
+        observer: PointN<Nf>,
         mut rx: impl FnMut(ChunkKey<Ni>),
     ) {
-        assert!(clip_sphere.radius > 0.0);
-
         if self.root_lod() == 0 {
             return;
         }
@@ -42,12 +40,7 @@ where
             self.visit_child_keys(root, |child_key, corner_index| {
                 let (state, _) = self.get_node_state(root).unwrap();
                 if state.descendant_needs_loading.bit_is_set(corner_index) {
-                    candidate_heap.push(ChunkSphere::new(
-                        clip_sphere,
-                        &self.indexer,
-                        child_key,
-                        true,
-                    ));
+                    candidate_heap.push(ChunkSphere::new(observer, &self.indexer, child_key, true));
                 }
             });
         });
@@ -83,7 +76,7 @@ where
                         if node_state.descendant_needs_loading.bit_is_set(child_i) {
                             let child_key = self.indexer.child_chunk_key(node_key, child_i);
                             candidate_heap.push(ChunkSphere::new(
-                                clip_sphere,
+                                observer,
                                 &self.indexer,
                                 child_key,
                                 true,
@@ -96,12 +89,7 @@ where
                 // loaded.
                 for child_i in 0..PointN::NUM_CORNERS {
                     let child_key = self.indexer.child_chunk_key(node_key, child_i);
-                    candidate_heap.push(ChunkSphere::new(
-                        clip_sphere,
-                        &self.indexer,
-                        child_key,
-                        true,
-                    ));
+                    candidate_heap.push(ChunkSphere::new(observer, &self.indexer, child_key, true));
                 }
             }
         }
@@ -142,12 +130,10 @@ where
     pub fn clipmap_render_updates(
         &self,
         detail: f32,
-        clip_sphere: Sphere<Nf>,
+        observer: PointN<Nf>,
         render_chunk_budget: usize,
         mut rx: impl FnMut(LodChange<Ni>),
     ) {
-        assert!(clip_sphere.radius > 0.0);
-
         // A map from descendant key to ancestor key. These are descendants of a chunk that we've committed to splitting. They
         // might also be in the candidate heap awaiting another potential split. If one gets split again, it'll need to be
         // replaced in the map with its children. When traversal finishes, these will be committed as-is along with their split
@@ -158,7 +144,7 @@ where
         let mut num_render_chunks = 0;
 
         self.visit_root_keys(|root| {
-            candidate_heap.push(ChunkSphere::new(clip_sphere, &self.indexer, root, false));
+            candidate_heap.push(ChunkSphere::new(observer, &self.indexer, root, false));
         });
 
         while let Some(ChunkSphere {
@@ -198,7 +184,7 @@ where
                         &node_state,
                         |child_key, corner_index| {
                             candidate_heap.push(ChunkSphere::new(
-                                clip_sphere,
+                                observer,
                                 &self.indexer,
                                 child_key,
                                 node_state.descendant_needs_loading.bit_is_set(corner_index),
@@ -272,7 +258,7 @@ where
                             committed_split_descendants.insert(child_key, split_ancestor);
                             if child_key.lod > 0 {
                                 candidate_heap.push(ChunkSphere::new(
-                                    clip_sphere,
+                                    observer,
                                     &self.indexer,
                                     child_key,
                                     node_state.descendant_needs_loading.bit_is_set(corner_index),
@@ -564,17 +550,14 @@ where
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
 {
     fn new(
-        clip_sphere: Sphere<Nf>,
+        observer: PointN<Nf>,
         indexer: &ChunkIndexer<Ni>,
         key: ChunkKey<Ni>,
         is_loading: bool,
     ) -> Self {
         let bounding_sphere = chunk_lod0_bounding_sphere(indexer, key);
 
-        let center_dist_to_observer = clip_sphere
-            .center
-            .l2_distance_squared(bounding_sphere.center)
-            .sqrt();
+        let center_dist_to_observer = observer.l2_distance_squared(bounding_sphere.center).sqrt();
         // Subtract the bounding sphere's radius to estimate the distance from the observer to the *closest point* on the chunk.
         // This should make it more fair for higher LODs.
         let closest_dist_to_observer = center_dist_to_observer - bounding_sphere.radius;

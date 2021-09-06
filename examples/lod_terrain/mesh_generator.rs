@@ -59,7 +59,7 @@ pub fn mesh_generator_system<Mesh: VoxelMesh>(
 
         voxel_map.chunks.clipmap_render_updates(
             voxel_map.config.detail,
-            clip_spheres.new_sphere,
+            clip_spheres.new_sphere.center,
             this_frame_budget as usize,
             |c| updates.push(c),
         );

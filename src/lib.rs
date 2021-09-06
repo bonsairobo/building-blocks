@@ -135,8 +135,8 @@
 //!
 //! ### Math Type Conversions
 //!
-//! The `PointN` types have conversions to/from [`glam`](https://docs.rs/glam), [`nalgebra`](https://nalgebra.org/), and
-//! [`mint`](https://docs.rs/mint) types by enabling the corresponding feature.
+//! The `PointN` types have conversions to/from [`glam`](https://docs.rs/glam), [`nalgebra`](https://nalgebra.org/),
+//! [`cgmath`](https://docs.rs/cgmath) and [`mint`](https://docs.rs/mint) types by enabling the corresponding feature.
 //!
 //! ### Compression Backends and WASM
 //!

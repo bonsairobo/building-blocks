@@ -36,6 +36,7 @@ trace = ["building_blocks_storage/tracing"]
 glam = ["building_blocks_core/glam"]
 mint = ["building_blocks_core/mint"]
 nalgebra = ["building_blocks_core/nalgebra"]
+cgmath = ["building_blocks_core/cgmath"]
 
 # Compression backends.
 lz4 = ["building_blocks_storage/lz4"]

@@ -1,6 +1,8 @@
 #[macro_use]
 pub mod point_traits;
 
+#[cfg(feature = "cgmath")]
+mod cgmath_conversions;
 #[cfg(feature = "glam")]
 mod glam_conversions;
 #[cfg(feature = "mint")]

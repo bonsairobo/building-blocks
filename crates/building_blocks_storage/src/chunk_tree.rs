@@ -42,9 +42,14 @@
 //!
 //! ## Chunks
 //!
-//! While in a tree you normally expect `O(log N)` time for random access, the [`ChunkTree`] only requires `O(1)`, since every
-//! chunk ultimately lives in a hash map. And luckily, the hash map keys are very small and the
+//! While in a tree you normally expect a tree to require `O(log N)` time for random access, the [`ChunkTree`] only requires
+//! `O(levels)` in the worst case for insertions and `O(1)` to get an existing chunk or check if it exists, since every chunk
+//! ultimately lives in a hash map. And luckily, the hash map keys are very small and the
 //! [`SmallKeyHashMap`](crate::SmallKeyHashMap) is very fast.
+//!
+//! When writing a chunk into a node that doesn't exist yet, the node will be linked to its nearest ancestor node, which may
+//! need to create a new root in the worst case. All new linkage nodes will not contain any data until they are filled manually
+//! or downsampled into.
 //!
 //! Chunks can be accessed directly by [`ChunkKey`] with the `get*_chunk*` methods. The key for a chunk is comprised of:
 //!

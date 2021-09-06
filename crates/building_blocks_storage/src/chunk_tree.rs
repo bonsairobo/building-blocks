@@ -430,17 +430,10 @@ where
         self.lod_storage_mut(key.lod).pop_raw_node(key.minimum)
     }
 
-    fn delete_chunk_dangling(&mut self, key: ChunkKey<N>) -> (Option<NodeState>, bool) {
+    fn delete_chunk_dangling(&mut self, key: ChunkKey<N>) -> Option<NodeState> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.lod_storage_mut(key.lod).delete_chunk(key.minimum)
-    }
-
-    fn write_chunk_dangling(&mut self, key: ChunkKey<N>, chunk: Usr) -> (&mut NodeState, bool) {
-        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
-
-        self.lod_storage_mut(key.lod)
-            .write_chunk(key.minimum, chunk)
     }
 }
 
@@ -639,7 +632,7 @@ where
 {
     /// Iff there is not already a node for `key`, then the entire subtree at `key` will be marked for loading. This means that
     /// a traversal from the ancestor root of `key` will be able to discover all nodes that need to be loaded by following the
-    /// `descendant_needs_loading` bits.
+    /// `descendant_needs_loading` bits. For an example of this, see [`ChunkTree::clipmap_loading_slots`].
     ///
     /// A node will be considered "loaded" once it's chunk data is mutated in any way, including "no-op" deletions (which is how
     /// we denote that a chunk has no data, even after trying to load it). Once a node is loaded, none of its descendants will
@@ -674,8 +667,6 @@ where
     pub fn get_mut_chunk_or_insert_ambient(&mut self, key: ChunkKey<N>) -> &mut Usr {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.prepare_to_create_node(key);
-
         let Self {
             indexer,
             storages,
@@ -683,19 +674,40 @@ where
             ..
         } = self;
 
-        storages[key.lod as usize]
+        // Need this splitting borrow so we can mutate ancestor storages while borrowing this key's node.
+        let (tree_storages, ancestor_storages) = storages.split_at_mut(key.lod as usize + 1);
+
+        tree_storages[key.lod as usize]
             .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty)
             .user_chunk
             .get_or_insert_with(|| {
+                // For better random access performance, we only want to do this when the node is first created.
+                Self::_link_new_chunk_or_node(ancestor_storages, indexer, builder.root_lod(), key);
+
                 builder.new_ambient(indexer.extent_for_chunk_with_min(key.minimum))
             })
     }
 
     /// Overwrite the chunk at `key` with `chunk`. Drops the previous value.
+    ///
+    /// The node's state and a `bool` indicating whether any old data was overwritten are returned for convenience.
     #[inline]
     pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) -> (&mut NodeState, bool) {
-        self.prepare_to_create_node(key);
-        self.write_chunk_dangling(key, chunk)
+        let Self {
+            indexer,
+            storages,
+            builder,
+            ..
+        } = self;
+
+        // Need this splitting borrow so we can mutate ancestor storages while borrowing this key's node.
+        let (tree_storages, ancestor_storages) = storages.split_at_mut(key.lod as usize + 1);
+
+        let (state, had_chunk) = tree_storages[key.lod as usize].write_chunk(key.minimum, chunk);
+        if !had_chunk {
+            Self::_link_new_chunk_or_node(ancestor_storages, indexer, builder.root_lod(), key);
+        }
+        (state, had_chunk)
     }
 
     /// Replace the chunk at `key` with `chunk`, returning the old value.
@@ -703,12 +715,16 @@ where
     pub fn replace_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.prepare_to_create_node(key);
-
         let node = self
             .lod_storage_mut(key.lod)
             .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty);
-        node.user_chunk.replace(chunk)
+        let old_chunk = node.user_chunk.replace(chunk);
+
+        if old_chunk.is_none() {
+            self.link_new_chunk_or_node(key);
+        }
+
+        old_chunk
     }
 
     /// Delete the chunk at `key` with `chunk`, dropping the old value.
@@ -716,7 +732,7 @@ where
     pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        let (node_state, _) = self.delete_chunk_dangling(key);
+        let node_state = self.delete_chunk_dangling(key);
         let node_exists = if let Some(node_state) = node_state {
             let keep_node = node_state.descendants_have_data();
             if !keep_node {
@@ -739,12 +755,25 @@ where
     ) -> &mut Usr {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.prepare_to_create_node(key);
+        let Self {
+            indexer,
+            storages,
+            builder,
+            ..
+        } = self;
 
-        self.lod_storage_mut(key.lod)
+        // Need this splitting borrow so we can mutate ancestor storages while borrowing this key's node.
+        let (tree_storages, ancestor_storages) = storages.split_at_mut(key.lod as usize + 1);
+
+        tree_storages[key.lod as usize]
             .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty)
             .user_chunk
-            .get_or_insert_with(|| create_chunk())
+            .get_or_insert_with(|| {
+                // For better random access performance, we only want to do this when the chunk is first created.
+                Self::_link_new_chunk_or_node(ancestor_storages, indexer, builder.root_lod(), key);
+
+                create_chunk()
+            })
     }
 
     /// Remove the chunk at `key`. This does not affect descendant or ancestor chunks.
@@ -803,26 +832,95 @@ where
         chunk_rx(key, node);
     }
 
-    fn prepare_to_create_node(&mut self, key: ChunkKey<N>) {
-        if self.node_is_loading(key) {
-            let parent_key = self.mark_node_as_loaded_on_parent(key, true);
-            self.link_to_nearest_ancestor(parent_key, ChunkNode::new_loading);
+    fn link_new_chunk_or_node(&mut self, key: ChunkKey<N>) {
+        let Self {
+            indexer,
+            storages,
+            builder,
+            ..
+        } = self;
+        let (_, ancestor_storages) = storages.split_at_mut(key.lod as usize + 1);
+        Self::_link_new_chunk_or_node(ancestor_storages, indexer, builder.root_lod(), key);
+    }
+
+    /// We need to call this any time a new chunk is created because:
+    /// 1. It might be satisfying an outstanding load, meaning we need to mark the node as loaded on a parent and ensure the
+    ///    parent is linked. This needs to happen even if the node already existed without a chunk.
+    /// 2. The new chunk might have been placed on a new node, meaning we need to link that node.
+    fn _link_new_chunk_or_node(
+        ancestor_storages: &mut [Store],
+        indexer: &ChunkIndexer<N>,
+        root_lod: u8,
+        key: ChunkKey<N>,
+    ) {
+        if Self::_node_is_loading(ancestor_storages, indexer, root_lod, key) {
+            let parent_key = Self::_mark_node_as_loaded_on_parent(
+                &mut ancestor_storages[0],
+                indexer,
+                root_lod,
+                key,
+                true,
+            );
+            Self::_link_to_nearest_ancestor(
+                &mut ancestor_storages[1..],
+                indexer,
+                root_lod,
+                parent_key,
+                ChunkNode::new_loading,
+            );
         } else {
-            self.link_to_nearest_ancestor(key, ChunkNode::new_empty);
+            Self::_link_to_nearest_ancestor(
+                ancestor_storages,
+                indexer,
+                root_lod,
+                key,
+                ChunkNode::new_empty,
+            );
         }
     }
 
+    /// We need to call this any time a user attempts to delete a chunk:
+    /// 1. It might be satisfying an outstanding load, meaning we need to mark the node as loaded on a parent and ensure the
+    ///    parent is linked. This needs to happen even if the node already existed without a chunk.
+    /// 2. The chunk might have been the last chunk linked into the tree by its node, meaning we need to unlink that node.
     fn clean_up_after_deleted_chunk(&mut self, key: ChunkKey<N>, node_exists: bool) {
-        if self.node_is_loading(key) {
-            let parent_key = self.mark_node_as_loaded_on_parent(key, node_exists);
-            self.link_to_nearest_ancestor(parent_key, ChunkNode::new_loading);
+        let Self {
+            indexer,
+            storages,
+            builder,
+            ..
+        } = self;
+        let (_, ancestor_storages) = storages.split_at_mut(key.lod as usize + 1);
+
+        if Self::_node_is_loading(ancestor_storages, indexer, builder.root_lod(), key) {
+            let parent_key = Self::_mark_node_as_loaded_on_parent(
+                &mut ancestor_storages[0],
+                indexer,
+                builder.root_lod(),
+                key,
+                node_exists,
+            );
+            Self::_link_to_nearest_ancestor(
+                &mut ancestor_storages[1..],
+                indexer,
+                builder.root_lod(),
+                parent_key,
+                ChunkNode::new_loading,
+            );
         } else if !node_exists {
-            self.unlink_node(key);
+            Self::_unlink_node(ancestor_storages, indexer, builder.root_lod(), key);
         }
     }
 
-    fn node_is_loading(&self, key: ChunkKey<N>) -> bool {
-        if let Some((ancestor_state, path_corner_index)) = self.find_nearest_ancestor_node(key) {
+    fn _node_is_loading(
+        ancestor_storages: &[Store],
+        indexer: &ChunkIndexer<N>,
+        root_lod: u8,
+        key: ChunkKey<N>,
+    ) -> bool {
+        if let Some((ancestor_state, path_corner_index)) =
+            Self::_find_nearest_ancestor_node(ancestor_storages, indexer, root_lod, key)
+        {
             ancestor_state
                 .descendant_needs_loading
                 .bit_is_set(path_corner_index)
@@ -831,35 +929,40 @@ where
         }
     }
 
-    fn find_nearest_ancestor_node(&self, mut key: ChunkKey<N>) -> Option<(&NodeState, u8)> {
-        while key.lod < self.root_lod() {
-            let parent_key = self.indexer.parent_chunk_key(key);
-            if let Some((parent_state, _)) = self.get_node_state(parent_key) {
-                let corner_index = self.indexer.corner_index(key.minimum);
+    fn _find_nearest_ancestor_node<'a>(
+        ancestor_storages: &'a [Store],
+        indexer: &ChunkIndexer<N>,
+        root_lod: u8,
+        mut key: ChunkKey<N>,
+    ) -> Option<(&'a NodeState, u8)> {
+        let mut storage_index = 0;
+        while key.lod < root_lod {
+            let parent_key = indexer.parent_chunk_key(key);
+            if let Some((parent_state, _)) =
+                ancestor_storages[storage_index].get_node_state(parent_key.minimum)
+            {
+                let corner_index = indexer.corner_index(key.minimum);
                 return Some((parent_state, corner_index));
             }
             key = parent_key;
+            storage_index += 1;
         }
 
         None
     }
 
-    fn link_to_nearest_ancestor(
-        &mut self,
+    fn _link_to_nearest_ancestor(
+        ancestor_storages: &mut [Store],
+        indexer: &ChunkIndexer<N>,
+        root_lod: u8,
         mut key: ChunkKey<N>,
         make_link_node: impl Fn() -> ChunkNode<Usr>,
     ) {
-        let Self {
-            storages,
-            indexer,
-            builder,
-            ..
-        } = self;
-
-        while key.lod < builder.root_lod() {
+        let mut storage_index = 0;
+        while key.lod < root_lod {
             let parent = indexer.parent_chunk_key(key);
             let mut parent_already_exists = true;
-            let (parent_state, _) = storages[parent.lod as usize]
+            let (parent_state, _) = ancestor_storages[storage_index]
                 .get_mut_node_state_or_insert_with(parent.minimum, || {
                     parent_already_exists = false;
                     make_link_node()
@@ -871,38 +974,47 @@ where
                 return;
             }
             key = parent;
+            storage_index += 1;
         }
     }
 
-    fn unlink_node(&mut self, mut key: ChunkKey<N>) {
-        while key.lod < self.root_lod() {
-            let parent = self.indexer.parent_chunk_key(key);
-            let (parent_state, parent_has_data) = self.storages[parent.lod as usize]
+    fn _unlink_node(
+        ancestor_storages: &mut [Store],
+        indexer: &ChunkIndexer<N>,
+        root_lod: u8,
+        mut key: ChunkKey<N>,
+    ) {
+        let mut storage_index = 0;
+        while key.lod < root_lod {
+            let parent = indexer.parent_chunk_key(key);
+            let (parent_state, parent_has_data) = ancestor_storages[storage_index]
                 .get_mut_node_state(parent.minimum)
                 .unwrap();
 
             if parent_state.descendants_have_data() || parent_has_data {
-                let child_corner_index = self.indexer.corner_index(key.minimum);
+                let child_corner_index = indexer.corner_index(key.minimum);
                 parent_state.children.unset_bit(child_corner_index);
                 return;
             }
 
             key = parent;
-            self.pop_raw_node_dangling(key);
+            storage_index += 1;
+            ancestor_storages[storage_index].pop_raw_node(key.minimum);
         }
     }
 
-    fn mark_node_as_loaded_on_parent(
-        &mut self,
+    fn _mark_node_as_loaded_on_parent(
+        parent_lod_storage: &mut Store,
+        indexer: &ChunkIndexer<N>,
+        root_lod: u8,
         key: ChunkKey<N>,
         node_exists: bool,
     ) -> ChunkKey<N> {
-        debug_assert!(key.lod < self.root_lod());
+        debug_assert!(key.lod < root_lod);
 
-        let parent = self.indexer.parent_chunk_key(key);
-        let corner_index = self.indexer.corner_index(key.minimum);
-        let (state, _) = self
-            .lod_storage_mut(parent.lod)
+        let parent = indexer.parent_chunk_key(key);
+        let corner_index = indexer.corner_index(key.minimum);
+        let (state, _) = parent_lod_storage
             .get_mut_node_state_or_insert_with(parent.minimum, ChunkNode::new_loading);
         state.descendant_needs_loading.unset_bit(corner_index);
         if node_exists {

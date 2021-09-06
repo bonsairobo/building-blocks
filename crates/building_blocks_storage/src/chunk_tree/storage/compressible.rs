@@ -289,7 +289,7 @@ where
 
     /// Writes `chunk` into the node at `key`, leaving any other state unaffected. Does not require decompression.
     ///
-    /// The node's state and a `bool` indicating whether it had any chunk data are returned for convenience.
+    /// The node's state and a `bool` indicating whether any old data was overwritten are returned for convenience.
     #[inline]
     pub fn write_chunk(&mut self, key: PointN<N>, chunk: Compr::Data) -> (&mut NodeState, bool) {
         self.invalidate_local_cache_entry(&key);
@@ -304,7 +304,7 @@ where
             key,
             |compressed_entry| {
                 compressed.remove(compressed_entry.slab_key);
-                ChunkNode::new_empty()
+                ChunkNode::new_without_data(compressed_entry.node_state.clone())
             },
             ChunkNode::new_empty,
         );
@@ -316,9 +316,9 @@ where
 
     /// Deletes the chunk out of the node at `key`, leaving any other state unaffected. Does not require decompression.
     ///
-    /// The node's state and a `bool` indicating whether it had any chunk data are returned for convenience.
+    /// The node's state is returned for convenience.
     #[inline]
-    pub fn delete_chunk(&mut self, key: PointN<N>) -> (Option<NodeState>, bool) {
+    pub fn delete_chunk(&mut self, key: PointN<N>) -> Option<NodeState> {
         self.invalidate_local_cache_entry(&key);
 
         let Self {
@@ -330,10 +330,9 @@ where
         if let Some(entry) = main_cache.get_mut(&key) {
             match entry {
                 CacheEntry::Cached(node) => {
-                    let had_data = node.user_chunk.is_some();
                     node.user_chunk = None;
 
-                    (Some(node.state.clone()), had_data)
+                    Some(node.state.clone())
                 }
                 CacheEntry::Evicted(compressed_entry) => {
                     compressed.remove(compressed_entry.slab_key);
@@ -342,11 +341,11 @@ where
                     let node = ChunkNode::new_without_data(node_state.clone());
                     main_cache.insert(key, node);
 
-                    (Some(node_state), true)
+                    Some(node_state)
                 }
             }
         } else {
-            (None, false)
+            None
         }
     }
 
@@ -555,7 +554,7 @@ where
     }
 
     #[inline]
-    fn delete_chunk(&mut self, key: PointN<N>) -> (Option<NodeState>, bool) {
+    fn delete_chunk(&mut self, key: PointN<N>) -> Option<NodeState> {
         self.delete_chunk(key)
     }
 }

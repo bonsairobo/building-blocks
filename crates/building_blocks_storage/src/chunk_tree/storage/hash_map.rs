@@ -97,14 +97,11 @@ where
     }
 
     #[inline]
-    fn delete_chunk(&mut self, key: PointN<N>) -> (Option<NodeState>, bool) {
-        if let Some(node) = self.get_mut_node(key) {
-            let had_data = node.user_chunk.is_some();
+    fn delete_chunk(&mut self, key: PointN<N>) -> Option<NodeState> {
+        self.get_mut_node(key).map(|node| {
             node.user_chunk = None;
-            (Some(node.state.clone()), had_data)
-        } else {
-            (None, false)
-        }
+            node.state.clone()
+        })
     }
 }
 

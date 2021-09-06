@@ -74,13 +74,13 @@ pub trait ChunkStorage<N> {
 
     /// Writes `chunk` into the node at `key`, leaving any other state unaffected.
     ///
-    /// The node's state and a `bool` indicating whether it had any chunk data are returned for convenience.
+    /// The node's state and a `bool` indicating whether any old data was overwritten are returned for convenience.
     fn write_chunk(&mut self, key: PointN<N>, chunk: Self::Chunk) -> (&mut NodeState, bool);
 
     /// Deletes the chunk out of the node at `key`, leaving any other state unaffected.
     ///
-    /// The node's state and a `bool` indicating whether it had any chunk data are returned for convenience.
-    fn delete_chunk(&mut self, key: PointN<N>) -> (Option<NodeState>, bool);
+    /// The node's state is returned for convenience.
+    fn delete_chunk(&mut self, key: PointN<N>) -> Option<NodeState>;
 }
 
 #[auto_impl(&, &mut)]

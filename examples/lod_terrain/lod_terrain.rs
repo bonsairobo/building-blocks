@@ -20,7 +20,7 @@ use sync_batch::SyncBatch;
 use voxel_map::{MapConfig, VoxelMap};
 use voxel_mesh::{BlockyMesh, SmoothMesh, VoxelMesh};
 
-use building_blocks::{core::prelude::*, storage::prelude::clipmap_chunks_in_sphere};
+use building_blocks::{core::prelude::*, storage::prelude::clipmap_chunks_intersecting_sphere};
 
 use bevy_utilities::{
     bevy::{
@@ -126,7 +126,7 @@ fn setup(
     // Detect the initial set of slots inside the clip sphere.
     let new_slots_batch = SyncBatch::<NewSlot>::default();
     let mut new_slots = Vec::new();
-    clipmap_chunks_in_sphere(
+    clipmap_chunks_intersecting_sphere(
         &indexer,
         map_config.root_lod(),
         map_config.detect_enter_lod,

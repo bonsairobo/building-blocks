@@ -51,11 +51,12 @@ pub mod prelude {
         array::{IndexedArray, Local, Stride},
         bitset::{AtomicBitset8, Bitset8},
         chunk_tree::{
-            chunk_bounding_sphere, clipmap_chunks_in_sphere, clipmap_new_chunks, AmbientExtent,
-            ChunkDownsampler, ChunkIndexer2, ChunkIndexer3, ChunkKey, ChunkKey2, ChunkKey3,
-            ChunkNode, ChunkStorage, ChunkTreeBuilder, ChunkTreeConfig, ChunkUnits, ClipmapSlot2,
-            ClipmapSlot3, IterChunkKeys, LodChange2, LodChange3, NodeState, PointDownsampler,
-            SdfMeanDownsampler, UserChunk,
+            chunk_bounding_sphere, clipmap_chunks_intersecting_sphere,
+            clipmap_new_chunks_intersecting_sphere, AmbientExtent, ChunkDownsampler, ChunkIndexer2,
+            ChunkIndexer3, ChunkKey, ChunkKey2, ChunkKey3, ChunkNode, ChunkStorage,
+            ChunkTreeBuilder, ChunkTreeConfig, ChunkUnits, ClipmapSlot2, ClipmapSlot3,
+            IterChunkKeys, LodChange2, LodChange3, NodeState, PointDownsampler, SdfMeanDownsampler,
+            UserChunk,
         },
         compression::{
             BincodeCompression, BytesCompression, Compressed, Compression, FromBytesCompression,

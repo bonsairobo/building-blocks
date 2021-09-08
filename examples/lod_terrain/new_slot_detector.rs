@@ -14,7 +14,7 @@ pub fn detect_new_slots_system(
 
     let indexer = ChunkIndexer3::new(config.chunk_shape());
     let mut new_slots = Vec::new();
-    clipmap_new_chunks(
+    clipmap_new_chunks_intersecting_sphere(
         &indexer,
         config.root_lod(),
         config.detect_enter_lod,

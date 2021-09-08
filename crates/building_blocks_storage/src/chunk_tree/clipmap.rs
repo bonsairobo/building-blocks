@@ -289,8 +289,8 @@ where
     }
 }
 
-/// Detects all chunk slots at `detect_lod` that are bounded by `clip_sphere`.
-pub fn clipmap_chunks_in_sphere<Ni, Nf>(
+/// Detects all chunk slots at `detect_lod` that are intersected by `clip_sphere`.
+pub fn clipmap_chunks_intersecting_sphere<Ni, Nf>(
     indexer: &ChunkIndexer<Ni>,
     root_lod: u8,
     detect_lod: u8,
@@ -308,7 +308,7 @@ pub fn clipmap_chunks_in_sphere<Ni, Nf>(
         indexer.covering_ancestor_extent(new_lod0_clip_extent, root_lod as i32);
 
     for chunk_min in indexer.chunk_mins_for_extent(&new_root_clip_extent) {
-        clipmap_chunks_in_sphere_recursive(
+        clipmap_chunks_intersecting_sphere_recursive(
             indexer,
             ChunkKey::new(root_lod, chunk_min),
             detect_lod,
@@ -319,7 +319,7 @@ pub fn clipmap_chunks_in_sphere<Ni, Nf>(
     }
 }
 
-fn clipmap_chunks_in_sphere_recursive<Ni, Nf>(
+fn clipmap_chunks_intersecting_sphere_recursive<Ni, Nf>(
     indexer: &ChunkIndexer<Ni>,
     node_key: ChunkKey<Ni>, // May not exist in the ChunkTree!
     detect_lod: u8,
@@ -338,15 +338,15 @@ fn clipmap_chunks_in_sphere_recursive<Ni, Nf>(
         .l2_distance_squared(node_sphere.center)
         .sqrt();
 
-    let node_intersects_clip_sphere = dist_to_clip_sphere - node_sphere.radius < clip_sphere.radius;
+    let node_intersects_sphere = dist_to_clip_sphere - node_sphere.radius < clip_sphere.radius;
 
-    if !node_intersects_clip_sphere {
+    if !node_intersects_sphere {
         return;
     }
 
     if node_key.lod > detect_lod {
         for child_i in 0..PointN::NUM_CORNERS {
-            clipmap_chunks_in_sphere_recursive(
+            clipmap_chunks_intersecting_sphere_recursive(
                 indexer,
                 indexer.child_chunk_key(node_key, child_i),
                 detect_lod,
@@ -357,23 +357,20 @@ fn clipmap_chunks_in_sphere_recursive<Ni, Nf>(
         }
     } else {
         // This is the LOD where we want to detect slots inside the sphere.
-        let node_bounded_by_clip_sphere =
-            dist_to_clip_sphere + node_sphere.radius < clip_sphere.radius;
         let is_render_candidate =
             node_key.lod == 0 || dist_to_clip_sphere / node_sphere.radius > detail;
 
-        if node_bounded_by_clip_sphere {
-            rx(ClipmapSlot {
-                key: node_key,
-                dist: dist_to_clip_sphere,
-                is_render_candidate,
-            });
-        }
+        rx(ClipmapSlot {
+            key: node_key,
+            dist: dist_to_clip_sphere,
+            is_render_candidate,
+        });
     }
 }
 
-/// Detects new chunk slots at `detect_lod` that entered `new_clip_sphere` after it moved from `old_clip_sphere`.
-pub fn clipmap_new_chunks<Ni, Nf>(
+/// Detects new chunk slots at `detect_lod` that started intersecting `new_clip_sphere` only after it moved from
+/// `old_clip_sphere`.
+pub fn clipmap_new_chunks_intersecting_sphere<Ni, Nf>(
     indexer: &ChunkIndexer<Ni>,
     root_lod: u8,
     detect_lod: u8,
@@ -393,7 +390,7 @@ pub fn clipmap_new_chunks<Ni, Nf>(
         indexer.covering_ancestor_extent(new_lod0_clip_extent, root_lod as i32);
 
     for chunk_min in indexer.chunk_mins_for_extent(&new_root_clip_extent) {
-        clipmap_new_chunks_recursive(
+        clipmap_new_chunks_intersecting_sphere_recursive(
             indexer,
             ChunkKey::new(root_lod, chunk_min),
             detect_lod,
@@ -405,7 +402,7 @@ pub fn clipmap_new_chunks<Ni, Nf>(
     }
 }
 
-fn clipmap_new_chunks_recursive<Ni, Nf>(
+fn clipmap_new_chunks_intersecting_sphere_recursive<Ni, Nf>(
     indexer: &ChunkIndexer<Ni>,
     node_key: ChunkKey<Ni>, // May not exist in the ChunkTree!
     detect_lod: u8,
@@ -434,24 +431,14 @@ fn clipmap_new_chunks_recursive<Ni, Nf>(
     let node_intersects_new_clip_sphere =
         dist_to_new_clip_sphere - node_sphere.radius < new_clip_sphere.radius;
 
-    if !node_intersects_old_clip_sphere && !node_intersects_new_clip_sphere {
+    if !node_intersects_new_clip_sphere {
         // There are no events for this node or any of its descendants.
-        return;
-    }
-
-    let node_bounded_by_old_clip_sphere =
-        dist_to_old_clip_sphere + node_sphere.radius < old_clip_sphere.radius;
-    let node_bounded_by_new_clip_sphere =
-        dist_to_new_clip_sphere + node_sphere.radius < new_clip_sphere.radius;
-
-    if node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere {
-        // This node is stably bounded, so enter events are not possible.
         return;
     }
 
     if node_key.lod > detect_lod {
         for child_i in 0..PointN::NUM_CORNERS {
-            clipmap_new_chunks_recursive(
+            clipmap_new_chunks_intersecting_sphere_recursive(
                 indexer,
                 indexer.child_chunk_key(node_key, child_i),
                 detect_lod,
@@ -461,18 +448,16 @@ fn clipmap_new_chunks_recursive<Ni, Nf>(
                 rx,
             );
         }
-    } else {
+    } else if !node_intersects_old_clip_sphere {
         // This is the LOD where we want to detect entrances into the clip sphere.
         let is_render_candidate =
             node_key.lod == 0 || dist_to_new_clip_sphere / node_sphere.radius > detail;
 
-        if !node_bounded_by_old_clip_sphere && node_bounded_by_new_clip_sphere {
-            rx(ClipmapSlot {
-                key: node_key,
-                dist: dist_to_new_clip_sphere,
-                is_render_candidate,
-            });
-        }
+        rx(ClipmapSlot {
+            key: node_key,
+            dist: dist_to_new_clip_sphere,
+            is_render_candidate,
+        });
     }
 }
 

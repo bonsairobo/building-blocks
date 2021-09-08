@@ -1016,9 +1016,10 @@ where
                 .get_mut_node_state(parent.minimum)
                 .unwrap();
 
+            let child_corner_index = indexer.corner_index(key.minimum);
+            parent_state.children.unset_bit(child_corner_index);
+
             if parent_state.descendants_have_data() || parent_has_data {
-                let child_corner_index = indexer.corner_index(key.minimum);
-                parent_state.children.unset_bit(child_corner_index);
                 return;
             }
 

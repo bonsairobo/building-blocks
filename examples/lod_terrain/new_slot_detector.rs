@@ -21,11 +21,7 @@ pub fn detect_new_slots_system(
         config.detail,
         clip_spheres.old_sphere,
         clip_spheres.new_sphere,
-        |new_slot| {
-            if new_slot.key.minimum.y() < 0 && new_slot.key.minimum.y() >= -64 {
-                new_slots.push(new_slot)
-            }
-        },
+        |new_slot| new_slots.push(new_slot),
     );
     frame_new_slots.extend(new_slots.into_iter().map(|s| NewSlot { key: s.key }));
 }

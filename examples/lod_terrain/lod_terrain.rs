@@ -132,11 +132,7 @@ fn setup(
         map_config.detect_enter_lod,
         map_config.detail,
         clip_spheres.new_sphere,
-        |new_slot| {
-            if new_slot.key.minimum.y() < 0 && new_slot.key.minimum.y() >= -64 {
-                new_slots.push(new_slot)
-            }
-        },
+        |new_slot| new_slots.push(new_slot),
     );
     new_slots_batch.extend(new_slots.into_iter().map(|s| NewSlot { key: s.key }));
 

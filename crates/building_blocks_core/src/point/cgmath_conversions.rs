@@ -3,16 +3,16 @@ use super::*;
 
 use cgmath;
 
-impl<T: std::marker::Copy> From<Point2<T>> for cgmath::Point2<T> {
+impl<T: Copy> From<Point2<T>> for cgmath::Point2<T> {
     #[inline]
     /// Converts to cgmath::Point2<T> from Point2<T>
     /// ```
     /// # use building_blocks_core::{PointN,Point2i,Point2f};
-    /// let p : Point2i = PointN([1_i32, 2]);
+    /// let p : Point2i = PointN([1, 2]);
     /// let c = cgmath::Point2::<i32>::from(p);
     /// assert_eq!(c.x , p.x());
     /// assert_eq!(c.y , p.y());
-    /// let p : Point2f = PointN([1_f32, 2.0]);
+    /// let p : Point2f = PointN([1.0, 2.0]);
     /// let c = cgmath::Point2::<f32>::from(p);
     /// assert_eq!(c.x , p.x());
     /// assert_eq!(c.y , p.y());
@@ -22,16 +22,16 @@ impl<T: std::marker::Copy> From<Point2<T>> for cgmath::Point2<T> {
     }
 }
 
-impl<T: std::marker::Copy> From<Point2<T>> for cgmath::Vector2<T> {
+impl<T: Copy> From<Point2<T>> for cgmath::Vector2<T> {
     #[inline]
     /// Converts to cgmath::Vector2<T> from Point2<T>
     /// ```
     /// # use building_blocks_core::{PointN,Point2i,Point2f};
-    /// let p : Point2i = PointN([1_i32, 2]);
+    /// let p : Point2i = PointN([1, 2]);
     /// let c = cgmath::Vector2::<i32>::from(p);
     /// assert_eq!(c.x , p.x());
     /// assert_eq!(c.y , p.y());
-    /// let p : Point2f = PointN([1_f32, 2.0]);
+    /// let p : Point2f = PointN([1.0, 2.0]);
     /// let c = cgmath::Vector2::<f32>::from(p);
     /// assert_eq!(c.x , p.x());
     /// assert_eq!(c.y , p.y());
@@ -85,7 +85,7 @@ impl From<Point2i> for cgmath::Point2<f32> {
     /// ```
     /// # use building_blocks_core::{PointN,Point2i};
     ///
-    /// let p : Point2i = PointN([1_i32, 2]);
+    /// let p : Point2i = PointN([1, 2]);
     /// let c = cgmath::Point2::<f32>::from(p);
     /// assert_eq!(c.x , p.x() as f32);
     /// assert_eq!(c.y , p.y() as f32);
@@ -100,7 +100,7 @@ impl From<Point2i> for cgmath::Vector2<f32> {
     /// Converts to cgmath::Vector2<f32> from Point2i
     /// ```
     /// # use building_blocks_core::{PointN,Point2i};
-    /// let p : Point2i = PointN([1_i32, 2]);
+    /// let p : Point2i = PointN([1, 2]);
     /// let c = cgmath::Vector2::<f32>::from(p);
     /// assert_eq!(c.x , p.x() as f32);
     /// assert_eq!(c.y , p.y() as f32);
@@ -110,22 +110,22 @@ impl From<Point2i> for cgmath::Vector2<f32> {
     }
 }
 
-impl<T: std::marker::Copy> From<Point3<T>> for cgmath::Point3<T> {
+impl<T: Copy> From<Point3<T>> for cgmath::Point3<T> {
     #[inline]
     /// Converts to cgmath::Point3<T> from Point3<T>
     /// ```
     /// # use building_blocks_core::{PointN,Point3i,Point3f};
-    /// let p : Point3i = PointN([1_i32, 2, 3]);
+    /// let p : Point3i = PointN([1, 2, 3]);
     /// let c = cgmath::Vector3::<i32>::from(p);
     /// assert_eq!(c.x , p.x());
     /// assert_eq!(c.y , p.y());
     /// assert_eq!(c.z , p.z());
-    /// let p : Point3f = PointN([1.0_f32, 2.0, 3.0]);
+    /// let p : Point3f = PointN([1.0, 2.0, 3.0]);
     /// let c = cgmath::Point3::<f32>::from(p);
     /// assert_eq!(c.x , p.x());
     /// assert_eq!(c.y , p.y());
     /// assert_eq!(c.z , p.z());
-    /// let p : Point3i = PointN([1_i32, 2, 3]);
+    /// let p : Point3i = PointN([1, 2, 3]);
     /// let c = cgmath::Vector3::<i32>::from(p);
     /// assert_eq!(c.x , p.x());
     /// assert_eq!(c.y , p.y());
@@ -136,12 +136,12 @@ impl<T: std::marker::Copy> From<Point3<T>> for cgmath::Point3<T> {
     }
 }
 
-impl<T: std::marker::Copy> From<Point3<T>> for cgmath::Vector3<T> {
+impl<T: Copy> From<Point3<T>> for cgmath::Vector3<T> {
     #[inline]
     /// Converts to cgmath::Vector3<T> from Point3<T>
     /// ```
     /// # use building_blocks_core::{PointN,Point3i,Point3f};
-    /// let p : Point3i = PointN([1_i32, 2, 3]);
+    /// let p : Point3i = PointN([1, 2, 3]);
     /// let c = cgmath::Vector3::<i32>::from(p);
     /// assert_eq!(c.x , p.x());
     /// assert_eq!(c.y , p.y());
@@ -199,7 +199,7 @@ impl From<Point3i> for cgmath::Point3<f32> {
     /// Converts to cgmath::Point3<f32> from Point3i
     /// ```
     /// # use building_blocks_core::{PointN,Point3i};
-    /// let p : Point3i = PointN([1_i32, 2, 3]);
+    /// let p : Point3i = PointN([1, 2, 3]);
     /// let c = cgmath::Point3::<f32>::from(p);
     /// assert_eq!(c.x , p.x() as f32);
     /// assert_eq!(c.y , p.y() as f32);
@@ -215,7 +215,7 @@ impl From<Point3i> for cgmath::Vector3<f32> {
     /// Converts to cgmath::Vector3<f32> from Point3i
     /// ```
     /// # use building_blocks_core::{PointN,Point3i};
-    /// let p : Point3i = PointN([1_i32, 2, 3]);
+    /// let p : Point3i = PointN([1, 2, 3]);
     /// let c = cgmath::Vector3::<f32>::from(p);
     /// assert_eq!(c.x , p.x() as f32);
     /// assert_eq!(c.y , p.y() as f32);

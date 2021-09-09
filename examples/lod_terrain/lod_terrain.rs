@@ -26,7 +26,7 @@ use bevy_utilities::{
     bevy::{
         pbr::AmbientLight,
         prelude::*,
-        render::camera::PerspectiveProjection,
+        render::camera::{Camera, PerspectiveProjection},
         render::wireframe::{WireframeConfig, WireframePlugin},
         tasks::ComputeTaskPool,
         wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions},
@@ -87,6 +87,7 @@ fn run_example<Mesh: VoxelMesh>() {
         .add_system(mesh_generator_system::<Mesh>.system().after("mesh_deleter"))
         .add_system(chunk_compression_system.system())
         .add_system(movement_sensitivity.system())
+        .add_system(light_follow_camera.system())
         .run();
 }
 
@@ -100,6 +101,22 @@ fn movement_sensitivity(
         } else {
             controller.translate_sensitivity = 0.5;
         }
+    }
+}
+
+fn light_follow_camera(
+    mut queries: QuerySet<(
+        Query<(&Transform, &Camera)>,
+        Query<(&mut Transform, &Light)>,
+    )>,
+) {
+    let camera_position = if let Some((tfm, _cam)) = queries.q0().iter().next() {
+        tfm.translation
+    } else {
+        return;
+    };
+    if let Some((mut tfm, _light)) = queries.q1_mut().iter_mut().next() {
+        tfm.translation = camera_position;
     }
 }
 
@@ -176,14 +193,14 @@ fn setup(
 
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
-        brightness: 1.0 / 5.0f32,
+        brightness: 1.0 / 2.0f32,
     });
     commands.spawn_bundle(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 500.0, 0.0)),
         light: Light {
-            intensity: 1000000.0,
-            depth: 0.1..1000000.0,
-            range: 1000000.0,
+            intensity: 3000.0,
+            depth: 0.1..100000.0,
+            range: 100000.0,
             ..Default::default()
         },
         ..Default::default()

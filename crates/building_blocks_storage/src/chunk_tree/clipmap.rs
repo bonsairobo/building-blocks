@@ -16,33 +16,24 @@ where
 {
     /// Searches for chunk slots that need to be loaded, prioritizing the slots closest to the center of `clip_sphere`.
     ///
-    /// By "slots that need to be loaded," we mean those whose parent `NodeState` has a corresponding `child_needs_loading` bit
-    /// set. These should be set with `clipmap_mark_node_for_loading_if_missing` and unset with `clipmap_write_loaded_chunk`.
-    /// Note that this implies root nodes will **never** be passed to `rx` (since they have no parent).
+    /// By "slots that need to be loaded," we mean those whose [`NodeState`] has the [`StateBit::Loading`] bit set. These should
+    /// be set with `ChunkTree::mark_tree_for_loading`. Be sure to write or delete the any chunk that finishes loading,
+    /// otherwise its loading bit will remain set, and it will continue to show up in `rx`.
     ///
-    /// A slot will only be considered for loading if all of its children are already loaded. This is necessary to correctly
-    /// downsample.
+    /// Normally, this function will only pass a chunk to `rx` after all of its descendants have finished loading. But if you
+    /// set `allow_top_down=true`, then this constraint is removed.
     pub fn clipmap_loading_slots(
         &self,
         load_chunk_budget: usize,
+        allow_top_down: bool,
         observer: PointN<Nf>,
         mut rx: impl FnMut(ChunkKey<Ni>),
     ) {
-        if self.root_lod() == 0 {
-            return;
-        }
-
         let mut candidate_heap = BinaryHeap::new();
         let mut num_load_slots = 0;
 
         self.visit_root_keys(|root| {
-            // Don't consider roots for loading, just their children.
-            self.visit_child_keys(root, |child_key, corner_index| {
-                let (state, _) = self.get_node_state(root).unwrap();
-                if state.descendant_needs_loading.bit_is_set(corner_index) {
-                    candidate_heap.push(ChunkSphere::new(observer, &self.indexer, child_key, true));
-                }
-            });
+            candidate_heap.push(ChunkSphere::new(observer, &self.indexer, root));
         });
 
         while let Some(ChunkSphere { key: node_key, .. }) = candidate_heap.pop() {
@@ -58,7 +49,9 @@ where
             }
 
             if let Some((node_state, _)) = self.get_node_state(node_key) {
-                if node_state.descendant_needs_loading.none() {
+                if node_state.is_loading()
+                    && (allow_top_down || node_state.descendant_needs_loading.none())
+                {
                     // All descendants have loaded, so this slot is ready to be loaded.
                     rx(node_key);
 
@@ -79,7 +72,6 @@ where
                                 observer,
                                 &self.indexer,
                                 child_key,
-                                true,
                             ));
                         }
                     }
@@ -89,7 +81,7 @@ where
                 // loaded.
                 for child_i in 0..PointN::NUM_CORNERS {
                     let child_key = self.indexer.child_chunk_key(node_key, child_i);
-                    candidate_heap.push(ChunkSphere::new(observer, &self.indexer, child_key, true));
+                    candidate_heap.push(ChunkSphere::new(observer, &self.indexer, child_key));
                 }
             }
         }
@@ -144,14 +136,13 @@ where
         let mut num_render_chunks = 0;
 
         self.visit_root_keys(|root| {
-            candidate_heap.push(ChunkSphere::new(observer, &self.indexer, root, false));
+            candidate_heap.push(ChunkSphere::new(observer, &self.indexer, root));
         });
 
         while let Some(ChunkSphere {
             key: node_key,
             bounding_sphere: node_sphere,
             center_dist_to_observer,
-            is_loading,
             ..
         }) = candidate_heap.pop()
         {
@@ -160,8 +151,9 @@ where
             }
 
             let (node_state, _) = self.get_node_state(node_key).unwrap();
+            let is_loading = node_state.is_loading();
 
-            let was_active = node_state.state_bits.bit_is_set(StateBit::Render as u8);
+            let was_active = node_state.is_rendering();
             let is_active =
                 node_key.lod == 0 || center_dist_to_observer / node_sphere.radius > detail;
 
@@ -179,18 +171,9 @@ where
                 // Old and new frames agree this chunk is not active.
                 (false, false) => {
                     // Keep looking for any active descendants.
-                    self.visit_child_keys_of_node(
-                        node_key,
-                        node_state,
-                        |child_key, corner_index| {
-                            candidate_heap.push(ChunkSphere::new(
-                                observer,
-                                &self.indexer,
-                                child_key,
-                                node_state.descendant_needs_loading.bit_is_set(corner_index),
-                            ));
-                        },
-                    );
+                    self.visit_child_keys_of_node(node_key, node_state, |child_key, _| {
+                        candidate_heap.push(ChunkSphere::new(observer, &self.indexer, child_key));
+                    });
                 }
                 (false, true) => {
                     if is_loading {
@@ -247,25 +230,20 @@ where
                     // out of render chunk budget. To be fair to other chunks in the queue that need to be split, we will only
                     // split by one layer for now, but we'll re-insert the children back into the heap so they can be split
                     // again if we still have budget.
-                    self.visit_child_keys_of_node(
-                        node_key,
-                        node_state,
-                        |child_key, corner_index| {
-                            let child_node = self.get_node(child_key).unwrap();
-                            child_node.state.state_bits.set_bit(StateBit::Render as u8);
+                    self.visit_child_keys_of_node(node_key, node_state, |child_key, _| {
+                        let child_node = self.get_node(child_key).unwrap();
+                        child_node.state.state_bits.set_bit(StateBit::Render as u8);
 
-                            num_render_chunks += 1;
-                            committed_split_descendants.insert(child_key, split_ancestor);
-                            if child_key.lod > 0 {
-                                candidate_heap.push(ChunkSphere::new(
-                                    observer,
-                                    &self.indexer,
-                                    child_key,
-                                    node_state.descendant_needs_loading.bit_is_set(corner_index),
-                                ));
-                            }
-                        },
-                    );
+                        num_render_chunks += 1;
+                        committed_split_descendants.insert(child_key, split_ancestor);
+                        if child_key.lod > 0 {
+                            candidate_heap.push(ChunkSphere::new(
+                                observer,
+                                &self.indexer,
+                                child_key,
+                            ));
+                        }
+                    });
                 }
                 // Old and new agree this node is active. No need to merge or split. None of the descendants can merge or split
                 // either.
@@ -529,7 +507,6 @@ struct ChunkSphere<Ni, Nf> {
     key: ChunkKey<Ni>,
     center_dist_to_observer: f32,
     closest_dist_to_observer: f32,
-    is_loading: bool,
 }
 
 impl<Ni, Nf> ChunkSphere<Ni, Nf>
@@ -537,12 +514,7 @@ where
     PointN<Ni>: IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
 {
-    fn new(
-        observer: PointN<Nf>,
-        indexer: &ChunkIndexer<Ni>,
-        key: ChunkKey<Ni>,
-        is_loading: bool,
-    ) -> Self {
+    fn new(observer: PointN<Nf>, indexer: &ChunkIndexer<Ni>, key: ChunkKey<Ni>) -> Self {
         let bounding_sphere = chunk_bounding_sphere(indexer, key, 0);
 
         let center_dist_to_observer = observer.l2_distance_squared(bounding_sphere.center).sqrt();
@@ -555,7 +527,6 @@ where
             key,
             center_dist_to_observer,
             closest_dist_to_observer,
-            is_loading,
         }
     }
 }

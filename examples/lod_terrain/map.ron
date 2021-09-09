@@ -13,6 +13,6 @@
         octaves: 6,
     ),
     msaa: None,
-    lod_colors: true,
+    lod_colors: false,
     wireframes: false,
 )

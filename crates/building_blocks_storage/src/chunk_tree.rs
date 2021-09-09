@@ -702,15 +702,22 @@ where
         // Need this splitting borrow so we can mutate ancestor storages while borrowing this key's node.
         let (tree_storages, ancestor_storages) = storages.split_at_mut(key.lod as usize + 1);
 
-        tree_storages[key.lod as usize]
-            .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty)
-            .user_chunk
-            .get_or_insert_with(|| {
-                // For better random access performance, we only want to do this when the node is first created.
-                Self::_link_new_chunk_or_node(ancestor_storages, indexer, builder.root_lod(), key);
+        let node = tree_storages[key.lod as usize]
+            .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty);
+        let was_loading = node.state.mark_loaded();
 
-                builder.new_ambient(indexer.extent_for_chunk_with_min(key.minimum))
-            })
+        node.user_chunk.get_or_insert_with(|| {
+            // For better random access performance, we only want to do this when the node is first created.
+            Self::_link_new_chunk_or_node(
+                was_loading,
+                ancestor_storages,
+                indexer,
+                builder.root_lod(),
+                key,
+            );
+
+            builder.new_ambient(indexer.extent_for_chunk_with_min(key.minimum))
+        })
     }
 
     /// Overwrite the chunk at `key` with `chunk`. Drops the previous value.
@@ -729,8 +736,15 @@ where
         let (tree_storages, ancestor_storages) = storages.split_at_mut(key.lod as usize + 1);
 
         let (state, had_chunk) = tree_storages[key.lod as usize].write_chunk(key.minimum, chunk);
+        let was_loading = state.mark_loaded();
         if !had_chunk {
-            Self::_link_new_chunk_or_node(ancestor_storages, indexer, builder.root_lod(), key);
+            Self::_link_new_chunk_or_node(
+                was_loading,
+                ancestor_storages,
+                indexer,
+                builder.root_lod(),
+                key,
+            );
         }
         (state, had_chunk)
     }
@@ -743,10 +757,11 @@ where
         let node = self
             .lod_storage_mut(key.lod)
             .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty);
+        let was_loading = node.state.mark_loaded();
         let old_chunk = node.user_chunk.replace(chunk);
 
         if old_chunk.is_none() {
-            self.link_new_chunk_or_node(key);
+            self.link_new_chunk_or_node(was_loading, key);
         }
 
         old_chunk
@@ -790,15 +805,22 @@ where
         // Need this splitting borrow so we can mutate ancestor storages while borrowing this key's node.
         let (tree_storages, ancestor_storages) = storages.split_at_mut(key.lod as usize + 1);
 
-        tree_storages[key.lod as usize]
-            .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty)
-            .user_chunk
-            .get_or_insert_with(|| {
-                // For better random access performance, we only want to do this when the chunk is first created.
-                Self::_link_new_chunk_or_node(ancestor_storages, indexer, builder.root_lod(), key);
+        let node = tree_storages[key.lod as usize]
+            .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty);
+        let was_loading = node.state.mark_loaded();
 
-                create_chunk()
-            })
+        node.user_chunk.get_or_insert_with(|| {
+            // For better random access performance, we only want to do this when the chunk is first created.
+            Self::_link_new_chunk_or_node(
+                was_loading,
+                ancestor_storages,
+                indexer,
+                builder.root_lod(),
+                key,
+            );
+
+            create_chunk()
+        })
     }
 
     /// Remove the chunk at `key`. This does not affect descendant or ancestor chunks.
@@ -857,7 +879,7 @@ where
         chunk_rx(key, node);
     }
 
-    fn link_new_chunk_or_node(&mut self, key: ChunkKey<N>) {
+    fn link_new_chunk_or_node(&mut self, was_loading: bool, key: ChunkKey<N>) {
         let Self {
             indexer,
             storages,
@@ -865,7 +887,13 @@ where
             ..
         } = self;
         let (_, ancestor_storages) = storages.split_at_mut(key.lod as usize + 1);
-        Self::_link_new_chunk_or_node(ancestor_storages, indexer, builder.root_lod(), key);
+        Self::_link_new_chunk_or_node(
+            was_loading,
+            ancestor_storages,
+            indexer,
+            builder.root_lod(),
+            key,
+        );
     }
 
     /// We need to call this any time a new chunk is created because:
@@ -873,12 +901,13 @@ where
     ///    parent is linked. This needs to happen even if the node already existed without a chunk.
     /// 2. The new chunk might have been placed on a new node, meaning we need to link that node.
     fn _link_new_chunk_or_node(
+        was_loading: bool,
         ancestor_storages: &mut [Store],
         indexer: &ChunkIndexer<N>,
         root_lod: u8,
         key: ChunkKey<N>,
     ) {
-        if Self::_node_is_loading(ancestor_storages, indexer, root_lod, key) {
+        if was_loading || Self::_node_is_loading(ancestor_storages, indexer, root_lod, key) {
             let parent_key = Self::_mark_node_as_loaded_on_parent(
                 &mut ancestor_storages[0],
                 indexer,
@@ -1087,6 +1116,7 @@ impl<U> ChunkNode<U> {
     pub fn new_loading() -> Self {
         let mut state = NodeState::default();
         state.descendant_needs_loading.set_all();
+        state.state_bits.set_bit(StateBit::Loading as u8);
         Self::new_without_data(state)
     }
 
@@ -1129,12 +1159,29 @@ impl NodeState {
     pub fn descendants_have_data(&self) -> bool {
         self.children.any() || self.descendant_needs_loading.any()
     }
+
+    #[inline]
+    pub fn is_loading(&self) -> bool {
+        self.state_bits.bit_is_set(StateBit::Loading as u8)
+    }
+
+    #[inline]
+    pub fn mark_loaded(&self) -> bool {
+        self.state_bits.fetch_and_unset_bit(StateBit::Loading as u8)
+    }
+
+    #[inline]
+    pub fn is_rendering(&self) -> bool {
+        self.state_bits.bit_is_set(StateBit::Render as u8)
+    }
 }
 
 #[repr(u8)]
 pub enum StateBit {
+    /// This bit is set if the chunk is currently loading.
+    Loading = 0,
     /// This bit is set if the chunk is currently being rendered.
-    Render = 0,
+    Render = 1,
 }
 
 /// An extent that takes the same value everywhere.

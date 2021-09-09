@@ -25,7 +25,7 @@ pub fn chunk_generator_system(
     mut map: ResMut<VoxelMap>,
     mut generate_tasks: ResMut<GenerateTasks>,
 ) {
-    let mut loaded_chunks = Vec::new();
+    let mut generated_chunks = Vec::new();
 
     // Complete generation tasks.
     budget.0.reset_timer();
@@ -33,13 +33,27 @@ pub fn chunk_generator_system(
         // PERF: is this the best way to block on many futures?
         let (chunk_key, item, item_duration) = future::block_on(task);
         budget.0.complete_item(item_duration);
-        loaded_chunks.push((chunk_key, item));
+        generated_chunks.push((chunk_key, item));
     }
     budget.0.update_estimate();
 
     // Mark chunks for loading so we can search for them asynchronously.
     for slot in new_slots.take_all().into_iter() {
         map.chunks.mark_tree_for_loading(slot.key);
+    }
+
+    // Insert generated chunks into the tree.
+    {
+        let span = tracing::info_span!("write_generated_chunks");
+        let _trace_guard = span.enter();
+
+        for (key, chunk) in generated_chunks.into_iter() {
+            if let Some(chunk) = chunk {
+                map.chunks.write_chunk(key, chunk);
+            } else {
+                map.chunks.delete_chunk(key);
+            }
+        }
     }
 
     // Find new chunks to load this frame.
@@ -65,12 +79,12 @@ pub fn chunk_generator_system(
     }
 
     // Downsample chunks. This is very fast relative to chunk generation.
-    {
+    let downsampled_chunks = {
         let span = tracing::info_span!("downsample_chunks");
         let _trace_guard = span.enter();
 
         let chunks_ref = &map.chunks;
-        let generated_chunks = pool.scope(|scope| {
+        let downsampled_chunks = pool.scope(|scope| {
             for dst_chunk_key in downsample_slots.drain(..) {
                 scope.spawn(async move {
                     let mut dst_chunk = chunks_ref.new_ambient_chunk(dst_chunk_key);
@@ -84,15 +98,15 @@ pub fn chunk_generator_system(
                 });
             }
         });
-        loaded_chunks.extend(generated_chunks.into_iter());
-    }
+        downsampled_chunks
+    };
 
-    // Insert new chunks into the tree.
+    // Insert downsampled chunks into the tree.
     {
-        let span = tracing::info_span!("write_new_chunks");
+        let span = tracing::info_span!("write_downsampled_chunks");
         let _trace_guard = span.enter();
 
-        for (key, chunk) in loaded_chunks.drain(..) {
+        for (key, chunk) in downsampled_chunks.into_iter() {
             if let Some(chunk) = chunk {
                 map.chunks.write_chunk(key, chunk);
             } else {

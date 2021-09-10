@@ -6,7 +6,7 @@ use nalgebra::base::Scalar;
 
 impl<T: Scalar> From<Point2<T>> for na::Point2<T> {
     #[inline]
-    /// Converts to nalgebra::Point2<T> from Point2<T>
+    /// Converts to `nalgebra::Point2<T>` from `Point2<T>`
     /// ```
     /// # use building_blocks_core::{PointN,Point2i,Point2f};
     /// let p : Point2i = PointN([1, 2]);
@@ -25,7 +25,7 @@ impl<T: Scalar> From<Point2<T>> for na::Point2<T> {
 
 impl<T: Scalar> From<Point2<T>> for nalgebra::Vector2<T> {
     #[inline]
-    /// Converts to nalgebra::Vector2<T> from Point2<T>
+    /// Converts to `nalgebra::Vector2<T>` from `Point2<T>`
     /// ```
     /// # use building_blocks_core::{PointN,Point2i,Point2f};
     /// let p : Point2i = PointN([1, 2]);
@@ -44,7 +44,7 @@ impl<T: Scalar> From<Point2<T>> for nalgebra::Vector2<T> {
 
 impl<T: Copy + Scalar> From<na::Point2<T>> for Point2<T> {
     #[inline]
-    /// Converts to Point2<T> from nalgebra::Point2<T>
+    /// Converts to `Point2<T>` from `nalgebra::Point2<T>`
     /// ```
     /// # use building_blocks_core::{PointN,Point2i,Point2f};
     /// let c = nalgebra::Point2::<i32>::new(1,2);
@@ -82,7 +82,7 @@ impl<T: Copy + Scalar> From<na::Vector2<T>> for Point2<T> {
 
 impl From<Point2i> for na::Point2<f32> {
     #[inline]
-    /// Converts to nalgebra::Point2<f32> from Point2i
+    /// Converts to `nalgebra::Point2<f32>` from `Point2i`
     /// ```
     /// # use building_blocks_core::{PointN,Point2i};
     ///
@@ -98,7 +98,7 @@ impl From<Point2i> for na::Point2<f32> {
 
 impl From<Point2i> for na::Vector2<f32> {
     #[inline]
-    /// Converts to nalgebra::Vector2<f32> from Point2i
+    /// Converts to `nalgebra::Vector2<f32>` from `Point2i`
     /// ```
     /// # use building_blocks_core::{PointN,Point2i};
     /// let p : Point2i = PointN([1, 2]);
@@ -113,7 +113,7 @@ impl From<Point2i> for na::Vector2<f32> {
 
 impl<T: Scalar> From<Point3<T>> for na::Point3<T> {
     #[inline]
-    /// Converts to nalgebra::Point3<T> from Point3<T>
+    /// Converts to `nalgebra::Point3<T>` from `Point3<T>`
     /// ```
     /// # use building_blocks_core::{PointN,Point3i,Point3f};
     /// let p : Point3i = PointN([1, 2, 3]);
@@ -134,7 +134,7 @@ impl<T: Scalar> From<Point3<T>> for na::Point3<T> {
 
 impl<T: Scalar> From<Point3<T>> for na::Vector3<T> {
     #[inline]
-    /// Converts to nalgebra::Vector3<T> from Point3<T>
+    /// Converts to `nalgebra::Vector3<T>` from `Point3<T>`
     /// ```
     /// # use building_blocks_core::{PointN,Point3i,Point3f};
     /// let p : Point3i = PointN([1, 2, 3]);
@@ -155,7 +155,7 @@ impl<T: Scalar> From<Point3<T>> for na::Vector3<T> {
 
 impl<T: Copy + Scalar> From<na::Point3<T>> for Point3<T> {
     #[inline]
-    /// Converts to Point3<T> from nalgebra::Point3<T>
+    /// Converts to `Point3<T>` from `nalgebra::Point3<T>`
     /// ```
     /// # use building_blocks_core::{Point3i,Point3f};
     /// let c = nalgebra::Point3::<i32>::new(1,2,3);
@@ -176,7 +176,7 @@ impl<T: Copy + Scalar> From<na::Point3<T>> for Point3<T> {
 
 impl<T: Copy + Scalar> From<na::Vector3<T>> for Point3<T> {
     #[inline]
-    /// Converts to Point3<T> from nalgebra::Vector3<T>
+    /// Converts to `Point3<T>` from `nalgebra::Vector3<T>`
     /// ```
     /// # use building_blocks_core::{Point3i,Point3f};
     /// let c = nalgebra::Vector3::<i32>::new(1,2,3);
@@ -197,7 +197,7 @@ impl<T: Copy + Scalar> From<na::Vector3<T>> for Point3<T> {
 
 impl From<Point3i> for na::Point3<f32> {
     #[inline]
-    /// Converts to nalgebra::Point3<f32> from Point3i
+    /// Converts to `nalgebra::Point3<f32>` from `Point3i`
     /// ```
     /// # use building_blocks_core::{PointN,Point3i};
     /// let p : Point3i = PointN([1, 2, 3]);
@@ -213,7 +213,7 @@ impl From<Point3i> for na::Point3<f32> {
 
 impl From<Point3i> for na::Vector3<f32> {
     #[inline]
-    /// Converts to nalgebra::Vector3<f32> from Point3i
+    /// Converts to `nalgebra::Vector3<f32>` from `Point3i`
     /// ```
     /// # use building_blocks_core::{PointN,Point3i};
     /// let p : Point3i = PointN([1, 2, 3]);

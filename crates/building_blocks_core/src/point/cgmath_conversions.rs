@@ -125,11 +125,6 @@ impl<T: Copy> From<Point3<T>> for cgmath::Point3<T> {
     /// assert_eq!(c.x , p.x());
     /// assert_eq!(c.y , p.y());
     /// assert_eq!(c.z , p.z());
-    /// let p : Point3i = PointN([1, 2, 3]);
-    /// let c = cgmath::Vector3::<i32>::from(p);
-    /// assert_eq!(c.x , p.x());
-    /// assert_eq!(c.y , p.y());
-    /// assert_eq!(c.z , p.z());
     /// ```
     fn from(p: Point3<T>) -> Self {
         cgmath::Point3::from(p.0)
@@ -143,6 +138,11 @@ impl<T: Copy> From<Point3<T>> for cgmath::Vector3<T> {
     /// # use building_blocks_core::{PointN,Point3i,Point3f};
     /// let p : Point3i = PointN([1, 2, 3]);
     /// let c = cgmath::Vector3::<i32>::from(p);
+    /// assert_eq!(c.x , p.x());
+    /// assert_eq!(c.y , p.y());
+    /// assert_eq!(c.z , p.z());
+    /// let p : Point3f = PointN([1.0, 2.0, 3.0]);
+    /// let c = cgmath::Vector3::<f32>::from(p);
     /// assert_eq!(c.x , p.x());
     /// assert_eq!(c.y , p.y());
     /// assert_eq!(c.z , p.z());

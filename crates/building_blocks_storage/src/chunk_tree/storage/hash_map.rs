@@ -45,8 +45,17 @@ where
     }
 
     #[inline]
-    fn get_mut_node(&mut self, key: PointN<N>) -> Option<&mut ChunkNode<Self::Chunk>> {
-        self.get_mut(&key)
+    fn get_mut_node(
+        &mut self,
+        key: PointN<N>,
+        drop_chunk: bool,
+    ) -> Option<&mut ChunkNode<Self::Chunk>> {
+        self.get_mut(&key).map(|node| {
+            if drop_chunk {
+                node.user_chunk = None;
+            }
+            node
+        })
     }
 
     #[inline]
@@ -81,8 +90,13 @@ where
     }
 
     #[inline]
-    fn pop_node(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::Chunk>> {
-        self.remove(&key)
+    fn pop_node(&mut self, key: PointN<N>, drop_chunk: bool) -> Option<ChunkNode<Self::Chunk>> {
+        self.remove(&key).map(|mut node| {
+            if drop_chunk {
+                node.user_chunk = None;
+            }
+            node
+        })
     }
 
     #[inline]
@@ -91,14 +105,6 @@ where
         key: PointN<N>,
     ) -> Option<ChunkNode<Either<Self::Chunk, Self::ColdChunk>>> {
         self.remove(&key).map(|node| node.map(Either::Left))
-    }
-
-    #[inline]
-    fn delete_chunk(&mut self, key: PointN<N>) -> Option<NodeState> {
-        self.get_mut_node(key).map(|node| {
-            node.user_chunk = None;
-            node.state.clone()
-        })
     }
 }
 

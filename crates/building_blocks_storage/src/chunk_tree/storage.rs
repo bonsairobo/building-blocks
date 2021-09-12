@@ -42,8 +42,12 @@ pub trait ChunkStorage<N> {
     /// Borrow the node state at `key`. The returned `bool` is `true` iff this node has data.
     fn get_node_state(&self, key: PointN<N>) -> Option<(&NodeState, bool)>;
 
-    /// Mutably borrow the node at `key`.
-    fn get_mut_node(&mut self, key: PointN<N>) -> Option<&mut ChunkNode<Self::Chunk>>;
+    /// Mutably borrow the node at `key`. Iff `drop_chunk` is `true`, then the chunk on the node is dropped.
+    fn get_mut_node(
+        &mut self,
+        key: PointN<N>,
+        drop_chunk: bool,
+    ) -> Option<&mut ChunkNode<Self::Chunk>>;
 
     /// Mutably borrow the node at `key`. If it doesn't exist, insert the return value of `create_node`.
     ///
@@ -70,18 +74,13 @@ pub trait ChunkStorage<N> {
     ) -> (&mut NodeState, bool);
 
     /// Removes and returns the node at `key`.
-    fn pop_node(&mut self, key: PointN<N>) -> Option<ChunkNode<Self::Chunk>>;
+    fn pop_node(&mut self, key: PointN<N>, drop_chunk: bool) -> Option<ChunkNode<Self::Chunk>>;
 
     /// Removes and returns the raw node at `key`.
     fn pop_raw_node(
         &mut self,
         key: PointN<N>,
     ) -> Option<ChunkNode<Either<Self::Chunk, Self::ColdChunk>>>;
-
-    /// Deletes the chunk out of the node at `key`, leaving any other state unaffected.
-    ///
-    /// The node's state is returned for convenience.
-    fn delete_chunk(&mut self, key: PointN<N>) -> Option<NodeState>;
 }
 
 #[auto_impl(&, &mut)]

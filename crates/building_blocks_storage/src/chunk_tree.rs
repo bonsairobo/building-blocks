@@ -399,10 +399,15 @@ where
 
     /// Mutably borrows the `ChunkNode` for `key`.
     #[inline]
-    pub fn get_mut_node(&mut self, key: ChunkKey<N>) -> Option<&mut ChunkNode<Usr>> {
+    pub fn get_mut_node(
+        &mut self,
+        key: ChunkKey<N>,
+        drop_chunk: bool,
+    ) -> Option<&mut ChunkNode<Usr>> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.lod_storage_mut(key.lod).get_mut_node(key.minimum)
+        self.lod_storage_mut(key.lod)
+            .get_mut_node(key.minimum, drop_chunk)
     }
 
     /// Borrows the `NodeState` for the node at `key`. The returned `bool` is `true` iff this node has data.
@@ -431,7 +436,8 @@ where
     /// Mutably borrow the chunk at `key`.
     #[inline]
     pub fn get_mut_chunk(&mut self, key: ChunkKey<N>) -> Option<&mut Usr> {
-        self.get_mut_node(key).and_then(|c| c.user_chunk.as_mut())
+        self.get_mut_node(key, false)
+            .and_then(|c| c.user_chunk.as_mut())
     }
 
     fn write_node_dangling(&mut self, key: ChunkKey<N>, node: ChunkNode<Usr>) {
@@ -440,10 +446,11 @@ where
         self.lod_storage_mut(key.lod).insert_node(key.minimum, node);
     }
 
-    fn pop_node_dangling(&mut self, key: ChunkKey<N>) -> Option<ChunkNode<Usr>> {
+    fn pop_node_dangling(&mut self, key: ChunkKey<N>, drop_chunk: bool) -> Option<ChunkNode<Usr>> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        self.lod_storage_mut(key.lod).pop_node(key.minimum)
+        self.lod_storage_mut(key.lod)
+            .pop_node(key.minimum, drop_chunk)
     }
 
     fn pop_raw_node_dangling(
@@ -453,12 +460,6 @@ where
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
         self.lod_storage_mut(key.lod).pop_raw_node(key.minimum)
-    }
-
-    fn delete_chunk_dangling(&mut self, key: ChunkKey<N>) -> Option<NodeState> {
-        debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
-
-        self.lod_storage_mut(key.lod).delete_chunk(key.minimum)
     }
 }
 
@@ -782,9 +783,8 @@ where
     pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        let node_state = self.delete_chunk_dangling(key);
-        let node_exists = if let Some(node_state) = node_state {
-            let keep_node = node_state.descendants_have_data();
+        let node_exists = if let Some(node) = self.get_mut_node(key, true) {
+            let keep_node = node.state.descendants_have_data();
             if !keep_node {
                 self.pop_raw_node_dangling(key);
             }
@@ -843,7 +843,7 @@ where
 
         // PERF: we wouldn't always have to pop the node if we had a ChunkStorage::entry API
         let mut keep_node = false;
-        let chunk = self.pop_node_dangling(key).and_then(|mut node| {
+        let chunk = self.pop_node_dangling(key, false).and_then(|mut node| {
             if !node.state.descendants_have_data() {
                 // No children, so this node is useless.
                 node.user_chunk

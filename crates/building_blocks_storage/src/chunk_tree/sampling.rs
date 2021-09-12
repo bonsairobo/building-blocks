@@ -156,7 +156,7 @@ where
         Samp: ChunkDownsampler<N, Usr::Array, Usr::Array>,
     {
         // PERF: Unforunately we have to remove the chunk and put it back to satisfy the borrow checker.
-        if let Some(src_node) = self.pop_node_dangling(src_chunk_key) {
+        if let Some(src_node) = self.pop_node_dangling(src_chunk_key, false) {
             if let Some(src_chunk) = &src_node.user_chunk {
                 self.downsample_external_into_self(sampler, src_chunk_key, src_chunk);
             } else {

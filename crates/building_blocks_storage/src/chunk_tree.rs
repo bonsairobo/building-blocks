@@ -1403,7 +1403,7 @@ mod tests {
     }
 
     #[test]
-    fn load_and_edit() {
+    fn load_and_edit_bottom_up() {
         let mut map = ChunkTreeBuilder3x1::new(MAP_CONFIG).build_with_hash_map_storage();
 
         let load_lod = 1;
@@ -1434,5 +1434,35 @@ mod tests {
 
         // Done loading at LOD1.
         assert!(!map.extent_is_loading(load_lod, load_key_extent));
+    }
+
+    #[test]
+    fn load_and_delete_top_down() {
+        let mut map = ChunkTreeBuilder3x1::new(MAP_CONFIG).build_with_hash_map_storage();
+
+        let load_lod = 1;
+        let load_key = ChunkKey::new(load_lod, PointN::ZERO);
+        map.mark_tree_for_loading(load_key);
+
+        let load_key_extent = map.indexer.extent_for_chunk_with_min(load_key.minimum);
+        let partial_overlap = load_key_extent + map.chunk_shape() / 2;
+
+        assert!(map.extent_is_loading(load_lod, partial_overlap));
+
+        // Load the key as empty.
+        map.delete_chunk(load_key);
+
+        // Done loading at LOD1.
+        assert!(!map.extent_is_loading(load_lod, load_key_extent));
+
+        // Still loading at LOD0.
+        let loading_extent_lod0 = map.indexer.chunk_extent_at_lower_lod(load_key, 0);
+        assert!(map.extent_is_loading(0, loading_extent_lod0));
+
+        let mut lod0 = map.lod_view_mut(0);
+        lod0.fill_extent(&loading_extent_lod0, 1);
+
+        // No longer loading at LOD0.
+        assert!(!map.extent_is_loading(0, loading_extent_lod0));
     }
 }

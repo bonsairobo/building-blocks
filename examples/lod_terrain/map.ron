@@ -9,7 +9,7 @@
     noise: (
         freq: 0.25,
         scale: 5.0,
-        seed: 666,
+        seed: 1010,
         octaves: 6,
     ),
     msaa: None,

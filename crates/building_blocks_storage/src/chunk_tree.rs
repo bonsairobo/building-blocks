@@ -539,56 +539,46 @@ where
 
     /// Returns `true` iff any chunk overlapping `extent` is loading.
     ///
-    /// `extent` should be given in voxel units of the given `lod`. This should be used before editing `extent` to ensure loads
-    /// are not interrupted.
+    /// `extent` should be given in voxel coordinates of `lod`. This should be used before editing `extent` to ensure loads
+    /// are not interrupted, assuming that edits would like to read-modify-write.
     pub fn extent_is_loading(&self, lod: u8, extent: ExtentN<N>) -> bool {
-        assert!(lod < self.root_lod());
-
         let mut loading = false;
         self.visit_root_keys(|root_key| {
-            let (root_state, _) = self.get_node_state(root_key).unwrap();
-            self.visit_child_keys(root_key, |child_key, corner_index| {
-                loading |= self.extent_is_loading_recursive(
-                    child_key,
-                    root_state.descendant_needs_loading.bit_is_set(corner_index),
-                    lod,
-                    extent,
-                );
-            });
+            loading |= self.extent_is_loading_recursive(root_key, lod, extent);
         });
         loading
     }
 
-    fn extent_is_loading_recursive(
-        &self,
-        key: ChunkKey<N>,
-        key_is_loading: bool,
-        lod: u8,
-        extent: ExtentN<N>,
-    ) -> bool {
-        if !key_is_loading {
-            return false;
-        }
-
+    // Precondition: the node at key exists.
+    fn extent_is_loading_recursive(&self, key: ChunkKey<N>, lod: u8, extent: ExtentN<N>) -> bool {
         let lod_extent = self.indexer.chunk_extent_at_lower_lod(key, lod);
         if lod_extent.intersection(&extent).is_empty() {
+            // No chunks at lod will overlap extent.
             return false;
         }
 
+        let (node_state, _) = self.get_node_state(key).unwrap();
+
         if key.lod == lod {
-            key_is_loading
+            node_state.is_loading()
         } else {
-            let (node_state, _) = self.get_node_state(key).unwrap();
-            let mut descendant_is_loading = false;
-            self.visit_child_keys(key, |child_key, corner_index| {
-                descendant_is_loading |= self.extent_is_loading_recursive(
-                    child_key,
-                    node_state.descendant_needs_loading.bit_is_set(corner_index),
-                    lod,
-                    extent,
-                );
-            });
-            descendant_is_loading
+            for corner_index in 0..PointN::NUM_CORNERS {
+                if node_state.descendant_needs_loading.bit_is_set(corner_index) {
+                    if node_state.has_child(corner_index) {
+                        // We know there are some loading chunks in this tree, but we need to continue traversal to see if they
+                        // overlap extent at lod.
+                        let child_key = self.indexer.child_chunk_key(key, corner_index);
+                        if self.extent_is_loading_recursive(child_key, lod, extent) {
+                            return true;
+                        }
+                    } else {
+                        // This entire tree is loading, and it overlaps with extent, so we know at least one loading chunk
+                        // overlaps.
+                        return true;
+                    }
+                }
+            }
+            false
         }
     }
 }

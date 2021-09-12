@@ -1,6 +1,6 @@
 (
     chunk_exponent: 4,
-    num_lods: 6,
+    num_lods: 10,
     detail: 6.0,
     chunk_generation_frame_time_budget_us: 6000,
     mesh_generation_frame_time_budget_us: 6000,

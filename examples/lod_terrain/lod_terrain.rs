@@ -223,8 +223,11 @@ fn load_mesh_materials(
     MeshMaterials(
         (0..6)
             .map(|i| {
-                let mut material =
-                    StandardMaterial::from(if lod_colors { colors[i] } else { colors[0] });
+                let mut material = StandardMaterial::from(if lod_colors {
+                    colors[i % colors.len()]
+                } else {
+                    colors[0]
+                });
                 material.roughness = 0.9;
 
                 materials.add(material)

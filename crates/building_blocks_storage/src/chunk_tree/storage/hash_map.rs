@@ -59,9 +59,15 @@ where
     fn get_mut_node_or_insert_with(
         &mut self,
         key: PointN<N>,
+        drop_chunk: bool,
         create_node: impl FnOnce() -> ChunkNode<Self::Chunk>,
-    ) -> &mut ChunkNode<Self::Chunk> {
-        self.entry(key).or_insert_with(create_node)
+    ) -> (&mut ChunkNode<Self::Chunk>, bool) {
+        let node = self.entry(key).or_insert_with(create_node);
+        let had_chunk = node.user_chunk.is_some();
+        if drop_chunk {
+            node.user_chunk = None;
+        }
+        (node, had_chunk)
     }
 
     #[inline]
@@ -85,14 +91,6 @@ where
         key: PointN<N>,
     ) -> Option<ChunkNode<Either<Self::Chunk, Self::ColdChunk>>> {
         self.remove(&key).map(|node| node.map(Either::Left))
-    }
-
-    #[inline]
-    fn write_chunk(&mut self, key: PointN<N>, chunk: Self::Chunk) -> (&mut NodeState, bool) {
-        let node = self.get_mut_node_or_insert_with(key, ChunkNode::new_empty);
-        let had_data = node.user_chunk.is_some();
-        node.user_chunk = Some(chunk);
-        (&mut node.state, had_data)
     }
 
     #[inline]

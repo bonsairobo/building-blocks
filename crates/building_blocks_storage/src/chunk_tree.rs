@@ -702,8 +702,11 @@ where
         // Need this splitting borrow so we can mutate ancestor storages while borrowing this key's node.
         let (tree_storages, ancestor_storages) = storages.split_at_mut(key.lod as usize + 1);
 
-        let node = tree_storages[key.lod as usize]
-            .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty);
+        let (node, _) = tree_storages[key.lod as usize].get_mut_node_or_insert_with(
+            key.minimum,
+            false,
+            ChunkNode::new_empty,
+        );
         let was_loading = node.state.mark_loaded();
 
         node.user_chunk.get_or_insert_with(|| {
@@ -724,7 +727,7 @@ where
     ///
     /// The node's state and a `bool` indicating whether any old data was overwritten are returned for convenience.
     #[inline]
-    pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) -> (&mut NodeState, bool) {
+    pub fn write_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) -> (&mut ChunkNode<Usr>, bool) {
         let Self {
             indexer,
             storages,
@@ -735,8 +738,13 @@ where
         // Need this splitting borrow so we can mutate ancestor storages while borrowing this key's node.
         let (tree_storages, ancestor_storages) = storages.split_at_mut(key.lod as usize + 1);
 
-        let (state, had_chunk) = tree_storages[key.lod as usize].write_chunk(key.minimum, chunk);
-        let was_loading = state.mark_loaded();
+        let (node, had_chunk) = tree_storages[key.lod as usize].get_mut_node_or_insert_with(
+            key.minimum,
+            true,
+            ChunkNode::new_empty,
+        );
+        node.user_chunk = Some(chunk);
+        let was_loading = node.state.mark_loaded();
         if !had_chunk {
             Self::_link_new_chunk_or_node(
                 was_loading,
@@ -746,7 +754,7 @@ where
                 key,
             );
         }
-        (state, had_chunk)
+        (node, had_chunk)
     }
 
     /// Replace the chunk at `key` with `chunk`, returning the old value.
@@ -754,9 +762,11 @@ where
     pub fn replace_chunk(&mut self, key: ChunkKey<N>, chunk: Usr) -> Option<Usr> {
         debug_assert!(self.indexer.chunk_min_is_valid(key.minimum));
 
-        let node = self
-            .lod_storage_mut(key.lod)
-            .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty);
+        let (node, _) = self.lod_storage_mut(key.lod).get_mut_node_or_insert_with(
+            key.minimum,
+            false,
+            ChunkNode::new_empty,
+        );
         let was_loading = node.state.mark_loaded();
         let old_chunk = node.user_chunk.replace(chunk);
 
@@ -805,8 +815,11 @@ where
         // Need this splitting borrow so we can mutate ancestor storages while borrowing this key's node.
         let (tree_storages, ancestor_storages) = storages.split_at_mut(key.lod as usize + 1);
 
-        let node = tree_storages[key.lod as usize]
-            .get_mut_node_or_insert_with(key.minimum, ChunkNode::new_empty);
+        let (node, _) = tree_storages[key.lod as usize].get_mut_node_or_insert_with(
+            key.minimum,
+            false,
+            ChunkNode::new_empty,
+        );
         let was_loading = node.state.mark_loaded();
 
         node.user_chunk.get_or_insert_with(|| {

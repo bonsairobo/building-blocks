@@ -45,15 +45,21 @@ pub trait ChunkStorage<N> {
     /// Mutably borrow the node at `key`.
     fn get_mut_node(&mut self, key: PointN<N>) -> Option<&mut ChunkNode<Self::Chunk>>;
 
-    /// Mutably borrow the node state at `key`. The returned `bool` is `true` iff this node has data.
-    fn get_mut_node_state(&mut self, key: PointN<N>) -> Option<(&mut NodeState, bool)>;
-
     /// Mutably borrow the node at `key`. If it doesn't exist, insert the return value of `create_node`.
+    ///
+    /// Iff `drop_chunk` is `true`, then the node's chunk is dropped before being returned. This can be used to prevent
+    /// decompression when the chunk isn't needed.
+    ///
+    /// Returns a `bool` indicating if the node had a chunk, for convenience.
     fn get_mut_node_or_insert_with(
         &mut self,
         key: PointN<N>,
+        drop_chunk: bool,
         create_node: impl FnOnce() -> ChunkNode<Self::Chunk>,
-    ) -> &mut ChunkNode<Self::Chunk>;
+    ) -> (&mut ChunkNode<Self::Chunk>, bool);
+
+    /// Mutably borrow the node state at `key`. The returned `bool` is `true` iff this node has data.
+    fn get_mut_node_state(&mut self, key: PointN<N>) -> Option<(&mut NodeState, bool)>;
 
     /// Mutably borrow the node state at `key`. If it doesn't exist, insert the return value of `create_node`. The returned
     /// `bool` is `true` iff this node has data.
@@ -71,11 +77,6 @@ pub trait ChunkStorage<N> {
         &mut self,
         key: PointN<N>,
     ) -> Option<ChunkNode<Either<Self::Chunk, Self::ColdChunk>>>;
-
-    /// Writes `chunk` into the node at `key`, leaving any other state unaffected.
-    ///
-    /// The node's state and a `bool` indicating whether any old data was overwritten are returned for convenience.
-    fn write_chunk(&mut self, key: PointN<N>, chunk: Self::Chunk) -> (&mut NodeState, bool);
 
     /// Deletes the chunk out of the node at `key`, leaving any other state unaffected.
     ///

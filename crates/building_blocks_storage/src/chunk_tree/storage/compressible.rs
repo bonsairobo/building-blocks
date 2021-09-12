@@ -198,36 +198,6 @@ where
         })
     }
 
-    /// Mutably borrow the node at `key`.
-    ///
-    /// This may trigger decompression of the node's chunk data if it's not cached. In this case, the decompressed data will
-    /// live in the main LRU cache until it is compressed again.
-    #[inline]
-    pub fn get_mut_node_or_insert_with(
-        &mut self,
-        key: PointN<N>,
-        create_node: impl FnOnce() -> ChunkNode<Compr::Data>,
-    ) -> &mut ChunkNode<Compr::Data> {
-        self.invalidate_local_cache_entry(&key);
-
-        let Self {
-            main_cache,
-            compressed,
-            ..
-        } = self;
-        main_cache.get_mut_or_insert_with(
-            key,
-            |compressed_entry| {
-                let chunk = compressed.remove(compressed_entry.slab_key);
-                ChunkNode::new(
-                    Some(chunk.decompress()),
-                    compressed_entry.node_state.clone(),
-                )
-            },
-            create_node,
-        )
-    }
-
     /// Mutably borrow the node state at `key`. If it doesn't exist, insert the return value of `create_node`. Does not require
     /// decompression.
     #[inline]
@@ -287,11 +257,21 @@ where
         })
     }
 
-    /// Writes `chunk` into the node at `key`, leaving any other state unaffected. Does not require decompression.
+    /// Mutably borrow the node at `key`.
     ///
-    /// The node's state and a `bool` indicating whether any old data was overwritten are returned for convenience.
+    /// This may trigger decompression of the node's chunk data if it's not cached. In this case, the decompressed data will
+    /// live in the main LRU cache until it is compressed again.
+    ///
+    /// Iff `drop_chunk` is `true`, then the node's chunk will not be decompressed, and instead it will be dropped.
+    ///
+    /// A `bool` indicating whether there was any chunk data is returned for convenience.
     #[inline]
-    pub fn write_chunk(&mut self, key: PointN<N>, chunk: Compr::Data) -> (&mut NodeState, bool) {
+    pub fn get_mut_node_or_insert_with(
+        &mut self,
+        key: PointN<N>,
+        drop_chunk: bool,
+        create_node: impl FnOnce() -> ChunkNode<Compr::Data>,
+    ) -> (&mut ChunkNode<Compr::Data>, bool) {
         self.invalidate_local_cache_entry(&key);
 
         let Self {
@@ -303,15 +283,24 @@ where
         let node = main_cache.get_mut_or_insert_with(
             key,
             |compressed_entry| {
-                compressed.remove(compressed_entry.slab_key);
-                ChunkNode::new_without_data(compressed_entry.node_state.clone())
+                let compressed_chunk = compressed.remove(compressed_entry.slab_key);
+                if drop_chunk {
+                    ChunkNode::new_without_data(compressed_entry.node_state.clone())
+                } else {
+                    ChunkNode::new(
+                        Some(compressed_chunk.decompress()),
+                        compressed_entry.node_state.clone(),
+                    )
+                }
             },
-            ChunkNode::new_empty,
+            create_node,
         );
-        let had_data = node.user_chunk.is_some();
-        node.user_chunk = Some(chunk);
+        let had_chunk = node.user_chunk.is_some();
+        if drop_chunk {
+            node.user_chunk = None;
+        }
 
-        (&mut node.state, had_data)
+        (node, had_chunk)
     }
 
     /// Deletes the chunk out of the node at `key`, leaving any other state unaffected. Does not require decompression.
@@ -521,9 +510,10 @@ where
     fn get_mut_node_or_insert_with(
         &mut self,
         key: PointN<N>,
+        drop_chunk: bool,
         create_node: impl FnOnce() -> ChunkNode<Self::Chunk>,
-    ) -> &mut ChunkNode<Self::Chunk> {
-        self.get_mut_node_or_insert_with(key, create_node)
+    ) -> (&mut ChunkNode<Self::Chunk>, bool) {
+        self.get_mut_node_or_insert_with(key, drop_chunk, create_node)
     }
 
     #[inline]
@@ -546,11 +536,6 @@ where
         key: PointN<N>,
     ) -> Option<ChunkNode<Either<Self::Chunk, Self::ColdChunk>>> {
         self.pop_raw_node(key)
-    }
-
-    #[inline]
-    fn write_chunk(&mut self, key: PointN<N>, chunk: Self::Chunk) -> (&mut NodeState, bool) {
-        self.write_chunk(key, chunk)
     }
 
     #[inline]

@@ -246,9 +246,9 @@ where
     // NOTE: The checks against max prevent us from making quads on the 3 maximal planes of the grid. This is necessary to avoid
     // redundant quads when meshing adjacent chunks (assuming this will be used on a chunked voxel grid).
     let min = extent.minimum;
-    let max = extent.max();
+    let max = extent.max() - Point3i::ONES;
 
-    for (p, p_stride) in output
+    for (&p, p_stride) in output
         .surface_points
         .iter()
         .zip(output.surface_strides.iter())
@@ -376,4 +376,86 @@ fn sq_dist(a: [f32; 3], b: [f32; 3]) -> f32 {
     let d = [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 
     d[0] * d[0] + d[1] * d[1] + d[2] * d[2]
+}
+
+// ████████╗███████╗███████╗████████╗
+// ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝
+//    ██║   █████╗  ███████╗   ██║
+//    ██║   ██╔══╝  ╚════██║   ██║
+//    ██║   ███████╗███████║   ██║
+//    ╚═╝   ╚══════╝╚══════╝   ╚═╝
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use std::collections::HashMap;
+
+    #[test]
+    fn no_duplicate_triangles() {
+        let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
+            chunk_shape: Point3i::fill(16),
+            ambient_value: 1.0,
+            root_lod: 0,
+        });
+        let mut chunks = builder.build_with_hash_map_storage();
+
+        let extent = Extent3i::from_min_and_lub(Point3i::fill(-16), Point3i::fill(16));
+        copy_extent(
+            &extent,
+            &Func(|p: Point3i| (p.dot(p) as f32) - 10.0),
+            &mut chunks.lod_view_mut(0),
+        );
+
+        let mut mesh = PosNormMesh::default();
+        let mut mesh_buf = SurfaceNetsBuffer::default();
+        chunks.visit_root_keys(|key| {
+            let chunk_extent = chunks.indexer.extent_for_chunk_with_min(key.minimum);
+            let padded_extent = padded_surface_nets_chunk_extent(&chunk_extent);
+            let mut padded_array = Array3x1::fill(padded_extent, chunks.ambient_value());
+            copy_extent(&padded_extent, &chunks.lod_view(0), &mut padded_array);
+            surface_nets(&padded_array, &padded_extent, 1.0, false, &mut mesh_buf);
+            mesh.append(&mut mesh_buf.mesh);
+        });
+
+        // Deduplicate identical vertices by modifying the indices.
+        let num_vertices = mesh.positions.len();
+        let mut identical_indices = Vec::new();
+        for i1 in 0..num_vertices {
+            for i2 in i1 + 1..num_vertices {
+                let p1 = mesh.positions[i1];
+                let p2 = mesh.positions[i2];
+
+                let dist =
+                    ((p1[0] - p2[0]).powi(2) + (p1[1] - p2[1]).powi(2) + (p1[2] - p2[2]).powi(2))
+                        .sqrt();
+
+                if dist < 0.0000000001 {
+                    identical_indices.push((i1 as u32, i2 as u32));
+                }
+            }
+        }
+
+        // Reduce backwards to make sure we always choose the least index as the representative.
+        identical_indices.reverse();
+        for (i1, i2) in identical_indices.into_iter() {
+            for i in mesh.indices.iter_mut() {
+                if *i == i2 {
+                    *i = i1;
+                }
+            }
+        }
+
+        // Now search for identical triangles.
+        let mut found_duplicates = false;
+        let mut triangles = HashMap::new();
+        for (i, tri) in mesh.indices.chunks(3).enumerate() {
+            if let Some(tri_num) = triangles.get(tri) {
+                println!("tri {} is the same as {}: {:?}", i, tri_num, tri);
+                found_duplicates = true;
+            }
+            triangles.insert(tri, i);
+        }
+        assert!(!found_duplicates);
+    }
 }

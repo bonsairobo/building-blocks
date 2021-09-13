@@ -502,9 +502,9 @@ pub struct MergeChunks<N> {
 }
 
 #[derive(Clone)]
-struct ChunkSphere<Ni, Nf> {
-    bounding_sphere: Sphere<Nf>,
+pub struct ChunkSphere<Ni, Nf> {
     key: ChunkKey<Ni>,
+    bounding_sphere: Sphere<Nf>,
     center_dist_to_observer: f32,
     closest_dist_to_observer: f32,
 }
@@ -514,7 +514,7 @@ where
     PointN<Ni>: IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
 {
-    fn new(observer: PointN<Nf>, indexer: &ChunkIndexer<Ni>, key: ChunkKey<Ni>) -> Self {
+    pub fn new(observer: PointN<Nf>, indexer: &ChunkIndexer<Ni>, key: ChunkKey<Ni>) -> Self {
         let bounding_sphere = chunk_bounding_sphere(indexer, key, 0);
 
         let center_dist_to_observer = observer.l2_distance_squared(bounding_sphere.center).sqrt();

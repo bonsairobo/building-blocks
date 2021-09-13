@@ -678,9 +678,33 @@ where
         }
     }
 
-    /// Mutably borrow the chunk at `key`. If the chunk doesn't exist, a new chunk is created with the ambient value.
+    /// Mutably borrow the node at `key`. If the node doesn't exist, `create_chunk` is called to insert one.
     #[inline]
-    pub fn get_mut_chunk_or_insert_ambient(&mut self, key: ChunkKey<N>) -> &mut Usr {
+    pub fn get_mut_node_or_insert_chunk_with(
+        &mut self,
+        key: ChunkKey<N>,
+        create_chunk: impl FnOnce() -> Usr,
+    ) -> &mut ChunkNode<Usr> {
+        let (node, _) = self.get_node_for_write(key, false);
+        node.user_chunk.get_or_insert_with(create_chunk);
+        node
+    }
+
+    #[inline]
+    pub fn get_mut_chunk_or_insert_with(
+        &mut self,
+        key: ChunkKey<N>,
+        create_chunk: impl FnOnce() -> Usr,
+    ) -> &mut Usr {
+        self.get_mut_node_or_insert_chunk_with(key, create_chunk)
+            .user_chunk
+            .as_mut()
+            .unwrap()
+    }
+
+    /// Mutably borrow the node at `key`. If the chunk doesn't exist, a new chunk is created with the ambient value.
+    #[inline]
+    pub fn get_mut_node_or_insert_ambient(&mut self, key: ChunkKey<N>) -> &mut ChunkNode<Usr> {
         let root_lod = self.root_lod();
         let Self {
             indexer,
@@ -692,7 +716,17 @@ where
 
         node.user_chunk.get_or_insert_with(|| {
             builder.new_ambient(indexer.extent_for_chunk_with_min(key.minimum))
-        })
+        });
+
+        node
+    }
+
+    #[inline]
+    pub fn get_mut_chunk_or_insert_ambient(&mut self, key: ChunkKey<N>) -> &mut Usr {
+        self.get_mut_node_or_insert_ambient(key)
+            .user_chunk
+            .as_mut()
+            .unwrap()
     }
 
     /// Overwrite the chunk at `key` with `chunk`. Drops the previous value.
@@ -717,18 +751,6 @@ where
     pub fn delete_chunk(&mut self, key: ChunkKey<N>) {
         let (node, rm) = self.remove_chunk_dangling(key, true);
         self.finish_removal_with_node(key, rm, node);
-    }
-
-    /// Mutably borrow the chunk at `key`. If the chunk doesn't exist, `create_chunk` is called to insert one.
-    #[inline]
-    pub fn get_mut_chunk_or_insert_with(
-        &mut self,
-        key: ChunkKey<N>,
-        create_chunk: impl FnOnce() -> Usr,
-    ) -> &mut Usr {
-        let (node, _) = self.get_node_for_write(key, false);
-
-        node.user_chunk.get_or_insert_with(create_chunk)
     }
 
     /// Remove the chunk at `key`. This does not affect descendant or ancestor chunks.

@@ -1487,4 +1487,27 @@ mod tests {
         // No longer loading at LOD0.
         assert!(!map.extent_is_loading(0, loading_extent_lod0));
     }
+
+    #[test]
+    fn delete_collapses_tree() {
+        let mut map = ChunkTreeBuilder3x1::new(MAP_CONFIG).build_with_hash_map_storage();
+
+        let root_key = ChunkKey::new(2, PointN::ZERO);
+        let lod0_extent = map.indexer.chunk_extent_at_lower_lod(root_key, 0);
+        map.lod_view_mut(0).fill_extent(&lod0_extent, 1);
+
+        let mut delete_keys = Vec::new();
+        map.visit_all_keys(|key| {
+            if key.lod == 0 {
+                delete_keys.push(key);
+            }
+            true
+        });
+
+        for key in delete_keys.into_iter() {
+            map.delete_chunk(key);
+        }
+
+        map.visit_root_keys(|_| panic!("expected no roots"));
+    }
 }

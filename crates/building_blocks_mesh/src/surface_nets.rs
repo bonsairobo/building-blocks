@@ -426,9 +426,7 @@ mod test {
                 let p1 = mesh.positions[i1];
                 let p2 = mesh.positions[i2];
 
-                let dist =
-                    ((p1[0] - p2[0]).powi(2) + (p1[1] - p2[1]).powi(2) + (p1[2] - p2[2]).powi(2))
-                        .sqrt();
+                let dist = sq_dist(p1, p2).sqrt();
 
                 if dist < 0.0000000001 {
                     identical_indices.push((i1 as u32, i2 as u32));
@@ -450,7 +448,9 @@ mod test {
         let mut found_duplicates = false;
         let mut triangles = HashMap::new();
         for (i, tri) in mesh.indices.chunks(3).enumerate() {
-            if let Some(tri_num) = triangles.get(tri) {
+            let mut tri = [tri[0], tri[1], tri[2]];
+            tri.sort();
+            if let Some(tri_num) = triangles.get(&tri) {
                 println!("tri {} is the same as {}: {:?}", i, tri_num, tri);
                 found_duplicates = true;
             }

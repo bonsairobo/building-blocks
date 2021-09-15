@@ -1,7 +1,7 @@
 use building_blocks_core::prelude::*;
 use building_blocks_storage::{
     access_traits::*,
-    database::{ChunkDb3, Delta},
+    database::{ChunkDb3, Delta, ReadableChunkDb},
     prelude::{
         ChunkKey, ChunkTreeBuilder, ChunkTreeBuilder3x1, ChunkTreeConfig, FastArrayCompressionNx1,
         FromBytesCompression, Lz4,
@@ -10,8 +10,8 @@ use building_blocks_storage::{
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
-fn db_write_chunks(c: &mut Criterion) {
-    let mut group = c.benchmark_group("db_write_chunks");
+fn db_read_all_chunks(c: &mut Criterion) {
+    let mut group = c.benchmark_group("db_read_all_chunks");
 
     for map_chunks in [1, 2, 4, 8].iter() {
         group.bench_with_input(
@@ -56,11 +56,13 @@ fn db_write_chunks(c: &mut Criterion) {
                             ),
                         );
 
-                        (chunk_db, batch.build())
-                    },
-                    |(chunk_db, batch)| {
-                        chunk_db.apply_deltas(batch).unwrap();
+                        chunk_db.apply_deltas(batch.build()).unwrap();
                         futures::executor::block_on(chunk_db.flush()).unwrap();
+
+                        chunk_db
+                    },
+                    |chunk_db| {
+                        let _result = chunk_db.read_all_chunks::<[i32; 3]>(0).unwrap();
                     },
                 );
             },
@@ -69,5 +71,5 @@ fn db_write_chunks(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, db_write_chunks);
+criterion_group!(benches, db_read_all_chunks);
 criterion_main!(benches);

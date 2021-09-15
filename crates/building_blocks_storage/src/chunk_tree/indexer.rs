@@ -140,6 +140,37 @@ where
             offset: dst_offset,
         }
     }
+
+    /// Call `visitor` on all keys in the Moore neighborhood of `key`.
+    #[inline]
+    pub fn visit_neighbor_keys(
+        &self,
+        key: ChunkKey<N>,
+        mut visitor: impl FnMut(ChunkKey<N>) -> bool,
+    ) -> bool {
+        for offset in PointN::moore_offsets().into_iter() {
+            let neighbor_min = key.minimum + (offset << self.chunk_shape_log2);
+            let neighbor_key = ChunkKey::new(key.lod, neighbor_min);
+            if !visitor(neighbor_key) {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    /// Call `visitor` on all children keys of `parent_key`.
+    #[inline]
+    pub fn visit_child_keys(
+        &self,
+        parent_key: ChunkKey<N>,
+        mut visitor: impl FnMut(ChunkKey<N>, u8),
+    ) {
+        for child_i in 0..PointN::NUM_CORNERS {
+            let child_key = self.child_chunk_key(parent_key, child_i);
+            visitor(child_key, child_i);
+        }
+    }
 }
 
 /// The key for a chunk at a particular level of detail.

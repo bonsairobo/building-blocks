@@ -484,10 +484,10 @@ where
         state: &NodeState,
         mut visitor: impl FnMut(ChunkKey<N>, u8),
     ) {
-        for child_i in 0..PointN::NUM_CORNERS {
-            if state.children.bit_is_set(child_i) {
-                let child_key = self.indexer.child_chunk_key(parent_key, child_i);
-                visitor(child_key, child_i);
+        for corner_index in 0..PointN::NUM_CORNERS {
+            if state.children.bit_is_set(corner_index) {
+                let child_key = self.indexer.child_chunk_key(parent_key, corner_index);
+                visitor(child_key, corner_index);
             }
         }
     }
@@ -583,30 +583,6 @@ where
     }
 }
 
-impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>
-where
-    PointN<N>: IntegerPoint<N>,
-    Store: ChunkStorage<N>,
-    Bldr: ChunkTreeBuilder<N, T>,
-{
-    /// Visit all keys in the Moore neighborhood of `key`, regardless of if the node exists.
-    pub fn visit_neighbor_keys(
-        &self,
-        key: ChunkKey<N>,
-        mut visitor: impl FnMut(ChunkKey<N>) -> bool,
-    ) -> bool {
-        for offset in PointN::moore_offsets().into_iter() {
-            let neighbor_min = key.minimum + offset * self.chunk_shape();
-            let neighbor_key = ChunkKey::new(key.lod, neighbor_min);
-            if !visitor(neighbor_key) {
-                return false;
-            }
-        }
-
-        true
-    }
-}
-
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
@@ -686,8 +662,10 @@ where
     }
 
     /// Returns `true` iff any chunks in the Moore-neighborhood of `key` are loading.
-    pub fn chunk_neighborhood_is_loading(&self, key: ChunkKey<N>) -> bool {
-        !self.visit_neighbor_keys(key, |neighbor_key| !self.node_is_loading(neighbor_key))
+    pub fn chunk_moore_neighborhood_is_loading(&self, key: ChunkKey<N>) -> bool {
+        !self
+            .indexer
+            .visit_neighbor_keys(key, |neighbor_key| !self.node_is_loading(neighbor_key))
     }
 
     /// Iff there is not already a node for `key`, then the entire subtree at `key` will be marked for loading. This means that

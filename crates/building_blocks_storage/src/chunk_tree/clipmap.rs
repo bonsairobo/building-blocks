@@ -79,10 +79,9 @@ where
             } else if node_key.lod > 0 {
                 // We need to enumerate all child corners because this node doesn't exist, but we know it needs to be
                 // loaded.
-                for child_i in 0..PointN::NUM_CORNERS {
-                    let child_key = self.indexer.child_chunk_key(node_key, child_i);
+                self.indexer.visit_child_keys(node_key, |child_key, _| {
                     candidate_heap.push(ChunkSphere::new(observer, &self.indexer, child_key));
-                }
+                });
             }
         }
     }
@@ -152,7 +151,7 @@ where
 
             let (node_state, _) = self.get_node_state(node_key).unwrap();
             let is_loading =
-                node_state.is_loading() || self.chunk_neighborhood_is_loading(node_key);
+                node_state.is_loading() || self.chunk_moore_neighborhood_is_loading(node_key);
 
             let was_active = node_state.is_rendering();
             let is_active =
@@ -224,13 +223,13 @@ where
                         let child_key = self.indexer.child_chunk_key(node_key, corner_index);
                         if let Some((child_state, _)) = self.get_node_state(child_key) {
                             if child_state.is_loading()
-                                || self.chunk_neighborhood_is_loading(child_key)
+                                || self.chunk_moore_neighborhood_is_loading(child_key)
                             {
                                 children_loading = true;
                                 break;
                             }
                         } else if self.missing_node_is_loading(child_key)
-                            || self.chunk_neighborhood_is_loading(child_key)
+                            || self.chunk_moore_neighborhood_is_loading(child_key)
                         {
                             children_loading = true;
                             break;
@@ -346,16 +345,16 @@ fn clipmap_chunks_intersecting_sphere_recursive<Ni, Nf>(
     }
 
     if node_key.lod > detect_lod {
-        for child_i in 0..PointN::NUM_CORNERS {
+        indexer.visit_child_keys(node_key, |child_key, _| {
             clipmap_chunks_intersecting_sphere_recursive(
                 indexer,
-                indexer.child_chunk_key(node_key, child_i),
+                child_key,
                 detect_lod,
                 detail,
                 clip_sphere,
                 rx,
             );
-        }
+        });
     } else {
         // This is the LOD where we want to detect slots inside the sphere.
         let is_render_candidate =
@@ -438,17 +437,17 @@ fn clipmap_new_chunks_intersecting_sphere_recursive<Ni, Nf>(
     }
 
     if node_key.lod > detect_lod {
-        for child_i in 0..PointN::NUM_CORNERS {
+        indexer.visit_child_keys(node_key, |child_key, _| {
             clipmap_new_chunks_intersecting_sphere_recursive(
                 indexer,
-                indexer.child_chunk_key(node_key, child_i),
+                child_key,
                 detect_lod,
                 detail,
                 old_clip_sphere,
                 new_clip_sphere,
                 rx,
             );
-        }
+        });
     } else if !node_intersects_old_clip_sphere {
         // This is the LOD where we want to detect entrances into the clip sphere.
         let is_render_candidate =

@@ -646,6 +646,23 @@ where
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
+    /// Returns `true` iff any chunks in the Moore-neighborhood of `key` are loading.
+    pub fn chunk_neighborhood_is_loading(&self, key: ChunkKey<N>) -> bool {
+        for offset in PointN::moore_offsets().into_iter() {
+            let neighbor_min = key.minimum + offset * self.chunk_shape();
+            let neighbor_key = ChunkKey::new(key.lod, neighbor_min);
+            if let Some((neighbor_state, _)) = self.get_node_state(neighbor_key) {
+                if neighbor_state.is_loading() {
+                    return true;
+                }
+            } else if self.missing_node_is_loading(neighbor_key) {
+                return true;
+            }
+        }
+
+        false
+    }
+
     /// Iff there is not already a node for `key`, then the entire subtree at `key` will be marked for loading. This means that
     /// a traversal from the ancestor root of `key` will be able to discover all nodes that need to be loaded by following the
     /// `descendant_needs_loading` bits. For an example of this, see [`ChunkTree::clipmap_loading_slots`].

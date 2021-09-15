@@ -151,7 +151,8 @@ where
             }
 
             let (node_state, _) = self.get_node_state(node_key).unwrap();
-            let is_loading = node_state.is_loading();
+            let is_loading =
+                node_state.is_loading() || self.chunk_neighborhood_is_loading(node_key);
 
             let was_active = node_state.is_rendering();
             let is_active =
@@ -216,6 +217,28 @@ where
                 (true, false) => {
                     // This node just became inactive, and none of its ancestors were active, so it must have active
                     // descendants. Split this node into active descendants.
+
+                    // Start by making sure all children are loaded.
+                    let mut children_loading = false;
+                    for corner_index in 0..PointN::NUM_CORNERS {
+                        let child_key = self.indexer.child_chunk_key(node_key, corner_index);
+                        if let Some((child_state, _)) = self.get_node_state(child_key) {
+                            if child_state.is_loading()
+                                || self.chunk_neighborhood_is_loading(child_key)
+                            {
+                                children_loading = true;
+                                break;
+                            }
+                        } else if self.missing_node_is_loading(child_key)
+                            || self.chunk_neighborhood_is_loading(child_key)
+                        {
+                            children_loading = true;
+                            break;
+                        }
+                    }
+                    if children_loading {
+                        continue;
+                    }
 
                     // This node might have already split off from some ancestor.
                     let split_ancestor =

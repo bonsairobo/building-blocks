@@ -51,7 +51,12 @@ pub fn chunk_generator_system(
             if let Some(chunk) = chunk {
                 map.chunks.write_chunk(key, chunk);
             } else {
-                map.chunks.delete_chunk(key);
+                // TODO: this is a temporary hack to smooth voxels; we can't delete just any "empty" chunks (those without any
+                // active edges) because there may be active edges between chunks, and the "empty" chunk might be responsible
+                // for generated the surface that intersects those edges
+                let extent = map.chunks.indexer.extent_for_chunk_with_min(key.minimum);
+                map.chunks.write_chunk(key, Array3x1::fill(extent, Voxel::EMPTY));
+                // map.chunks.delete_chunk(key);
             }
         }
     }

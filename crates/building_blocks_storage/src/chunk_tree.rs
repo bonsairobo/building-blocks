@@ -583,6 +583,30 @@ where
     }
 }
 
+impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>
+where
+    PointN<N>: IntegerPoint<N>,
+    Store: ChunkStorage<N>,
+    Bldr: ChunkTreeBuilder<N, T>,
+{
+    /// Visit all keys in the Moore neighborhood of `key`, regardless of if the node exists.
+    pub fn visit_neighbor_keys(
+        &self,
+        key: ChunkKey<N>,
+        mut visitor: impl FnMut(ChunkKey<N>) -> bool,
+    ) -> bool {
+        for offset in PointN::moore_offsets().into_iter() {
+            let neighbor_min = key.minimum + offset * self.chunk_shape();
+            let neighbor_key = ChunkKey::new(key.lod, neighbor_min);
+            if !visitor(neighbor_key) {
+                return false;
+            }
+        }
+
+        true
+    }
+}
+
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
     PointN<N>: IntegerPoint<N>,
@@ -646,19 +670,6 @@ where
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
-    /// Returns `true` iff any chunks in the Moore-neighborhood of `key` are loading.
-    pub fn chunk_neighborhood_is_loading(&self, key: ChunkKey<N>) -> bool {
-        for offset in PointN::moore_offsets().into_iter() {
-            let neighbor_min = key.minimum + offset * self.chunk_shape();
-            let neighbor_key = ChunkKey::new(key.lod, neighbor_min);
-            if self.node_is_loading(neighbor_key) {
-                return true;
-            }
-        }
-
-        false
-    }
-
     /// Returns `true` iff the node at `key` is currently loading. This can be true even if the node does not exist, in which
     /// case the nearest ancestor node would know if the node is loading (by virtue of being in an empty subtree that is
     /// loading).
@@ -672,6 +683,11 @@ where
         }
 
         false
+    }
+
+    /// Returns `true` iff any chunks in the Moore-neighborhood of `key` are loading.
+    pub fn chunk_neighborhood_is_loading(&self, key: ChunkKey<N>) -> bool {
+        !self.visit_neighbor_keys(key, |neighbor_key| !self.node_is_loading(neighbor_key))
     }
 
     /// Iff there is not already a node for `key`, then the entire subtree at `key` will be marked for loading. This means that

@@ -20,8 +20,6 @@ bytemuck = "1.7"
 either = "1.6"
 float-ord = "0.3"
 futures = "0.3"
-itertools = "0.10"
-num = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 slab = "0.4"
 thread_local = "1.1"

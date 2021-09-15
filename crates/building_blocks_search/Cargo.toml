@@ -19,7 +19,6 @@ ncollide = ["nalgebra", "ncollide3d", "building_blocks_core/nalgebra"]
 
 [dependencies]
 indexmap = "1.5"
-itertools = "0.10"
 pathfinding = "2.1"
 
 # Optional, feature-gated

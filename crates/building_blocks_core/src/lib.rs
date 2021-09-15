@@ -25,6 +25,7 @@ pub use sphere::*;
 
 pub use bytemuck;
 pub use num;
+pub use itertools;
 
 #[doc(hidden)]
 pub mod prelude {

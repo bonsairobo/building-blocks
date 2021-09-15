@@ -389,6 +389,7 @@ fn sq_dist(a: [f32; 3], b: [f32; 3]) -> f32 {
 mod test {
     use super::*;
 
+    use building_blocks_core::num::BigUint;
     use std::collections::HashMap;
 
     #[test]
@@ -457,5 +458,56 @@ mod test {
             triangles.insert(tri, i);
         }
         assert!(!found_duplicates);
+    }
+
+    #[ignore]
+    #[test]
+    fn no_unused_vertices() {
+        let builder = ChunkTreeBuilder3x1::new(ChunkTreeConfig {
+            chunk_shape: Point3i::fill(16),
+            ambient_value: 1.0,
+            root_lod: 0,
+        });
+        let mut chunks = builder.build_with_hash_map_storage();
+
+        let extent = Extent3i::from_min_and_lub(Point3i::fill(-16), Point3i::fill(16));
+        copy_extent(
+            &extent,
+            &Func(|p: Point3i| (p.dot(p) as f32) - 10.0),
+            &mut chunks.lod_view_mut(0),
+        );
+
+        let mut mesh = PosNormMesh::default();
+        let mut mesh_buf = SurfaceNetsBuffer::default();
+        chunks.visit_root_keys(|key| {
+            let chunk_extent = chunks.indexer.extent_for_chunk_with_min(key.minimum);
+            let padded_extent = padded_surface_nets_chunk_extent(&chunk_extent);
+            let mut padded_array = Array3x1::fill(padded_extent, chunks.ambient_value());
+            copy_extent(&padded_extent, &chunks.lod_view(0), &mut padded_array);
+            surface_nets(&padded_array, &padded_extent, 1.0, false, &mut mesh_buf);
+            mesh.append(&mut mesh_buf.mesh);
+        });
+
+        let mut used_positions = BigUint::default();
+
+        for i in mesh.indices.into_iter().rev() {
+            used_positions.set_bit(i as u64, true);
+        }
+
+        let mut unused_positions = 0_usize;
+        for (i, pos) in mesh.positions.iter().enumerate() {
+            if !used_positions.bit(i as u64) {
+                println!("Vertex #{} is the never used: {:?}", i, pos);
+                unused_positions += 1;
+            }
+        }
+        if unused_positions > 0 {
+            println!(
+                "Found {}/{} unused vertices",
+                unused_positions,
+                mesh.positions.len()
+            );
+        }
+        assert_eq!(unused_positions, 0);
     }
 }

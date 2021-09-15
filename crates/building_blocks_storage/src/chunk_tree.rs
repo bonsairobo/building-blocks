@@ -651,13 +651,24 @@ where
         for offset in PointN::moore_offsets().into_iter() {
             let neighbor_min = key.minimum + offset * self.chunk_shape();
             let neighbor_key = ChunkKey::new(key.lod, neighbor_min);
-            if let Some((neighbor_state, _)) = self.get_node_state(neighbor_key) {
-                if neighbor_state.is_loading() {
-                    return true;
-                }
-            } else if self.missing_node_is_loading(neighbor_key) {
+            if self.node_is_loading(neighbor_key) {
                 return true;
             }
+        }
+
+        false
+    }
+
+    /// Returns `true` iff the node at `key` is currently loading. This can be true even if the node does not exist, in which
+    /// case the nearest ancestor node would know if the node is loading (by virtue of being in an empty subtree that is
+    /// loading).
+    pub fn node_is_loading(&self, key: ChunkKey<N>) -> bool {
+        if let Some((state, _)) = self.get_node_state(key) {
+            if state.is_loading() {
+                return true;
+            }
+        } else if self.missing_node_is_loading(key) {
+            return true;
         }
 
         false

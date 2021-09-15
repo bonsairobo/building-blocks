@@ -231,8 +231,8 @@ where
                     // split by one layer for now, but we'll re-insert the children back into the heap so they can be split
                     // again if we still have budget.
                     self.visit_child_keys_of_node(node_key, node_state, |child_key, _| {
-                        let child_node = self.get_node(child_key).unwrap();
-                        child_node.state.state_bits.set_bit(StateBit::Render as u8);
+                        let (child_state, _) = self.get_node_state(child_key).unwrap();
+                        child_state.state_bits.set_bit(StateBit::Render as u8);
 
                         num_render_chunks += 1;
                         committed_split_descendants.insert(child_key, split_ancestor);

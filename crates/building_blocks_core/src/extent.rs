@@ -2,6 +2,8 @@ use crate::{point::point_traits::*, Point2, Point2f, Point3, Point3f, PointN};
 
 use bytemuck::{Pod, Zeroable};
 use core::ops::{Add, AddAssign, Mul, Shl, Shr, Sub, SubAssign};
+
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// A 2-dimensional extent with scalar type `T`.
@@ -20,7 +22,8 @@ pub type Extent3f = ExtentN<[f32; 3]>;
 /// An N-dimensional extent. This is mathematically the Cartesian product of a half-closed interval `[a, b)` in each dimension.
 /// You can also just think of it as an axis-aligned box with some shape and a minimum point. When doing queries against lattice
 /// maps, this is the primary structure used to determine the bounds of your query.
-#[derive(Debug, Deserialize, Eq, Serialize)]
+#[derive(Debug, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ExtentN<N> {
     /// The least point contained in the extent.
     pub minimum: PointN<N>,

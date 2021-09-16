@@ -1,19 +1,21 @@
+#[cfg(all(feature = "serde", feature = "bincode"))]
 mod compressed_bincode;
-
 #[cfg(feature = "lz4")]
 mod lz4_compression;
 #[cfg(feature = "snap")]
 mod snappy_compression;
 
+#[cfg(all(feature = "serde", feature = "bincode"))]
 pub use compressed_bincode::BincodeCompression;
-
 #[cfg(feature = "lz4")]
 pub use lz4_compression::Lz4;
 #[cfg(feature = "snap")]
 pub use snappy_compression::Snappy;
 
-use serde::{Deserialize, Serialize};
 use std::io;
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// An algorithm for:
 ///     1. compressing a specific type `Data` into raw bytes
@@ -41,7 +43,8 @@ pub trait FromBytesCompression<B> {
 
 /// A wrapper for bytes from compression algorithm `A`. This is slightly safer than manually calling `decompress` on any byte
 /// slice, since it remembers the original data type.
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Compressed<A> {
     pub compressed_bytes: Vec<u8>,
     marker: std::marker::PhantomData<A>,

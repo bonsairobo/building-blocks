@@ -25,6 +25,8 @@ use point_traits::*;
 use bytemuck::{Pod, Zeroable};
 use core::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 use num::{Signed, Zero};
+
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// An N-dimensional point (where N=2 or N=3), which is usually just a primitive array like
@@ -71,7 +73,8 @@ use serde::{Deserialize, Serialize};
 /// let p = PointN([0, 1, 2]);
 /// assert!(min <= p && p < least_upper_bound);
 /// ```
-#[derive(Copy, Clone, Debug, Deserialize, Default, Eq, Hash, PartialEq, Serialize)]
+#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PointN<N>(pub N);
 
 unsafe impl<N> Zeroable for PointN<N> where N: Zeroable {}

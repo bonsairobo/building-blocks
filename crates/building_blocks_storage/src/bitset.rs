@@ -1,7 +1,10 @@
-use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU8, Ordering};
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Debug, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Bitset8 {
     pub bits: u8,
 }
@@ -43,7 +46,8 @@ impl Bitset8 {
     }
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AtomicBitset8 {
     pub bits: AtomicU8,
 }

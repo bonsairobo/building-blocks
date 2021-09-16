@@ -8,9 +8,12 @@ use crate::{
 };
 
 use core::mem::MaybeUninit;
+
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Channel<T, Store = Box<[T]>> {
     store: Store,
     marker: std::marker::PhantomData<T>,

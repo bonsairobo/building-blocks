@@ -2,13 +2,15 @@ use crate::dev_prelude::Local;
 
 use building_blocks_core::prelude::*;
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Arbitrarily chosen. Certainly can't exceed the number of bits in an i32.
 pub const MAX_LODS: usize = 20;
 
 /// Calculates chunk locations, e.g. minimums and downsampling destinations.
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ChunkIndexer<N> {
     chunk_shape: PointN<N>,
     chunk_shape_mask: PointN<N>,
@@ -174,7 +176,8 @@ where
 }
 
 /// The key for a chunk at a particular level of detail.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ChunkKey<N> {
     /// The minimum point of the chunk.
     pub minimum: PointN<N>,
@@ -240,7 +243,8 @@ pub(crate) struct DownsampleDestination<N> {
 }
 
 /// A newtype wrapper for `PointN` or `ExtentN` where each point represents exactly one chunk.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ChunkUnits<T>(pub T);
 
 impl<N> ChunkUnits<PointN<N>>

@@ -201,6 +201,8 @@ use building_blocks_core::{
 };
 
 use either::Either;
+
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// The user-accessible data stored in each chunk of a [`ChunkTree`].
@@ -236,7 +238,7 @@ impl<N, Chan> UserChunk for Array<N, Chan> {
 /// A multiresolution lattice map made up of same-shaped [`Array`] chunks.
 ///
 /// See the [module-level docs](self) for more info.
-#[derive(Deserialize, Serialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ChunkTree<N, T, Bldr, Store> {
     pub indexer: ChunkIndexer<N>,
     storages: Vec<Store>,
@@ -1126,7 +1128,8 @@ struct RemoveInfo {
 }
 
 /// A node in the `ChunkTree`.
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ChunkNode<U> {
     /// Parent chunks are `None` until written or downsampled into. This means that users can opt-in to storing downsampled
     /// chunks, which requires more memory.
@@ -1186,7 +1189,8 @@ impl<U> ChunkNode<U> {
     }
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct NodeState {
     /// A bitmask tracking which child nodes exist.
     children: Bitset8,
@@ -1433,17 +1437,22 @@ mod tests {
         });
     }
 
-    #[test]
-    fn hash_map_chunk_tree_can_serde() {
-        let builder = ChunkTreeBuilder3x2::new(MULTICHAN_MAP_CONFIG);
-        let map = builder.build_with_hash_map_storage();
-        can_serde(map);
-    }
+    #[cfg(feature = "serde")]
+    mod serde_test {
+        use super::*;
 
-    fn can_serde<'a, T>(_x: T)
-    where
-        T: Deserialize<'a> + Serialize,
-    {
+        #[test]
+        fn hash_map_chunk_tree_can_serde() {
+            let builder = ChunkTreeBuilder3x2::new(MULTICHAN_MAP_CONFIG);
+            let map = builder.build_with_hash_map_storage();
+            can_serde(map);
+        }
+
+        fn can_serde<'a, T>(_x: T)
+        where
+            T: Deserialize<'a> + Serialize,
+        {
+        }
     }
 
     #[test]

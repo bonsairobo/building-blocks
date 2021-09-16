@@ -6,10 +6,13 @@ use crate::{
 use building_blocks_core::{point_traits::IntegerPoint, ExtentN, PointN};
 
 use core::hash::Hash;
+
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Constant parameters required to construct a [`ChunkTreeBuilder`].
-#[derive(Clone, Copy, Deserialize, Serialize)]
+#[derive(Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ChunkTreeConfig<N, T> {
     /// The shape of every chunk.
     pub chunk_shape: PointN<N>,
@@ -80,7 +83,8 @@ pub trait ChunkTreeBuilder<N, T>: Sized {
 }
 
 /// A `ChunkTreeBuilder` for `Array` chunks.
-#[derive(Clone, Copy, Deserialize, Serialize)]
+#[derive(Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ChunkTreeBuilderNxM<N, T, Chan> {
     pub config: ChunkTreeConfig<N, T>,
     marker: std::marker::PhantomData<Chan>,

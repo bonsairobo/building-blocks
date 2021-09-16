@@ -175,12 +175,15 @@ use building_blocks_core::prelude::*;
 use core::iter::{once, Once};
 use core::ops::{Add, Deref};
 use either::Either;
+
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// A map from lattice location `PointN<N>` to data `T`, stored as a flat array.
 ///
 /// See the [module-level docs](self) for more details.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Array<N, Chan> {
     channels: Chan,
     extent: ExtentN<N>,

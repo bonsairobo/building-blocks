@@ -58,9 +58,7 @@ pub mod prelude {
             IterChunkKeys, LodChange2, LodChange3, NodeState, PointDownsampler, SdfMeanDownsampler,
             UserChunk,
         },
-        compression::{
-            BincodeCompression, BytesCompression, Compressed, Compression, FromBytesCompression,
-        },
+        compression::{BytesCompression, Compressed, Compression, FromBytesCompression},
         func::Func,
         octree_set::{OctreeNode, OctreeSet, OctreeVisitor, VisitStatus},
         signed_distance::{Sd16, Sd8, SignedDistance},
@@ -75,6 +73,8 @@ pub mod prelude {
     pub use super::chunk_tree::storage::compressible::multichannel_aliases::*;
     pub use super::chunk_tree::storage::hash_map::multichannel_aliases::*;
 
+    #[cfg(all(feature = "serde", feature = "bincode"))]
+    pub use super::compression::BincodeCompression;
     #[cfg(feature = "lz4")]
     pub use super::compression::Lz4;
     #[cfg(feature = "snap")]

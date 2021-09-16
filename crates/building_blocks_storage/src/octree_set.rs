@@ -51,13 +51,16 @@ use crate::dev_prelude::*;
 use building_blocks_core::prelude::*;
 
 use core::ops::Deref;
-use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// A sparse set of voxel coordinates (3D integer points). Supports spatial queries.
 ///
 /// The octree is a cube shape and the edge lengths can only be a power of 2, at most 64.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct OctreeSet {
     extent: Extent3i,
     power: u8,
@@ -867,7 +870,8 @@ const FULL_CHILD_BIT_MASK: ChildBitMask = 0xFF;
 /// level N-5:
 ///   loc = 0b1000000000000000, ...
 /// ```
-#[derive(Clone, Copy, Deserialize, Hash, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Hash, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 struct LocationCode(u16);
 
 impl std::fmt::Debug for LocationCode {

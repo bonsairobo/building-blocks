@@ -15,18 +15,18 @@ all-features = true
 [dependencies]
 ahash = { version = "0.7", features = ["serde"] }
 auto_impl = "0.4"
-bincode = "1.3"
 bytemuck = "1.7"
 either = "1.6"
 float-ord = "0.3"
 futures = "0.3"
-serde = { version = "1.0", features = ["derive"] }
 slab = "0.4"
 thread_local = "1.1"
 
 building_blocks_core = { path = "../building_blocks_core", version = "0.7.0", default-features = false }
 
 # Optional, feature-gated.
+bincode = { version = "1.3", optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true }
 dot_vox = { version = "4.1", optional = true }
 image = { version = "0.23", optional = true }
 lz4 = { version = "1.23", optional = true }
@@ -61,6 +61,7 @@ harness = false
 [[bench]]
 name = "compression"
 harness = false
+required-features = ["bincode", "lz4", "snappy", "serde"]
 
 [[bench]]
 name = "octree_set"

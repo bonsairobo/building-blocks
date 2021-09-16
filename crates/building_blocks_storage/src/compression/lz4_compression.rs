@@ -1,10 +1,13 @@
 use super::BytesCompression;
 
-use serde::{Deserialize, Serialize};
 use std::io;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// The [LZ4 compression algorithm](https://en.wikipedia.org/wiki/LZ4_(compression_algorithm)).
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Lz4 {
     /// The compression level, from 0 to 10. 0 is fastest and least aggressive. 10 is slowest and
     /// most aggressive.

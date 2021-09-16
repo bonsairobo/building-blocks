@@ -13,7 +13,7 @@ where
         + ForEach<N, (PointN<N>, Stride), Item = T>
         + GetUnchecked<Stride, Item = T>,
     T: IsEmpty,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     ExtentN<N>: std::fmt::Debug,
     Local<N>: Copy,
 {

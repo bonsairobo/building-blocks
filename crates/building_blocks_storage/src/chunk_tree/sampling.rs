@@ -20,7 +20,7 @@ pub trait ChunkDownsampler<N, Src, Dst> {
 
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     T: Clone,
     Usr: UserChunk,
     Usr::Array: FillExtent<N, Item = T> + IndexedArray<N>,
@@ -391,7 +391,7 @@ fn chunk_downsample_for_each<N>(
 ) -> LockStepArrayForEach<N>
 where
     N: ArrayIndexer<N>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     let dst_shape = chunk_shape >> 1;
     debug_assert!(dst_shape > PointN::ZERO);

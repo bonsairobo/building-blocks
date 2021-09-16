@@ -20,7 +20,7 @@ pub type LockStepArrayForEach3 = LockStepArrayForEach<[i32; 3]>;
 impl<N> LockStepArrayForEach<N>
 where
     N: ArrayIndexer<N>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     pub fn new(iter_extent: ExtentN<N>, iter1: ArrayStrideIter, iter2: ArrayStrideIter) -> Self {
         Self {

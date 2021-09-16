@@ -22,7 +22,7 @@ pub type ChunkIndexer3 = ChunkIndexer<[i32; 3]>;
 
 impl<N> ChunkIndexer<N>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     #[inline]
     pub fn new(chunk_shape: PointN<N>) -> Self {
@@ -245,7 +245,7 @@ pub struct ChunkUnits<T>(pub T);
 
 impl<N> ChunkUnits<PointN<N>>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     pub fn chunk_min(&self, chunk_shape: PointN<N>) -> PointN<N> {
         chunk_shape * self.0

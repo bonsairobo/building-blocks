@@ -102,7 +102,7 @@ pub trait DotProduct {
     fn dot(self, other: Self) -> Self::Scalar;
 }
 
-pub trait IntegerPoint<N>:
+pub trait IntegerPoint:
     BitAnd<Self, Output = Self>
     + BitOr<Self, Output = Self>
     + BitXor<Self, Output = Self>
@@ -113,7 +113,7 @@ pub trait IntegerPoint<N>:
     + Eq
     + IntegerDiv
     + Into<Self::Morton>
-    + IterExtent<N>
+    + IterExtent
     + LatticeOrder
     + Neighborhoods
     + Not<Output = Self>
@@ -481,10 +481,10 @@ pub trait Neighborhoods: Sized {
     fn moore_offsets() -> Vec<Self>;
 }
 
-pub trait IterExtent<N> {
-    type PointIter: Iterator<Item = PointN<N>>;
+pub trait IterExtent {
+    type PointIter: Iterator<Item = Self>;
 
-    fn iter_extent(min: PointN<N>, max: PointN<N>) -> Self::PointIter;
+    fn iter_extent(min: Self, max: Self) -> Self::PointIter;
 }
 
 // `Zero` trait doesn't allow associated constants for zero because of bignums.

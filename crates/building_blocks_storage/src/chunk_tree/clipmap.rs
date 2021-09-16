@@ -9,7 +9,7 @@ use std::collections::BinaryHeap;
 
 impl<Ni, Nf, T, Usr, Bldr, Store> ChunkTree<Ni, T, Bldr, Store>
 where
-    PointN<Ni>: std::hash::Hash + IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
+    PointN<Ni>: std::hash::Hash + IntegerPoint<FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
     Bldr: ChunkTreeBuilder<Ni, T, Chunk = Usr>,
     Store: ChunkStorage<Ni, Chunk = Usr> + for<'r> IterChunkKeys<'r, Ni>,
@@ -298,7 +298,7 @@ pub fn clipmap_chunks_intersecting_sphere<Ni, Nf>(
     clip_sphere: Sphere<Nf>,
     mut rx: impl FnMut(ClipmapSlot<Ni>),
 ) where
-    PointN<Ni>: std::hash::Hash + IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
+    PointN<Ni>: std::hash::Hash + IntegerPoint<FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
 {
     assert!(clip_sphere.radius > 0.0);
@@ -327,7 +327,7 @@ fn clipmap_chunks_intersecting_sphere_recursive<Ni, Nf>(
     clip_sphere: Sphere<Nf>,
     rx: &mut impl FnMut(ClipmapSlot<Ni>),
 ) where
-    PointN<Ni>: std::hash::Hash + IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
+    PointN<Ni>: std::hash::Hash + IntegerPoint<FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
 {
     let node_sphere = chunk_bounding_sphere(indexer, node_key, 0);
@@ -379,7 +379,7 @@ pub fn clipmap_new_chunks_intersecting_sphere<Ni, Nf>(
     new_clip_sphere: Sphere<Nf>,
     mut rx: impl FnMut(ClipmapSlot<Ni>),
 ) where
-    PointN<Ni>: std::hash::Hash + IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
+    PointN<Ni>: std::hash::Hash + IntegerPoint<FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
 {
     assert!(old_clip_sphere.radius > 0.0);
@@ -411,7 +411,7 @@ fn clipmap_new_chunks_intersecting_sphere_recursive<Ni, Nf>(
     new_clip_sphere: Sphere<Nf>,
     rx: &mut impl FnMut(ClipmapSlot<Ni>),
 ) where
-    PointN<Ni>: std::hash::Hash + IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
+    PointN<Ni>: std::hash::Hash + IntegerPoint<FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
 {
     let node_sphere = chunk_bounding_sphere(indexer, node_key, 0);
@@ -468,7 +468,7 @@ pub fn chunk_bounding_sphere<Ni, Nf>(
     at_lod: u8,
 ) -> Sphere<Nf>
 where
-    PointN<Ni>: IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
+    PointN<Ni>: IntegerPoint<FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
 {
     let node_lod_extent = indexer.chunk_extent_at_lower_lod(chunk_key, at_lod);
@@ -533,7 +533,7 @@ pub struct ChunkSphere<Ni, Nf> {
 
 impl<Ni, Nf> ChunkSphere<Ni, Nf>
 where
-    PointN<Ni>: IntegerPoint<Ni, FloatPoint = PointN<Nf>>,
+    PointN<Ni>: IntegerPoint<FloatPoint = PointN<Nf>>,
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
 {
     pub fn new(observer: PointN<Nf>, indexer: &ChunkIndexer<Ni>, key: ChunkKey<Ni>) -> Self {

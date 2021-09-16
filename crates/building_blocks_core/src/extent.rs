@@ -126,7 +126,7 @@ where
 
 impl<N> ExtentN<N>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     /// The number of points contained in the extent.
     #[inline]
@@ -211,7 +211,7 @@ where
     /// ]);
     /// ```
     #[inline]
-    pub fn iter_points(&self) -> <PointN<N> as IterExtent<N>>::PointIter {
+    pub fn iter_points(&self) -> <PointN<N> as IterExtent>::PointIter {
         PointN::iter_extent(self.minimum, self.least_upper_bound())
     }
 }
@@ -219,7 +219,7 @@ where
 impl<Nf, Ni> ExtentN<Nf>
 where
     PointN<Nf>: FloatPoint<IntPoint = PointN<Ni>>,
-    PointN<Ni>: IntegerPoint<Ni>,
+    PointN<Ni>: IntegerPoint,
 {
     /// Returns the integer `ExtentN` that contains `self`.
     #[inline]
@@ -333,7 +333,7 @@ where
 pub fn bounding_extent<N, I>(mut points: I) -> ExtentN<N>
 where
     I: Iterator<Item = PointN<N>>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     let first_point = points
         .next()

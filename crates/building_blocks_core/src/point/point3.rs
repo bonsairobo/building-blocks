@@ -362,7 +362,7 @@ where
     }
 }
 
-impl IntegerPoint<[i32; 3]> for Point3i {
+impl IntegerPoint for Point3i {
     type Morton = Morton3;
     type FloatPoint = Point3f;
 
@@ -437,7 +437,7 @@ where
     }
 }
 
-impl IterExtent<[i32; 3]> for Point3i {
+impl IterExtent for Point3i {
     type PointIter = Extent3PointIter<i32>;
 
     #[inline(always)]

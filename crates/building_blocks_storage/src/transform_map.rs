@@ -139,7 +139,7 @@ where
 impl<'a, N, Chan, F> ReadExtent<'a, N> for TransformMap<'a, Array<N, Chan>, F>
 where
     Self: IndexedArray<N> + Clone,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     type Src = ArrayCopySrc<Self>;
     type SrcIter = Once<(ExtentN<N>, Self::Src)>;
@@ -155,7 +155,7 @@ impl<'a, Delegate, N, F, In: 'a, Out, Usr: 'a, Bldr: 'a, Store: 'a> ReadExtent<'
     for TransformMap<'a, ChunkTreeLodView<Delegate>, F>
 where
     Delegate: Deref<Target = ChunkTree<N, In, Bldr, Store>>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     F: Copy + Fn(In) -> Out,
     In: Copy,
     Usr: UserChunk,

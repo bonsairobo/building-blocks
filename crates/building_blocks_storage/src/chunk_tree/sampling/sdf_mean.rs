@@ -14,7 +14,7 @@ pub struct SdfMeanDownsampler;
 impl<N, Src, Dst, T> ChunkDownsampler<N, Src, Dst> for SdfMeanDownsampler
 where
     N: ArrayIndexer<N>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     ArrayForEach<N>: Clone,
     T: From<f32>,
     f32: From<T>,

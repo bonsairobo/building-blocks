@@ -258,7 +258,7 @@ pub type ChunkTree3x1<T, Store> = ChunkTreeNx1<[i32; 3], T, Store>;
 
 impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     T: Clone,
     Bldr: ChunkTreeBuilder<N, T>,
 {
@@ -374,7 +374,7 @@ impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store> {
 // Convenience adapters over the chunk storage.
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
     /// Returns `true` iff the tree contains a chunk for `key`.
@@ -465,7 +465,7 @@ where
 
 impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Store: ChunkStorage<N>,
 {
     /// Call `visitor` on all children keys of `parent_key`.
@@ -515,7 +515,7 @@ where
 
 impl<N, T, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Store: ChunkStorage<N> + for<'r> IterChunkKeys<'r, N>,
     Bldr: ChunkTreeBuilder<N, T>,
 {
@@ -585,7 +585,7 @@ where
 
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Usr: UserChunk,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
@@ -621,7 +621,7 @@ where
 
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Usr: UserChunk,
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = Usr>,
@@ -642,7 +642,7 @@ where
 
 impl<N, T, Usr, Bldr, Store> ChunkTree<N, T, Bldr, Store>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
     Store: ChunkStorage<N, Chunk = Usr>,
 {
@@ -1275,7 +1275,7 @@ impl<N, T> AmbientExtent<N, T> {
 impl<N, T> ForEach<N, PointN<N>> for AmbientExtent<N, T>
 where
     T: Clone,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     type Item = T;
 

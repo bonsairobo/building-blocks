@@ -48,7 +48,7 @@ impl<N, By, Chan> FastCompressibleChunkStorage<N, By, Chan>
 where
     N: Send,
     Chan: Send,
-    PointN<N>: Hash + IntegerPoint<N>,
+    PointN<N>: Hash + IntegerPoint,
     FastChannelsCompression<By, Chan>: Compression<Data = Chan>,
 {
     pub fn with_bytes_compression(bytes_compression: By) -> Self {

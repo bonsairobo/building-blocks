@@ -40,7 +40,7 @@ pub trait ReadableChunkDb {
         extent: ExtentN<N>,
     ) -> sled::Result<ReadResult<Self::Compr>>
     where
-        PointN<N>: IntegerPoint<N>,
+        PointN<N>: IntegerPoint,
         ChunkKey<N>: DatabaseKey<N>,
     {
         // PERF: more parallelism?

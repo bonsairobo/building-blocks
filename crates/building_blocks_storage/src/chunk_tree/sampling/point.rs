@@ -12,7 +12,7 @@ pub struct PointDownsampler;
 impl<N, Src, Dst, T> ChunkDownsampler<N, Src, Dst> for PointDownsampler
 where
     N: ArrayIndexer<N>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Src: GetUnchecked<Stride, Item = T> + IndexedArray<N>,
     Dst: for<'r> GetMutUnchecked<'r, Stride, Item = &'r mut T>,
 {

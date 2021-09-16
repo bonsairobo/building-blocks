@@ -34,7 +34,7 @@ where
 impl<F, N, T> ForEach<N, PointN<N>> for Func<F>
 where
     F: Fn(PointN<N>) -> T,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     type Item = T;
 
@@ -48,7 +48,7 @@ where
 impl<'a, F, N, T> ReadExtent<'a, N> for Func<F>
 where
     F: 'a + Fn(PointN<N>) -> T,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     type Src = &'a F;
     type SrcIter = Once<(ExtentN<N>, Self::Src)>;

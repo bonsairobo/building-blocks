@@ -265,7 +265,7 @@ where
     }
 }
 
-impl IntegerPoint<[i32; 2]> for Point2i {
+impl IntegerPoint for Point2i {
     type Morton = Morton2;
     type FloatPoint = Point2f;
 
@@ -334,7 +334,7 @@ where
     }
 }
 
-impl IterExtent<[i32; 2]> for Point2i {
+impl IterExtent for Point2i {
     type PointIter = Extent2PointIter<i32>;
 
     #[inline]

@@ -22,7 +22,7 @@ impl<Ni, Nf> GridRayTraversal<Ni, Nf> {
     #[inline]
     pub fn new(start: PointN<Nf>, velocity: PointN<Nf>) -> Self
     where
-        PointN<Ni>: IntegerPoint<Ni>,
+        PointN<Ni>: IntegerPoint,
         PointN<Nf>: IntoIntegerPoint<IntPoint = PointN<Ni>> + FloatPoint,
         PointN<Nf>: From<PointN<Ni>>,
     {

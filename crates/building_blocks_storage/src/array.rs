@@ -268,7 +268,7 @@ where
 
 impl<N, Chan> Array<N, Chan>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     /// Creates a new `Array` from the return value of `selector`. `selector` takes a tuple of `Channel`s that borrow their
     /// storage.
@@ -318,7 +318,7 @@ where
 impl<N, Chan> FillExtent<N> for Array<N, Chan>
 where
     Self: ForEachMutPtr<N, (), Item = Chan::Ptr>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Chan: ResetChannels,
     Chan::Data: Clone,
 {
@@ -352,7 +352,7 @@ where
 
 impl<N, Chan> Array<N, Chan>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Chan: FillChannels,
 {
     /// Creates a map that fills the entire `extent` with the same `value`.
@@ -367,7 +367,7 @@ where
 impl<N, Chan, UninitChan> Array<N, Chan>
 where
     Array<N, UninitChan>: ForEachMutPtr<N, PointN<N>, Item = UninitChan::Ptr>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Chan: Channels<UninitSelf = UninitChan>,
     UninitChan: UninitChannels<InitSelf = Chan>,
     UninitChan::Ptr: IntoMultiMutPtr<Data = Chan::Data>,
@@ -388,7 +388,7 @@ where
 
 impl<N, Chan> Array<N, Chan>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Chan: UninitChannels,
 {
     /// Creates an uninitialized map, mainly for performance.
@@ -410,7 +410,7 @@ where
 
 impl<N, T, Store> ArrayNx1<N, T, Store>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Store: Deref<Target = [T]>,
 {
     pub fn new_one_channel(extent: ExtentN<N>, values: Store) -> Self {
@@ -692,7 +692,7 @@ macro_rules! impl_array_for_each {
         where
             Self: GetUnchecked<Stride>,
             N: ArrayIndexer<N>,
-            PointN<N>: IntegerPoint<N>,
+            PointN<N>: IntegerPoint,
         {
             type Item = <Self as GetUnchecked<Stride>>::Item;
 
@@ -710,7 +710,7 @@ macro_rules! impl_array_for_each {
         where
             Self: GetMutPtr<Stride, Item = Chan::Ptr>,
             N: ArrayIndexer<N>,
-            PointN<N>: IntegerPoint<N>,
+            PointN<N>: IntegerPoint,
             Chan: Channels,
         {
             type Item = Chan::Ptr;
@@ -781,7 +781,7 @@ pub struct ArrayCopySrc<Map>(pub Map);
 
 impl<'a, N: 'a, Chan: 'a> ReadExtent<'a, N> for Array<N, Chan>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     type Src = ArrayCopySrc<&'a Array<N, Chan>>;
     type SrcIter = Once<(ExtentN<N>, Self::Src)>;
@@ -799,7 +799,7 @@ where
     Self: GetMutPtr<Stride, Item = ChanDst::Ptr>,
     Array<N, ChanSrc>: Get<Stride, Item = Data>,
     N: ArrayIndexer<N>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     ChanSrc: Channels<Data = Data> + Slices<'a, Target = SrcSlices>,
     ChanDst: Channels<Data = Data> + CopySlices<'a, Src = SrcSlices>,
 {
@@ -830,7 +830,7 @@ where
     Self: IndexedArray<N> + GetMutPtr<Stride, Item = Chan::Ptr>,
     TransformMap<'a, Delegate, F>: IndexedArray<N> + Get<Stride, Item = Chan::Data>,
     N: ArrayIndexer<N>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Chan: Channels,
 {
     fn write_extent(
@@ -853,7 +853,7 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, Ptr>(
     extent: ExtentN<N>,
 ) where
     N: ArrayIndexer<N>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Dst: IndexedArray<N> + GetMutPtr<Stride, Item = Ptr>,
     Src: IndexedArray<N> + Get<Stride, Item = Ptr::Data>,
     Ptr: MultiMutPtr,
@@ -872,7 +872,7 @@ fn unchecked_copy_extent_between_arrays<Dst, Src, N, Ptr>(
 impl<N, Chan, Ch> WriteExtent<N, ChunkCopySrc<N, Chan::Data, Ch>> for Array<N, Chan>
 where
     Self: ForEachMutPtr<N, (), Item = Chan::Ptr> + WriteExtent<N, ArrayCopySrc<Ch>>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Chan: ResetChannels,
     Chan::Data: Clone,
 {

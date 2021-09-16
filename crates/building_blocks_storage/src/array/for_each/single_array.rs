@@ -17,7 +17,7 @@ pub type Array3ForEach = ArrayForEach<[i32; 3]>;
 impl<N> ArrayForEach<N>
 where
     N: ArrayIndexer<N>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     #[inline]
     pub fn new_local_unchecked(

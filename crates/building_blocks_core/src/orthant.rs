@@ -21,7 +21,7 @@ pub type Octant = Orthant<[i32; 3]>;
 
 impl<N> Orthant<N>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     /// Construct an `Orthant`. This ensures that the orthant is valid by constraining the input parameters to be:
     /// - an `exponent` for the power of 2 edge length
@@ -121,7 +121,7 @@ pub fn orthants_covering_extent<N>(
     exponent: i32,
 ) -> impl Iterator<Item = Orthant<N>>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     let scaled_extent =
         ExtentN::from_min_and_max(extent.minimum >> exponent, extent.max() >> exponent);

@@ -61,7 +61,7 @@ pub trait ChunkTreeBuilder<N, T>: Sized {
         storage_factory: impl Fn() -> Store,
     ) -> ChunkTree<N, T, Self, Store>
     where
-        PointN<N>: IntegerPoint<N>,
+        PointN<N>: IntegerPoint,
         T: Clone,
         Store: ChunkStorage<N, Chunk = Self::Chunk>,
     {
@@ -72,7 +72,7 @@ pub trait ChunkTreeBuilder<N, T>: Sized {
     /// Create a new `ChunkTree` using a `SmallKeyHashMap` as the chunk storage.
     fn build_with_hash_map_storage(self) -> HashMapChunkTree<N, T, Self>
     where
-        PointN<N>: Hash + IntegerPoint<N>,
+        PointN<N>: Hash + IntegerPoint,
         T: Clone,
     {
         Self::build_with_storage(self, SmallKeyHashMap::default)
@@ -128,7 +128,7 @@ pub use multichannel_aliases::*;
 
 impl<N, T, Chan> ChunkTreeBuilder<N, T> for ChunkTreeBuilderNxM<N, T, Chan>
 where
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     T: Clone,
     Chan: FillChannels<Data = T>,
 {

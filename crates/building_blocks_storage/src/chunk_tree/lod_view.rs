@@ -33,7 +33,7 @@ impl<Delegate, N, T, Bldr, Store, Usr> ChunkTreeLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
     Store: ChunkStorage<N, Chunk = Usr>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
 {
     /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be represented by an `AmbientExtent`.
     #[inline]
@@ -62,7 +62,7 @@ where
 impl<'a, Delegate, N, T, Bldr, Store> ChunkTreeLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Store: ChunkStorage<N> + for<'r> IterChunkKeys<'r, N>,
     Bldr: ChunkTreeBuilder<N, T>,
 {
@@ -116,7 +116,7 @@ impl<Delegate, N, T, Bldr, Store, Usr> ChunkTreeLodView<Delegate>
 where
     Delegate: DerefMut<Target = ChunkTree<N, T, Bldr, Store>>,
     Store: ChunkStorage<N, Chunk = Usr>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
 {
     /// Call `visitor` on all chunks that overlap `extent`. Vacant chunks will be created first with ambient value.
@@ -141,7 +141,7 @@ where
 impl<'a, Delegate, N, T, Usr, Bldr, Store> Get<PointN<N>> for ChunkTreeLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     T: Clone,
     Usr: UserChunk,
     Usr::Array: GetUnchecked<PointN<N>, Item = T>,
@@ -159,7 +159,7 @@ impl<'a, Delegate, N, T: 'a, Usr: 'a, Bldr: 'a, Store: 'a, Ref> GetRef<'a, Point
     for ChunkTreeLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     T: Clone,
     Usr: UserChunk,
     Usr::Array: GetRefUnchecked<'a, PointN<N>, Item = Ref>,
@@ -178,7 +178,7 @@ impl<'a, Delegate, N, T: 'a, Usr: 'a, Bldr: 'a, Store: 'a, Mut> GetMut<'a, Point
     for ChunkTreeLodView<Delegate>
 where
     Delegate: DerefMut<Target = ChunkTree<N, T, Bldr, Store>>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Usr: UserChunk,
     Usr::Array: GetMutUnchecked<'a, PointN<N>, Item = Mut>,
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
@@ -202,7 +202,7 @@ where
 impl<Delegate, N, T, Usr, Bldr, Store> ForEach<N, PointN<N>> for ChunkTreeLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     T: Clone,
     Usr: UserChunk,
     Usr::Array: ForEach<N, PointN<N>, Item = T>,
@@ -227,7 +227,7 @@ impl<Delegate, N, T, Usr, Bldr, Store, MutPtr> ForEachMutPtr<N, PointN<N>>
     for ChunkTreeLodView<Delegate>
 where
     Delegate: DerefMut<Target = ChunkTree<N, T, Bldr, Store>>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Usr: UserChunk,
     Usr::Array: ForEachMutPtr<N, PointN<N>, Item = MutPtr>,
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,
@@ -291,7 +291,7 @@ impl<'a, Delegate, N, T: 'a, Usr: 'a, Bldr: 'a, Store: 'a> ReadExtent<'a, N>
     for ChunkTreeLodView<Delegate>
 where
     Delegate: Deref<Target = ChunkTree<N, T, Bldr, Store>>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     T: Clone,
     Usr: UserChunk,
     Store: ChunkStorage<N, Chunk = Usr>,
@@ -328,7 +328,7 @@ where
 impl<Delegate, N, T, Usr, Bldr, Store, Src> WriteExtent<N, Src> for ChunkTreeLodView<Delegate>
 where
     Delegate: DerefMut<Target = ChunkTree<N, T, Bldr, Store>>,
-    PointN<N>: IntegerPoint<N>,
+    PointN<N>: IntegerPoint,
     Usr: UserChunk,
     Usr::Array: WriteExtent<N, Src>,
     Bldr: ChunkTreeBuilder<N, T, Chunk = Usr>,

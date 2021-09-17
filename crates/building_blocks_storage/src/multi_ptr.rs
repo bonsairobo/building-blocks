@@ -69,7 +69,7 @@ impl<T> MultiMutPtr for *mut T {
 
     #[inline]
     unsafe fn write(self, data: Self::Data) {
-        *self = data;
+        self.write(data);
     }
 }
 

@@ -173,7 +173,7 @@ use crate::{
 use building_blocks_core::prelude::*;
 
 use core::iter::{once, Once};
-use core::ops::{Add, Deref};
+use core::ops::Add;
 use either::Either;
 
 #[cfg(feature = "serde")]
@@ -414,10 +414,10 @@ where
 impl<N, T, Store> ArrayNx1<N, T, Store>
 where
     PointN<N>: IntegerPoint,
-    Store: Deref<Target = [T]>,
+    Store: AsRef<[T]>,
 {
     pub fn new_one_channel(extent: ExtentN<N>, values: Store) -> Self {
-        assert_eq!(extent.num_points(), values.len());
+        assert_eq!(extent.num_points(), values.as_ref().len());
 
         Self::new(extent, Channel::new(values))
     }

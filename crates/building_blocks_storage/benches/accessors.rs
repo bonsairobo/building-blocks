@@ -54,8 +54,8 @@ fn array_for_each_point_and_stride(c: &mut Criterion) {
     group.finish();
 }
 
-fn chunk_hash_map_for_each_point(c: &mut Criterion) {
-    let mut group = c.benchmark_group("chunk_hash_map_for_each_point");
+fn hash_map_chunk_tree_for_each_point(c: &mut Criterion) {
+    let mut group = c.benchmark_group("hash_map_chunk_tree_for_each_point");
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
@@ -73,8 +73,8 @@ fn chunk_hash_map_for_each_point(c: &mut Criterion) {
     group.finish();
 }
 
-fn chunk_hash_map_for_each_point_mut(c: &mut Criterion) {
-    let mut group = c.benchmark_group("chunk_hash_map_for_each_point_mut");
+fn hash_map_chunk_tree_for_each_point_mut(c: &mut Criterion) {
+    let mut group = c.benchmark_group("hash_map_chunk_tree_for_each_point_mut");
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
@@ -112,8 +112,8 @@ fn array_point_indexing(c: &mut Criterion) {
     group.finish();
 }
 
-fn chunk_hash_map_point_indexing(c: &mut Criterion) {
-    let mut group = c.benchmark_group("chunk_hash_map_point_indexing");
+fn hash_map_chunk_tree_point_indexing(c: &mut Criterion) {
+    let mut group = c.benchmark_group("hash_map_chunk_tree_point_indexing");
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
@@ -148,8 +148,8 @@ fn hash_map_chunk_tree_visit_sparse_keys(c: &mut Criterion) {
     group.finish();
 }
 
-fn compressible_chunk_map_point_indexing(c: &mut Criterion) {
-    let mut group = c.benchmark_group("compressible_chunk_map_point_indexing");
+fn compressible_chunk_tree_point_indexing(c: &mut Criterion) {
+    let mut group = c.benchmark_group("compressible_chunk_tree_point_indexing");
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
@@ -199,8 +199,8 @@ fn array_copy(c: &mut Criterion) {
     group.finish();
 }
 
-fn chunk_hash_map_copy(c: &mut Criterion) {
-    let mut group = c.benchmark_group("chunk_hash_map_copy");
+fn hash_map_chunk_tree_copy(c: &mut Criterion) {
+    let mut group = c.benchmark_group("hash_map_chunk_tree_copy");
     for size in ARRAY_SIZES.iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter_with_setup(
@@ -229,12 +229,12 @@ criterion_group!(
     array_for_each_point_and_stride,
     array_point_indexing,
     array_copy,
-    chunk_hash_map_for_each_point,
-    chunk_hash_map_for_each_point_mut,
-    chunk_hash_map_point_indexing,
+    hash_map_chunk_tree_for_each_point,
+    hash_map_chunk_tree_for_each_point_mut,
+    hash_map_chunk_tree_point_indexing,
     hash_map_chunk_tree_visit_sparse_keys,
-    chunk_hash_map_copy,
-    compressible_chunk_map_point_indexing
+    hash_map_chunk_tree_copy,
+    compressible_chunk_tree_point_indexing
 );
 criterion_main!(benches);
 

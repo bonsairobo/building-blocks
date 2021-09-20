@@ -176,11 +176,6 @@ impl Point for Point2i {
     }
 
     #[inline]
-    fn basis() -> Vec<Self> {
-        vec![PointN([1, 0]), PointN([0, 1])]
-    }
-
-    #[inline]
     fn volume(self) -> <Self as Point>::Scalar {
         self.x() * self.y()
     }
@@ -192,11 +187,6 @@ impl Point for Point2f {
     #[inline]
     fn fill(value: f32) -> Self {
         Self([value; 2])
-    }
-
-    #[inline]
-    fn basis() -> Vec<Self> {
-        vec![PointN([1.0, 0.0]), PointN([0.0, 1.0])]
     }
 
     #[inline]

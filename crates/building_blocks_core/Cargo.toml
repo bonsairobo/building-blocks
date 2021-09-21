@@ -16,9 +16,9 @@ all-features = true
 default = []
 
 [dependencies]
-bitintr = "0.3"
 bytemuck = "1.7"
 itertools = "0.10"
+morton-encoding = "2.0"
 num = "0.4"
 
 # Optional, feature-gated.

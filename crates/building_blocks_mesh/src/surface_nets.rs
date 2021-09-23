@@ -241,9 +241,9 @@ where
     // NOTE: The checks against max prevent us from making quads on the 3 maximal planes of the grid. This is necessary to avoid
     // redundant quads when meshing adjacent chunks (assuming this will be used on a chunked voxel grid).
     let min = extent.minimum;
-    let max = extent.max();
+    let max = extent.max() - Point3i::ONES;
 
-    for (p, p_stride) in output
+    for (&p, p_stride) in output
         .surface_points
         .iter()
         .zip(output.surface_strides.iter())

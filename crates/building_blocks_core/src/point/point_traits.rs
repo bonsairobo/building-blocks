@@ -413,22 +413,22 @@ macro_rules! impl_integer_div {
         impl IntegerDiv for $t {
             #[inline]
             fn vector_div_floor(self, rhs: Self) -> Self {
-                self.map_components_binary(rhs, |c1, c2| c1.div_floor(&c2))
+                self.map_components_binary(rhs, |c1, c2| Integer::div_floor(&c1,&c2))
             }
 
             #[inline]
             fn scalar_div_floor(self, rhs: i32) -> Self {
-                self.map_components_unary(|c| c.div_floor(&rhs))
+                self.map_components_unary(|c| Integer::div_floor(&c,&rhs))
             }
 
             #[inline]
             fn vector_div_ceil(self, rhs: Self) -> Self {
-                self.map_components_binary(rhs, |c1, c2| c1.div_ceil(&c2))
+                self.map_components_binary(rhs, |c1, c2| Integer::div_ceil(&c1,&c2))
             }
 
             #[inline]
             fn scalar_div_ceil(self, rhs: i32) -> Self {
-                self.map_components_unary(|c| c.div_ceil(&rhs))
+                self.map_components_unary(|c| Integer::div_ceil(&c,&rhs))
             }
         }
     };

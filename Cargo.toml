@@ -1,6 +1,6 @@
 [package]
 name = "building-blocks"
-version = "0.7.0"
+version = "0.7.1"
 edition = "2018"
 authors = ["Duncan <bonsairobo@gmail.com>"]
 description = "Data types, collections, and algorithms for working with maps on 2D and 3D integer lattices. Commonly known as voxel data."
@@ -47,12 +47,12 @@ exclude = ["benches", "examples"]
 # TODO: use RFC #2906 to deduplicate dependency specs once it is merged
 
 [dependencies]
-building_blocks_core = { path = "crates/building_blocks_core", version = "0.7.0", default-features = false }
-building_blocks_storage = { path = "crates/building_blocks_storage", version = "0.7.0", default-features = false }
+building_blocks_core = { path = "crates/building_blocks_core", version = "0.7.1", default-features = false }
+building_blocks_storage = { path = "crates/building_blocks_storage", version = "0.7.1", default-features = false }
 
 # Optional, feature-gated
-building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.7.0", default-features = false, optional = true }
-building_blocks_search = { path = "crates/building_blocks_search", version = "0.7.0", default-features = false, optional = true }
+building_blocks_mesh = { path = "crates/building_blocks_mesh", version = "0.7.1", default-features = false, optional = true }
+building_blocks_search = { path = "crates/building_blocks_search", version = "0.7.1", default-features = false, optional = true }
 
 [dev-dependencies]
 utilities = { path = "crates/utilities" }

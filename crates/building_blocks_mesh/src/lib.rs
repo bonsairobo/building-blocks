@@ -90,6 +90,7 @@ pub use greedy_quads::*;
 pub use height_map::*;
 pub use quad::*;
 pub use surface_nets::*;
+use std::convert::TryInto;
 
 #[derive(Clone, Default)]
 pub struct PosNormMesh {
@@ -109,6 +110,15 @@ impl PosNormMesh {
         self.positions.clear();
         self.normals.clear();
         self.indices.clear();
+    }
+
+    pub fn append(&mut self, other: &mut Self) {
+        let n: u32 = self.positions.len().try_into().unwrap();
+
+        self.positions.append(&mut other.positions);
+        self.normals.append(&mut other.normals);
+
+        self.indices.extend(other.indices.drain(..).map(|i| n + i));
     }
 }
 

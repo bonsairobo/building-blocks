@@ -61,7 +61,7 @@ harness = false
 [[bench]]
 name = "compression"
 harness = false
-required-features = ["bincode", "lz4", "snappy", "serde"]
+required-features = ["bincode", "lz4", "snap", "serde"]
 
 [[bench]]
 name = "octree_set"

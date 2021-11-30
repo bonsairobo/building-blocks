@@ -6,6 +6,27 @@
 //!
 //! Building Blocks is a voxel library for real-time applications.
 //!
+//! ## Project Status
+//! 
+//! This crate is effectively in maintenance mode while I extract the most useful features into their own crates
+//! with fewer overall dependencies. Rather than providing generic APIs centered around a bespoke `Array` type,
+//! the new crates provide simpler APIs that only require slice `[T]` data.
+//! 
+//! The list of new crates is here:
+//! 
+//! - [ilattice](https://github.com/bonsairobo/ilattice-rs)
+//! - [ndshape](https://github.com/bonsairobo/ndshape-rs)
+//! - [ndcopy](https://github.com/bonsairobo/ndcopy-rs)
+//! - [fast-surface-nets](https://github.com/bonsairobo/fast-surface-nets-rs)
+//! - [block-mesh](https://github.com/bonsairobo/block-mesh-rs)
+//! - [height-mesh](https://github.com/bonsairobo/height-mesh-rs)
+//! - [grid-ray](https://github.com/bonsairobo/grid-ray-rs)
+//! - grid-tree: WORK IN PROGRESS
+//! 
+//! There are currently no plans to resume development on `building-blocks`, and users should consider migrating
+//! to the new crates. These crates will be actively maintained as their development is driven by the
+//! [feldspar](https://github.com/bonsairobo/feldspar) project.
+//!
 //! ![LOD
 //! Terrain](https://media.githubusercontent.com/media/bonsairobo/building-blocks/main/examples/screenshots/lod_terrain.png)
 //!

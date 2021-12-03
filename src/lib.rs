@@ -21,7 +21,7 @@
 //! - [block-mesh](https://github.com/bonsairobo/block-mesh-rs)
 //! - [height-mesh](https://github.com/bonsairobo/height-mesh-rs)
 //! - [grid-ray](https://github.com/bonsairobo/grid-ray-rs)
-//! - grid-tree: WORK IN PROGRESS
+//! - [grid-tree](https://github.com/bonsairobo/grid-tree-rs)
 //! 
 //! There are currently no plans to resume development on `building-blocks`, and users should consider migrating
 //! to the new crates. These crates will be actively maintained as their development is driven by the

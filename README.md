@@ -14,16 +14,7 @@ This crate is in maintenance mode. I have extracted the most useful features int
 with fewer overall dependencies. Rather than providing generic APIs centered around a bespoke `Array` type,
 the new crates provide simpler APIs that only require slice `[T]` data.
 
-The list of new crates is here:
-
-- [ilattice](https://github.com/bonsairobo/ilattice-rs)
-- [ndshape](https://github.com/bonsairobo/ndshape-rs)
-- [ndcopy](https://github.com/bonsairobo/ndcopy-rs)
-- [fast-surface-nets](https://github.com/bonsairobo/fast-surface-nets-rs)
-- [block-mesh](https://github.com/bonsairobo/block-mesh-rs)
-- [height-mesh](https://github.com/bonsairobo/height-mesh-rs)
-- [grid-ray](https://github.com/bonsairobo/grid-ray-rs)
-- [grid-tree](https://github.com/bonsairobo/grid-tree-rs)
+The list of new crates is here: https://github.com/stars/bonsairobo/lists/my-stack
 
 There are currently no plans to resume development on `building-blocks`, and users should consider migrating
 to the new crates. These crates will be actively maintained as their development is driven by the

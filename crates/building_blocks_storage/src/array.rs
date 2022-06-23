@@ -377,8 +377,8 @@ where
 {
     /// Create a new array for `extent` where each point's value is determined by the `filler` function.
     pub fn fill_with(extent: ExtentN<N>, mut filler: impl FnMut(PointN<N>) -> Chan::Data) -> Self {
+        let mut array = unsafe { Array::<_, UninitChan>::maybe_uninit(extent) };
         unsafe {
-            let mut array = Array::<_, UninitChan>::maybe_uninit(extent);
 
             array.for_each_mut_ptr(&extent, |p, val| {
                 val.into_multi_mut_ptr().write(filler(p));
